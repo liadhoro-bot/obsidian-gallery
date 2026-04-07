@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase'
-import NavBar from '../../components/NavBar'
+import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 
 async function addUnit(formData: FormData) {
@@ -77,6 +77,37 @@ async function toggleStage(formData: FormData) {
 
   revalidatePath(`/projects/${projectId}`)
 }
+async function setFeaturedUnit(formData: FormData) {
+  'use server'
+
+  const unitId = formData.get('unitId')?.toString()
+  const projectId = formData.get('projectId')?.toString()
+
+  if (!unitId || !projectId) return
+
+  const { error: clearError } = await supabase
+    .from('units')
+    .update({ is_featured: false })
+    .eq('project_id', projectId)
+
+  if (clearError) {
+    console.error('Error clearing featured unit:', clearError)
+    return
+  }
+
+  const { error: setError } = await supabase
+    .from('units')
+    .update({ is_featured: true })
+    .eq('id', unitId)
+
+  if (setError) {
+    console.error('Error setting featured unit:', setError)
+    return
+  }
+
+  revalidatePath(`/projects/${projectId}`)
+  revalidatePath('/dashboard')
+}
 export default async function ProjectDetailPage({
   params,
 }: {
@@ -97,7 +128,7 @@ export default async function ProjectDetailPage({
     .order('created_at', { ascending: false })
 
   return (
-    <main className="min-h-screen bg-black p-6 text-white">
+    <main className="min-h-screen bg-black p-6 pb-28 text-white">
       <div className="mx-auto max-w-xl">
             <NavBar />
         <a href="/" className="text-cyan-400">
@@ -170,82 +201,107 @@ export default async function ProjectDetailPage({
           </form>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-xl font-semibold">Units</h2>
+<section className="mt-6">
+  <h2 className="text-xl font-semibold">Units</h2>
 
-          {unitsError ? (
-            <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
-              {JSON.stringify(unitsError, null, 2)}
-            </pre>
-          ) : units && units.length > 0 ? (
-            <div className="mt-4 space-y-3">
-{units.map(async (unit) => {
-  const { data: stages } = await supabase
-    .from('unit_stage_progress')
-    .select('*')
-    .eq('unit_id', unit.id)
+  {unitsError ? (
+    <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
+      {JSON.stringify(unitsError, null, 2)}
+    </pre>
+  ) : units && units.length > 0 ? (
+    <div className="mt-4 space-y-3">
+      {await Promise.all(
+        units.map(async (unit) => {
+          const { data: stages } = await supabase
+            .from('unit_stage_progress')
+            .select('*')
+            .eq('unit_id', unit.id)
 
-  const completed = stages?.filter((s) => s.is_done).length || 0
-  const total = stages?.length || 1
-  const percent = Math.round((completed / total) * 100)
+          const completed = stages?.filter((s) => s.is_done).length || 0
+          const total = stages?.length || 1
+          const percent = Math.round((completed / total) * 100)
 
-  return (
-    <div
-      key={unit.id}
-      className="rounded border border-neutral-700 p-4"
-    >
-      <h3 className="text-lg font-semibold">{unit.name}</h3>
+          return (
+            <div
+              key={unit.id}
+              className="rounded border border-neutral-700 p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">{unit.name}</h3>
 
-      <p className="text-sm text-neutral-400">
-        Models: {unit.model_count}
-      </p>
+                  <p className="text-sm text-neutral-400">
+                    Models: {unit.model_count}
+                  </p>
 
-      <p className="text-sm text-neutral-500">
-        {unit.notes || 'No notes'}
-      </p>
+                  <p className="text-sm text-neutral-500">
+                    {unit.notes || 'No notes'}
+                  </p>
+                </div>
 
-      {/* Progress bar */}
-      <div className="mt-3">
-        <div className="h-2 w-full rounded bg-neutral-800">
-          <div
-            className="h-2 rounded bg-cyan-500"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-        <p className="mt-1 text-xs text-neutral-400">
-          {percent}% complete
-        </p>
-      </div>
+                <form action={setFeaturedUnit}>
+                  <input type="hidden" name="unitId" value={unit.id} />
+                  <input type="hidden" name="projectId" value={id} />
 
-      {/* Stages */}
-      <div className="mt-3 flex flex-wrap gap-2">
-{stages?.map((stage) => (
-  <form key={stage.id} action={toggleStage}>
-    <input type="hidden" name="stageId" value={stage.id} />
-    <input type="hidden" name="current" value={stage.is_done.toString()} />
-    <input type="hidden" name="projectId" value={id} />
+                  <button
+                    type="submit"
+                    className={`rounded px-3 py-2 text-xs font-medium ${
+                      unit.is_featured
+                        ? 'bg-yellow-400 text-black'
+                        : 'bg-neutral-800 text-white'
+                    }`}
+                  >
+                    {unit.is_featured ? 'Featured' : 'Set Featured'}
+                  </button>
+                </form>
+              </div>
 
-    <button
-      type="submit"
-      className={`rounded px-2 py-1 text-xs ${
-        stage.is_done
-          ? 'bg-cyan-500 text-black'
-          : 'bg-neutral-800 text-neutral-400'
-      }`}
-    >
-      {stage.stage_key}
-    </button>
-  </form>
-))}
-      </div>
-    </div>
-  )
-})}
+              <div className="mt-3">
+                <div className="h-2 w-full rounded bg-neutral-800">
+                  <div
+                    className="h-2 rounded bg-cyan-500"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-neutral-400">
+                  {percent}% complete
+                </p>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {stages?.map((stage) => (
+                  <form key={stage.id} action={toggleStage}>
+                    <input type="hidden" name="stageId" value={stage.id} />
+                    <input
+                      type="hidden"
+                      name="current"
+                      value={stage.is_done.toString()}
+                    />
+                    <input type="hidden" name="projectId" value={id} />
+
+                    <button
+                      type="submit"
+                      className={`rounded px-2 py-1 text-xs ${
+                        stage.is_done
+                          ? 'bg-cyan-500 text-black'
+                          : 'bg-neutral-800 text-neutral-400'
+                      }`}
+                    >
+                      {stage.stage_key}
+                    </button>
+                  </form>
+                ))}
+              </div>
             </div>
-          ) : (
-            <p className="mt-4 text-neutral-400">No units yet.</p>
-          )}
-        </section>
+          )
+        })
+      )}
+    </div>
+  ) : (
+    <p className="mt-4 text-neutral-400">No units yet.</p>
+  )}
+</section>
+
       </div>
     </main>
   )

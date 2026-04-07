@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/supabase'
-import NavBar from '../../components/NavBar'
+import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 
 async function addRecipeStep(formData: FormData) {
@@ -73,9 +73,9 @@ const { data: paints } = await supabase
   .order('name', { ascending: true })
 
   return (
-    <main className="min-h-screen bg-black p-6 text-white">
+    <main className="min-h-screen bg-black p-6 pb-28 text-white">
       <div className="mx-auto max-w-xl">
-            <NavBar />
+            <MobileNav />
         <a href="/recipes" className="text-cyan-400">
           ← Back to Recipes
         </a>

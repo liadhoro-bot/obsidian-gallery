@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase'
-import NavBar from '../components/NavBar'
+import MobileNav from '../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 
 async function addPaint(formData: FormData) {
@@ -37,16 +37,66 @@ async function addPaint(formData: FormData) {
   revalidatePath('/vault')
 }
 
-export default async function VaultPage() {
-  const { data: paints, error } = await supabase
-    .from('paints')
-    .select('*')
-    .order('name', { ascending: true })
+export default async function VaultPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string
+    manufacturer?: string
+    series?: string
+  }>
+}) {
+ const {
+  q = '',
+  manufacturer = '',
+  series = '',
+} = await searchParams
+let paintsQuery = supabase
+  .from('paints')
+  .select('*')
+  .order('name', { ascending: true })
+
+if (q) {
+  paintsQuery = paintsQuery.ilike('name', `%${q}%`)
+}
+
+if (manufacturer) {
+  paintsQuery = paintsQuery.eq('manufacturer', manufacturer)
+}
+
+if (series) {
+  paintsQuery = paintsQuery.eq('series', series)
+}
+
+const { data: paints, error } = await paintsQuery
+const { data: allManufacturers } = await supabase
+  .from('paints')
+  .select('manufacturer')
+
+const { data: allSeries } = await supabase
+  .from('paints')
+  .select('series')
+
+const manufacturerOptions = Array.from(
+  new Set(
+    (allManufacturers || [])
+      .map((item) => item.manufacturer)
+      .filter(Boolean)
+  )
+).sort()
+
+const seriesOptions = Array.from(
+  new Set(
+    (allSeries || [])
+      .map((item) => item.series)
+      .filter(Boolean)
+  )
+).sort()
 
   return (
-    <main className="min-h-screen bg-black p-6 text-white">
+    <main className="min-h-screen bg-black p-6 pb-28 text-white">
       <div className="mx-auto max-w-2xl">
-            <NavBar />
+            <MobileNav />
         <a href="/" className="text-cyan-400">
           ← Back to Projects
         </a>
@@ -134,6 +184,72 @@ export default async function VaultPage() {
 
         <section className="mt-6">
           <h2 className="text-xl font-semibold">Your Paints</h2>
+          <form method="GET" className="mt-4 grid gap-3 md:grid-cols-4">
+  <div className="md:col-span-2">
+    <label className="mb-1 block text-sm text-neutral-300">
+      Search
+    </label>
+    <input
+      type="text"
+      name="q"
+      defaultValue={q}
+      placeholder="Search by paint name"
+      className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
+    />
+  </div>
+
+  <div>
+    <label className="mb-1 block text-sm text-neutral-300">
+      Manufacturer
+    </label>
+    <select
+      name="manufacturer"
+      defaultValue={manufacturer}
+      className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
+    >
+      <option value="">All</option>
+      {manufacturerOptions.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <label className="mb-1 block text-sm text-neutral-300">
+      Series
+    </label>
+    <select
+      name="series"
+      defaultValue={series}
+      className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
+    >
+      <option value="">All</option>
+      {seriesOptions.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div className="md:col-span-4 flex gap-2">
+    <button
+      type="submit"
+      className="rounded bg-cyan-500 px-4 py-2 font-medium text-black"
+    >
+      Apply
+    </button>
+
+    <a
+      href="/vault"
+      className="rounded bg-neutral-800 px-4 py-2 font-medium text-white"
+    >
+      Reset
+    </a>
+  </div>
+</form>
 
           {error ? (
             <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">

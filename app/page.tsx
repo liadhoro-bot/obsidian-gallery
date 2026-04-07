@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import NavBar from './components/NavBar'
+import MobileNav from './components/MobileNav'
 import { revalidatePath } from 'next/cache'
 
 async function addProject(formData: FormData) {
@@ -32,9 +32,9 @@ export default async function Home() {
     .order('created_at', { ascending: false })
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-6 text-white">
+<main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
       <div className="mx-auto max-w-xl">
-<NavBar />
+<MobileNav />
         <h1 className="text-3xl font-bold">Obsidian Gallery</h1>
         <p className="mt-2 text-sm text-neutral-400">
           Projects V1
@@ -80,30 +80,31 @@ export default async function Home() {
 
         <section className="mt-8">
           <h2 className="text-xl font-semibold">Your Projects</h2>
-
-          {error ? (
-            <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
-              {JSON.stringify(error, null, 2)}
-            </pre>
-          ) : projects && projects.length > 0 ? (
-            <div className="mt-4 space-y-3">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-xl border border-neutral-800 bg-neutral-900 p-4"
-                >
-                  <a href={`/projects/${project.id}`} className="block">
-  <h3 className="text-lg font-semibold text-cyan-400">{project.name}</h3>
-  <p className="mt-1 text-sm text-neutral-400">
-    {project.description || 'No description'}
-  </p>
-</a>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-4 text-neutral-400">No projects yet.</p>
-          )}
+{error ? (
+  <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
+    {JSON.stringify(error, null, 2)}
+  </pre>
+) : projects && projects.length > 0 ? (
+  <div className="mt-4 space-y-3">
+    {projects.map((project) => (
+      <div
+        key={project.id}
+        className="rounded-xl border border-neutral-800 bg-neutral-900 p-4"
+      >
+        <a href={`/projects/${project.id}`} className="block">
+          <h3 className="text-lg font-semibold text-cyan-400">
+            {project.name}
+          </h3>
+          <p className="mt-1 text-sm text-neutral-400">
+            {project.description || 'No description'}
+          </p>
+        </a>
+      </div>
+    ))}
+  </div>
+) : (
+  <p className="mt-4 text-neutral-400">No projects yet.</p>
+)}
         </section>
       </div>
     </main>
