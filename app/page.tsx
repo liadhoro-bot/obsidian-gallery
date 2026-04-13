@@ -1,110 +1,199 @@
-import { supabase } from '../lib/supabase'
-import MobileNav from './components/MobileNav'
+import { createClient } from '../utils/supabase/server'
+import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import MobileNav from './components/MobileNav'
+import ProjectsPageClient from './projects-page-client'
 
-async function addProject(formData: FormData) {
-  'use server'
-
-  const name = formData.get('name')?.toString().trim()
-  const description = formData.get('description')?.toString().trim() || null
-
-  if (!name) return
-
-  const { error } = await supabase.from('projects').insert([
-    {
-      name,
-      description,
-    },
-  ])
-
-  if (error) {
-    console.error('Error adding project:', error)
-    return
-  }
-
-  revalidatePath('/')
+type ProjectWithImage = {
+  id: string
+  name: string
+  description: string | null
+  created_at: string
+  primaryImage: {
+    image_url: string
+    alt_text: string | null
+  } | null
 }
 
-export default async function Home() {
-  const { data: projects, error } = await supabase
+export default async function ProjectsPage() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  async function addProject(formData: FormData) {
+    'use server'
+
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/login')
+    }
+
+    const name = formData.get('name')?.toString().trim()
+    const descriptionRaw = formData.get('description')?.toString().trim()
+
+    if (!name) {
+      throw new Error('Project name is required')
+    }
+
+    const { error } = await supabase.from('projects').insert([
+      {
+        name,
+        description: descriptionRaw || null,
+      },
+    ])
+
+    if (error) {
+      throw new Error(error.message || 'Failed to create project')
+    }
+
+    revalidatePath('/')
+  }
+
+  const { data: projects, error: projectsError } = await supabase
     .from('projects')
-    .select('*')
+    .select(`
+      id,
+      name,
+      description,
+      created_at
+    `)
     .order('created_at', { ascending: false })
 
+  if (projectsError) {
+    throw new Error(projectsError.message)
+  }
+
+  const projectIds = (projects ?? []).map((project) => project.id)
+
+  let featuredImagesByProjectId: Record<
+    string,
+    {
+      image_url: string
+      alt_text: string | null
+    }
+  > = {}
+
+  if (projectIds.length > 0) {
+    const { data: images, error: imagesError } = await supabase
+      .from('image_assets')
+      .select(`
+        entity_id,
+        image_url,
+        alt_text,
+        is_featured,
+        created_at
+      `)
+      .eq('entity_type', 'project')
+      .in('entity_id', projectIds)
+      .order('created_at', { ascending: true })
+
+    if (imagesError) {
+      throw new Error(imagesError.message)
+    }
+
+    for (const projectId of projectIds) {
+      const projectImages = (images ?? []).filter(
+        (image) => image.entity_id === projectId
+      )
+
+      const primaryImage =
+        projectImages.find((image) => image.is_featured) ||
+        projectImages[0] ||
+        null
+
+      if (primaryImage) {
+        featuredImagesByProjectId[projectId] = {
+          image_url: primaryImage.image_url,
+          alt_text: primaryImage.alt_text,
+        }
+      }
+    }
+  }
+
+  const projectsWithImages: ProjectWithImage[] = (projects ?? []).map((project) => ({
+    ...project,
+    primaryImage: featuredImagesByProjectId[project.id] || null,
+  }))
+
   return (
-<main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
-      <div className="mx-auto max-w-xl">
-<MobileNav />
-        <h1 className="text-3xl font-bold">Obsidian Gallery</h1>
-        <p className="mt-2 text-sm text-neutral-400">
-          Projects V1
-        </p>
+    <main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
+      <div className="mx-auto max-w-3xl">
+        <MobileNav />
 
-        <section className="mt-8 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-          <h2 className="text-xl font-semibold">Add Project</h2>
-
-          <form action={addProject} className="mt-4 space-y-3">
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Project Name
-              </label>
-              <input
-                name="name"
-                type="text"
-                required
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none"
-                placeholder="e.g. Tomb Kings Army"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Description
-              </label>
-              <textarea
-                name="description"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none"
-                placeholder="Optional notes"
-                rows={3}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="rounded-lg bg-cyan-500 px-4 py-2 font-medium text-black"
-            >
-              Add Project
-            </button>
-          </form>
-        </section>
-
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold">Your Projects</h2>
-{error ? (
-  <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
-    {JSON.stringify(error, null, 2)}
-  </pre>
-) : projects && projects.length > 0 ? (
-  <div className="mt-4 space-y-3">
-    {projects.map((project) => (
-      <div
-        key={project.id}
-        className="rounded-xl border border-neutral-800 bg-neutral-900 p-4"
-      >
-        <a href={`/projects/${project.id}`} className="block">
-          <h3 className="text-lg font-semibold text-cyan-400">
-            {project.name}
-          </h3>
-          <p className="mt-1 text-sm text-neutral-400">
-            {project.description || 'No description'}
+        <header className="mb-6">
+          <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
+            Obsidian Gallery
           </p>
-        </a>
-      </div>
-    ))}
-  </div>
-) : (
-  <p className="mt-4 text-neutral-400">No projects yet.</p>
-)}
+          <h1 className="mt-2 text-3xl font-bold">Projects</h1>
+          <p className="mt-2 max-w-2xl text-sm text-neutral-400">
+            Track armies, units, and painting progress across your collection.
+          </p>
+
+          <div className="mt-4">
+            <ProjectsPageClient addProjectAction={addProject} />
+          </div>
+        </header>
+
+        <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm uppercase tracking-wider text-cyan-400">
+                Project Library
+              </p>
+              <h2 className="mt-1 text-xl font-semibold">All Projects</h2>
+            </div>
+          </div>
+
+          {projectsWithImages.length > 0 ? (
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {projectsWithImages.map((project) => (
+                <a
+                  key={project.id}
+                  href={`/projects/${project.id}`}
+                  className="block overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/80 transition hover:border-cyan-500"
+                >
+                  {project.primaryImage ? (
+                    <div className="overflow-hidden border-b border-neutral-800">
+                      <img
+                        src={project.primaryImage.image_url}
+                        alt={project.primaryImage.alt_text || project.name}
+                        className="h-40 w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-40 w-full items-center justify-center border-b border-neutral-800 bg-neutral-950 text-sm text-neutral-500">
+                      No featured image
+                    </div>
+                  )}
+
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-cyan-400">
+                      {project.name}
+                    </h3>
+
+                    <p className="mt-3 line-clamp-3 text-sm text-neutral-400">
+                      {project.description || 'No description'}
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-neutral-400">
+              No projects yet. Create your first project to get started.
+            </p>
+          )}
         </section>
       </div>
     </main>

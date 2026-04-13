@@ -1,9 +1,11 @@
-import { supabase } from '../../lib/supabase'
+import { createClient } from '../../utils/supabase/server'
+import { redirect } from 'next/navigation'
 import MobileNav from '../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 
 async function addPaint(formData: FormData) {
   'use server'
+  const supabase = await createClient()
 
   const name = formData.get('name')?.toString().trim()
   const manufacturer = formData.get('manufacturer')?.toString().trim() || null
@@ -40,17 +42,27 @@ async function addPaint(formData: FormData) {
 export default async function VaultPage({
   searchParams,
 }: {
-  searchParams: Promise<{
+  searchParams: {
     q?: string
     manufacturer?: string
     series?: string
-  }>
+  }
 }) {
- const {
-  q = '',
-  manufacturer = '',
-  series = '',
-} = await searchParams
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
+  const {
+    q = '',
+    manufacturer = '',
+    series = '',
+  } = searchParams
 let paintsQuery = supabase
   .from('paints')
   .select('*')
@@ -94,20 +106,23 @@ const seriesOptions = Array.from(
 ).sort()
 
   return (
-    <main className="min-h-screen bg-black p-6 pb-28 text-white">
+    <main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
       <div className="mx-auto max-w-2xl">
             <MobileNav />
-        <a href="/" className="text-cyan-400">
-          ← Back to Projects
-        </a>
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5 shadow-sm">
+  <p className="text-xs uppercase tracking-[0.2em] text-cyan-400">
+    Inventory
+  </p>
 
-        <h1 className="mt-4 text-3xl font-bold">Paint Vault</h1>
-        <p className="mt-2 text-sm text-neutral-400">
-          Manage your paint collection
-        </p>
+  <h1 className="mt-2 text-3xl font-bold text-white">Paint Vault</h1>
 
-        <section className="mt-6 rounded border border-neutral-700 p-4">
-          <h2 className="text-xl font-semibold">Add Paint</h2>
+  <p className="mt-3 max-w-2xl text-sm text-neutral-400">
+    Organize your paints, browse swatches, and filter by manufacturer and series.
+  </p>
+</section>
+
+        <section className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-5 shadow-sm">
+          <h2 className="text-xl font-semibold text-white">Add Paint</h2>
 
           <form action={addPaint} className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="md:col-span-2">
@@ -183,8 +198,12 @@ const seriesOptions = Array.from(
         </section>
 
         <section className="mt-6">
-          <h2 className="text-xl font-semibold">Your Paints</h2>
-          <form method="GET" className="mt-4 grid gap-3 md:grid-cols-4">
+          <h2 className="text-xl font-semibold text-white">Your Paints</h2>
+          <form
+  method="GET"
+  className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-4 shadow-sm"
+>
+  <div className="grid gap-3 md:grid-cols-4">
   <div className="md:col-span-2">
     <label className="mb-1 block text-sm text-neutral-300">
       Search
@@ -194,7 +213,7 @@ const seriesOptions = Array.from(
       name="q"
       defaultValue={q}
       placeholder="Search by paint name"
-      className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
+      className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
     />
   </div>
 
@@ -205,7 +224,7 @@ const seriesOptions = Array.from(
     <select
       name="manufacturer"
       defaultValue={manufacturer}
-      className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
+      className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
     >
       <option value="">All</option>
       {manufacturerOptions.map((option) => (
@@ -223,7 +242,7 @@ const seriesOptions = Array.from(
     <select
       name="series"
       defaultValue={series}
-      className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
+      className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
     >
       <option value="">All</option>
       {seriesOptions.map((option) => (
@@ -237,18 +256,19 @@ const seriesOptions = Array.from(
   <div className="md:col-span-4 flex gap-2">
     <button
       type="submit"
-      className="rounded bg-cyan-500 px-4 py-2 font-medium text-black"
+      className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
     >
       Apply
     </button>
 
     <a
       href="/vault"
-      className="rounded bg-neutral-800 px-4 py-2 font-medium text-white"
+      className="rounded-xl bg-neutral-800 px-4 py-2 font-medium text-white"
     >
       Reset
     </a>
   </div>
+</div>
 </form>
 
           {error ? (
@@ -256,36 +276,45 @@ const seriesOptions = Array.from(
               {JSON.stringify(error, null, 2)}
             </pre>
           ) : paints && paints.length > 0 ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {paints.map((paint) => (
                 <div
-                  key={paint.id}
-                  className="rounded border border-neutral-700 p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-6 w-6 rounded border border-neutral-600"
-                      style={{
-                        backgroundColor: paint.color_hex || '#000000',
-                      }}
-                    />
-                    <div>
-                      <h3 className="text-lg font-semibold">{paint.name}</h3>
-                      <p className="text-sm text-neutral-400">
-                        {paint.manufacturer || 'Unknown brand'}
-                        {paint.series ? ` • ${paint.series}` : ''}
-                      </p>
-                    </div>
-                  </div>
+  key={paint.id}
+  className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 shadow-sm"
+>
+  <div className="flex items-start gap-4">
+    <div
+      className="h-12 w-12 shrink-0 rounded-2xl border border-neutral-700"
+      style={{
+        backgroundColor: paint.color_hex || '#000000',
+      }}
+    />
 
-                  <p className="mt-3 text-sm text-neutral-500">
-                    {paint.paint_type || 'No type'}
-                  </p>
+    <div className="min-w-0 flex-1">
+      <p className="text-xs uppercase tracking-wide text-neutral-500">
+        {paint.manufacturer || 'Unknown brand'}
+      </p>
 
-                  <p className="mt-1 text-xs text-neutral-600">
-                    {paint.color_hex || 'No hex value'}
-                  </p>
-                </div>
+      <h3 className="mt-1 text-lg font-semibold text-white">
+        {paint.name}
+      </h3>
+
+      <p className="mt-1 text-sm text-neutral-400">
+        {paint.series || 'No series'}
+      </p>
+    </div>
+  </div>
+
+  <div className="mt-4 flex items-center justify-between text-sm">
+    <span className="rounded-full bg-neutral-950 px-3 py-1 text-neutral-300">
+      {paint.paint_type || 'No type'}
+    </span>
+
+    <span className="text-neutral-500">
+      {paint.color_hex || 'No hex value'}
+    </span>
+  </div>
+</div>
               ))}
             </div>
           ) : (

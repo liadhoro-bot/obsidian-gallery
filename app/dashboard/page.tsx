@@ -1,15 +1,26 @@
-import { supabase } from '../../lib/supabase'
+import { createClient } from '../../utils/supabase/server'
+import { redirect } from 'next/navigation'
 import MobileNav from '../components/MobileNav'
 
 export default async function DashboardPage() {
+      const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
   const { data: projects } = await supabase
     .from('projects')
     .select('*')
     .order('created_at', { ascending: false })
 
-  const { data: units } = await supabase
-    .from('units')
-    .select('*')
+const { data: units } = await supabase
+  .from('units')
+  .select('*')
+  .eq('is_active', true)
 
   const { data: recipes } = await supabase
     .from('recipes')
@@ -22,16 +33,25 @@ export default async function DashboardPage() {
   const featuredUnits =
     units?.filter((unit) => unit.is_featured) || []
 
-  const featuredUnitsWithProject = featuredUnits.map((unit) => {
+const featuredUnitsWithProject = await Promise.all(featuredUnits.map(async (unit) => {
     const matchingProject = projects?.find(
       (project) => project.id === unit.project_id
     )
+const { data: images } = await supabase
+  .from('image_assets')
+  .select('*')
+  .eq('entity_type', 'unit')
+  .eq('entity_id', unit.id)
+  .order('created_at', { ascending: true })
 
-    return {
-      ...unit,
-      projectName: matchingProject?.name || 'Unknown project',
-    }
-  })
+const primaryImage =
+  images?.find((image) => image.is_featured) || images?.[0] || null
+return {
+  ...unit,
+  projectName: matchingProject?.name || 'Unknown project',
+  primaryImage,
+}
+  }))
 
   return (
     <main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
@@ -90,24 +110,35 @@ export default async function DashboardPage() {
           {featuredUnitsWithProject.length > 0 ? (
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {featuredUnitsWithProject.map((unit) => (
-                <div
-                  key={unit.id}
-                  className="rounded-2xl border border-neutral-800 bg-neutral-900/80 p-4"
-                >
-                  <h3 className="text-lg font-semibold text-cyan-400">
-                    {unit.name}
-                  </h3>
+  <a
+    key={unit.id}
+    href={`/units/${unit.id}`}
+    className="block rounded-2xl border border-neutral-800 bg-neutral-900/80 p-4 transition hover:border-cyan-500"
+  >
+    <h3 className="text-lg font-semibold text-cyan-400">
+      {unit.name}
+    </h3>
 
-                  <p className="mt-1 text-sm text-neutral-400">
-                    {unit.notes || 'No notes'}
-                  </p>
+    {unit.primaryImage && (
+      <div className="mt-3 overflow-hidden rounded-xl border border-neutral-800">
+        <img
+          src={unit.primaryImage.image_url}
+          alt={unit.name}
+          className="h-40 w-full object-cover"
+        />
+      </div>
+    )}
 
-                  <div className="mt-4 space-y-1 text-sm text-neutral-500">
-                    <p>Project: {unit.projectName}</p>
-                    <p>Models: {unit.model_count}</p>
-                  </div>
-                </div>
-              ))}
+    <p className="mt-1 text-sm text-neutral-400">
+      {unit.notes || 'No notes'}
+    </p>
+
+    <div className="mt-4 space-y-1 text-sm text-neutral-500">
+      <p>Project: {unit.projectName}</p>
+      <p>Models: {unit.model_count}</p>
+    </div>
+  </a>
+))}
             </div>
           ) : (
             <p className="mt-4 text-neutral-400">

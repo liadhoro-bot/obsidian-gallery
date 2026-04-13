@@ -1,9 +1,13 @@
-import { supabase } from '../../../lib/supabase'
+import { createClient } from '../../../utils/supabase/server'
+import { redirect } from 'next/navigation'
 import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
+import ProjectDetailClient from './project-detail-client'
 
 async function addUnit(formData: FormData) {
   'use server'
+
+  const supabase = await createClient()
 
   const projectId = formData.get('projectId')?.toString()
   const name = formData.get('name')?.toString().trim()
@@ -22,6 +26,7 @@ async function addUnit(formData: FormData) {
         name,
         model_count: Number.isNaN(modelCount) ? 1 : modelCount,
         notes,
+        is_active: true,
       },
     ])
     .select()
@@ -32,54 +37,89 @@ async function addUnit(formData: FormData) {
     return
   }
 
-  const stages = [
-    'assembled',
-    'primed',
-    'initial_paints',
-    'fine_details',
-    'base_rim',
-    'done',
+  const progressSteps = [
+    {
+      step_key: 'assembled',
+      step_label: 'Assembled',
+      step_order: 1,
+      status: 'pending',
+      progress: 0,
+    },
+    {
+      step_key: 'primed',
+      step_label: 'Primed',
+      step_order: 2,
+      status: 'pending',
+      progress: 0,
+    },
+    {
+      step_key: 'initial_paints',
+      step_label: 'Initial Paints',
+      step_order: 3,
+      status: 'pending',
+      progress: 0,
+    },
+    {
+      step_key: 'fine_details',
+      step_label: 'Fine Details',
+      step_order: 4,
+      status: 'pending',
+      progress: 0,
+    },
+    {
+      step_key: 'base_rim',
+      step_label: 'Base & Rim',
+      step_order: 5,
+      status: 'pending',
+      progress: 0,
+    },
+    {
+      step_key: 'done',
+      step_label: 'Done',
+      step_order: 6,
+      status: 'pending',
+      progress: 0,
+    },
   ]
 
-  const stageRows = stages.map((stage) => ({
+  const newStepRows = progressSteps.map((step) => ({
     unit_id: insertedUnit.id,
-    stage_key: stage,
+    step_key: step.step_key,
+    step_label: step.step_label,
+    step_order: step.step_order,
+    status: step.status,
+    progress: step.progress,
+  }))
+
+  const { error: newStepsError } = await supabase
+    .from('unit_progress_steps')
+    .insert(newStepRows)
+
+  if (newStepsError) {
+    console.error('Error creating unit progress steps:', newStepsError)
+  }
+
+  const legacyStageRows = progressSteps.map((step) => ({
+    unit_id: insertedUnit.id,
+    stage_key: step.step_key,
     is_done: false,
   }))
 
-  const { error: stageError } = await supabase
+  const { error: legacyStageError } = await supabase
     .from('unit_stage_progress')
-    .insert(stageRows)
+    .insert(legacyStageRows)
 
-  if (stageError) {
-    console.error('Error creating unit stages:', stageError)
+  if (legacyStageError) {
+    console.error('Error creating legacy unit stages:', legacyStageError)
   }
 
   revalidatePath(`/projects/${projectId}`)
 }
-async function toggleStage(formData: FormData) {
-  'use server'
 
-  const stageId = formData.get('stageId')?.toString()
-  const current = formData.get('current') === 'true'
-  const projectId = formData.get('projectId')?.toString()
-
-  if (!stageId || !projectId) return
-
-  const { error } = await supabase
-    .from('unit_stage_progress')
-    .update({ is_done: !current })
-    .eq('id', stageId)
-
-  if (error) {
-    console.error('Error toggling stage:', error)
-  }
-
-  revalidatePath(`/projects/${projectId}`)
-}
 async function setFeaturedUnit(formData: FormData) {
   'use server'
 
+  const supabase = await createClient()
   const unitId = formData.get('unitId')?.toString()
   const projectId = formData.get('projectId')?.toString()
 
@@ -108,12 +148,190 @@ async function setFeaturedUnit(formData: FormData) {
   revalidatePath(`/projects/${projectId}`)
   revalidatePath('/dashboard')
 }
+
+async function uploadProjectImage(formData: FormData) {
+  'use server'
+
+  const supabase = await createClient()
+  const projectId = formData.get('projectId')?.toString()
+  const altText = formData.get('altText')?.toString().trim() || null
+  const file = formData.get('image') as File | null
+
+  if (!projectId || !file || file.size === 0) return
+
+  const fileExt = file.name.split('.').pop() || 'jpg'
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
+  const filePath = `projects/${projectId}/${fileName}`
+
+  const arrayBuffer = await file.arrayBuffer()
+  const fileBuffer = new Uint8Array(arrayBuffer)
+
+  const { error: uploadError } = await supabase.storage
+    .from('obsidian-images')
+    .upload(filePath, fileBuffer, {
+      contentType: file.type,
+      upsert: false,
+    })
+
+  if (uploadError) {
+    console.error('Error uploading project image:', uploadError)
+    throw new Error(`Upload failed: ${JSON.stringify(uploadError)}`)
+  }
+
+  const publicUrlResult = supabase.storage
+    .from('obsidian-images')
+    .getPublicUrl(filePath)
+
+  const publicUrl = publicUrlResult?.data?.publicUrl
+
+  if (!publicUrl) {
+    throw new Error('Could not generate public URL for uploaded image')
+  }
+
+  const { data: existingImages } = await supabase
+    .from('image_assets')
+    .select('id')
+    .eq('entity_type', 'project')
+    .eq('entity_id', projectId)
+
+  const isFirstImage = !existingImages || existingImages.length === 0
+
+  const { error: insertError } = await supabase
+    .from('image_assets')
+    .insert([
+      {
+        entity_type: 'project',
+        entity_id: projectId,
+        image_url: publicUrl,
+        alt_text: altText,
+        is_featured: isFirstImage,
+        is_primary: isFirstImage,
+      },
+    ])
+
+  if (insertError) {
+    console.error('Error saving project image asset:', insertError)
+    throw new Error(`Image asset save failed: ${JSON.stringify(insertError)}`)
+  }
+
+  revalidatePath(`/projects/${projectId}`)
+}
+
+async function setFeaturedProjectImage(formData: FormData) {
+  'use server'
+
+  const supabase = await createClient()
+  const assetId = formData.get('assetId')?.toString()
+  const projectId = formData.get('projectId')?.toString()
+
+  if (!assetId || !projectId) return
+
+  const { error: clearError } = await supabase
+    .from('image_assets')
+    .update({
+      is_featured: false,
+      is_primary: false,
+    })
+    .eq('entity_type', 'project')
+    .eq('entity_id', projectId)
+
+  if (clearError) {
+    console.error('Error clearing project featured image:', clearError)
+    return
+  }
+
+  const { error: setError } = await supabase
+    .from('image_assets')
+    .update({
+      is_featured: true,
+      is_primary: true,
+    })
+    .eq('id', assetId)
+
+  if (setError) {
+    console.error('Error setting project featured image:', setError)
+    return
+  }
+
+  revalidatePath(`/projects/${projectId}`)
+}
+
+async function deleteProjectImage(formData: FormData) {
+  'use server'
+
+  const supabase = await createClient()
+  const assetId = formData.get('assetId')?.toString()
+  const projectId = formData.get('projectId')?.toString()
+
+  if (!assetId || !projectId) return
+
+  const { data: imageToDelete, error: fetchError } = await supabase
+    .from('image_assets')
+    .select('*')
+    .eq('id', assetId)
+    .single()
+
+  if (fetchError || !imageToDelete) {
+    console.error('Error fetching project image:', fetchError)
+    return
+  }
+
+  const wasFeatured = !!imageToDelete.is_featured
+
+  const { error: deleteError } = await supabase
+    .from('image_assets')
+    .delete()
+    .eq('id', assetId)
+
+  if (deleteError) {
+    console.error('Error deleting project image:', deleteError)
+    return
+  }
+
+  if (wasFeatured) {
+    const { data: remainingImages } = await supabase
+      .from('image_assets')
+      .select('id')
+      .eq('entity_type', 'project')
+      .eq('entity_id', projectId)
+      .order('created_at', { ascending: true })
+
+    const nextImage = remainingImages?.[0]
+
+    if (nextImage) {
+      await supabase
+        .from('image_assets')
+        .update({
+          is_featured: true,
+          is_primary: true,
+        })
+        .eq('id', nextImage.id)
+    }
+  }
+
+  revalidatePath(`/projects/${projectId}`)
+}
+
 export default async function ProjectDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
   const { id } = await params
+
+  if (!id || id === 'undefined') {
+    throw new Error('Missing or invalid project id in route params')
+  }
 
   const { data: project, error: projectError } = await supabase
     .from('projects')
@@ -125,184 +343,82 @@ export default async function ProjectDetailPage({
     .from('units')
     .select('*')
     .eq('project_id', id)
+    .eq('is_active', true)
     .order('created_at', { ascending: false })
 
+  const unitIds = (units ?? [])
+    .map((unit) => unit.id)
+    .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
+
+  const { data: allStages, error: allStagesError } = unitIds.length
+    ? await supabase
+        .from('unit_stage_progress')
+        .select('*')
+        .in('unit_id', unitIds)
+    : { data: [], error: null }
+
+  const { data: allUnitImages, error: allUnitImagesError } = unitIds.length
+    ? await supabase
+        .from('image_assets')
+        .select('*')
+        .eq('entity_type', 'unit')
+        .in('entity_id', unitIds)
+        .order('created_at', { ascending: true })
+    : { data: [], error: null }
+
+  const { data: projectImages, error: projectImagesError } = await supabase
+    .from('image_assets')
+    .select('*')
+    .eq('entity_type', 'project')
+    .eq('entity_id', id)
+    .order('created_at', { ascending: true })
+
+  const stagesByUnitId = (allStages ?? []).reduce<Record<string, any[]>>(
+    (acc, stage) => {
+      if (!acc[stage.unit_id]) {
+        acc[stage.unit_id] = []
+      }
+      acc[stage.unit_id].push(stage)
+      return acc
+    },
+    {}
+  )
+
+  const imagesByUnitId = (allUnitImages ?? []).reduce<Record<string, any[]>>(
+    (acc, image) => {
+      if (!acc[image.entity_id]) {
+        acc[image.entity_id] = []
+      }
+      acc[image.entity_id].push(image)
+      return acc
+    },
+    {}
+  )
+
+  const featuredProjectImage =
+    (projectImages ?? []).find((image) => image.is_featured) ||
+    (projectImages ?? [])[0] ||
+    null
+
   return (
-    <main className="min-h-screen bg-black p-6 pb-28 text-white">
-      <div className="mx-auto max-w-xl">
-            <NavBar />
-        <a href="/" className="text-cyan-400">
-          ← Back to Projects
-        </a>
-
-        {projectError ? (
-          <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
-            {JSON.stringify(projectError, null, 2)}
-          </pre>
-        ) : (
-          <div className="mt-4 rounded border border-neutral-700 p-4">
-            <h1 className="text-2xl font-bold">{project?.name}</h1>
-            <p className="mt-2 text-neutral-300">
-              {project?.description || 'No description'}
-            </p>
-          </div>
-        )}
-
-        <section className="mt-6 rounded border border-neutral-700 p-4">
-          <h2 className="text-xl font-semibold">Add Unit</h2>
-
-          <form action={addUnit} className="mt-4 space-y-3">
-            <input type="hidden" name="projectId" value={id} />
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Unit Name
-              </label>
-              <input
-                name="name"
-                type="text"
-                required
-                className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
-                placeholder="e.g. Skeleton Warriors"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Model Count
-              </label>
-              <input
-                name="modelCount"
-                type="number"
-                min="1"
-                defaultValue="1"
-                className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Notes
-              </label>
-              <textarea
-                name="notes"
-                rows={3}
-                className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
-                placeholder="Optional notes"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="rounded bg-cyan-500 px-4 py-2 font-medium text-black"
-            >
-              Add Unit
-            </button>
-          </form>
-        </section>
-
-<section className="mt-6">
-  <h2 className="text-xl font-semibold">Units</h2>
-
-  {unitsError ? (
-    <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
-      {JSON.stringify(unitsError, null, 2)}
-    </pre>
-  ) : units && units.length > 0 ? (
-    <div className="mt-4 space-y-3">
-      {await Promise.all(
-        units.map(async (unit) => {
-          const { data: stages } = await supabase
-            .from('unit_stage_progress')
-            .select('*')
-            .eq('unit_id', unit.id)
-
-          const completed = stages?.filter((s) => s.is_done).length || 0
-          const total = stages?.length || 1
-          const percent = Math.round((completed / total) * 100)
-
-          return (
-            <div
-              key={unit.id}
-              className="rounded border border-neutral-700 p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold">{unit.name}</h3>
-
-                  <p className="text-sm text-neutral-400">
-                    Models: {unit.model_count}
-                  </p>
-
-                  <p className="text-sm text-neutral-500">
-                    {unit.notes || 'No notes'}
-                  </p>
-                </div>
-
-                <form action={setFeaturedUnit}>
-                  <input type="hidden" name="unitId" value={unit.id} />
-                  <input type="hidden" name="projectId" value={id} />
-
-                  <button
-                    type="submit"
-                    className={`rounded px-3 py-2 text-xs font-medium ${
-                      unit.is_featured
-                        ? 'bg-yellow-400 text-black'
-                        : 'bg-neutral-800 text-white'
-                    }`}
-                  >
-                    {unit.is_featured ? 'Featured' : 'Set Featured'}
-                  </button>
-                </form>
-              </div>
-
-              <div className="mt-3">
-                <div className="h-2 w-full rounded bg-neutral-800">
-                  <div
-                    className="h-2 rounded bg-cyan-500"
-                    style={{ width: `${percent}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {percent}% complete
-                </p>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {stages?.map((stage) => (
-                  <form key={stage.id} action={toggleStage}>
-                    <input type="hidden" name="stageId" value={stage.id} />
-                    <input
-                      type="hidden"
-                      name="current"
-                      value={stage.is_done.toString()}
-                    />
-                    <input type="hidden" name="projectId" value={id} />
-
-                    <button
-                      type="submit"
-                      className={`rounded px-2 py-1 text-xs ${
-                        stage.is_done
-                          ? 'bg-cyan-500 text-black'
-                          : 'bg-neutral-800 text-neutral-400'
-                      }`}
-                    >
-                      {stage.stage_key}
-                    </button>
-                  </form>
-                ))}
-              </div>
-            </div>
-          )
-        })
-      )}
-    </div>
-  ) : (
-    <p className="mt-4 text-neutral-400">No units yet.</p>
-  )}
-</section>
-
-      </div>
-    </main>
+    <ProjectDetailClient
+      project={project}
+      projectError={projectError}
+      projectId={id}
+      featuredProjectImage={featuredProjectImage}
+      projectImages={projectImages ?? []}
+      units={units ?? []}
+      unitsError={unitsError}
+      allStagesError={allStagesError}
+      allUnitImagesError={allUnitImagesError}
+      projectImagesError={projectImagesError}
+      stagesByUnitId={stagesByUnitId}
+      imagesByUnitId={imagesByUnitId}
+      addUnitAction={addUnit}
+      setFeaturedUnitAction={setFeaturedUnit}
+      uploadProjectImageAction={uploadProjectImage}
+      setFeaturedProjectImageAction={setFeaturedProjectImage}
+      deleteProjectImageAction={deleteProjectImage}
+    />
   )
 }
