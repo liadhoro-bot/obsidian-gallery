@@ -46,12 +46,13 @@ export default async function ProjectsPage() {
       throw new Error('Project name is required')
     }
 
-    const { error } = await supabase.from('projects').insert([
-      {
-        name,
-        description: descriptionRaw || null,
-      },
-    ])
+const { error } = await supabase.from('projects').insert([
+  {
+    user_id: user.id,
+    name,
+    description: descriptionRaw || null,
+  },
+])
 
     if (error) {
       throw new Error(error.message || 'Failed to create project')
@@ -60,7 +61,7 @@ export default async function ProjectsPage() {
     revalidatePath('/')
   }
 
-  const { data: projects, error: projectsError } = await supabase
+      const { data: projects, error: projectsError } = await supabase
     .from('projects')
     .select(`
       id,
@@ -68,6 +69,7 @@ export default async function ProjectsPage() {
       description,
       created_at
     `)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   if (projectsError) {
@@ -85,7 +87,7 @@ export default async function ProjectsPage() {
   > = {}
 
   if (projectIds.length > 0) {
-    const { data: images, error: imagesError } = await supabase
+            const { data: images, error: imagesError } = await supabase
       .from('image_assets')
       .select(`
         entity_id,
@@ -95,6 +97,7 @@ export default async function ProjectsPage() {
         created_at
       `)
       .eq('entity_type', 'project')
+      .eq('user_id', user.id)
       .in('entity_id', projectIds)
       .order('created_at', { ascending: true })
 

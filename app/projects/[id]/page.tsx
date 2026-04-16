@@ -9,6 +9,14 @@ async function addUnit(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
   const projectId = formData.get('projectId')?.toString()
   const name = formData.get('name')?.toString().trim()
   const modelCountValue = formData.get('modelCount')?.toString().trim()
@@ -22,6 +30,7 @@ async function addUnit(formData: FormData) {
     .from('units')
     .insert([
       {
+        user_id: user.id,
         project_id: projectId,
         name,
         model_count: Number.isNaN(modelCount) ? 1 : modelCount,
@@ -153,6 +162,15 @@ async function uploadProjectImage(formData: FormData) {
   'use server'
 
   const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
   const projectId = formData.get('projectId')?.toString()
   const altText = formData.get('altText')?.toString().trim() || null
   const file = formData.get('image') as File | null
@@ -200,6 +218,7 @@ async function uploadProjectImage(formData: FormData) {
     .from('image_assets')
     .insert([
       {
+        user_id: user.id,
         entity_type: 'project',
         entity_id: projectId,
         image_url: publicUrl,
@@ -337,12 +356,14 @@ export default async function ProjectDetailPage({
     .from('projects')
     .select('*')
     .eq('id', id)
+    .eq('user_id', user.id)
     .single()
 
   const { data: units, error: unitsError } = await supabase
     .from('units')
     .select('*')
     .eq('project_id', id)
+    .eq('user_id', user.id)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
 
@@ -362,6 +383,7 @@ export default async function ProjectDetailPage({
         .from('image_assets')
         .select('*')
         .eq('entity_type', 'unit')
+        .eq('user_id', user.id)
         .in('entity_id', unitIds)
         .order('created_at', { ascending: true })
     : { data: [], error: null }
@@ -371,6 +393,7 @@ export default async function ProjectDetailPage({
     .select('*')
     .eq('entity_type', 'project')
     .eq('entity_id', id)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: true })
 
   const stagesByUnitId = (allStages ?? []).reduce<Record<string, any[]>>(

@@ -12,23 +12,28 @@ export default async function DashboardPage() {
   if (!user) {
     redirect('/login')
   }
-  const { data: projects } = await supabase
+    const { data: projects } = await supabase
     .from('projects')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
 const { data: units } = await supabase
   .from('units')
   .select('*')
+  .eq('user_id', user.id)
   .eq('is_active', true)
 
-  const { data: recipes } = await supabase
+    const { data: recipes } = await supabase
     .from('recipes')
     .select('*')
+    .eq('user_id', user.id)
 
-  const { data: paints } = await supabase
-    .from('paints')
+    const { data: paints } = await supabase
+    .from('user_paint_ownership')
     .select('*')
+    .eq('user_id', user.id)
+    .eq('is_owned', true)
 
   const featuredUnits =
     units?.filter((unit) => unit.is_featured) || []
@@ -42,6 +47,7 @@ const { data: images } = await supabase
   .select('*')
   .eq('entity_type', 'unit')
   .eq('entity_id', unit.id)
+  .eq('user_id', user.id)
   .order('created_at', { ascending: true })
 
 const primaryImage =

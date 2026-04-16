@@ -47,10 +47,11 @@ export default async function RecipesPage() {
       throw new Error('Recipe name is required')
     }
 
-    const insertPayload = {
-      name,
-      description: descriptionRaw || null,
-    }
+const insertPayload = {
+  user_id: user.id,
+  name,
+  description: descriptionRaw || null,
+}
 
     const { data: newRecipe, error } = await supabase
       .from('recipes')
@@ -75,6 +76,7 @@ export default async function RecipesPage() {
       expert_tips,
       created_at
     `)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   if (recipesError) {
@@ -102,6 +104,7 @@ export default async function RecipesPage() {
         created_at
       `)
       .eq('entity_type', 'recipe')
+      .eq('user_id', user.id)
       .in('entity_id', recipeIds)
       .order('created_at', { ascending: true })
 

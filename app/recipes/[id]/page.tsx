@@ -422,6 +422,14 @@ async function uploadRecipeImage(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
   const recipeId = formData.get('recipeId')?.toString()
   const altText = formData.get('altText')?.toString().trim() || null
   const file = formData.get('image') as File | null
@@ -463,6 +471,7 @@ async function uploadRecipeImage(formData: FormData) {
 
   const { error: insertError } = await supabase.from('image_assets').insert([
     {
+      user_id: user.id,
       entity_type: 'recipe',
       entity_id: recipeId,
       image_url: publicUrl,
@@ -596,6 +605,7 @@ export default async function RecipeDetailPage({
     .from('recipes')
     .select('*')
     .eq('id', id)
+    .eq('user_id', user.id)
     .single()
 
   if (recipeError || !recipe) {
@@ -640,6 +650,7 @@ const { data: stepPaintLinks, error: stepPaintLinksError } =
     .select('*')
     .eq('entity_type', 'recipe')
     .eq('entity_id', id)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   const featuredImage =

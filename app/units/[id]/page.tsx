@@ -20,38 +20,40 @@ export default async function UnitDetailPage({ params }: PageProps) {
   }
 
   const { data: unit, error: unitError } = await supabase
-    .from('units')
-    .select(`
-      id,
-      name,
-      complexity,
-      unit_size,
-      is_active,
-      project_id
-    `)
-    .eq('id', id)
-    .single()
+  .from('units')
+  .select(`
+    id,
+    name,
+    complexity,
+    unit_size,
+    is_active,
+    project_id
+  `)
+  .eq('id', id)
+  .eq('user_id', user.id)
+  .single()
 
   if (unitError || !unit) {
     notFound()
   }
 
   const { data: images, error: imagesError } = await supabase
-    .from('image_assets')
-    .select(`
-      id,
-      image_url,
-      is_featured,
-      created_at,
-      sort_order,
-      alt_text,
-      storage_bucket,
-      storage_path
-    `)
-    .eq('entity_type', 'unit')
-    .eq('entity_id', id)
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: false })
+  .from('image_assets')
+  .select(`
+    id,
+    image_url,
+    is_featured,
+    created_at,
+    sort_order,
+    alt_text,
+    storage_bucket,
+    storage_path
+  `)
+  .eq('entity_type', 'unit')
+  .eq('entity_id', id)
+  .eq('user_id', user.id)
+  .order('sort_order', { ascending: true })
+  .order('created_at', { ascending: false })
 
   if (imagesError) {
     throw new Error(imagesError.message)
@@ -155,16 +157,17 @@ export default async function UnitDetailPage({ params }: PageProps) {
   }
 
     let { data: sessions, error: sessionsError } = await supabase
-    .from('unit_sessions')
-    .select(`
-      id,
-      started_at,
-      ended_at,
-      duration_seconds,
-      user_id
-    `)
-    .eq('unit_id', id)
-    .order('started_at', { ascending: false })
+  .from('unit_sessions')
+  .select(`
+    id,
+    started_at,
+    ended_at,
+    duration_seconds,
+    user_id
+  `)
+  .eq('unit_id', id)
+  .eq('user_id', user.id)
+  .order('started_at', { ascending: false })
 
   if (sessionsError) {
     throw new Error(sessionsError.message)
@@ -197,16 +200,17 @@ export default async function UnitDetailPage({ params }: PageProps) {
       }
 
       const reload = await supabase
-        .from('unit_sessions')
-        .select(`
-          id,
-          started_at,
-          ended_at,
-          duration_seconds,
-          user_id
-        `)
-        .eq('unit_id', id)
-        .order('started_at', { ascending: false })
+  .from('unit_sessions')
+  .select(`
+    id,
+    started_at,
+    ended_at,
+    duration_seconds,
+    user_id
+  `)
+  .eq('unit_id', id)
+  .eq('user_id', user.id)
+  .order('started_at', { ascending: false })
 
       if (reload.error) {
         throw new Error(reload.error.message)
