@@ -11,7 +11,7 @@ export default function MobileNav() {
         </a>
 
         <a
-          href="/"
+          href="/projects"
           className="flex flex-col items-center justify-center gap-1 py-3 text-xs text-white"
         >
           <span>🪖</span>

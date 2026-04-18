@@ -51,7 +51,7 @@ export default function ProjectDetailClient({
       <div className="mx-auto max-w-3xl">
         <MobileNav />
 
-        <a href="/" className="text-cyan-400">
+        <a href="/projects" className="text-cyan-400">
           ← Back to Projects
         </a>
 

@@ -1,22 +1,28 @@
-import { createClient } from '../../utils/supabase/server'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { createClient } from '../../utils/supabase/server'
 import MobileNav from '../components/MobileNav'
+import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import RecipesPageClient from './recipes-page-client'
+import RecipesStats from './recipes-stats'
+import RecipesFilters from './recipes-filters'
+import RecipesList from './recipes-list'
+import {
+  RecipesStatsSkeleton,
+  RecipesFiltersSkeleton,
+  RecipesListSkeleton,
+} from './recipes-skeletons'
 
-type RecipeWithImage = {
-  id: string
-  name: string
-  description: string | null
-  inventory_required: string | null
-  expert_tips: string | null
-  created_at: string
-  primaryImage: {
-    image_url: string
-    alt_text: string | null
-  } | null
+type PageProps = {
+  searchParams: Promise<{
+    q?: string
+  }>
 }
 
-export default async function RecipesPage() {
+export async function createRecipe(formData: FormData) {
+  'use server'
+
   const supabase = await createClient()
 
   const {
@@ -27,193 +33,70 @@ export default async function RecipesPage() {
     redirect('/login')
   }
 
-  async function createRecipe(formData: FormData) {
-    'use server'
+  const name = formData.get('name')?.toString().trim()
+  const description = formData.get('description')?.toString().trim() || null
 
-    const supabase = await createClient()
+  if (!name) {
+    throw new Error('Recipe name is required')
+  }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  const { error } = await supabase.from('recipes').insert({
+    name,
+    description,
+    user_id: user.id,
+  })
 
-    if (!user) {
-      redirect('/login')
-    }
+  if (error) {
+    throw new Error(error.message)
+  }
 
-    const name = formData.get('name')?.toString().trim()
-    const descriptionRaw = formData.get('description')?.toString().trim()
-
-    if (!name) {
-      throw new Error('Recipe name is required')
-    }
-
-const insertPayload = {
-  user_id: user.id,
-  name,
-  description: descriptionRaw || null,
+  revalidatePath('/recipes')
 }
 
-    const { data: newRecipe, error } = await supabase
-      .from('recipes')
-      .insert(insertPayload)
-      .select('id')
-      .single()
+export default async function RecipesPage({ searchParams }: PageProps) {
+  const supabase = await createClient()
 
-    if (error || !newRecipe) {
-      throw new Error(error?.message || 'Failed to create recipe')
-    }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-    redirect(`/recipes/${newRecipe.id}`)
+  if (!user) {
+    redirect('/login')
   }
 
-  const { data: recipes, error: recipesError } = await supabase
-    .from('recipes')
-    .select(`
-      id,
-      name,
-      description,
-      inventory_required,
-      expert_tips,
-      created_at
-    `)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  if (recipesError) {
-    throw new Error(recipesError.message)
-  }
-
-  const recipeIds = (recipes ?? []).map((recipe) => recipe.id)
-
-  let featuredImagesByRecipeId: Record<
-    string,
-    {
-      image_url: string
-      alt_text: string | null
-    }
-  > = {}
-
-  if (recipeIds.length > 0) {
-    const { data: images, error: imagesError } = await supabase
-      .from('image_assets')
-      .select(`
-        entity_id,
-        image_url,
-        alt_text,
-        is_featured,
-        created_at
-      `)
-      .eq('entity_type', 'recipe')
-      .eq('user_id', user.id)
-      .in('entity_id', recipeIds)
-      .order('created_at', { ascending: true })
-
-    if (imagesError) {
-      throw new Error(imagesError.message)
-    }
-
-    for (const recipeId of recipeIds) {
-      const recipeImages = (images ?? []).filter(
-        (image) => image.entity_id === recipeId
-      )
-
-      const primaryImage =
-        recipeImages.find((image) => image.is_featured) ||
-        recipeImages[0] ||
-        null
-
-      if (primaryImage) {
-        featuredImagesByRecipeId[recipeId] = {
-          image_url: primaryImage.image_url,
-          alt_text: primaryImage.alt_text,
-        }
-      }
-    }
-  }
-
-  const recipesWithImages: RecipeWithImage[] = (recipes ?? []).map((recipe) => ({
-    ...recipe,
-    primaryImage: featuredImagesByRecipeId[recipe.id] || null,
-  }))
+  const resolvedSearchParams = await searchParams
+  const q = resolvedSearchParams.q?.trim() || ''
 
   return (
     <main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-5xl">
         <MobileNav />
 
-        <header className="mb-6">
-          <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
-            Obsidian Gallery
-          </p>
-          <h1 className="mt-2 text-3xl font-bold">Recipes</h1>
-          <p className="mt-2 max-w-2xl text-sm text-neutral-400">
-            Save paint recipes and step-by-step miniature workflows.
-          </p>
+        <Suspense fallback={null}>
+          <DashboardTopBar />
+        </Suspense>
 
-          <div className="mt-4">
-            <RecipesPageClient createRecipeAction={createRecipe} />
-          </div>
-        </header>
+        <div className="mt-6">
+          <RecipesPageClient createRecipeAction={createRecipe} />
+        </div>
 
-        <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm uppercase tracking-wider text-cyan-400">
-                Recipe Library
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">All Recipes</h2>
-            </div>
-          </div>
+        <div className="mt-6">
+          <Suspense fallback={<RecipesStatsSkeleton />}>
+            <RecipesStats />
+          </Suspense>
+        </div>
 
-          {recipesWithImages.length > 0 ? (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {recipesWithImages.map((recipe) => (
-                <a
-                  key={recipe.id}
-                  href={`/recipes/${recipe.id}`}
-                  className="block rounded-2xl border border-neutral-800 bg-neutral-900/80 p-4 transition hover:border-cyan-500"
-                >
-                  <h3 className="text-lg font-semibold text-cyan-400">
-                    {recipe.name}
-                  </h3>
+        <div className="mt-6">
+          <Suspense fallback={<RecipesFiltersSkeleton />}>
+            <RecipesFilters q={q} />
+          </Suspense>
+        </div>
 
-                  {recipe.primaryImage ? (
-                    <div className="mt-3 overflow-hidden rounded-xl border border-neutral-800">
-                      <img
-                        src={recipe.primaryImage.image_url}
-                        alt={recipe.primaryImage.alt_text || recipe.name}
-                        className="h-40 w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950 text-sm text-neutral-500">
-                      No featured image
-                    </div>
-                  )}
-
-                  <p className="mt-3 line-clamp-2 text-sm text-neutral-400">
-                    {recipe.description || 'No description'}
-                  </p>
-
-                  <div className="mt-4 space-y-1 text-sm text-neutral-500">
-                    <p>
-                      Inventory:{' '}
-                      {recipe.inventory_required ? 'Added' : 'Not added'}
-                    </p>
-                    <p>
-                      Tips:{' '}
-                      {recipe.expert_tips ? 'Added' : 'Not added'}
-                    </p>
-                  </div>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-4 text-neutral-400">
-              No recipes yet. Create your first recipe to start building your library.
-            </p>
-          )}
-        </section>
+        <div className="mt-6">
+          <Suspense key={q} fallback={<RecipesListSkeleton />}>
+            <RecipesList q={q} />
+          </Suspense>
+        </div>
       </div>
     </main>
   )
