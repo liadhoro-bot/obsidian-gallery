@@ -4,6 +4,42 @@ import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 import RecipeDetailClient from './recipe-detail-client'
 
+function parsePaintSelection(rawValue: string) {
+  if (!rawValue) {
+    return {
+      paint_source: null,
+      paint_catalog_id: null,
+      custom_paint_id: null,
+    }
+  }
+
+  if (rawValue.includes(':')) {
+    const [source, id] = rawValue.split(':')
+
+    if (source === 'catalog') {
+      return {
+        paint_source: 'catalog',
+        paint_catalog_id: id,
+        custom_paint_id: null,
+      }
+    }
+
+    if (source === 'custom') {
+      return {
+        paint_source: 'custom',
+        paint_catalog_id: null,
+        custom_paint_id: id,
+      }
+    }
+  }
+
+  return {
+    paint_source: 'catalog',
+    paint_catalog_id: rawValue,
+    custom_paint_id: null,
+  }
+}
+
 async function updateRecipeHeader(formData: FormData) {
   'use server'
 
@@ -82,11 +118,54 @@ async function updateRecipeTips(formData: FormData) {
   revalidatePath(`/recipes/${recipeId}`)
 }
 
-async function addRecipeStep(formData: FormData) {
+async function createCustomPaint(formData: FormData) {
   'use server'
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return
+
+  const recipeId = formData.get('recipeId')?.toString()
+  const name = formData.get('name')?.toString().trim()
+  const manufacturer = formData.get('manufacturer')?.toString().trim() || null
+  const series = formData.get('series')?.toString().trim() || null
+  const paintType = formData.get('paintType')?.toString().trim() || null
+  const colorHex = formData.get('colorHex')?.toString().trim() || null
+
+  if (!recipeId || !name) return
+
+  const { error } = await supabase.from('paints').insert([
+    {
+      user_id: user.id,
+      name,
+      manufacturer,
+      series,
+      paint_type: paintType,
+      color_hex: colorHex,
+    },
+  ])
+
+  if (error) {
+    console.error('Error creating custom paint:', error)
+    return
+  }
+
+  revalidatePath(`/recipes/${recipeId}`)
+}
+
+async function addRecipeStep(formData: FormData) {
+  'use server'
+
+  const supabase = await createClient()
+const {
+  data: { user },
+} = await supabase.auth.getUser()
+
+if (!user) return
   const recipeId = formData.get('recipeId')?.toString()
   const title = formData.get('title')?.toString().trim()
   const instructions = formData.get('instructions')?.toString().trim()
@@ -120,51 +199,65 @@ async function addRecipeStep(formData: FormData) {
       : 1
 
   const { data: insertedStep, error: stepInsertError } = await supabase
-    .from('recipe_steps')
-    .insert([
-      {
-        recipe_id: recipeId,
-        step_number: nextStepNumber,
-        title,
-        instructions,
-      },
-    ])
-    .select()
-    .single()
+  .from('recipe_steps')
+  .insert([
+    {
+      recipe_id: recipeId,
+      user_id: user.id,
+      step_number: nextStepNumber,
+      title,
+      instructions,
+    },
+  ])
+  .select()
+  .single()
 
   if (stepInsertError || !insertedStep) {
     console.error('Error adding recipe step:', stepInsertError)
     return
   }
 
+  const paint1 = parsePaintSelection(paintId1)
+  const paint2 = parsePaintSelection(paintId2)
+  const paint3 = parsePaintSelection(paintId3)
+
   const stepPaintsToInsert = []
 
   if (paintId1) {
-    stepPaintsToInsert.push({
-      recipe_step_id: insertedStep.id,
-      paint_id: paintId1,
-      paint_order: 1,
-      ratio_text: ratio1,
-    })
-  }
+  stepPaintsToInsert.push({
+    recipe_step_id: insertedStep.id,
+    user_id: user.id,
+    paint_source: paint1.paint_source,
+    paint_catalog_id: paint1.paint_catalog_id,
+    custom_paint_id: paint1.custom_paint_id,
+    paint_order: 1,
+    ratio_text: ratio1,
+  })
+}
 
   if (paintId2) {
-    stepPaintsToInsert.push({
-      recipe_step_id: insertedStep.id,
-      paint_id: paintId2,
-      paint_order: 2,
-      ratio_text: ratio2,
-    })
-  }
+  stepPaintsToInsert.push({
+    recipe_step_id: insertedStep.id,
+    user_id: user.id,
+    paint_source: paint2.paint_source,
+    paint_catalog_id: paint2.paint_catalog_id,
+    custom_paint_id: paint2.custom_paint_id,
+    paint_order: 2,
+    ratio_text: ratio2,
+  })
+}
 
   if (paintId3) {
-    stepPaintsToInsert.push({
-      recipe_step_id: insertedStep.id,
-      paint_id: paintId3,
-      paint_order: 3,
-      ratio_text: ratio3,
-    })
-  }
+  stepPaintsToInsert.push({
+    recipe_step_id: insertedStep.id,
+    user_id: user.id,
+    paint_source: paint3.paint_source,
+    paint_catalog_id: paint3.paint_catalog_id,
+    custom_paint_id: paint3.custom_paint_id,
+    paint_order: 3,
+    ratio_text: ratio3,
+  })
+}
 
   if (stepPaintsToInsert.length > 0) {
     const { error: stepPaintsError } = await supabase
@@ -173,16 +266,22 @@ async function addRecipeStep(formData: FormData) {
 
     if (stepPaintsError) {
       console.error('Error adding step paints:', stepPaintsError)
-      return
     }
   }
 
   revalidatePath(`/recipes/${recipeId}`)
 }
+
 async function updateRecipeStep(formData: FormData) {
   'use server'
 
   const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return
 
   const recipeId = formData.get('recipeId')?.toString()
   const stepId = formData.get('stepId')?.toString()
@@ -197,6 +296,19 @@ async function updateRecipeStep(formData: FormData) {
 
   const paintId3 = formData.get('paintId3')?.toString() || ''
   const ratio3 = formData.get('ratio3')?.toString().trim() || null
+
+  console.log('updateRecipeStep submitted values:', {
+    recipeId,
+    stepId,
+    title,
+    instructions,
+    paintId1,
+    ratio1,
+    paintId2,
+    ratio2,
+    paintId3,
+    ratio3,
+  })
 
   if (!recipeId || !stepId || !title || !instructions) return
 
@@ -223,44 +335,65 @@ async function updateRecipeStep(formData: FormData) {
     return
   }
 
+  const paint1 = parsePaintSelection(paintId1)
+  const paint2 = parsePaintSelection(paintId2)
+  const paint3 = parsePaintSelection(paintId3)
+
   const stepPaintsToInsert = []
 
   if (paintId1) {
-    stepPaintsToInsert.push({
-      recipe_step_id: stepId,
-      paint_id: paintId1,
-      paint_order: 1,
-      ratio_text: ratio1,
-    })
-  }
+  stepPaintsToInsert.push({
+    recipe_step_id: stepId,
+    user_id: user.id,
+    paint_source: paint1.paint_source,
+    paint_catalog_id: paint1.paint_catalog_id,
+    custom_paint_id: paint1.custom_paint_id,
+    paint_order: 1,
+    ratio_text: ratio1,
+  })
+}
 
   if (paintId2) {
-    stepPaintsToInsert.push({
-      recipe_step_id: stepId,
-      paint_id: paintId2,
-      paint_order: 2,
-      ratio_text: ratio2,
-    })
-  }
+  stepPaintsToInsert.push({
+    recipe_step_id: stepId,
+    user_id: user.id,
+    paint_source: paint2.paint_source,
+    paint_catalog_id: paint2.paint_catalog_id,
+    custom_paint_id: paint2.custom_paint_id,
+    paint_order: 2,
+    ratio_text: ratio2,
+  })
+}
 
   if (paintId3) {
-    stepPaintsToInsert.push({
-      recipe_step_id: stepId,
-      paint_id: paintId3,
-      paint_order: 3,
-      ratio_text: ratio3,
-    })
-  }
+  stepPaintsToInsert.push({
+    recipe_step_id: stepId,
+    user_id: user.id,
+    paint_source: paint3.paint_source,
+    paint_catalog_id: paint3.paint_catalog_id,
+    custom_paint_id: paint3.custom_paint_id,
+    paint_order: 3,
+    ratio_text: ratio3,
+  })
+}
+
+  console.log('stepPaintsToInsert before insert:', stepPaintsToInsert)
 
   if (stepPaintsToInsert.length > 0) {
-    const { error: insertPaintLinksError } = await supabase
-      .from('recipe_step_paints')
-      .insert(stepPaintsToInsert)
+    const { data: insertedPaintLinks, error: insertPaintLinksError } =
+      await supabase
+        .from('recipe_step_paints')
+        .insert(stepPaintsToInsert)
+        .select()
 
     if (insertPaintLinksError) {
       console.error('Error re-adding recipe step paints:', insertPaintLinksError)
       return
     }
+
+    console.log('Inserted recipe_step_paints rows:', insertedPaintLinks)
+  } else {
+    console.log('No paint rows to insert. stepPaintsToInsert is empty.')
   }
 
   revalidatePath(`/recipes/${recipeId}`)
@@ -298,7 +431,7 @@ async function deleteRecipeStep(formData: FormData) {
   }
 
   for (let i = 0; i < (remainingSteps || []).length; i++) {
-    const step = remainingSteps![i]
+    const step = remainingSteps[i]
     const newStepNumber = i + 1
 
     if (step.step_number !== newStepNumber) {
@@ -316,6 +449,7 @@ async function deleteRecipeStep(formData: FormData) {
 
   revalidatePath(`/recipes/${recipeId}`)
 }
+
 async function moveRecipeStep(formData: FormData) {
   'use server'
 
@@ -398,7 +532,7 @@ async function moveRecipeStep(formData: FormData) {
   }
 
   for (let i = 0; i < (orderedSteps || []).length; i++) {
-    const step = orderedSteps![i]
+    const step = orderedSteps[i]
     const expectedStepNumber = i + 1
 
     if (step.step_number !== expectedStepNumber) {
@@ -489,6 +623,7 @@ async function uploadRecipeImage(formData: FormData) {
 
   revalidatePath(`/recipes/${recipeId}`)
 }
+
 async function setFeaturedRecipeImage(formData: FormData) {
   'use server'
 
@@ -618,32 +753,187 @@ export default async function RecipeDetailPage({
     .eq('recipe_id', id)
     .order('step_number', { ascending: true })
 
+  if (stepsError) {
+    console.error('Error fetching recipe steps:', stepsError)
+  }
+
   const stepIds = steps?.map((step) => step.id) || []
 
-const { data: stepPaintLinks, error: stepPaintLinksError } =
-  stepIds.length > 0
-    ? await supabase
-        .from('recipe_step_paints')
-        .select(`
-          id,
-          recipe_step_id,
-          paint_order,
-          ratio_text,
-          paint:paints (
+  const { data: rawStepPaintLinks, error: stepPaintLinksError } =
+    stepIds.length > 0
+      ? await supabase
+          .from('recipe_step_paints')
+          .select(`
             id,
-            name,
-            manufacturer,
-            color_hex
-          )
-        `)
-        .in('recipe_step_id', stepIds)
-        .order('paint_order', { ascending: true })
-    : { data: [], error: null }
+            recipe_step_id,
+            paint_order,
+            ratio_text,
+            paint_source,
+            paint_catalog_id,
+            custom_paint_id,
+            catalog_paint:paint_catalog_id (
+              id,
+              brand,
+              line,
+              name,
+              hex_approx,
+              swatch_image_url
+            ),
+            custom_paint:custom_paint_id (
+              id,
+              name,
+              manufacturer,
+              series,
+              color_hex,
+              paint_type
+            )
+          `)
+          .in('recipe_step_id', stepIds)
+          .order('paint_order', { ascending: true })
+      : { data: [], error: null }
 
-  const { data: paints } = await supabase
-    .from('paints')
-    .select('*')
+  if (stepPaintLinksError) {
+    console.error('Error fetching recipe step paint links:', stepPaintLinksError)
+  }
+
+  const { data: paintsCatalog, error: paintsCatalogError } = await supabase
+    .from('paint_catalog')
+    .select(`
+      id,
+      brand,
+      line,
+      name,
+      sku,
+      swatch_image_url,
+      hex_approx,
+      finish,
+      paint_type
+    `)
+    .eq('is_active', true)
+    .order('brand', { ascending: true })
+    .order('line', { ascending: true })
     .order('name', { ascending: true })
+
+  if (paintsCatalogError) {
+    console.error('Error fetching paint catalog:', paintsCatalogError)
+  }
+
+  const { data: ownershipRows, error: ownershipError } = await supabase
+    .from('user_paint_ownership')
+    .select('paint_catalog_id, is_owned')
+    .eq('user_id', user.id)
+
+  if (ownershipError) {
+    console.error('Error fetching user paint ownership:', ownershipError)
+  }
+
+  const { data: customPaintRows, error: customPaintRowsError } = await supabase
+    .from('paints')
+    .select(`
+      id,
+      name,
+      manufacturer,
+      series,
+      paint_type,
+      color_hex
+    `)
+    .eq('user_id', user.id)
+    .order('manufacturer', { ascending: true })
+    .order('series', { ascending: true })
+    .order('name', { ascending: true })
+
+  if (customPaintRowsError) {
+    console.error('Error fetching custom paints:', customPaintRowsError)
+  }
+
+  const ownedPaintIds = new Set(
+    (ownershipRows || [])
+      .filter((row) => row.is_owned)
+      .map((row) => row.paint_catalog_id)
+  )
+
+  const catalogPaintOptions =
+    paintsCatalog?.map((paint) => ({
+      id: paint.id,
+      source: 'catalog' as const,
+      brand: paint.brand,
+      line: paint.line,
+      name: paint.name,
+      sku: paint.sku,
+      swatch_image_url: paint.swatch_image_url,
+      hex_approx: paint.hex_approx,
+      paint_type: paint.paint_type,
+      is_owned: ownedPaintIds.has(paint.id),
+    })) || []
+
+  const customPaintOptions =
+    customPaintRows?.map((paint) => ({
+      id: paint.id,
+      source: 'custom' as const,
+      brand: paint.manufacturer,
+      line: paint.series,
+      name: paint.name,
+      sku: null,
+      swatch_image_url: null,
+      hex_approx: paint.color_hex,
+      paint_type: paint.paint_type,
+      is_owned: true,
+    })) || []
+
+  const paints = [...catalogPaintOptions, ...customPaintOptions].sort((a, b) => {
+    const brandA = a.brand || ''
+    const brandB = b.brand || ''
+    const lineA = a.line || ''
+    const lineB = b.line || ''
+    const nameA = a.name || ''
+    const nameB = b.name || ''
+
+    return (
+      brandA.localeCompare(brandB) ||
+      lineA.localeCompare(lineB) ||
+      nameA.localeCompare(nameB)
+    )
+  })
+
+  const stepPaintLinks =
+    rawStepPaintLinks?.map((link) => {
+      const catalogPaint = Array.isArray(link.catalog_paint)
+        ? link.catalog_paint[0]
+        : link.catalog_paint
+
+      const customPaint = Array.isArray(link.custom_paint)
+        ? link.custom_paint[0]
+        : link.custom_paint
+
+      const paint =
+        link.paint_source === 'custom' && customPaint
+          ? {
+              id: customPaint.id,
+              brand: customPaint.manufacturer,
+              line: customPaint.series,
+              name: customPaint.name,
+              hex_approx: customPaint.color_hex,
+              swatch_image_url: null,
+            }
+          : catalogPaint
+            ? {
+                id: catalogPaint.id,
+                brand: catalogPaint.brand,
+                line: catalogPaint.line,
+                name: catalogPaint.name,
+                hex_approx: catalogPaint.hex_approx,
+                swatch_image_url: catalogPaint.swatch_image_url,
+              }
+            : null
+
+      return {
+        id: link.id,
+        recipe_step_id: link.recipe_step_id,
+        paint_order: link.paint_order,
+        ratio_text: link.ratio_text,
+        paint,
+      }
+    }) || []
 
   const { data: recipeImages, error: recipeImagesError } = await supabase
     .from('image_assets')
@@ -653,10 +943,14 @@ const { data: stepPaintLinks, error: stepPaintLinksError } =
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
+  if (recipeImagesError) {
+    console.error('Error fetching recipe images:', recipeImagesError)
+  }
+
   const featuredImage =
     recipeImages?.find((img) => img.is_featured) || recipeImages?.[0] || null
 
-   return (
+  return (
     <main className="min-h-screen bg-black pb-28 text-white">
       <MobileNav />
 
@@ -666,24 +960,25 @@ const { data: stepPaintLinks, error: stepPaintLinksError } =
         </a>
       </div>
 
-            <RecipeDetailClient
-  recipe={recipe}
-  steps={steps || []}
-  stepPaintLinks={stepPaintLinks || []}
-  recipeImages={recipeImages || []}
-  featuredImage={featuredImage}
-  paints={paints || []}
-  updateRecipeHeaderAction={updateRecipeHeader}
-  updateRecipeInventoryAction={updateRecipeInventory}
-  updateRecipeTipsAction={updateRecipeTips}
-  addRecipeStepAction={addRecipeStep}
-  updateRecipeStepAction={updateRecipeStep}
-  deleteRecipeStepAction={deleteRecipeStep}
-  moveRecipeStepAction={moveRecipeStep}
-  uploadRecipeImageAction={uploadRecipeImage}
-  setFeaturedRecipeImageAction={setFeaturedRecipeImage}
-  deleteRecipeImageAction={deleteRecipeImage}
-/>
+      <RecipeDetailClient
+        recipe={recipe}
+        steps={steps || []}
+        stepPaintLinks={stepPaintLinks}
+        recipeImages={recipeImages || []}
+        featuredImage={featuredImage}
+        paints={paints}
+        updateRecipeHeaderAction={updateRecipeHeader}
+        updateRecipeInventoryAction={updateRecipeInventory}
+        updateRecipeTipsAction={updateRecipeTips}
+        addRecipeStepAction={addRecipeStep}
+        updateRecipeStepAction={updateRecipeStep}
+        deleteRecipeStepAction={deleteRecipeStep}
+        moveRecipeStepAction={moveRecipeStep}
+        uploadRecipeImageAction={uploadRecipeImage}
+        setFeaturedRecipeImageAction={setFeaturedRecipeImage}
+        deleteRecipeImageAction={deleteRecipeImage}
+        createCustomPaintAction={createCustomPaint}
+      />
     </main>
   )
 }
