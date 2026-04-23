@@ -1,13 +1,77 @@
 import { createClient } from '../../utils/supabase/server'
 
+const USER_TIMEZONE = 'Asia/Jerusalem'
+
 function formatDuration(totalSeconds: number) {
   const totalHours = Math.floor(totalSeconds / 3600)
+  return `${totalHours}h`
+}
 
-  if (totalHours < 100) {
-    return `${totalHours}h`
+function formatTimeSince(dateString: string | null) {
+  if (!dateString) {
+    return '—'
   }
 
-  return `${totalHours}h`
+  const then = new Date(dateString)
+  const now = new Date()
+
+  const diffMs = now.getTime() - then.getTime()
+
+  if (diffMs <= 0) {
+    return '0d 0h'
+  }
+
+  const totalHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const days = Math.floor(totalHours / 24)
+  const hours = totalHours % 24
+
+  return `${days}d ${hours}h`
+}
+
+function getDateKeyInTimezone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+
+  const year = parts.find((part) => part.type === 'year')?.value
+  const month = parts.find((part) => part.type === 'month')?.value
+  const day = parts.find((part) => part.type === 'day')?.value
+
+  return `${year}-${month}-${day}`
+}
+
+function getPaintStreak(
+  sessions: Array<{ created_at: string | null; duration_seconds: number | null }>,
+  timeZone: string
+) {
+  const qualifyingDayKeys = new Set(
+    sessions
+      .filter((session) => (session.duration_seconds ?? 0) >= 60)
+      .map((session) => {
+        if (!session.created_at) return null
+        return getDateKeyInTimezone(new Date(session.created_at), timeZone)
+      })
+      .filter((dayKey): dayKey is string => Boolean(dayKey))
+  )
+
+  let streak = 0
+  const cursor = new Date()
+
+  while (true) {
+    const dayKey = getDateKeyInTimezone(cursor, timeZone)
+
+    if (!qualifyingDayKeys.has(dayKey)) {
+      break
+    }
+
+    streak += 1
+    cursor.setDate(cursor.getDate() - 1)
+  }
+
+  return `${streak}d`
 }
 
 export default async function DashboardMetadataGrid() {
@@ -49,20 +113,25 @@ export default async function DashboardMetadataGrid() {
 
     supabase
       .from('unit_sessions')
-      .select('duration_seconds')
-      .eq('user_id', user.id),
+      .select('duration_seconds, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
   ])
 
   const totalUnits = totalUnitsResult.count ?? 0
   const recentUnits = recentUnitsResult.count ?? 0
   const ownedColors = ownedColorsResult.count ?? 0
 
-  const totalSeconds =
-    sessionsResult.data?.reduce((sum, session) => {
-      return sum + (session.duration_seconds ?? 0)
-    }, 0) ?? 0
+  const sessions = sessionsResult.data ?? []
+
+  const totalSeconds = sessions.reduce((sum, session) => {
+    return sum + (session.duration_seconds ?? 0)
+  }, 0)
 
   const timeLogged = formatDuration(totalSeconds)
+  const lastSessionAt = sessions[0]?.created_at ?? null
+  const timeSinceLastSession = formatTimeSince(lastSessionAt)
+  const paintStreak = getPaintStreak(sessions, USER_TIMEZONE)
 
   const items = [
     {
@@ -84,6 +153,16 @@ export default async function DashboardMetadataGrid() {
       label: 'Colors in Vault',
       value: ownedColors.toString(),
       accent: 'text-white',
+    },
+    {
+      label: 'Since Last Session',
+      value: timeSinceLastSession,
+      accent: 'text-white',
+    },
+    {
+      label: 'Paint Streak',
+      value: paintStreak,
+      accent: 'text-orange-400',
     },
   ]
 

@@ -896,44 +896,45 @@ export default async function RecipeDetailPage({
   })
 
   const stepPaintLinks =
-    rawStepPaintLinks?.map((link) => {
-      const catalogPaint = Array.isArray(link.catalog_paint)
-        ? link.catalog_paint[0]
-        : link.catalog_paint
+  rawStepPaintLinks?.map((link) => {
+    const catalogPaint = Array.isArray(link.catalog_paint)
+      ? link.catalog_paint[0]
+      : link.catalog_paint
 
-      const customPaint = Array.isArray(link.custom_paint)
-        ? link.custom_paint[0]
-        : link.custom_paint
+    const customPaint = Array.isArray(link.custom_paint)
+      ? link.custom_paint[0]
+      : link.custom_paint
 
-      const paint =
-        link.paint_source === 'custom' && customPaint
+    const paint =
+      link.paint_source === 'custom' && customPaint
+        ? {
+            id: customPaint.id,
+            brand: customPaint.manufacturer,
+            line: customPaint.series,
+            name: customPaint.name,
+            hex_approx: customPaint.color_hex,
+            swatch_image_url: null,
+          }
+        : catalogPaint
           ? {
-              id: customPaint.id,
-              brand: customPaint.manufacturer,
-              line: customPaint.series,
-              name: customPaint.name,
-              hex_approx: customPaint.color_hex,
-              swatch_image_url: null,
+              id: catalogPaint.id,
+              brand: catalogPaint.brand,
+              line: catalogPaint.line,
+              name: catalogPaint.name,
+              hex_approx: catalogPaint.hex_approx,
+              swatch_image_url: catalogPaint.swatch_image_url,
             }
-          : catalogPaint
-            ? {
-                id: catalogPaint.id,
-                brand: catalogPaint.brand,
-                line: catalogPaint.line,
-                name: catalogPaint.name,
-                hex_approx: catalogPaint.hex_approx,
-                swatch_image_url: catalogPaint.swatch_image_url,
-              }
-            : null
+          : null
 
-      return {
-        id: link.id,
-        recipe_step_id: link.recipe_step_id,
-        paint_order: link.paint_order,
-        ratio_text: link.ratio_text,
-        paint,
-      }
-    }) || []
+    return {
+      id: link.id,
+      recipe_step_id: link.recipe_step_id,
+      paint_order: link.paint_order,
+      ratio_text: link.ratio_text,
+      paint_source: link.paint_source,
+      paint,
+    }
+  }) || []
 
   const { data: recipeImages, error: recipeImagesError } = await supabase
     .from('image_assets')
