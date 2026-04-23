@@ -33,15 +33,21 @@ export default function VaultFiltersForm({
     }
   }, [hasActiveFilters])
 
-  const lineOptions = useMemo(() => {
-    const filtered = allLines.filter((item) => {
-      if (!item.line) return false
-      if (!brandValue) return true
-      return item.brand === brandValue
-    })
+const lineOptions = useMemo(() => {
+  const filtered = allLines.filter((item) => {
+    if (!item.line) return false
+    if (!brandValue) return true
+    return item.brand === brandValue
+  })
 
-    return Array.from(new Set(filtered.map((item) => item.line).filter(Boolean))).sort()
-  }, [allLines, brandValue])
+  return Array.from(
+    new Set(
+      filtered
+        .map((item) => item.line)
+        .filter((line): line is string => Boolean(line))
+    )
+  ).sort((a, b) => a.localeCompare(b))
+}, [allLines, brandValue])
 
   useEffect(() => {
     if (!lineValue) return
