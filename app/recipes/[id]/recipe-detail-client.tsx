@@ -438,7 +438,13 @@ export default function RecipeDetailClient({
               <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
                 <h3 className="text-lg font-semibold text-white">Add Step</h3>
 
-                <form action={addRecipeStepAction} className="mt-4 space-y-4">
+                <form
+  action={async (formData) => {
+    await addRecipeStepAction(formData)
+    setIsAddingStep(false)
+  }}
+  className="mt-4 space-y-4"
+>
                   <input type="hidden" name="recipeId" value={recipe.id} />
 
                   <div>
@@ -459,12 +465,11 @@ export default function RecipeDetailClient({
                       Instructions
                     </label>
                     <textarea
-                      name="instructions"
-                      rows={4}
-                      required
-                      placeholder="Describe what to do in this step"
-                      className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-                    />
+  name="instructions"
+  rows={4}
+  placeholder="Optional instructions for this step"
+  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+/>
                   </div>
 
                   {[1, 2, 3].map((num) => (

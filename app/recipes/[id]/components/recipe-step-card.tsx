@@ -216,9 +216,13 @@ export default function RecipeStepCard({
 
         {isEditingThisStep ? (
           <form
-            action={updateRecipeStepAction}
-            className="mt-4 space-y-4 rounded-2xl border border-neutral-800 bg-black p-4"
-          >
+  action={async (formData) => {
+    await updateRecipeStepAction(formData)
+    setEditingStepId(null)
+    setDeleteConfirmStepId(null)
+  }}
+  className="mt-4 space-y-4 rounded-2xl border border-neutral-800 bg-black p-4"
+>
             <input type="hidden" name="recipeId" value={recipe.id} />
             <input type="hidden" name="stepId" value={step.id} />
 
@@ -240,12 +244,12 @@ export default function RecipeStepCard({
                 Instructions
               </label>
               <textarea
-                name="instructions"
-                rows={4}
-                required
-                defaultValue={step.instructions}
-                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-              />
+  name="instructions"
+  rows={4}
+  defaultValue={step.instructions || ''}
+  placeholder="Optional instructions for this step"
+  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+/>
             </div>
 
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
@@ -350,14 +354,16 @@ export default function RecipeStepCard({
               </div>
             ) : null}
 
-            <div className="mt-5 rounded-xl bg-black p-4">
-              <p className="text-xs uppercase tracking-wide text-neutral-500">
-                Instructions
-              </p>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">
-                {step.instructions}
-              </p>
-            </div>
+            {step.instructions?.trim() ? (
+  <div className="mt-5 rounded-xl bg-black p-4">
+    <p className="text-xs uppercase tracking-wide text-neutral-500">
+      Instructions
+    </p>
+    <p className="mt-2 text-sm leading-6 text-neutral-300">
+      {step.instructions}
+    </p>
+  </div>
+) : null}
           </>
         )}
       </div>

@@ -168,7 +168,7 @@ const {
 if (!user) return
   const recipeId = formData.get('recipeId')?.toString()
   const title = formData.get('title')?.toString().trim()
-  const instructions = formData.get('instructions')?.toString().trim()
+const instructions = formData.get('instructions')?.toString().trim() || null
 
   const paintId1 = formData.get('paintId1')?.toString() || ''
   const ratio1 = formData.get('ratio1')?.toString().trim() || null
@@ -179,8 +179,7 @@ if (!user) return
   const paintId3 = formData.get('paintId3')?.toString() || ''
   const ratio3 = formData.get('ratio3')?.toString().trim() || null
 
-  if (!recipeId || !title || !instructions) return
-
+if (!recipeId || !title) return
   const { data: existingSteps, error: fetchError } = await supabase
     .from('recipe_steps')
     .select('step_number')
@@ -286,7 +285,7 @@ async function updateRecipeStep(formData: FormData) {
   const recipeId = formData.get('recipeId')?.toString()
   const stepId = formData.get('stepId')?.toString()
   const title = formData.get('title')?.toString().trim()
-  const instructions = formData.get('instructions')?.toString().trim()
+const instructions = formData.get('instructions')?.toString().trim() || null
 
   const paintId1 = formData.get('paintId1')?.toString() || ''
   const ratio1 = formData.get('ratio1')?.toString().trim() || null
@@ -310,14 +309,14 @@ async function updateRecipeStep(formData: FormData) {
     ratio3,
   })
 
-  if (!recipeId || !stepId || !title || !instructions) return
+  if (!recipeId || !stepId || !title) return
 
-  const { error: stepUpdateError } = await supabase
-    .from('recipe_steps')
-    .update({
-      title,
-      instructions,
-    })
+const { error: stepUpdateError } = await supabase
+  .from('recipe_steps')
+  .update({
+    title,
+    instructions,
+  })
     .eq('id', stepId)
 
   if (stepUpdateError) {
