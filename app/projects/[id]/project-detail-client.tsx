@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import MobileNav from '../../components/MobileNav'
 
 type Props = {
   project: any
@@ -47,11 +46,10 @@ export default function ProjectDetailClient({
   const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)
 
   return (
-    <main className="min-h-screen bg-black p-6 pb-28 text-white">
-      <div className="mx-auto max-w-3xl">
-        <MobileNav />
+  <div className="w-full">
 
-        <a href="/projects" className="text-cyan-400">
+        <div>
+  <a href="/projects" className="text-cyan-400 text-sm">
           ← Back to Projects
         </a>
 
@@ -175,7 +173,7 @@ export default function ProjectDetailClient({
               {JSON.stringify(unitsError, null, 2)}
             </pre>
           ) : units && units.length > 0 ? (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 flex flex-col gap-4">
               {allStagesError || allUnitImagesError ? (
                 <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
                   {JSON.stringify(
@@ -438,7 +436,8 @@ export default function ProjectDetailClient({
             </p>
           )}
         </section>
+              </div>
+
       </div>
-    </main>
   )
 }

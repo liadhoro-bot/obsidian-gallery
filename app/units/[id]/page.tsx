@@ -1,3 +1,6 @@
+import { Suspense } from 'react'
+import MobileNav from '../../components/MobileNav'
+import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import UnitDetailClient from './unit-detail-client'
@@ -23,11 +26,12 @@ export default async function UnitDetailPage({ params }: PageProps) {
   .from('units')
   .select(`
     id,
-    name,
-    complexity,
-    unit_size,
-    is_active,
-    project_id
+name,
+complexity,
+unit_size,
+deadline,
+is_active,
+project_id
   `)
   .eq('id', id)
   .eq('user_id', user.id)
@@ -234,14 +238,24 @@ export default async function UnitDetailPage({ params }: PageProps) {
     images?.find((img) => img.is_featured) ?? images?.[0] ?? null
 
   return (
-    <UnitDetailClient
-      unit={unit}
-      images={images ?? []}
-      featuredImage={featuredImage}
-      steps={steps ?? []}
-      totalLoggedSeconds={totalLoggedSeconds}
-      activeSession={currentActiveSession}
-      sessions={sessions ?? []}
-    />  
-  )
+  <main className="min-h-screen bg-[#081018] text-white">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
+      <Suspense fallback={null}>
+        <DashboardTopBar />
+      </Suspense>
+
+      <UnitDetailClient
+        unit={unit}
+        images={images ?? []}
+        featuredImage={featuredImage}
+        steps={steps ?? []}
+        totalLoggedSeconds={totalLoggedSeconds}
+        activeSession={currentActiveSession}
+        sessions={sessions ?? []}
+      />
+    </div>
+
+    <MobileNav />
+  </main>
+)
 }

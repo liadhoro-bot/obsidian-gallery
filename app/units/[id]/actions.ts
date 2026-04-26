@@ -192,16 +192,23 @@ export async function updateUnitDetails(formData: FormData) {
   }
 
   const unitId = String(formData.get('unitId') ?? '')
-  const complexity = String(formData.get('complexity') ?? '').trim()
+  const complexityRaw = String(formData.get('complexity') ?? '').trim()
   const unitSizeRaw = String(formData.get('unit_size') ?? '').trim()
+  const deadlineRaw = String(formData.get('deadline') ?? '').trim()
 
   if (!unitId) {
     throw new Error('Missing unit ID')
   }
 
-  const unitSize = Number(unitSizeRaw)
+  const complexity = complexityRaw ? Number(complexityRaw) : null
+  const unitSize = unitSizeRaw ? Number(unitSizeRaw) : null
+  const deadline = deadlineRaw || null
 
-  if (!Number.isFinite(unitSize) || unitSize < 1) {
+  if (complexity !== null && (!Number.isFinite(complexity) || complexity < 1 || complexity > 5)) {
+    throw new Error('Complexity must be between 1 and 5')
+  }
+
+  if (unitSize !== null && (!Number.isFinite(unitSize) || unitSize < 1)) {
     throw new Error('Unit size must be a positive number')
   }
 
@@ -210,8 +217,10 @@ export async function updateUnitDetails(formData: FormData) {
     .update({
       complexity,
       unit_size: unitSize,
+      deadline,
     })
     .eq('id', unitId)
+    .eq('user_id', user.id)
 
   if (error) {
     throw error

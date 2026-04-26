@@ -20,7 +20,8 @@ type Unit = {
   name: string
   complexity: number | null
   unit_size: number | null
-  is_active: boolean
+deadline: string | null
+is_active: boolean
   project_id: string | null
 }
 
@@ -126,7 +127,7 @@ const [complexityInput, setComplexityInput] = useState(
 const [unitSizeInput, setUnitSizeInput] = useState(
   unit.unit_size ? String(unit.unit_size) : ''
 )
-
+const [deadlineInput, setDeadlineInput] = useState(unit.deadline || '')
     useEffect(() => {
     if (!activeSession) {
       return
@@ -262,8 +263,7 @@ const handleUpdateDetails = (formData: FormData) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#050b12] pb-24 text-white">
-  <div className="mx-auto max-w-3xl">
+  <div className="w-full">
       <div className="relative">
         <div className="relative h-[260px] w-full overflow-hidden">
           {featuredImage ? (
@@ -309,18 +309,9 @@ const handleUpdateDetails = (formData: FormData) => {
         </div>
       </div>
 
-      <div className="px-4">
-        <div className="-mt-2 grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="text-[11px] uppercase tracking-wide text-white/50">
-              Time Logged
-            </div>
-            <div className="mt-2 text-xl font-bold">
-              {formatDuration(displayedLoggedSeconds)}
-            </div>
-          </div>
-
-<div className="col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+      <div>
+        <div className="-mt-2">
+  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
   <div className="mb-3 flex items-center justify-between">
     <div className="text-[11px] uppercase tracking-wide text-white/50">
       Unit Details
@@ -341,6 +332,7 @@ const handleUpdateDetails = (formData: FormData) => {
           setIsEditingDetails(false)
           setComplexityInput(unit.complexity ? String(unit.complexity) : '')
           setUnitSizeInput(unit.unit_size ? String(unit.unit_size) : '')
+          setDeadlineInput(unit.deadline || '')
         }}
         className="text-xs text-white/60"
       >
@@ -350,32 +342,39 @@ const handleUpdateDetails = (formData: FormData) => {
   </div>
 
   {!isEditingDetails ? (
-    <div className="grid grid-cols-2 gap-3">
-      <div>
-        <div className="text-[11px] text-white/50">Complexity</div>
-        <div className="text-lg font-bold">
-          {unit.complexity ? `${unit.complexity}/10` : '—'}
-        </div>
-      </div>
-
-      <div>
-        <div className="text-[11px] text-white/50">Unit Size</div>
-        <div className="text-lg font-bold">
-          {unit.unit_size || '—'}
-        </div>
-      </div>
+    <div className="grid grid-cols-3 gap-3">
+  <div>
+    <div className="text-[11px] text-white/50">Complexity</div>
+    <div className="text-lg font-bold">
+      {unit.complexity ? `${unit.complexity}/5` : '—'}
     </div>
+  </div>
+
+  <div>
+    <div className="text-[11px] text-white/50">Unit Size</div>
+    <div className="text-lg font-bold">
+      {unit.unit_size || '—'}
+    </div>
+  </div>
+
+  <div>
+    <div className="text-[11px] text-white/50">Deadline</div>
+    <div className="text-lg font-bold">
+      {unit.deadline ? new Date(unit.deadline).toLocaleDateString() : '—'}
+    </div>
+  </div>
+</div>
   ) : (
     <form action={handleUpdateDetails} className="space-y-3">
       <input type="hidden" name="unitId" value={unit.id} />
 
       <div>
-        <label className="text-xs text-white/50">Complexity (1–10)</label>
+        <label className="text-xs text-white/50">Complexity (1–5)</label>
         <input
           name="complexity"
           type="number"
           min="1"
-          max="10"
+          max="5"
           value={complexityInput}
           onChange={(e) => setComplexityInput(e.target.value)}
           className="mt-1 w-full rounded-lg bg-black/40 px-3 py-2 text-sm text-white"
@@ -393,7 +392,16 @@ const handleUpdateDetails = (formData: FormData) => {
           className="mt-1 w-full rounded-lg bg-black/40 px-3 py-2 text-sm text-white"
         />
       </div>
-
+<div>
+  <label className="text-xs text-white/50">Deadline</label>
+  <input
+    name="deadline"
+    type="date"
+    value={deadlineInput}
+    onChange={(e) => setDeadlineInput(e.target.value)}
+    className="mt-1 w-full rounded-lg bg-black/40 px-3 py-2 text-sm text-white"
+  />
+</div>
       <button
         type="submit"
         disabled={isPending}
@@ -490,7 +498,15 @@ const handleUpdateDetails = (formData: FormData) => {
                 </div>
               ))}
             </div>
-          )}
+                    )}
+
+          <div className="mt-4 border-t border-white/10 pt-4 flex items-center justify-between">
+  <h2 className="text-lg font-bold">Total Time Logged</h2>
+
+  <span className="text-lg font-bold text-cyan-400">
+    {formatSessionDuration(displayedLoggedSeconds)}
+  </span>
+</div>
         </section>
 
         <section className="mt-8">
@@ -644,22 +660,9 @@ const showFinalDone = finalDoneStep?.status === 'done'
             >
               Upload Reference
             </button>
-          </div>
+                    </div>
         </section>
       </div>
-
-            </div>
-
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-[#07111b]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-center justify-around px-4 py-3 text-xs text-white/70">
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/" className="text-cyan-400">
-            Projects
-          </Link>
-          <Link href="/vault">Vault</Link>
-          <Link href="/recipes">Recipes</Link>
-        </div>
-      </nav>
     </div>
   )
 }

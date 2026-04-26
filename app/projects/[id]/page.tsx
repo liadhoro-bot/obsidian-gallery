@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 import ProjectDetailClient from './project-detail-client'
+import { Suspense } from 'react'
+import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 
 async function addUnit(formData: FormData) {
   'use server'
@@ -424,24 +426,34 @@ export default async function ProjectDetailPage({
     null
 
   return (
-    <ProjectDetailClient
-      project={project}
-      projectError={projectError}
-      projectId={id}
-      featuredProjectImage={featuredProjectImage}
-      projectImages={projectImages ?? []}
-      units={units ?? []}
-      unitsError={unitsError}
-      allStagesError={allStagesError}
-      allUnitImagesError={allUnitImagesError}
-      projectImagesError={projectImagesError}
-      stagesByUnitId={stagesByUnitId}
-      imagesByUnitId={imagesByUnitId}
-      addUnitAction={addUnit}
-      setFeaturedUnitAction={setFeaturedUnit}
-      uploadProjectImageAction={uploadProjectImage}
-      setFeaturedProjectImageAction={setFeaturedProjectImage}
-      deleteProjectImageAction={deleteProjectImage}
-    />
-  )
+  <main className="min-h-screen bg-[#081018] text-white">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
+      <Suspense fallback={null}>
+        <DashboardTopBar />
+      </Suspense>
+
+      <ProjectDetailClient
+        project={project}
+        projectError={projectError}
+        projectId={id}
+        featuredProjectImage={featuredProjectImage}
+        projectImages={projectImages ?? []}
+        units={units ?? []}
+        unitsError={unitsError}
+        allStagesError={allStagesError}
+        allUnitImagesError={allUnitImagesError}
+        projectImagesError={projectImagesError}
+        stagesByUnitId={stagesByUnitId}
+        imagesByUnitId={imagesByUnitId}
+        addUnitAction={addUnit}
+        setFeaturedUnitAction={setFeaturedUnit}
+        uploadProjectImageAction={uploadProjectImage}
+        setFeaturedProjectImageAction={setFeaturedProjectImage}
+        deleteProjectImageAction={deleteProjectImage}
+      />
+    </div>
+
+    <MobileNav />
+  </main>
+)
 }

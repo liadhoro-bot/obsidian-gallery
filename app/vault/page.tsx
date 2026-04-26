@@ -4,11 +4,9 @@ import { createClient } from '../../utils/supabase/server'
 import MobileNav from '../components/MobileNav'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import VaultFilters from './vault-filters'
-import VaultStats from './vault-stats'
 import VaultGrid from './vault-grid'
 import {
   VaultFiltersSkeleton,
-  VaultStatsSkeleton,
   VaultGridSkeleton,
 } from './vault-skeletons'
 
@@ -37,48 +35,43 @@ export default async function VaultPage({ searchParams }: PageProps) {
   const q = resolvedSearchParams.q?.trim() || ''
   const brand = resolvedSearchParams.brand || ''
   const line = resolvedSearchParams.line || ''
-  const ownership = resolvedSearchParams.ownership || ''
+  const ownership = resolvedSearchParams.ownership || 'owned'
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
-      <div className="mx-auto max-w-5xl">
-        <MobileNav />
-
+    <main className="min-h-screen bg-[#081018] text-white">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={null}>
           <DashboardTopBar />
         </Suspense>
 
-        <div className="mt-6">
-          <Suspense fallback={<VaultStatsSkeleton />}>
-            <VaultStats />
-          </Suspense>
-        </div>
+        <section>
+          <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-400">
+            Inventory Management
+          </p>
 
-        <div className="mt-6">
-          <Suspense fallback={<VaultFiltersSkeleton />}>
-            <VaultFilters
-              q={q}
-              brand={brand}
-              line={line}
-              ownership={ownership}
-            />
-          </Suspense>
-        </div>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-white">
+            The Paint Vault
+          </h1>
 
-        <div className="mt-6">
-          <Suspense
-            key={`${q}-${brand}-${line}-${ownership}`}
-            fallback={<VaultGridSkeleton />}
-          >
-            <VaultGrid
-              q={q}
-              brand={brand}
-              line={line}
-              ownership={ownership}
-            />
-          </Suspense>
-        </div>
+          <p className="mt-4 text-base leading-7 text-neutral-400">
+            Your curated collection of premium pigments and mediums. Organised
+            for high-speed reference and palette synchronization.
+          </p>
+        </section>
+
+        <Suspense fallback={<VaultFiltersSkeleton />}>
+          <VaultFilters q={q} brand={brand} line={line} ownership={ownership} />
+        </Suspense>
+
+        <Suspense
+          key={`${q}-${brand}-${line}-${ownership}`}
+          fallback={<VaultGridSkeleton />}
+        >
+          <VaultGrid q={q} brand={brand} line={line} ownership={ownership} />
+        </Suspense>
       </div>
+
+      <MobileNav />
     </main>
   )
 }

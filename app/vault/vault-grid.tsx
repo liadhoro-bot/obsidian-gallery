@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { createClient } from '../../utils/supabase/server'
-import { togglePaintOwnership } from './actions'
+import { togglePaintOwnership, togglePaintWishlist } from './actions'
+import Link from 'next/link'
 
 type VaultGridProps = {
   q: string
@@ -11,14 +12,16 @@ type VaultGridProps = {
 
 type VaultPaint = {
   id: string
+  source: 'catalog' | 'custom'
   brand: string | null
   line: string | null
   name: string | null
   sku: string | null
   swatch_image_url: string | null
   hex_approx: string | null
-  finish: string | null
   paint_type: string | null
+  is_owned: boolean
+  is_wishlist: boolean
 }
 
 export default async function VaultGrid({
@@ -33,177 +36,213 @@ export default async function VaultGrid({
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    return null
-  }
+  if (!user) return null
 
-  let paintsQuery = supabase
-    .from('paint_catalog')
-    .select(
-      `
-      id,
-      brand,
-      line,
-      name,
-      sku,
-      swatch_image_url,
-      hex_approx,
-      finish,
-      paint_type
-    `
-    )
-    .order('brand', { ascending: true })
-    .order('line', { ascending: true })
-    .order('name', { ascending: true })
-
-  if (q) {
-    paintsQuery = paintsQuery.or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
-  }
-
-  if (brand) {
-    paintsQuery = paintsQuery.eq('brand', brand)
-  }
-
-  if (line) {
-    paintsQuery = paintsQuery.eq('line', line)
-  }
-
-  const [{ data: paints, error }, { data: ownedRows, error: ownedError }] =
+  const [{ data: catalogRows }, { data: customRows }, { data: ownershipRows }] =
     await Promise.all([
-      paintsQuery,
+      supabase
+        .from('paint_catalog')
+        .select(`
+          id,
+          brand,
+          line,
+          name,
+          sku,
+          swatch_image_url,
+          hex_approx,
+          paint_type
+        `)
+        .eq('is_active', true),
+
+      supabase
+        .from('paints')
+        .select(`
+          id,
+          name,
+          manufacturer,
+          series,
+          paint_type,
+          color_hex
+        `)
+        .eq('user_id', user.id),
+
       supabase
         .from('user_paint_ownership')
-        .select('paint_catalog_id')
-        .eq('user_id', user.id)
-        .eq('is_owned', true),
+        .select('paint_catalog_id, is_owned, is_wishlist')
+        .eq('user_id', user.id),
     ])
 
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  if (ownedError) {
-    throw new Error(ownedError.message)
-  }
-
   const ownedSet = new Set(
-    (ownedRows || []).map((row) => row.paint_catalog_id)
+    (ownershipRows || [])
+      .filter((row) => row.is_owned)
+      .map((row) => row.paint_catalog_id)
   )
+const wishlistSet = new Set(
+  (ownershipRows || [])
+    .filter((row) => row.is_wishlist)
+    .map((row) => row.paint_catalog_id)
+)
+  const catalogPaints: VaultPaint[] =
+  catalogRows?.map((paint) => ({
+    id: paint.id,
+    source: 'catalog',
+    brand: paint.brand,
+    line: paint.line,
+    name: paint.name,
+    sku: paint.sku,
+    swatch_image_url: paint.swatch_image_url,
+    hex_approx: paint.hex_approx,
+    paint_type: paint.paint_type,
+    is_owned: ownedSet.has(paint.id),
+    is_wishlist: wishlistSet.has(paint.id),
+  })) || []
 
-  const allPaints = (paints || []) as VaultPaint[]
+  const customPaints: VaultPaint[] =
+  customRows?.map((paint) => ({
+    id: paint.id,
+    source: 'custom',
+    brand: paint.manufacturer,
+    line: paint.series,
+    name: paint.name,
+    sku: null,
+    swatch_image_url: null,
+    hex_approx: paint.color_hex,
+    paint_type: paint.paint_type,
+    is_owned: true,
+    is_wishlist: false,
+  })) || []
 
-  const visiblePaints =
-    ownership === 'owned'
-      ? allPaints.filter((paint) => ownedSet.has(paint.id))
-      : ownership === 'not_owned'
-        ? allPaints.filter((paint) => !ownedSet.has(paint.id))
-        : allPaints
+  const visiblePaints = [...catalogPaints, ...customPaints]
+    .filter((paint) => {
+      const matchesSearch =
+        !q ||
+        paint.name?.toLowerCase().includes(q.toLowerCase()) ||
+        paint.sku?.toLowerCase().includes(q.toLowerCase())
+
+      const matchesBrand = !brand || paint.brand === brand
+      const matchesLine = !line || paint.line === line
+
+      const matchesOwnership =
+        ownership === 'owned'
+          ? paint.is_owned
+          : ownership === 'not_owned'
+            ? !paint.is_owned
+            : true
+
+      return matchesSearch && matchesBrand && matchesLine && matchesOwnership
+    })
+    .sort((a, b) => {
+      return (
+        (a.brand || '').localeCompare(b.brand || '') ||
+        (a.line || '').localeCompare(b.line || '') ||
+        (a.name || '').localeCompare(b.name || '')
+      )
+    })
+
+  if (visiblePaints.length === 0) {
+    return (
+      <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 p-8 text-center">
+        <p className="text-lg font-semibold text-white">No paints found</p>
+        <p className="mt-2 text-sm text-neutral-400">
+          Try changing the filters or resetting the search.
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <section>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold text-white">Paint Library</h2>
-          <p className="text-sm text-neutral-400">
-            Showing {visiblePaints.length} paint{visiblePaints.length === 1 ? '' : 's'}
-          </p>
-        </div>
-      </div>
+  <section className="grid grid-cols-3 gap-x-4 gap-y-7">
+    {visiblePaints.map((paint) => {
+      const href =
+  paint.source === 'custom'
+    ? `/vault/custom/${paint.id}`
+    : `/vault/catalog/${paint.id}`
 
-      {visiblePaints.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {visiblePaints.map((paint) => {
-            const isOwned = ownedSet.has(paint.id)
+      return (
+        <article key={`${paint.source}-${paint.id}`} className="min-w-0">
+          <Link href={href} className="group block w-full text-left">
+            <PaintSwatch paint={paint} />
+          </Link>
 
-            return (
-              <form key={paint.id} action={togglePaintOwnership}>
+          <div className="mt-2 grid grid-cols-2 gap-1">
+            {paint.source === 'catalog' ? (
+              <form action={togglePaintOwnership} className="min-w-0">
                 <input type="hidden" name="paintId" value={paint.id} />
 
                 <button
                   type="submit"
-                  className="flex h-full w-full flex-col rounded-3xl border border-neutral-800 bg-neutral-900 p-4 text-left shadow-sm transition hover:border-cyan-500"
+                  className={`flex h-5 w-full items-center justify-center rounded-full border px-1 text-[7px] font-black uppercase leading-none tracking-tight ${
+                    paint.is_owned
+                      ? 'border-cyan-500/30 bg-cyan-500/15 text-cyan-300'
+                      : 'border-neutral-700 bg-neutral-800 text-neutral-500'
+                  }`}
                 >
-                  <div className="flex items-start gap-4">
-                    {paint.swatch_image_url ? (
-                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-950">
-                        <Image
-                          src={paint.swatch_image_url}
-                          alt={`${paint.name || 'Paint'} swatch`}
-                          fill
-                          className="object-cover"
-                          sizes="56px"
-                        />
-                      </div>
-                    ) : paint.hex_approx ? (
-                      <div
-                        className="h-14 w-14 shrink-0 rounded-2xl border border-neutral-700"
-                        style={{ backgroundColor: paint.hex_approx }}
-                      />
-                    ) : (
-                      <div className="h-14 w-14 shrink-0 rounded-2xl border border-dashed border-neutral-700 bg-neutral-950" />
-                    )}
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">
-                            {paint.brand || 'Unknown brand'}
-                          </p>
-
-                          <h3 className="mt-1 truncate text-lg font-semibold text-white">
-                            {paint.name || 'Unnamed paint'}
-                          </h3>
-                        </div>
-
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-                            isOwned
-                              ? 'bg-cyan-500 text-black'
-                              : 'bg-neutral-800 text-neutral-300'
-                          }`}
-                        >
-                          {isOwned ? 'Owned' : 'Not owned'}
-                        </span>
-                      </div>
-
-                      <p className="mt-1 text-sm text-neutral-400">
-                        {paint.line || 'No line'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    {paint.paint_type ? (
-                      <span className="rounded-full bg-neutral-950 px-3 py-1 text-xs text-neutral-300">
-                        {paint.paint_type}
-                      </span>
-                    ) : null}
-
-                    {paint.sku ? (
-                      <span className="rounded-full bg-neutral-950 px-3 py-1 text-xs text-neutral-300">
-                        SKU {paint.sku}
-                      </span>
-                    ) : null}
-
-                    {paint.hex_approx ? (
-                      <span className="rounded-full bg-neutral-950 px-3 py-1 text-xs text-neutral-300">
-                        {paint.hex_approx}
-                      </span>
-                    ) : null}
-                  </div>
+                  Owned
                 </button>
               </form>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 p-8 text-center">
-          <p className="text-lg font-semibold text-white">No paints found</p>
-          <p className="mt-2 text-sm text-neutral-400">
-            Try changing the filters or resetting the search.
-          </p>
-        </div>
-      )}
-    </section>
+            ) : (
+              <span className="flex h-5 w-full items-center justify-center rounded-full border border-cyan-500/30 bg-cyan-500/15 px-1 text-[7px] font-black uppercase leading-none tracking-tight text-cyan-300">
+                Owned
+              </span>
+            )}
+
+            {paint.source === 'catalog' ? (
+              <form action={togglePaintWishlist} className="min-w-0">
+                <input type="hidden" name="paintId" value={paint.id} />
+
+                <button
+                  type="submit"
+                  className={`flex h-5 w-full items-center justify-center rounded-full border px-1 text-[7px] font-black uppercase leading-none tracking-tight ${
+                    paint.is_wishlist
+                      ? 'border-orange-500/20 bg-orange-500/10 text-orange-300'
+                      : 'border-neutral-700 bg-neutral-800 text-neutral-500'
+                  }`}
+                >
+                  Wishlist
+                </button>
+              </form>
+            ) : (
+              <span className="flex h-5 w-full items-center justify-center rounded-full border border-neutral-700 bg-neutral-800 px-1 text-[7px] font-black uppercase leading-none tracking-tight text-neutral-500">
+                Wishlist
+              </span>
+            )}
+          </div>
+        </article>
+      )
+    })}
+  </section>
+)
+}
+
+function PaintSwatch({ paint }: { paint: VaultPaint }) {
+  return (
+    <>
+      <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 shadow-[0_0_0_4px_rgba(23,23,23,0.65)] transition group-hover:border-cyan-500">
+        {paint.swatch_image_url ? (
+          <Image
+            src={paint.swatch_image_url}
+            alt={`${paint.name || 'Paint'} swatch`}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 33vw, 220px"
+          />
+        ) : paint.hex_approx ? (
+          <div
+            className="h-full w-full"
+            style={{ backgroundColor: paint.hex_approx }}
+          />
+        ) : (
+          <div className="h-full w-full bg-neutral-900" />
+        )}
+      </div>
+
+      <h3 className="mt-3 truncate text-xs font-black uppercase leading-tight tracking-wide text-white">
+        {paint.name || 'Unnamed paint'}
+      </h3>
+
+      <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">
+        {paint.brand || 'Custom'} · {paint.line || 'No line'}
+      </p>
+    </>
   )
 }

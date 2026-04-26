@@ -68,36 +68,28 @@ export default async function RecipesPage({ searchParams }: PageProps) {
   const q = resolvedSearchParams.q?.trim() || ''
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-6 pb-28 text-white">
-      <div className="mx-auto max-w-5xl">
-        <MobileNav />
+  <main className="min-h-screen bg-[#081018] text-white">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
+      <Suspense fallback={null}>
+        <DashboardTopBar />
+      </Suspense>
 
-        <Suspense fallback={null}>
-          <DashboardTopBar />
-        </Suspense>
+      <RecipesPageClient createRecipeAction={createRecipe} />
 
-        <div className="mt-6">
-          <RecipesPageClient createRecipeAction={createRecipe} />
-        </div>
+      <Suspense fallback={<RecipesStatsSkeleton />}>
+        <RecipesStats />
+      </Suspense>
 
-        <div className="mt-6">
-          <Suspense fallback={<RecipesStatsSkeleton />}>
-            <RecipesStats />
-          </Suspense>
-        </div>
+      <Suspense fallback={<RecipesFiltersSkeleton />}>
+        <RecipesFilters q={q} />
+      </Suspense>
 
-        <div className="mt-6">
-          <Suspense fallback={<RecipesFiltersSkeleton />}>
-            <RecipesFilters q={q} />
-          </Suspense>
-        </div>
+      <Suspense key={q} fallback={<RecipesListSkeleton />}>
+        <RecipesList q={q} />
+      </Suspense>
+    </div>
 
-        <div className="mt-6">
-          <Suspense key={q} fallback={<RecipesListSkeleton />}>
-            <RecipesList q={q} />
-          </Suspense>
-        </div>
-      </div>
-    </main>
-  )
+    <MobileNav />
+  </main>
+)
 }

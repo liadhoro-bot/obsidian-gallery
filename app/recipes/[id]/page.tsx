@@ -1,3 +1,5 @@
+import { Suspense } from 'react'
+import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { createClient } from '../../../utils/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import MobileNav from '../../components/MobileNav'
@@ -951,11 +953,14 @@ export default async function RecipeDetailPage({
     recipeImages?.find((img) => img.is_featured) || recipeImages?.[0] || null
 
   return (
-    <main className="min-h-screen bg-black pb-28 text-white">
-      <MobileNav />
+  <main className="min-h-screen bg-[#081018] text-white">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
+      <Suspense fallback={null}>
+        <DashboardTopBar />
+      </Suspense>
 
-      <div className="px-4 pt-4">
-        <a href="/recipes" className="text-cyan-400">
+      <div>
+        <a href="/recipes" className="text-cyan-400 text-sm">
           ← Back to Recipes
         </a>
       </div>
@@ -979,6 +984,9 @@ export default async function RecipeDetailPage({
         deleteRecipeImageAction={deleteRecipeImage}
         createCustomPaintAction={createCustomPaint}
       />
-    </main>
-  )
+    </div>
+
+    <MobileNav />
+  </main>
+)
 }

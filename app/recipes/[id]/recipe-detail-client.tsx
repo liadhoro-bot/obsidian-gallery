@@ -157,7 +157,7 @@ export default function RecipeDetailClient({
   }, [stepPaintLinks])
 
   return (
-    <div className="mx-auto max-w-xl">
+  <div className="w-full">
       <RecipeHero
         recipe={recipe}
         featuredImage={featuredImage}
@@ -166,7 +166,7 @@ export default function RecipeDetailClient({
         updateRecipeHeaderAction={updateRecipeHeaderAction}
       />
 
-      <div className="space-y-6 px-4 py-6">
+      <div className="space-y-5">
         <RecipeInventoryCard
           recipe={recipe}
           stepPaintLinks={stepPaintLinks}
@@ -235,7 +235,7 @@ export default function RecipeDetailClient({
                   </button>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-4">
+                <div className="flex flex-col gap-3">
                   <div>
                     <label className="mb-1 block text-sm text-neutral-300">
                       Search
