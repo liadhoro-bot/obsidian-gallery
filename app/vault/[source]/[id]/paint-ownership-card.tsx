@@ -39,17 +39,18 @@ export default async function PaintOwnershipCard({
         <div className="flex gap-2">
           <OwnershipButton
   paintId={paintRef.paintId}
-  action="owned"
-  currentValue={isOwned}
-  currentUnits={unitsOwned}
-  label="Owned"
-  activeClass="bg-cyan-500 text-slate-950"
+  action="wishlist"
+  currentValue={isWishlist}
+  currentUnits={0}
+  label="Wishlist"
+  activeClass="..."
 />
 
           <OwnershipButton
             paintId={paintRef.paintId}
             action="wishlist"
             currentValue={isWishlist}
+            currentUnits={0}
             label="Wishlist"
             activeClass="bg-orange-400 text-slate-950"
           />
