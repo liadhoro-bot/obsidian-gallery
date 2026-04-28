@@ -8,6 +8,8 @@ import DashboardXpCard from './dashboard-xp-card'
 import DashboardMetadataGrid from './dashboard-metadata-grid'
 import DashboardUnitInProgress from './dashboard-unit-in-progress'
 import DashboardActiveBench from './dashboard-active-bench'
+import DashboardQuickActions from './dashboard-quick-actions'
+import DashboardHobbyBadges from './dashboard-hobby-badges'
 import {
   BenchUnitsSkeleton,
   FeaturedUnitSkeleton,
@@ -47,6 +49,10 @@ export default async function DashboardPage() {
         <Suspense fallback={<FeaturedUnitSkeleton />}>
           <DashboardUnitInProgress />
         </Suspense>
+
+        <DashboardQuickActions />
+
+        <DashboardHobbyBadges />
 
         <Suspense fallback={<BenchUnitsSkeleton />}>
           <DashboardActiveBench />

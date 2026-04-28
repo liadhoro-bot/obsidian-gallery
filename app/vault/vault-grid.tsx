@@ -23,7 +23,17 @@ type VaultPaint = {
   is_owned: boolean
   is_wishlist: boolean
 }
+function getBrandAbbreviation(brand?: string | null) {
+  const normalized = (brand || '').toLowerCase()
 
+  if (normalized.includes('vallejo')) return 'VAL'
+  if (normalized.includes('warhammer')) return 'WHC'
+  if (normalized.includes('citadel')) return 'WHC'
+  if (normalized.includes('army painter')) return 'TAP'
+  if (normalized.includes('custom')) return 'CUS'
+
+  return (brand || 'UNK').slice(0, 3).toUpperCase()
+}
 export default async function VaultGrid({
   q,
   brand,
@@ -240,9 +250,13 @@ function PaintSwatch({ paint }: { paint: VaultPaint }) {
         {paint.name || 'Unnamed paint'}
       </h3>
 
-      <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">
-        {paint.brand || 'Custom'} · {paint.line || 'No line'}
-      </p>
+      <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500">
+  <span className="text-cyan-300">
+    {getBrandAbbreviation(paint.brand)}
+  </span>
+  <span className="text-neutral-600"> · </span>
+  <span>{paint.line || 'No line'}</span>
+</p>
     </>
   )
 }

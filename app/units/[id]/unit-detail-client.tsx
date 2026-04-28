@@ -281,11 +281,14 @@ const handleUpdateDetails = (formData: FormData) => {
         </div>
 
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-4">
-          <Link href="/" className="text-sm text-cyan-400">
-            ← Back
-          </Link>
+  <Link
+    href={unit.project_id ? `/projects/${unit.project_id}` : '/projects'}
+    className="text-sm text-cyan-400"
+  >
+    ← Back
+  </Link>
 
-          <button
+  <button
             type="button"
             onClick={() => handleToggleActive(!unit.is_active)}
             className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide ${

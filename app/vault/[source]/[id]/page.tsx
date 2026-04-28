@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../../../utils/supabase/server'
@@ -45,28 +46,38 @@ export default async function PaintPage({ params }: PageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#061012] pb-24 text-slate-100">
+  <main className="min-h-screen bg-[#061012] pb-24 text-slate-100">
+    <div className="mx-auto w-full max-w-md px-4">
       <DashboardTopBar />
+    </div>
 
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5">
-        <Suspense fallback={<PaintHeroSkeleton />}>
-          <PaintHero paintRef={paintRef} />
-        </Suspense>
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5">
 
-        <Suspense fallback={<PaintTechnicalSpecsSkeleton />}>
-          <PaintTechnicalSpecs paintRef={paintRef} />
-        </Suspense>
+  <Link
+    href="/vault"
+    className="text-sm text-cyan-400"
+  >
+    ← Back to Vault
+  </Link>
 
-        <Suspense fallback={<PaintOwnershipSkeleton />}>
-          <PaintOwnershipCard paintRef={paintRef} />
-        </Suspense>
+  <Suspense fallback={<PaintHeroSkeleton />}>
+        <PaintHero paintRef={paintRef} />
+      </Suspense>
 
-        <Suspense fallback={<PaintRecipesSkeleton />}>
-          <PaintRecipesUsed paintRef={paintRef} />
-        </Suspense>
-      </div>
+      <Suspense fallback={<PaintTechnicalSpecsSkeleton />}>
+        <PaintTechnicalSpecs paintRef={paintRef} />
+      </Suspense>
 
-      <MobileNav />
-    </main>
-  )
+      <Suspense fallback={<PaintOwnershipSkeleton />}>
+        <PaintOwnershipCard paintRef={paintRef} />
+      </Suspense>
+
+      <Suspense fallback={<PaintRecipesSkeleton />}>
+        <PaintRecipesUsed paintRef={paintRef} />
+      </Suspense>
+    </div>
+
+    <MobileNav />
+  </main>
+)
 }

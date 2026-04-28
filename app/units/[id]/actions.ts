@@ -295,34 +295,43 @@ export async function toggleStepDone(formData: FormData) {
 
   const progress = nextStatus === 'done' ? 100 : 0
 
+await supabase
+  .from('unit_progress_steps')
+  .update({
+    status: nextStatus,
+    progress,
+  })
+  .eq('id', stepId)
+  .eq('unit_id', unitId)
+
+const { data: allSteps, error } = await supabase
+  .from('unit_progress_steps')
+  .select('id, step_key, status')
+  .eq('unit_id', unitId)
+
+if (!error && allSteps) {
+  const visibleSteps = allSteps.filter((step) => step.step_key !== 'done')
+  const allVisibleDone =
+    visibleSteps.length > 0 &&
+    visibleSteps.every((step) => step.status === 'done')
+
   await supabase
     .from('unit_progress_steps')
     .update({
-      status: nextStatus,
-      progress,
+      status: allVisibleDone ? 'done' : 'pending',
+      progress: allVisibleDone ? 100 : 0,
     })
-    .eq('id', stepId)
-
-  const { data: allSteps, error } = await supabase
-    .from('unit_progress_steps')
-    .select('id, step_key, status')
     .eq('unit_id', unitId)
+    .eq('step_key', 'done')
 
-  if (!error && allSteps) {
-    const visibleSteps = allSteps.filter((step) => step.step_key !== 'done')
-    const allVisibleDone =
-      visibleSteps.length > 0 &&
-      visibleSteps.every((step) => step.status === 'done')
+  await supabase
+    .from('units')
+    .update({ is_active: !allVisibleDone })
+    .eq('id', unitId)
+}
 
-    await supabase
-      .from('unit_progress_steps')
-      .update({
-        status: allVisibleDone ? 'done' : 'pending',
-        progress: allVisibleDone ? 100 : 0,
-      })
-      .eq('unit_id', unitId)
-      .eq('step_key', 'done')
-  }
-
+revalidatePath(`/units/${unitId}`)
+revalidatePath('/dashboard')
+revalidatePath('/projects')
   revalidatePath(`/units/${unitId}`)
 }

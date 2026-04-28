@@ -103,7 +103,7 @@ async function addUnit(formData: FormData) {
   }))
 
   const { error: newStepsError } = await supabase
-    .from('unit_progress_steps')
+    .from('unit_stage_progress')
     .insert(newStepRows)
 
   if (newStepsError) {
@@ -373,12 +373,30 @@ export default async function ProjectDetailPage({
     .map((unit) => unit.id)
     .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
 
-  const { data: allStages, error: allStagesError } = unitIds.length
-    ? await supabase
+  const [stageProgressResult, progressStepsResult] = unitIds.length
+  ? await Promise.all([
+      supabase
         .from('unit_stage_progress')
         .select('*')
-        .in('unit_id', unitIds)
-    : { data: [], error: null }
+        .in('unit_id', unitIds),
+
+      supabase
+        .from('unit_progress_steps')
+        .select('*')
+        .in('unit_id', unitIds),
+    ])
+  : [
+      { data: [], error: null },
+      { data: [], error: null },
+    ]
+
+const allStages = [
+  ...(stageProgressResult.data ?? []),
+  ...(progressStepsResult.data ?? []),
+]
+
+const allStagesError =
+  stageProgressResult.error || progressStepsResult.error
 
   const { data: allUnitImages, error: allUnitImagesError } = unitIds.length
     ? await supabase
