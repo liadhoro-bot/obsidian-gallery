@@ -5,6 +5,7 @@ import { redirect, notFound } from 'next/navigation'
 import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 import RecipeDetailClient from './recipe-detail-client'
+import RecipeVideoCard from './recipe-video-card'
 
 function parsePaintSelection(rawValue: string) {
   if (!rawValue) {
@@ -89,6 +90,62 @@ async function updateRecipeInventory(formData: FormData) {
 
   if (error) {
     console.error('Error updating recipe inventory:', error)
+    return
+  }
+
+  revalidatePath(`/recipes/${recipeId}`)
+}
+
+async function updateRecipePaintOwnership(formData: FormData) {
+  'use server'
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return
+
+  const recipeId = formData.get('recipeId')?.toString()
+  const paintCatalogId = formData.get('paintCatalogId')?.toString()
+  const action = formData.get('action')?.toString()
+  const currentValue = formData.get('currentValue')?.toString() === 'true'
+
+  console.log('PALETTE TOGGLE CLICKED:', {
+    recipeId,
+    paintCatalogId,
+    action,
+    currentValue,
+    nextValue: !currentValue,
+  })
+
+  if (!recipeId || !paintCatalogId) return
+  if (action !== 'owned' && action !== 'wishlist') return
+
+  const updates =
+    action === 'owned'
+      ? { is_owned: !currentValue }
+      : { is_wishlist: !currentValue }
+
+  const { data, error } = await supabase
+    .from('user_paint_ownership')
+    .upsert(
+      {
+        user_id: user.id,
+        paint_catalog_id: paintCatalogId,
+        ...updates,
+      },
+      {
+        onConflict: 'user_id,paint_catalog_id',
+      }
+    )
+    .select()
+
+  console.log('PALETTE TOGGLE RESULT:', { data, error })
+
+  if (error) {
+    console.error('Error updating recipe paint ownership:', error)
     return
   }
 
@@ -821,7 +878,7 @@ export default async function RecipeDetailPage({
 
   const { data: ownershipRows, error: ownershipError } = await supabase
     .from('user_paint_ownership')
-    .select('paint_catalog_id, is_owned')
+    .select('paint_catalog_id, is_owned, is_wishlist')
     .eq('user_id', user.id)
 
   if (ownershipError) {
@@ -852,7 +909,11 @@ export default async function RecipeDetailPage({
       .filter((row) => row.is_owned)
       .map((row) => row.paint_catalog_id)
   )
-
+const wishlistPaintIds = new Set(
+  (ownershipRows || [])
+    .filter((row) => row.is_wishlist)
+    .map((row) => row.paint_catalog_id)
+)
   const catalogPaintOptions =
     paintsCatalog?.map((paint) => ({
       id: paint.id,
@@ -865,6 +926,7 @@ export default async function RecipeDetailPage({
       hex_approx: paint.hex_approx,
       paint_type: paint.paint_type,
       is_owned: ownedPaintIds.has(paint.id),
+      is_wishlist: wishlistPaintIds.has(paint.id),
     })) || []
 
   const customPaintOptions =
@@ -879,6 +941,7 @@ export default async function RecipeDetailPage({
       hex_approx: paint.color_hex,
       paint_type: paint.paint_type,
       is_owned: true,
+      is_wishlist: false,
     })) || []
 
   const paints = [...catalogPaintOptions, ...customPaintOptions].sort((a, b) => {
@@ -907,24 +970,28 @@ export default async function RecipeDetailPage({
       : link.custom_paint
 
     const paint =
-      link.paint_source === 'custom' && customPaint
-        ? {
-            id: customPaint.id,
-            brand: customPaint.manufacturer,
-            line: customPaint.series,
-            name: customPaint.name,
-            hex_approx: customPaint.color_hex,
-            swatch_image_url: null,
-          }
+  link.paint_source === 'custom' && customPaint
+  ? {
+      id: customPaint.id,
+      brand: customPaint.manufacturer,
+      line: customPaint.series,
+      name: customPaint.name,
+      hex_approx: customPaint.color_hex,
+      swatch_image_url: null,
+      is_owned: true,
+      is_wishlist: false,
+    }
         : catalogPaint
-          ? {
-              id: catalogPaint.id,
-              brand: catalogPaint.brand,
-              line: catalogPaint.line,
-              name: catalogPaint.name,
-              hex_approx: catalogPaint.hex_approx,
-              swatch_image_url: catalogPaint.swatch_image_url,
-            }
+  ? {
+      id: catalogPaint.id,
+      brand: catalogPaint.brand,
+      line: catalogPaint.line,
+      name: catalogPaint.name,
+      hex_approx: catalogPaint.hex_approx,
+      swatch_image_url: catalogPaint.swatch_image_url,
+      is_owned: ownedPaintIds.has(catalogPaint.id),
+      is_wishlist: wishlistPaintIds.has(catalogPaint.id),
+    }
           : null
 
     return {
@@ -937,6 +1004,7 @@ export default async function RecipeDetailPage({
     }
   }) || []
 
+  
   const { data: recipeImages, error: recipeImagesError } = await supabase
     .from('image_assets')
     .select('*')
@@ -983,6 +1051,7 @@ export default async function RecipeDetailPage({
         setFeaturedRecipeImageAction={setFeaturedRecipeImage}
         deleteRecipeImageAction={deleteRecipeImage}
         createCustomPaintAction={createCustomPaint}
+        updateRecipePaintOwnershipAction={updateRecipePaintOwnership}
       />
     </div>
 

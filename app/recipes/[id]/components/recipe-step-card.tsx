@@ -1,17 +1,8 @@
 'use client'
 
-import PaintSwatch from './paint-swatch'
 import PaintPicker from './paint-picker'
 import { Paint, Recipe, RecipeStep, StepPaintLink } from './types'
-
-const STEP_COLORS = [
-  '#22d3ee',
-  '#f97316',
-  '#facc15',
-  '#a855f7',
-  '#10b981',
-  '#ef4444',
-]
+import PaintSwatch from './paint-swatch'
 
 function getPaintSelectValue(
   paint: StepPaintLink['paint'] | null,
@@ -24,7 +15,19 @@ function getPaintSelectValue(
 
   return `${matchedPaint.source}:${matchedPaint.id}`
 }
+function getContrastTextColor(hex?: string | null) {
+  if (!hex) return '#000'
 
+  const cleaned = hex.replace('#', '')
+  const r = parseInt(cleaned.substring(0, 2), 16)
+  const g = parseInt(cleaned.substring(2, 4), 16)
+  const b = parseInt(cleaned.substring(4, 6), 16)
+
+  // perceived brightness
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+
+  return brightness > 150 ? '#000' : '#fff'
+}
 export default function RecipeStepCard({
   recipe,
   step,
@@ -54,139 +57,14 @@ export default function RecipeStepCard({
   updateRecipeStepAction: (formData: FormData) => Promise<void>
   deleteRecipeStepAction: (formData: FormData) => Promise<void>
 }) {
-  const accent = STEP_COLORS[stepIndex % STEP_COLORS.length]
-
   const paint1 = paintsForStep[0]?.paint || null
   const paint2 = paintsForStep[1]?.paint || null
   const paint3 = paintsForStep[2]?.paint || null
 
-  const ratioBadge = paintsForStep
-    .map((link) => link.ratio_text)
-    .filter(Boolean)
-    .join(' : ')
-
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-      <div
-        className="absolute inset-y-0 left-0 w-1"
-        style={{ backgroundColor: accent }}
-      />
-
-      <div className="pl-2">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p
-              className="text-xs font-semibold uppercase tracking-[0.2em]"
-              style={{ color: accent }}
-            >
-              Step {String(step.step_number).padStart(2, '0')}
-            </p>
-
-            <h3 className="mt-3 min-w-0 text-2xl font-semibold leading-tight text-white">
-              {step.title}
-            </h3>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="flex flex-col items-end gap-3">
-              {paintsForStep.length > 0 ? (
-                <div className="flex flex-wrap justify-end gap-2">
-                  {paintsForStep.map((link) => {
-                    const paint = link.paint
-
-                    return paint ? (
-                      <div
-                        key={link.id}
-                        className="h-9 w-9 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-800"
-                        title={
-                          [paint.brand, paint.line, paint.name]
-                            .filter(Boolean)
-                            .join(' • ') || 'Paint'
-                        }
-                      >
-                        {paint.swatch_image_url ? (
-                          <img
-                            src={paint.swatch_image_url}
-                            alt={paint.name || 'Paint'}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div
-                            className="h-full w-full"
-                            style={{
-                              backgroundColor: paint.hex_approx || '#888888',
-                            }}
-                          />
-                        )}
-                      </div>
-                    ) : null
-                  })}
-                </div>
-              ) : null}
-
-              {ratioBadge ? (
-                <div className="rounded-full border border-neutral-700 bg-black px-3 py-1.5 text-sm font-medium text-orange-400 shadow-sm">
-                  {ratioBadge}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <form action={moveRecipeStepAction}>
-                <input type="hidden" name="recipeId" value={recipe.id} />
-                <input type="hidden" name="stepId" value={step.id} />
-                <input type="hidden" name="direction" value="up" />
-                <button
-                  type="submit"
-                  disabled={step.step_number === 1}
-                  className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white disabled:opacity-30"
-                  title="Move step up"
-                >
-                  ↑
-                </button>
-              </form>
-
-              <form action={moveRecipeStepAction}>
-                <input type="hidden" name="recipeId" value={recipe.id} />
-                <input type="hidden" name="stepId" value={step.id} />
-                <input type="hidden" name="direction" value="down" />
-                <button
-                  type="submit"
-                  disabled={step.step_number === stepsLength}
-                  className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white disabled:opacity-30"
-                  title="Move step down"
-                >
-                  ↓
-                </button>
-              </form>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setEditingStepId(isEditingThisStep ? null : step.id)
-                }
-                className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-                title="Edit step"
-              >
-                ✎
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setDeleteConfirmStepId(
-                    deleteConfirmStepId === step.id ? null : step.id
-                  )
-                }
-                className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-                title="Delete step"
-              >
-                X
-              </button>
-            </div>
-          </div>
-        </div>
-
+return (
+  <div className="relative overflow-hidden rounded-2xl border border-neutral-800 bg-[#081116] p-5 shadow-xl shadow-black/30">
+    <div>
+      
         {deleteConfirmStepId === step.id ? (
           <div className="mt-4 rounded-2xl border border-neutral-700 bg-black p-4">
             <p className="text-sm text-white">Delete this step?</p>
@@ -328,43 +206,160 @@ export default function RecipeStepCard({
           </form>
         ) : (
           <>
-            {paintsForStep.length > 0 ? (
-              <div className="mt-5 space-y-3">
-                {paintsForStep.map((link) => {
-                  const paint = link.paint
-                  if (!paint) return null
+  {/* HEADER */}
+  <div className="mb-8 flex items-start gap-4">
+    <div
+  key={step.step_number}
+  className="text-5xl font-black leading-none text-neutral-500/40 animate-[stepNumberIn_500ms_cubic-bezier(0.22,1,0.36,1)]"
+>
+  {String(step.step_number).padStart(2, '0')}
+</div>
 
-                  return (
-                    <div
-                      key={link.id}
-                      className="flex items-start gap-3 text-sm"
-                    >
-                      <PaintSwatch paint={paint} size="md" />
+    <h3 className="pt-1 text-2xl font-bold leading-tight text-white">
+      {step.title}
+    </h3>
+  </div>
 
-                      <div className="min-w-0">
-                        <p className="font-medium text-white">{paint.name}</p>
-                        <p className="text-xs text-neutral-500">
-                          {[paint.brand, paint.line].filter(Boolean).join(' • ') ||
-                            'Unknown brand'}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : null}
+{/* SWATCHES */}
+{paintsForStep.length > 0 && (
+  <div className="mb-10 flex justify-center gap-5">
+    {paintsForStep.slice(0, 3).map((link) => {
+      const paint = link.paint
+      if (!paint) return null
 
-            {step.instructions?.trim() ? (
-  <div className="mt-5 rounded-xl bg-black p-4">
-    <p className="text-xs uppercase tracking-wide text-neutral-500">
-      Instructions
-    </p>
-    <p className="mt-2 text-sm leading-6 text-neutral-300">
+      const ratio = parseInt(link.ratio_text || '1', 10) || 1
+
+      return (
+        <div key={link.id} className="relative">
+        <div className="h-32 w-32 overflow-hidden rounded-xl border border-neutral-700 bg-neutral-800 shadow-inner">
+  {paint.swatch_image_url ? (
+    <img
+      src={paint.swatch_image_url}
+      alt={paint.name || 'Paint'}
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <div
+      className="h-full w-full"
+      style={{
+        backgroundColor: paint.hex_approx || '#888888',
+      }}
+    />
+  )}
+</div>
+
+          <div className="absolute bottom-1 right-1 flex flex-col items-end gap-1">
+  <div className="flex items-center justify-end gap-1">
+  {Array.from({ length: ratio }).map((_, i) => (
+    <span
+      key={i}
+      className="block h-4 w-4 rotate-[225deg] rounded-full rounded-br-none border border-white/30"
+      style={{
+        backgroundColor: paint.hex_approx || '#888888',
+        boxShadow:
+          '0 0 0 1px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.5)',
+      }}
+    />
+  ))}
+</div>
+
+  <span
+    className="rounded-full border border-white/20 px-2 py-1 text-[10px] font-black shadow"
+    style={{
+      backgroundColor: paint.hex_approx || '#888888',
+      color: getContrastTextColor(paint.hex_approx),
+      boxShadow:
+        '0 0 0 2px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.55)',
+    }}
+  >
+    {ratio} part{ratio === 1 ? '' : 's'}
+  </span>
+</div>
+        </div>
+      )
+    })}
+  </div>
+)}
+
+  {/* SUBTITLE */}
+  <p className="text-xs uppercase tracking-[0.2em] text-cyan-400">
+    {paintsForStep.length > 1
+      ? 'PAINT MIX'
+      : paintsForStep[0]?.paint?.brand || 'Paint'}
+  </p>
+
+  {/* PAINT TITLE */}
+  <p className="mt-2 text-lg font-bold text-white">
+    {paintsForStep
+      .map((p) => {
+        const paint = p.paint
+        if (!paint) return ''
+        return [paint.brand, paint.name].filter(Boolean).join(' ')
+      })
+      .join(' + ')}
+  </p>
+
+  {/* DESCRIPTION */}
+  {step.instructions?.trim() && (
+    <p className="mt-4 text-sm leading-7 text-neutral-300">
       {step.instructions}
     </p>
-  </div>
-) : null}
-          </>
+  )}
+  <div className="mt-6 flex justify-end">
+  {!isEditingThisStep ? (
+    <button
+      type="button"
+      onClick={() =>
+        setEditingStepId(isEditingThisStep ? null : step.id)
+      }
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white backdrop-blur transition hover:bg-white/10"
+      title="Edit step"
+    >
+      ✎
+    </button>
+  ) : (
+    <div className="flex items-center gap-2">
+      <form action={moveRecipeStepAction}>
+        <input type="hidden" name="recipeId" value={recipe.id} />
+        <input type="hidden" name="stepId" value={step.id} />
+        <input type="hidden" name="direction" value="up" />
+        <button
+          type="submit"
+          disabled={step.step_number === 1}
+          className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white disabled:opacity-30"
+        >
+          ↑
+        </button>
+      </form>
+
+      <form action={moveRecipeStepAction}>
+        <input type="hidden" name="recipeId" value={recipe.id} />
+        <input type="hidden" name="stepId" value={step.id} />
+        <input type="hidden" name="direction" value="down" />
+        <button
+          type="submit"
+          disabled={step.step_number === stepsLength}
+          className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white disabled:opacity-30"
+        >
+          ↓
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={() =>
+          setDeleteConfirmStepId(
+            deleteConfirmStepId === step.id ? null : step.id
+          )
+        }
+        className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
+      >
+        X
+      </button>
+    </div>
+  )}
+</div>
+</>
         )}
       </div>
     </div>

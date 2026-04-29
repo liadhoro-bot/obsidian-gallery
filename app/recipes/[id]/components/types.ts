@@ -25,13 +25,15 @@ export type StepPaintLink = {
   ratio_text: string | null
   paint_source: 'catalog' | 'custom' | null
   paint: {
-    id: string
-    brand: string | null
-    line: string | null
-    name: string | null
-    hex_approx: string | null
-    swatch_image_url: string | null
-  } | null
+  id: string
+  brand: string | null
+  line: string | null
+  name: string | null
+  hex_approx: string | null
+  swatch_image_url: string | null
+  is_owned?: boolean
+  is_wishlist?: boolean
+} | null
 }
 
 export type RecipeStep = {
@@ -47,4 +49,5 @@ export type Recipe = {
   description: string | null
   inventory_required: string | null
   expert_tips: string | null
+  youtube_url: string | null
 }
