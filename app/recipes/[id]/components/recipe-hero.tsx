@@ -1,6 +1,8 @@
 'use client'
 
 import { Recipe, RecipeImage } from './types'
+import RecipeVisibilityPill from './recipe-visibility-pill'
+import { updateRecipeVisibility } from '../recipe-actions'
 
 export default function RecipeHero({
   recipe,
@@ -46,14 +48,22 @@ export default function RecipeHero({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsEditingHeader(!isEditingHeader)}
-              className="rounded-full border border-neutral-600 bg-black/60 px-3 py-2 text-sm text-white"
-              title="Edit title and description"
-            >
-              ✎
-            </button>
+            <div className="flex items-center gap-2">
+  <RecipeVisibilityPill
+    recipeId={recipe.id}
+    isPublic={recipe.is_public}
+    updateRecipeVisibilityAction={updateRecipeVisibility}
+  />
+
+  <button
+    type="button"
+    onClick={() => setIsEditingHeader(!isEditingHeader)}
+    className="rounded-full border border-neutral-600 bg-black/60 px-3 py-2 text-sm text-white"
+    title="Edit title and description"
+  >
+    ✎
+  </button>
+</div>
           </div>
         </div>
       </div>

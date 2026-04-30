@@ -50,4 +50,5 @@ export type Recipe = {
   inventory_required: string | null
   expert_tips: string | null
   youtube_url: string | null
+  is_public: boolean
 }
