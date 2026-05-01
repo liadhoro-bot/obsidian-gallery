@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from '@vercel/analytics/react'
 import { PHProvider } from './providers/posthog-provider'
+import PostHogUserIdentifier from './providers/posthog-user-identifier'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
   <PHProvider>
+    <PostHogUserIdentifier />
     {children}
   </PHProvider>
   <Analytics />
