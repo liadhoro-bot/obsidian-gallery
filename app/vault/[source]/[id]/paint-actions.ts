@@ -64,5 +64,4 @@ if (action === 'decrement') {
   if (error) throw new Error(error.message)
 
   revalidatePath(`/vault/catalog/${paintCatalogId}`)
-  revalidatePath('/vault')
 }

@@ -16,6 +16,7 @@ type PageProps = {
     brand?: string
     line?: string
     ownership?: string
+    limit?: string
   }>
 }
 
@@ -36,6 +37,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
   const brand = resolvedSearchParams.brand || ''
   const line = resolvedSearchParams.line || ''
   const ownership = resolvedSearchParams.ownership || 'owned'
+  const limit = Math.max(24, Number(resolvedSearchParams.limit || 24))
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
@@ -64,10 +66,16 @@ export default async function VaultPage({ searchParams }: PageProps) {
         </Suspense>
 
         <Suspense
-          key={`${q}-${brand}-${line}-${ownership}`}
+  key={`${q}-${brand}-${line}-${ownership}-${limit}`}
           fallback={<VaultGridSkeleton />}
         >
-          <VaultGrid q={q} brand={brand} line={line} ownership={ownership} />
+          <VaultGrid
+  q={q}
+  brand={brand}
+  line={line}
+  ownership={ownership}
+  limit={limit}
+/>
         </Suspense>
       </div>
 

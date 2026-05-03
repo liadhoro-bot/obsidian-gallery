@@ -4,6 +4,7 @@ import "./globals.css";
 import { Analytics } from '@vercel/analytics/react'
 import { PHProvider } from './providers/posthog-provider'
 import PostHogUserIdentifier from './providers/posthog-user-identifier'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
     {children}
   </PHProvider>
   <Analytics />
+  <SpeedInsights />
 </body>
     </html>
   );

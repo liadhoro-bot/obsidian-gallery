@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
+import SupportButton from '../components/SupportButton'
 
 export default async function DashboardTopBar() {
   const supabase = await createClient()
@@ -54,9 +55,8 @@ export default async function DashboardTopBar() {
         </div>
       </div>
 
-      <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-        Studio Active
-      </div>
+      {/* 🔥 REPLACEMENT HERE */}
+      <SupportButton />
     </div>
   )
 }
