@@ -1,95 +1,98 @@
-import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
 import MobileNav from '../components/MobileNav'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import RecipesPageClient from './recipes-page-client'
-import RecipesStats from './recipes-stats'
-import RecipesFilters from './recipes-filters'
-import RecipesList from './recipes-list'
-import {
-  RecipesStatsSkeleton,
-  RecipesFiltersSkeleton,
-  RecipesListSkeleton,
-} from './recipes-skeletons'
 
-type PageProps = {
-  searchParams: Promise<{
-    q?: string
-  }>
-}
-
-export async function createRecipe(formData: FormData) {
-  'use server'
-
+export default async function RecipesPage() {
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
-  const name = formData.get('name')?.toString().trim()
-  const description = formData.get('description')?.toString().trim() || null
+  const [{ data: publicRecipes }, { data: myRecipes }, { data: savedRows }] =
+    await Promise.all([
+      supabase
+        .from('recipes')
+        .select('id, name, description, image_url, is_public, created_at, user_id')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false }),
 
-  if (!name) {
-    throw new Error('Recipe name is required')
-  }
+      supabase
+        .from('recipes')
+        .select('id, name, description, image_url, is_public, created_at, user_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
 
-  const { error } = await supabase.from('recipes').insert({
-    name,
-    description,
-    user_id: user.id,
-  })
+      supabase
+        .from('saved_recipes')
+        .select(
+          `
+          recipe_id,
+          recipes (
+            id,
+            name,
+            description,
+            image_url,
+            is_public,
+            created_at,
+            user_id
+          )
+        `
+        )
+        .eq('user_id', user.id),
+    ])
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  // ✅ FIX: must come BEFORE recipeIds
+  const savedRecipes =
+    savedRows
+      ?.map((row: any) => row.recipes)
+      .filter(Boolean) ?? []
 
-  revalidatePath('/recipes')
-}
+  // Collect all recipe IDs for image lookup
+  const recipeIds = [
+    ...(publicRecipes ?? []).map((r) => r.id),
+    ...(myRecipes ?? []).map((r) => r.id),
+    ...savedRecipes.map((r: any) => r.id),
+  ]
 
-export default async function RecipesPage({ searchParams }: PageProps) {
-  const supabase = await createClient()
+  // Fetch images safely (avoid empty .in())
+  const { data: imageRows } = recipeIds.length
+    ? await supabase
+        .from('image_assets')
+        .select('entity_id, image_url')
+        .eq('entity_type', 'recipe')
+        .in('entity_id', recipeIds)
+        .order('created_at', { ascending: false })
+    : { data: [] }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const imageByRecipeId = new Map(
+    (imageRows ?? []).map((row) => [row.entity_id, row.image_url])
+  )
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  const resolvedSearchParams = await searchParams
-  const q = resolvedSearchParams.q?.trim() || ''
+  const withRecipeImages = (recipes: any[]) =>
+    recipes.map((recipe) => ({
+      ...recipe,
+      image_url: recipe.image_url || imageByRecipeId.get(recipe.id) || null,
+    }))
 
   return (
-  <main className="min-h-screen bg-[#081018] text-white">
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-      <Suspense fallback={null}>
-        <DashboardTopBar />
-      </Suspense>
+    <main className="min-h-screen bg-[#03070b] pb-24 text-white">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
+        <DashboardTopBar userId={user.id} />
 
-      <RecipesPageClient createRecipeAction={createRecipe} />
+        <RecipesPageClient
+          publicRecipes={withRecipeImages(publicRecipes ?? [])}
+          myRecipes={withRecipeImages(myRecipes ?? [])}
+          savedRecipes={withRecipeImages(savedRecipes)}
+          savedRecipeIds={(savedRows ?? []).map((row: any) => row.recipe_id)}
+        />
+      </div>
 
-      <Suspense fallback={<RecipesStatsSkeleton />}>
-        <RecipesStats />
-      </Suspense>
-
-      <Suspense fallback={<RecipesFiltersSkeleton />}>
-        <RecipesFilters q={q} />
-      </Suspense>
-
-      <Suspense key={q} fallback={<RecipesListSkeleton />}>
-        <RecipesList q={q} />
-      </Suspense>
-    </div>
-
-    <MobileNav />
-  </main>
-)
+      <MobileNav />
+    </main>
+  )
 }
