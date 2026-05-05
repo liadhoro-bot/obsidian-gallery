@@ -7,6 +7,7 @@ type VaultGridProps = {
   line: string
   ownership: string
   limit: number
+  tab: 'find' | 'collection'
 }
 
 type VaultPaint = {
@@ -68,6 +69,7 @@ export default async function VaultGrid({
   line,
   ownership,
   limit,
+  tab,
 }: VaultGridProps) {
   const supabase = await createClient()
 
@@ -98,7 +100,27 @@ export default async function VaultGrid({
   )
 
   const ownedIds = Array.from(ownedSet)
+// ---------- COLLECTION COUNTS ----------
+let ownedCatalogCount = 0
+let customCount = 0
 
+if (tab === 'collection') {
+  if (ownedIds.length > 0) {
+    const { count } = await supabase
+      .from('paint_catalog')
+      .select('id', { count: 'exact', head: true })
+      .in('id', ownedIds)
+
+    ownedCatalogCount = count || 0
+  }
+
+  const { count } = await supabase
+    .from('paints')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  customCount = count || 0
+}
   let catalogQuery = supabase
     .from('paint_catalog')
     .select(
@@ -128,6 +150,17 @@ export default async function VaultGrid({
     catalogQuery = catalogQuery.eq('line', line)
   }
 
+  if (tab === 'collection') {
+  // ONLY owned catalog paints
+  if (ownedIds.length === 0) {
+    catalogQuery = catalogQuery.in('id', [
+      '00000000-0000-0000-0000-000000000000',
+    ])
+  } else {
+    catalogQuery = catalogQuery.in('id', ownedIds)
+  }
+} else {
+  // Normal Find Color behavior
   if (ownership === 'owned') {
     if (ownedIds.length === 0) {
       catalogQuery = catalogQuery.in('id', [
@@ -138,9 +171,22 @@ export default async function VaultGrid({
     }
   }
 
-  if (ownership === 'not_owned' && ownedIds.length > 0) {
-    catalogQuery = catalogQuery.not('id', 'in', `(${ownedIds.join(',')})`)
+  if (ownership === 'unowned' && ownedIds.length > 0) {
+  catalogQuery = catalogQuery.not('id', 'in', `(${ownedIds.join(',')})`)
+}
+
+if (ownership === 'wishlist') {
+  const wishlistIds = Array.from(wishlistSet)
+
+  if (wishlistIds.length === 0) {
+    catalogQuery = catalogQuery.in('id', [
+      '00000000-0000-0000-0000-000000000000',
+    ])
+  } else {
+    catalogQuery = catalogQuery.in('id', wishlistIds)
   }
+}
+}
 
   const { data: catalogRows, count: catalogCount } = await catalogQuery
     .order('brand', { ascending: true })
@@ -176,7 +222,7 @@ export default async function VaultGrid({
     .order('manufacturer', { ascending: true })
     .order('series', { ascending: true })
     .order('name', { ascending: true })
-    .range(from, to)
+    .range(0, 999)
 
   const catalogPaints: VaultPaint[] =
     catalogRows?.map((paint) => ({
@@ -193,31 +239,61 @@ export default async function VaultGrid({
       is_wishlist: wishlistSet.has(paint.id),
     })) || []
 
-  const customPaints: VaultPaint[] =
-    ownership === 'not_owned'
-      ? []
-      : customRows?.map((paint) => ({
-          id: paint.id,
-          source: 'custom',
-          brand: paint.manufacturer,
-          line: paint.series,
-          name: paint.name,
-          sku: null,
-          swatch_image_url: null,
-          hex_approx: paint.color_hex,
-          paint_type: paint.paint_type,
-          is_owned: true,
-          is_wishlist: false,
-        })) || []
+  let customPaints: VaultPaint[] = []
+
+if (tab === 'collection') {
+  // ALWAYS show custom paints in My Collection
+  customPaints =
+    customRows?.map((paint) => ({
+      id: paint.id,
+      source: 'custom',
+      brand: paint.manufacturer,
+      line: paint.series,
+      name: paint.name,
+      sku: null,
+      swatch_image_url: null,
+      hex_approx: paint.color_hex,
+      paint_type: paint.paint_type,
+      is_owned: true,
+      is_wishlist: false,
+    })) || []
+} else {
+  // Find Color behavior (optional inclusion)
+  if (ownership !== 'unowned') {
+    customPaints =
+      customRows?.map((paint) => ({
+        id: paint.id,
+        source: 'custom',
+        brand: paint.manufacturer,
+        line: paint.series,
+        name: paint.name,
+        sku: null,
+        swatch_image_url: null,
+        hex_approx: paint.color_hex,
+        paint_type: paint.paint_type,
+        is_owned: true,
+        is_wishlist: false,
+      })) || []
+  }
+}
 
   const visiblePaints = [...catalogPaints, ...customPaints].slice(0, limit)
 
-  const hasNextPage = catalogCount ? limit < catalogCount : false
+  const totalCount =
+  tab === 'collection'
+    ? ownedCatalogCount + customCount
+    : catalogCount || 0
+
+const hasNextPage = limit < totalCount
 
   if (visiblePaints.length === 0) {
     return (
       <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 p-8 text-center">
-        <p className="text-lg font-semibold text-white">No paints found</p>
+        <p className="text-lg font-semibold text-white">
+  {tab === 'collection'
+    ? 'No paints in your collection yet'
+    : 'No paints found'}
+</p>
         <p className="mt-2 text-sm text-neutral-400">
           Try changing the filters or resetting the search.
         </p>
@@ -226,13 +302,21 @@ export default async function VaultGrid({
   }
 
   return (
-  <VaultGridClient
-    initialPaints={visiblePaints}
-    q={q}
-    brand={brand}
-    line={line}
-    ownership={ownership}
-  />
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-black uppercase tracking-[0.22em] text-white/75">
+        Showing: {totalCount} colors
+      </p>
+    </div>
+
+    <VaultGridClient
+      initialPaints={visiblePaints}
+      q={q}
+      brand={brand}
+      line={line}
+      ownership={ownership}
+    />
+  </div>
 )
 }
 

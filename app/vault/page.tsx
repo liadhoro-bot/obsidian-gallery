@@ -5,19 +5,30 @@ import MobileNav from '../components/MobileNav'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import VaultFilters from './vault-filters'
 import VaultGrid from './vault-grid'
+import VaultSegmentedTabs from './vault-segmented-tabs'
+import CustomColorForm from './custom-color-form'
 import {
   VaultFiltersSkeleton,
   VaultGridSkeleton,
 } from './vault-skeletons'
 
+type VaultTab = 'find' | 'collection' | 'custom'
+
 type PageProps = {
   searchParams: Promise<{
+    tab?: string
     q?: string
     brand?: string
     line?: string
     ownership?: string
     limit?: string
   }>
+}
+
+function resolveVaultTab(tab?: string): VaultTab {
+  if (tab === 'collection') return 'collection'
+  if (tab === 'custom') return 'custom'
+  return 'find'
 }
 
 export default async function VaultPage({ searchParams }: PageProps) {
@@ -33,10 +44,16 @@ export default async function VaultPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = await searchParams
 
+  const activeTab = resolveVaultTab(resolvedSearchParams.tab)
+
   const q = resolvedSearchParams.q?.trim() || ''
   const brand = resolvedSearchParams.brand || ''
   const line = resolvedSearchParams.line || ''
-  const ownership = resolvedSearchParams.ownership || 'owned'
+  const ownership =
+    activeTab === 'collection'
+      ? 'owned'
+      : resolvedSearchParams.ownership || 'all'
+
   const limit = Math.max(24, Number(resolvedSearchParams.limit || 24))
 
   return (
@@ -61,22 +78,43 @@ export default async function VaultPage({ searchParams }: PageProps) {
           </p>
         </section>
 
-        <Suspense fallback={<VaultFiltersSkeleton />}>
-          <VaultFilters q={q} brand={brand} line={line} ownership={ownership} />
-        </Suspense>
+        <VaultSegmentedTabs
+          activeTab={activeTab}
+          q={q}
+          brand={brand}
+          line={line}
+          ownership={ownership}
+        />
 
-        <Suspense
-  key={`${q}-${brand}-${line}-${ownership}-${limit}`}
-          fallback={<VaultGridSkeleton />}
-        >
-          <VaultGrid
+        {activeTab !== 'custom' && (
+          <Suspense fallback={<VaultFiltersSkeleton />}>
+            <VaultFilters
+  q={q}
+  brand={brand}
+  line={line}
+  ownership={ownership}
+  tab={activeTab === 'collection' ? 'collection' : 'find'}
+/>
+          </Suspense>
+        )}
+
+        {activeTab === 'custom' ? (
+          <CustomColorForm />
+        ) : (
+          <Suspense
+            key={`${activeTab}-${q}-${brand}-${line}-${ownership}-${limit}`}
+            fallback={<VaultGridSkeleton />}
+          >
+            <VaultGrid
   q={q}
   brand={brand}
   line={line}
   ownership={ownership}
   limit={limit}
+  tab={activeTab === 'collection' ? 'collection' : 'find'}
 />
-        </Suspense>
+          </Suspense>
+        )}
       </div>
 
       <MobileNav />

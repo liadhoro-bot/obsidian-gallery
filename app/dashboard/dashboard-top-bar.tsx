@@ -3,24 +3,33 @@ import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
 import SupportButton from '../components/SupportButton'
 
-export default async function DashboardTopBar() {
+export default async function DashboardTopBar({
+  userId,
+}: {
+  userId?: string
+}) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let resolvedUserId = userId
 
-  if (!user) {
-    return null
+  if (!resolvedUserId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    resolvedUserId = user.id
   }
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('avatar_url')
-    .eq('id', user.id)
-    .single()
+  .from('profiles')
+  .select('avatar_url, level')
+  .eq('id', resolvedUserId)
+  .single()
 
   const avatarUrl = profile?.avatar_url || null
+  const level = profile?.level ?? 0
 
   return (
     <div className="flex items-center justify-between">
@@ -48,11 +57,13 @@ export default async function DashboardTopBar() {
         </Link>
 
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-white/50">
-            Obsidian Gallery
-          </p>
-          <p className="text-sm font-medium text-white/90">Lv. 7</p>
-        </div>
+  <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+    Obsidian Gallery
+  </p>
+  <p className="text-sm font-medium text-white/90">
+    Lv. {level} Painter
+  </p>
+</div>
       </div>
 
       {/* 🔥 REPLACEMENT HERE */}

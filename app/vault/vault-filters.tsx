@@ -1,11 +1,12 @@
 import { createClient } from '../../utils/supabase/server'
-import VaultFiltersForm from './vault-filters-form'
+import VaultFiltersClient from './vault-filters-client'
 
 type VaultFiltersProps = {
   q: string
   brand: string
   line: string
   ownership: string
+  tab: 'find' | 'collection'
 }
 
 export default async function VaultFilters({
@@ -13,98 +14,39 @@ export default async function VaultFilters({
   brand,
   line,
   ownership,
+  tab,
 }: VaultFiltersProps) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: catalogRows } = await supabase
+    .from('paint_catalog')
+    .select('brand, line')
+    .eq('is_active', true)
+    .order('brand', { ascending: true })
+    .order('line', { ascending: true })
 
-  if (!user) return null
+  const brands = Array.from(
+    new Set((catalogRows || []).map((row) => row.brand).filter(Boolean))
+  ) as string[]
 
-  const [{ data: catalogRows }, { data: customRows }, { data: ownershipRows }] =
-    await Promise.all([
-      supabase
-        .from('paint_catalog')
-        .select('id, brand, line, name, sku')
-        .eq('is_active', true),
-
-      supabase
-        .from('paints')
-        .select('id, manufacturer, series, name')
-        .eq('user_id', user.id),
-
-      supabase
-        .from('user_paint_ownership')
-        .select('paint_catalog_id, is_owned')
-        .eq('user_id', user.id),
-    ])
-
-  const ownedSet = new Set(
-    (ownershipRows || [])
-      .filter((row) => row.is_owned)
-      .map((row) => row.paint_catalog_id)
-  )
-
-  const catalogPaints =
-    catalogRows?.map((paint) => ({
-      id: paint.id,
-      brand: paint.brand,
-      line: paint.line,
-      name: paint.name,
-      sku: paint.sku,
-      is_owned: ownedSet.has(paint.id),
-    })) || []
-
-  const customPaints =
-    customRows?.map((paint) => ({
-      id: paint.id,
-      brand: paint.manufacturer,
-      line: paint.series,
-      name: paint.name,
-      sku: null,
-      is_owned: true,
-    })) || []
-
-  const allPaints = [...catalogPaints, ...customPaints]
-
-  const filteredPaints = allPaints.filter((paint) => {
-    const matchesSearch =
-      !q ||
-      paint.name?.toLowerCase().includes(q.toLowerCase()) ||
-      paint.sku?.toLowerCase().includes(q.toLowerCase())
-
-    const matchesBrand = !brand || paint.brand === brand
-    const matchesLine = !line || paint.line === line
-
-    const matchesOwnership =
-  ownership === 'owned'
-    ? paint.is_owned
-    : ownership === 'not_owned'
-      ? !paint.is_owned
-      : true
-
-    return matchesSearch && matchesBrand && matchesLine && matchesOwnership
-  })
-
-  const brandOptions = Array.from(
-    new Set(allPaints.map((paint) => paint.brand).filter(Boolean))
-  ).sort()
-
-  const allLines = allPaints.map((paint) => ({
-    brand: paint.brand,
-    line: paint.line,
-  }))
+  const lines = Array.from(
+    new Set(
+      (catalogRows || [])
+        .filter((row) => !brand || row.brand === brand)
+        .map((row) => row.line)
+        .filter(Boolean)
+    )
+  ) as string[]
 
   return (
-    <VaultFiltersForm
+    <VaultFiltersClient
       q={q}
       brand={brand}
       line={line}
       ownership={ownership}
-      brandOptions={brandOptions}
-      allLines={allLines}
-      visibleCount={filteredPaints.length}
+      tab={tab}
+      brands={brands}
+      lines={lines}
     />
   )
 }

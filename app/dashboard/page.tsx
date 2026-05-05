@@ -13,7 +13,6 @@ import DashboardHobbyBadges from './dashboard-hobby-badges'
 import {
   BenchUnitsSkeleton,
   FeaturedUnitSkeleton,
-  HeroCardSkeleton,
   StatsSkeleton,
   TopBarSkeleton,
 } from './dashboard-skeletons'
@@ -33,21 +32,19 @@ export default async function DashboardPage() {
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={<TopBarSkeleton />}>
-          <DashboardTopBar />
+          <DashboardTopBar userId={user.id} />
         </Suspense>
 
         <DashboardWelcome />
 
-        <Suspense fallback={<HeroCardSkeleton />}>
-          <DashboardXpCard />
-        </Suspense>
+        <DashboardXpCard />
 
         <Suspense fallback={<StatsSkeleton />}>
-          <DashboardMetadataGrid />
+          <DashboardMetadataGrid userId={user.id} />
         </Suspense>
 
         <Suspense fallback={<FeaturedUnitSkeleton />}>
-          <DashboardUnitInProgress />
+          <DashboardUnitInProgress userId={user.id} />
         </Suspense>
 
         <DashboardQuickActions />
@@ -55,7 +52,7 @@ export default async function DashboardPage() {
         <DashboardHobbyBadges />
 
         <Suspense fallback={<BenchUnitsSkeleton />}>
-          <DashboardActiveBench />
+          <DashboardActiveBench userId={user.id} />
         </Suspense>
       </div>
 

@@ -2,7 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../../utils/supabase/server'
-
+import {
+  calculateUnitXP,
+  calculateStepXP,
+  calculateCompletionBonus,
+} from '@/lib/gamification/xp'
+import { addXP } from '@/lib/gamification/add-xp'
 export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   const supabase = await createClient()
 
@@ -287,35 +292,85 @@ export async function expireUnitSessionAtTwoHours(unitId: string) {
 export async function toggleStepDone(formData: FormData) {
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
   const stepId = formData.get('stepId')?.toString()
   const unitId = formData.get('unitId')?.toString()
-  const nextStatus = formData.get('nextStatus')?.toString()
+  const nextStatus = formData.get('nextStatus')?.toString() as
+    | 'pending'
+    | 'in_progress'
+    | 'done'
+    | undefined
 
   if (!stepId || !unitId || !nextStatus) return
 
-  const progress = nextStatus === 'done' ? 100 : 0
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id, user_id, complexity, unit_size, is_active')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .single()
 
-await supabase
-  .from('unit_progress_steps')
-  .update({
-    status: nextStatus,
-    progress,
-  })
-  .eq('id', stepId)
-  .eq('unit_id', unitId)
+  if (unitError || !unit) {
+    throw new Error('Unit not found')
+  }
 
-const { data: allSteps, error } = await supabase
-  .from('unit_progress_steps')
-  .select('id, step_key, status')
-  .eq('unit_id', unitId)
+  const { data: currentStep, error: currentStepError } = await supabase
+    .from('unit_progress_steps')
+    .select('id, step_key, status')
+    .eq('id', stepId)
+    .eq('unit_id', unitId)
+    .single()
 
-if (!error && allSteps) {
+  if (currentStepError || !currentStep) {
+    throw new Error('Step not found')
+  }
+
+  const wasStepDone = currentStep.status === 'done'
+  const isNowDone = nextStatus === 'done'
+  const shouldGrantStepXP =
+    !wasStepDone && isNowDone && currentStep.step_key !== 'done'
+
+  const progress = isNowDone ? 100 : 0
+
+  const { error: updateStepError } = await supabase
+    .from('unit_progress_steps')
+    .update({
+      status: nextStatus,
+      progress,
+    })
+    .eq('id', stepId)
+    .eq('unit_id', unitId)
+
+  if (updateStepError) {
+    throw updateStepError
+  }
+
+  const { data: allSteps, error: stepsError } = await supabase
+    .from('unit_progress_steps')
+    .select('id, step_key, status')
+    .eq('unit_id', unitId)
+
+  if (stepsError) {
+    throw stepsError
+  }
+
   const visibleSteps = allSteps.filter((step) => step.step_key !== 'done')
+
   const allVisibleDone =
     visibleSteps.length > 0 &&
     visibleSteps.every((step) => step.status === 'done')
 
-  await supabase
+  const shouldGrantCompletionBonus =
+    allVisibleDone && unit.is_active !== false
+
+  const { error: updateDoneStepError } = await supabase
     .from('unit_progress_steps')
     .update({
       status: allVisibleDone ? 'done' : 'pending',
@@ -324,14 +379,36 @@ if (!error && allSteps) {
     .eq('unit_id', unitId)
     .eq('step_key', 'done')
 
-  await supabase
+  if (updateDoneStepError) {
+    throw updateDoneStepError
+  }
+
+  const { error: updateUnitError } = await supabase
     .from('units')
     .update({ is_active: !allVisibleDone })
     .eq('id', unitId)
-}
+    .eq('user_id', user.id)
 
-revalidatePath(`/units/${unitId}`)
-revalidatePath('/dashboard')
-revalidatePath('/projects')
+  if (updateUnitError) {
+    throw updateUnitError
+  }
+
+  const totalUnitXP = calculateUnitXP({
+    complexity: unit.complexity ?? 1,
+    unitSize: unit.unit_size ?? 1,
+  })
+
+  if (shouldGrantStepXP) {
+    const stepXP = calculateStepXP(totalUnitXP)
+    await addXP(user.id, stepXP)
+  }
+
+  if (shouldGrantCompletionBonus) {
+    const completionBonus = calculateCompletionBonus(totalUnitXP)
+    await addXP(user.id, completionBonus)
+  }
+
   revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/projects')
 }

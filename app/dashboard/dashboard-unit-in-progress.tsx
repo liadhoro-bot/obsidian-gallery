@@ -2,33 +2,31 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
 
-type UnitImageRow = {
-  entity_id: string
-  image_url: string
-}
-
-export default async function DashboardUnitInProgress() {
+export default async function DashboardUnitInProgress({
+  userId,
+}: {
+  userId?: string
+}) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let resolvedUserId = userId
 
-  if (!user) {
-    return null
+  if (!resolvedUserId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    resolvedUserId = user.id
   }
 
   const { data: units, error } = await supabase
     .from('units')
-    .select(`
-      id,
-      name,
-      updated_at,
-      project_id
-    `)
-    .eq('user_id', user.id)
+    .select('id, name, updated_at, project_id')
+    .eq('user_id', resolvedUserId)
     .order('updated_at', { ascending: false })
-    .limit(12)
+    .limit(6)
 
   if (error || !units?.length) {
     return (
@@ -41,22 +39,20 @@ export default async function DashboardUnitInProgress() {
     )
   }
 
-  const unitIds = units.map((unit) => unit.id)
-
   const { data: doneRows } = await supabase
     .from('unit_stage_progress')
     .select('unit_id, is_done')
-    .in('unit_id', unitIds)
+    .in(
+      'unit_id',
+      units.map((u) => u.id)
+    )
     .eq('stage_key', 'done')
 
-  const doneMap = new Map<string, boolean>()
+  const doneSet = new Set(
+    (doneRows || []).filter((r) => r.is_done).map((r) => r.unit_id)
+  )
 
-  for (const row of doneRows ?? []) {
-    doneMap.set(row.unit_id, row.is_done === true)
-  }
-
-  const inProgressUnit =
-    units.find((unit) => doneMap.get(unit.id) !== true) ?? null
+  const inProgressUnit = units.find((u) => !doneSet.has(u.id)) || null
 
   if (!inProgressUnit) {
     return (
@@ -77,7 +73,6 @@ export default async function DashboardUnitInProgress() {
     .eq('entity_type', 'unit')
     .eq('entity_id', inProgressUnit.id)
     .eq('is_featured', true)
-    .limit(1)
     .maybeSingle()
 
   return (
@@ -109,7 +104,8 @@ export default async function DashboardUnitInProgress() {
               {inProgressUnit.name}
             </h2>
             <p className="text-sm text-white/75">
-              Last updated {new Date(inProgressUnit.updated_at).toLocaleDateString()}
+              Last updated{' '}
+              {new Date(inProgressUnit.updated_at).toLocaleDateString()}
             </p>
           </div>
 

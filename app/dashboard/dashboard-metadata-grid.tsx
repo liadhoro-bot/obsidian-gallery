@@ -74,15 +74,23 @@ function getPaintStreak(
   return `${streak}d`
 }
 
-export default async function DashboardMetadataGrid() {
+export default async function DashboardMetadataGrid({
+  userId,
+}: {
+  userId?: string
+}) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let resolvedUserId = userId
 
-  if (!user) {
-    return null
+  if (!resolvedUserId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return null
+
+    resolvedUserId = user.id
   }
 
   const thirtyDaysAgo = new Date()
@@ -97,25 +105,26 @@ export default async function DashboardMetadataGrid() {
     supabase
       .from('units')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id),
+      .eq('user_id', resolvedUserId),
 
     supabase
       .from('units')
       .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', resolvedUserId)
       .gte('created_at', thirtyDaysAgo.toISOString()),
 
     supabase
       .from('user_paint_ownership')
       .select('paint_catalog_id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+      .eq('user_id', resolvedUserId)
       .eq('is_owned', true),
 
     supabase
-      .from('unit_sessions')
-      .select('duration_seconds, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false }),
+  .from('unit_sessions')
+  .select('duration_seconds, created_at')
+  .eq('user_id', resolvedUserId)
+  .order('created_at', { ascending: false })
+  .limit(120),
   ])
 
   const totalUnits = totalUnitsResult.count ?? 0
