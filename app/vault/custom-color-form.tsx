@@ -7,11 +7,24 @@ export default function CustomColorForm() {
   const [brand, setBrand] = useState('Custom')
   const [line, setLine] = useState('Custom Color')
   const [hex, setHex] = useState('#4A4F57')
+  const [isSaving, setIsSaving] = useState(false)
 
   const safeHex = useMemo(() => {
     if (/^#[0-9A-Fa-f]{6}$/.test(hex)) return hex
     return '#4A4F57'
   }, [hex])
+
+  async function handleSaveColor() {
+    try {
+      setIsSaving(true)
+
+      // Save logic will go here later.
+      // This temporary delay lets us confirm the button feedback works.
+      await new Promise((resolve) => setTimeout(resolve, 800))
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -106,7 +119,10 @@ export default function CustomColorForm() {
 
         <div className="grid grid-cols-[112px_1fr] gap-4 rounded-2xl border border-white/10 bg-slate-900/80 p-3">
           <div
-            className="aspect-square rounded-xl border border-white/10 shadow-inner"
+            className={[
+              'aspect-square rounded-xl border border-white/10 shadow-inner transition',
+              isSaving ? 'opacity-50' : 'opacity-100',
+            ].join(' ')}
             style={{ backgroundColor: safeHex }}
           />
 
@@ -128,9 +144,15 @@ export default function CustomColorForm() {
 
       <button
         type="button"
-        className="w-full rounded-xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.25em] text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.35)]"
+        disabled={isSaving}
+        onClick={handleSaveColor}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.25em] text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.35)] transition active:scale-[0.98] active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Save Color
+        {isSaving ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+        ) : null}
+
+        <span>{isSaving ? 'Saving Color...' : 'Save Color'}</span>
       </button>
     </div>
   )

@@ -33,6 +33,7 @@ function getBrandAbbreviation(brand?: string | null) {
   if (normalized.includes('warhammer')) return 'WHC'
   if (normalized.includes('citadel')) return 'WHC'
   if (normalized.includes('army painter')) return 'TAP'
+  if (normalized.includes('rust-oleum')) return 'ROL'
   if (normalized.includes('custom')) return 'CUS'
 
   return (brand || 'UNK').slice(0, 3).toUpperCase()

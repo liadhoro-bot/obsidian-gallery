@@ -65,9 +65,10 @@ export default function PaintOwnershipControls({
       const formData = new FormData()
       formData.set('paintCatalogId', paintId)
       formData.set('action', action)
-      formData.set('currentValue', String(
-        action === 'owned' ? optimistic.isOwned : optimistic.isWishlist
-      ))
+      formData.set(
+        'currentValue',
+        String(action === 'owned' ? optimistic.isOwned : optimistic.isWishlist)
+      )
       formData.set('currentUnits', String(optimistic.unitsOwned))
 
       await updatePaintOwnership(formData)
@@ -75,33 +76,39 @@ export default function PaintOwnershipControls({
   }
 
   return (
-    <>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => runAction('owned')}
-          disabled={isPending}
-          className={`rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider transition ${
-            optimistic.isOwned
-              ? 'bg-cyan-400 text-slate-950'
-              : 'bg-slate-800 text-slate-400'
-          }`}
-        >
-          Owned
-        </button>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+          Ownership
+        </h2>
 
-        <button
-          type="button"
-          onClick={() => runAction('wishlist')}
-          disabled={isPending}
-          className={`rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider transition ${
-            optimistic.isWishlist
-              ? 'bg-orange-400 text-slate-950'
-              : 'bg-slate-800 text-slate-400'
-          }`}
-        >
-          Wishlist
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => runAction('owned')}
+            disabled={isPending}
+            className={`rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider transition disabled:opacity-50 ${
+              optimistic.isOwned
+                ? 'bg-cyan-400 text-slate-950'
+                : 'bg-slate-800 text-slate-400'
+            }`}
+          >
+            Owned
+          </button>
+
+          <button
+            type="button"
+            onClick={() => runAction('wishlist')}
+            disabled={isPending}
+            className={`rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider transition disabled:opacity-50 ${
+              optimistic.isWishlist
+                ? 'bg-orange-400 text-slate-950'
+                : 'bg-slate-800 text-slate-400'
+            }`}
+          >
+            Wishlist
+          </button>
+        </div>
       </div>
 
       <div>
@@ -133,6 +140,6 @@ export default function PaintOwnershipControls({
           </button>
         </div>
       </div>
-    </>
+    </div>
   )
 }

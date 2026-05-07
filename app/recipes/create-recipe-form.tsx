@@ -7,6 +7,7 @@ export default function CreateRecipeForm() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -21,6 +22,18 @@ export default function CreateRecipeForm() {
 
     const imageUrl = URL.createObjectURL(file)
     setPreviewImageUrl(imageUrl)
+  }
+
+  async function handleCreateRecipe() {
+    try {
+      setIsCreating(true)
+
+      // Create recipe logic will go here later.
+      // Temporary delay lets us confirm the button feedback works.
+      await new Promise((resolve) => setTimeout(resolve, 800))
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   return (
@@ -69,8 +82,9 @@ export default function CreateRecipeForm() {
 
             <button
               type="button"
+              disabled={isCreating}
               onClick={() => fileInputRef.current?.click()}
-              className="w-full overflow-hidden rounded-xl border border-dashed border-white/20 bg-black/20 text-center transition hover:border-cyan-400/50 hover:bg-cyan-400/5"
+              className="w-full overflow-hidden rounded-xl border border-dashed border-white/20 bg-black/20 text-center transition active:scale-[0.98] active:opacity-70 hover:border-cyan-400/50 hover:bg-cyan-400/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {previewImageUrl ? (
                 <div className="relative aspect-video w-full">
@@ -78,7 +92,10 @@ export default function CreateRecipeForm() {
                     src={previewImageUrl}
                     alt="Recipe cover preview"
                     fill
-                    className="object-cover"
+                    className={[
+                      'object-cover transition',
+                      isCreating ? 'opacity-50' : 'opacity-100',
+                    ].join(' ')}
                     unoptimized
                   />
                 </div>
@@ -103,7 +120,12 @@ export default function CreateRecipeForm() {
           LIVE PREVIEW
         </h2>
 
-        <div className="flex items-center gap-4 rounded-xl border border-white/10 bg-black/20 p-3">
+        <div
+          className={[
+            'flex items-center gap-4 rounded-xl border border-white/10 bg-black/20 p-3 transition',
+            isCreating ? 'opacity-50' : 'opacity-100',
+          ].join(' ')}
+        >
           <div className="relative h-24 w-24 overflow-hidden rounded-lg bg-white/10">
             {previewImageUrl ? (
               <Image
@@ -132,9 +154,15 @@ export default function CreateRecipeForm() {
 
       <button
         type="button"
-        className="w-full rounded-xl bg-cyan-400 px-4 py-4 text-sm font-black tracking-[0.2em] text-black shadow-[0_0_22px_rgba(34,211,238,0.35)]"
+        disabled={isCreating}
+        onClick={handleCreateRecipe}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-4 text-sm font-black tracking-[0.2em] text-black shadow-[0_0_22px_rgba(34,211,238,0.35)] transition active:scale-[0.98] active:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        CREATE RECIPE
+        {isCreating ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
+        ) : null}
+
+        <span>{isCreating ? 'CREATING RECIPE...' : 'CREATE RECIPE'}</span>
       </button>
     </div>
   )

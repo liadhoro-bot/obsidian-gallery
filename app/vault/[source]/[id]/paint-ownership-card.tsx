@@ -30,19 +30,13 @@ export default async function PaintOwnershipCard({
   const unitsOwned = ownership?.units_owned ?? 0
 
   return (
-  <section className="rounded-2xl bg-slate-900/80 p-6 shadow-lg">
-    <div className="mb-5 flex items-center justify-between">
-      <h2 className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
-        Ownership
-      </h2>
-    </div>
-
-    <PaintOwnershipControls
-      paintId={paintRef.paintId}
-      initialIsOwned={isOwned}
-      initialIsWishlist={isWishlist}
-      initialUnitsOwned={unitsOwned}
-    />
-  </section>
-)
+    <section className="rounded-2xl bg-slate-900/80 p-6 shadow-lg">
+      <PaintOwnershipControls
+        paintId={paintRef.paintId}
+        initialIsOwned={isOwned}
+        initialIsWishlist={isWishlist}
+        initialUnitsOwned={unitsOwned}
+      />
+    </section>
+  )
 }
