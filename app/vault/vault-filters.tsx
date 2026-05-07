@@ -9,6 +9,40 @@ type VaultFiltersProps = {
   tab: 'find' | 'collection'
 }
 
+type CatalogFilterRow = {
+  brand: string | null
+  line: string | null
+}
+
+async function getAllCatalogFilterRows() {
+  const supabase = await createClient()
+
+  const pageSize = 1000
+  let from = 0
+  let allRows: CatalogFilterRow[] = []
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('paint_catalog')
+      .select('brand, line')
+      .eq('is_active', true)
+      .order('brand', { ascending: true })
+      .order('line', { ascending: true })
+      .range(from, from + pageSize - 1)
+
+    if (error) throw error
+
+    const rows = data || []
+    allRows = [...allRows, ...rows]
+
+    if (rows.length < pageSize) break
+
+    from += pageSize
+  }
+
+  return allRows
+}
+
 export default async function VaultFilters({
   q,
   brand,
@@ -16,27 +50,20 @@ export default async function VaultFilters({
   ownership,
   tab,
 }: VaultFiltersProps) {
-  const supabase = await createClient()
-
-  const { data: catalogRows } = await supabase
-    .from('paint_catalog')
-    .select('brand, line')
-    .eq('is_active', true)
-    .order('brand', { ascending: true })
-    .order('line', { ascending: true })
+  const catalogRows = await getAllCatalogFilterRows()
 
   const brands = Array.from(
-    new Set((catalogRows || []).map((row) => row.brand).filter(Boolean))
-  ) as string[]
+    new Set(catalogRows.map((row) => row.brand).filter(Boolean))
+  ).sort() as string[]
 
   const lines = Array.from(
     new Set(
-      (catalogRows || [])
+      catalogRows
         .filter((row) => !brand || row.brand === brand)
         .map((row) => row.line)
         .filter(Boolean)
     )
-  ) as string[]
+  ).sort() as string[]
 
   return (
     <VaultFiltersClient

@@ -24,17 +24,23 @@ export default function VaultFiltersClient({
 }: VaultFiltersClientProps) {
   const router = useRouter()
   const [, startTransition] = useTransition()
+
   const [searchValue, setSearchValue] = useState(q)
+  const [localBrand, setLocalBrand] = useState(brand)
+  const [localLine, setLocalLine] = useState(line)
+  const [localOwnership, setLocalOwnership] = useState(
+    tab === 'collection' ? 'owned' : ownership || 'all'
+  )
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams()
 
     params.set('tab', tab)
 
-    const nextQ = key === 'q' ? value : q
-    const nextBrand = key === 'brand' ? value : brand
-    const nextLine = key === 'line' ? value : line
-    const nextOwnership = key === 'ownership' ? value : ownership
+    const nextQ = key === 'q' ? value : searchValue
+    const nextBrand = key === 'brand' ? value : localBrand
+    const nextLine = key === 'line' ? value : localLine
+    const nextOwnership = key === 'ownership' ? value : localOwnership
 
     if (nextQ) params.set('q', nextQ)
     if (nextBrand) params.set('brand', nextBrand)
@@ -55,6 +61,18 @@ export default function VaultFiltersClient({
   useEffect(() => {
     setSearchValue(q)
   }, [q])
+
+  useEffect(() => {
+    setLocalBrand(brand)
+  }, [brand])
+
+  useEffect(() => {
+    setLocalLine(line)
+  }, [line])
+
+  useEffect(() => {
+    setLocalOwnership(tab === 'collection' ? 'owned' : ownership || 'all')
+  }, [ownership, tab])
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -79,8 +97,12 @@ export default function VaultFiltersClient({
 
       <div className="grid grid-cols-3 gap-3">
         <select
-          value={brand}
-          onChange={(event) => updateParam('brand', event.target.value)}
+          value={localBrand}
+          onChange={(event) => {
+            setLocalBrand(event.target.value)
+            setLocalLine('')
+            updateParam('brand', event.target.value)
+          }}
           className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none"
         >
           <option value="">Brand</option>
@@ -92,8 +114,11 @@ export default function VaultFiltersClient({
         </select>
 
         <select
-          value={line}
-          onChange={(event) => updateParam('line', event.target.value)}
+          value={localLine}
+          onChange={(event) => {
+            setLocalLine(event.target.value)
+            updateParam('line', event.target.value)
+          }}
           className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none"
         >
           <option value="">Line</option>
@@ -105,8 +130,11 @@ export default function VaultFiltersClient({
         </select>
 
         <select
-          value={tab === 'collection' ? 'owned' : ownership}
-          onChange={(event) => updateParam('ownership', event.target.value)}
+          value={localOwnership}
+          onChange={(event) => {
+            setLocalOwnership(event.target.value)
+            updateParam('ownership', event.target.value)
+          }}
           disabled={tab === 'collection'}
           className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none disabled:opacity-70"
         >
