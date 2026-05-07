@@ -5,15 +5,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  endUnitSession,
   expireUnitSessionAtTwoHours,
   setFeaturedUnitImage,
-  startUnitSession,
   toggleUnitActive,
   updateUnitDetails,
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
 import { toggleStepDone } from './actions'
+import UnitSessionTracker from './components/unit-session-tracker'
 
 type Unit = {
   id: string
@@ -63,50 +62,6 @@ type Props = {
   sessions: Session[]
 }
 
-function formatDuration(seconds: number) {
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-
-  if (hrs === 0) {
-    return `${mins}m`
-  }
-
-  return `${hrs}.${Math.floor((mins / 60) * 10)}h`
-}
-
-function formatLiveDuration(startedAt: string) {
-  const diff = Math.max(
-    0,
-    Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000)
-  )
-
-  const hrs = Math.floor(diff / 3600)
-  const mins = Math.floor((diff % 3600) / 60)
-  const secs = diff % 60
-
-  return `${hrs.toString().padStart(2, '0')}:${mins
-    .toString()
-    .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString()
-}
-
-function formatSessionDuration(seconds: number | null) {
-  if (!seconds) {
-    return '—'
-  }
-
-  const hrs = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-
-  if (hrs === 0) {
-    return `${mins}m`
-  }
-
-  return `${hrs}h ${mins}m`
-}
-
 export default function UnitDetailClient({
   unit,
   images,
@@ -119,6 +74,7 @@ export default function UnitDetailClient({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [liveNow, setLiveNow] = useState(Date.now())
+  const [optimisticSteps, setOptimisticSteps] = useState(steps)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [isEditingDetails, setIsEditingDetails] = useState(false)
 const [complexityInput, setComplexityInput] = useState(
@@ -162,31 +118,71 @@ const [deadlineInput, setDeadlineInput] = useState(unit.deadline || '')
       )
     : totalLoggedSeconds
 
-  const completedCount = steps.filter((step) => step.status === 'done').length
-    const recentSessions = sessions
-    .filter((session) => session.ended_at !== null)
-    .slice(0, 5)
+  useEffect(() => {
+  setOptimisticSteps(steps)
+}, [steps])
 
-  const handleToggleActive = (nextValue: boolean) => {
-    startTransition(async () => {
-      await toggleUnitActive(unit.id, nextValue)
-      router.refresh()
-    })
-  }
+const completedCount = optimisticSteps.filter(
+  (step) => step.step_key !== 'done' && step.status === 'done'
+).length
 
-  const handleStartSession = () => {
-    startTransition(async () => {
-      await startUnitSession(unit.id)
-      router.refresh()
-    })
-  }
+const handleToggleStep = (step: ProgressStep) => {
+  const nextStatus: ProgressStep['status'] =
+  step.status === 'done' ? 'pending' : 'done'
 
-  const handleEndSession = () => {
-    startTransition(async () => {
-      await endUnitSession(unit.id)
-      router.refresh()
-    })
-  }
+  setOptimisticSteps((currentSteps) => {
+    const updatedSteps = currentSteps.map((currentStep) =>
+      currentStep.id === step.id
+        ? {
+            ...currentStep,
+            status: nextStatus,
+            progress: nextStatus === 'done' ? 100 : 0,
+          }
+        : currentStep
+    )
+
+    const visibleSteps = updatedSteps.filter(
+      (s) => s.step_key !== 'done'
+    )
+
+    const allVisibleDone =
+      visibleSteps.length > 0 &&
+      visibleSteps.every((s) => s.status === 'done')
+
+    return updatedSteps.map((currentStep) =>
+      currentStep.step_key === 'done'
+        ? {
+            ...currentStep,
+            status: allVisibleDone ? 'done' : 'pending',
+            progress: allVisibleDone ? 100 : 0,
+          }
+        : currentStep
+    )
+  })
+
+  startTransition(async () => {
+    const formData = new FormData()
+
+    formData.set('stepId', step.id)
+    formData.set('unitId', unit.id)
+    formData.set(
+      'nextStatus',
+      nextStatus
+    )
+
+    await toggleStepDone(formData)
+
+    router.refresh()
+  })
+}
+
+const handleToggleActive = (nextValue: boolean) => {
+  startTransition(async () => {
+    await toggleUnitActive(unit.id, nextValue)
+    router.refresh()
+  })
+}
+
 const handleUpdateDetails = (formData: FormData) => {
   startTransition(async () => {
     await updateUnitDetails(formData)
@@ -417,100 +413,13 @@ const handleUpdateDetails = (formData: FormData) => {
 </div>
         </div>
 
-        <div className="mt-4">
-          {!activeSession ? (
-            <button
-              type="button"
-              onClick={handleStartSession}
-              disabled={isPending}
-              className="w-full rounded-2xl bg-cyan-400 px-4 py-4 text-sm font-bold uppercase tracking-[0.2em] text-black shadow-[0_0_30px_rgba(34,211,238,0.25)]"
-            >
-              ▶ Start Session
-            </button>
-          ) : (
-            <div className="rounded-2xl border border-cyan-400/40 bg-cyan-400/10 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-cyan-300">
-                    Session Running
-                  </div>
-                  <div className="mt-1 text-2xl font-bold">
-                    {formatLiveDuration(activeSession.started_at)}
-                  </div>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={handleEndSession}
-                  disabled={isPending}
-                  className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white"
-                >
-                  Stop
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-                <section className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-bold">Recent Sessions</h2>
-            <span className="text-xs uppercase tracking-wide text-white/40">
-              Last 5
-            </span>
-          </div>
-
-          {recentSessions.length === 0 ? (
-            <div className="text-sm text-white/50">
-              No completed sessions yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {recentSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="rounded-xl border border-white/10 bg-black/20 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs uppercase tracking-wide text-white/40">
-                        Started
-                      </div>
-                      <div className="text-sm font-medium">
-                        {formatDateTime(session.started_at)}
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs uppercase tracking-wide text-white/40">
-                        Duration
-                      </div>
-                      <div className="text-sm font-bold text-cyan-400">
-                        {formatSessionDuration(session.duration_seconds)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-2">
-                    <div className="text-xs uppercase tracking-wide text-white/40">
-                      Ended
-                    </div>
-                    <div className="text-sm text-white/70">
-                      {session.ended_at ? formatDateTime(session.ended_at) : '—'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-                    )}
-
-          <div className="mt-4 border-t border-white/10 pt-4 flex items-center justify-between">
-  <h2 className="text-lg font-bold">Total Time Logged</h2>
-
-  <span className="text-lg font-bold text-cyan-400">
-    {formatSessionDuration(displayedLoggedSeconds)}
-  </span>
-</div>
-        </section>
+<UnitSessionTracker
+  unitId={unit.id}
+  activeSession={activeSession}
+  sessions={sessions}
+  totalLoggedSeconds={displayedLoggedSeconds}
+/>
 
         <section className="mt-8">
           <div className="mb-4 flex items-center justify-between">
@@ -521,7 +430,7 @@ const handleUpdateDetails = (formData: FormData) => {
           </div>
 
           {(() => {
-  const visibleSteps = steps
+  const visibleSteps = optimisticSteps
     .filter((s) => s.step_key !== 'done')
     .sort((a, b) => a.step_order - b.step_order)
 
@@ -529,7 +438,9 @@ const handleUpdateDetails = (formData: FormData) => {
     .filter((s) => s.status === 'done')
     .map((s) => s.id)
 
-const finalDoneStep = steps.find((s) => s.step_key === 'done')
+const finalDoneStep = optimisticSteps.find(
+  (s) => s.step_key === 'done'
+)
 const showFinalDone = finalDoneStep?.status === 'done'
   return (
     <div className="space-y-3">
@@ -539,19 +450,13 @@ const showFinalDone = finalDoneStep?.status === 'done'
         const percent = isDone ? (doneIndex + 1) * 20 : 0
 
         return (
-          <form key={step.id} action={toggleStepDone}>
-            <input type="hidden" name="stepId" value={step.id} />
-            <input type="hidden" name="unitId" value={unit.id} />
-            <input
-              type="hidden"
-              name="nextStatus"
-              value={isDone ? 'pending' : 'done'}
-            />
-
-            <button
-              type="submit"
-              className="flex w-full items-center gap-4 rounded-2xl bg-neutral-900 px-4 py-4"
-            >
+          <div key={step.id}>
+  <button
+    type="button"
+    onClick={() => handleToggleStep(step)}
+    disabled={isPending}
+    className="flex w-full items-center gap-4 rounded-2xl bg-neutral-900 px-4 py-4 transition-all disabled:opacity-60"
+  >
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
                   isDone
@@ -571,8 +476,8 @@ const showFinalDone = finalDoneStep?.status === 'done'
               <div className={isDone ? 'font-semibold text-cyan-400' : 'text-neutral-500'}>
                 {percent}%
               </div>
-            </button>
-          </form>
+              </button>
+</div>
         )
       })}
             {showFinalDone && (

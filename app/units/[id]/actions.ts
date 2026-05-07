@@ -412,3 +412,80 @@ export async function toggleStepDone(formData: FormData) {
   revalidatePath('/dashboard')
   revalidatePath('/projects')
 }
+
+export async function updateUnitSession(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Unauthorized')
+
+  const unitId = String(formData.get('unitId') || '')
+  const sessionId = String(formData.get('sessionId') || '')
+  const startedAt = String(formData.get('startedAt') || '')
+  const endedAt = String(formData.get('endedAt') || '')
+
+  if (!unitId || !sessionId || !startedAt || !endedAt) {
+    throw new Error('Missing session details')
+  }
+
+  const started = new Date(startedAt)
+  const ended = new Date(endedAt)
+
+  if (ended <= started) {
+    throw new Error('End time must be after start time')
+  }
+
+  const durationSeconds = Math.floor(
+    (ended.getTime() - started.getTime()) / 1000
+  )
+
+  const { error } = await supabase
+    .from('unit_sessions')
+    .update({
+      started_at: started.toISOString(),
+      ended_at: ended.toISOString(),
+      duration_seconds: durationSeconds,
+    })
+    .eq('id', sessionId)
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) throw error
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/projects')
+}
+
+export async function deleteUnitSession(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Unauthorized')
+
+  const unitId = String(formData.get('unitId') || '')
+  const sessionId = String(formData.get('sessionId') || '')
+
+  if (!unitId || !sessionId) {
+    throw new Error('Missing session details')
+  }
+
+  const { error } = await supabase
+    .from('unit_sessions')
+    .delete()
+    .eq('id', sessionId)
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) throw error
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/projects')
+}
