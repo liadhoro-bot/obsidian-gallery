@@ -3,20 +3,33 @@ export type RecipeDetailTab = 'details' | 'steps' | 'add'
 type Props = {
   activeTab: RecipeDetailTab
   setActiveTab: (tab: RecipeDetailTab) => void
+  isOwner: boolean
 }
 
-export default function RecipeDetailTabs({ activeTab, setActiveTab }: Props) {
+export default function RecipeDetailTabs({
+  activeTab,
+  setActiveTab,
+  isOwner,
+}: Props) {
   const tabs: {
     key: RecipeDetailTab
     label: string
   }[] = [
     { key: 'details', label: 'Recipe Details' },
     { key: 'steps', label: 'Recipe Steps' },
-    { key: 'add', label: 'Add Step' },
   ]
 
+  if (isOwner) {
+    tabs.push({ key: 'add', label: 'Add Step' })
+  }
+
   return (
-    <div className="mt-5 grid grid-cols-3 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+    <div
+      className={[
+        'mt-5 grid rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]',
+        isOwner ? 'grid-cols-3' : 'grid-cols-2',
+      ].join(' ')}
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key
 

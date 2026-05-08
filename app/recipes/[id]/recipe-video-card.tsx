@@ -6,6 +6,7 @@ import { updateRecipeYoutubeUrl } from './recipe-actions'
 type RecipeVideoCardProps = {
   recipeId: string
   youtubeUrl: string | null
+  isOwner: boolean
 }
 
 function getYoutubeVideoId(url: string | null) {
@@ -45,6 +46,7 @@ function getYoutubeEmbedUrl(url: string | null) {
 export default function RecipeVideoCard({
   recipeId,
   youtubeUrl,
+  isOwner,
 }: RecipeVideoCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draftUrl, setDraftUrl] = useState(youtubeUrl || '')
@@ -54,7 +56,7 @@ export default function RecipeVideoCard({
 
   return (
     <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-xl">
-      {!embedUrl && !isEditing ? (
+      {isOwner && !embedUrl && !isEditing ? (
         <div className="flex flex-col gap-5">
           <div>
             <div className="flex items-center gap-3">
@@ -83,7 +85,7 @@ export default function RecipeVideoCard({
         </div>
       ) : null}
 
-      {isEditing ? (
+      {isOwner && isEditing ? (
         <form
           action={async (formData) => {
             await updateRecipeYoutubeUrl(formData)
@@ -167,16 +169,18 @@ export default function RecipeVideoCard({
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-white">YouTube Tutorial</h2>
 
-            <button
-              type="button"
-              onClick={() => {
-                setDraftUrl(youtubeUrl || '')
-                setIsEditing(true)
-              }}
-              className="text-sm font-semibold text-cyan-300"
-            >
-              Edit
-            </button>
+            {isOwner ? (
+  <button
+    type="button"
+    onClick={() => {
+      setDraftUrl(youtubeUrl || '')
+      setIsEditing(true)
+    }}
+    className="text-sm font-semibold text-cyan-300"
+  >
+    Edit
+  </button>
+) : null}
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">

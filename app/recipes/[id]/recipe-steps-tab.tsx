@@ -4,6 +4,7 @@ import RecipeStepCard from './components/recipe-step-card'
 import { Paint, Recipe, RecipeStep, StepPaintLink } from './components/types'
 
 type Props = {
+  isOwner: boolean
   recipe: Recipe
   steps: RecipeStep[]
   paintsByStepId: Map<string, StepPaintLink[]>
@@ -20,6 +21,7 @@ type Props = {
 }
 
 export default function RecipeStepsTab({
+  isOwner,
   recipe,
   steps = [],
   paintsByStepId,
@@ -38,7 +40,7 @@ export default function RecipeStepsTab({
     <section className="mt-5">
       <h2 className="text-lg font-semibold text-white">Recipe Steps</h2>
 
-     {(steps || []).length > 0 ? (
+      {(steps || []).length > 0 ? (
         <div className="mt-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm text-neutral-400">
@@ -90,13 +92,14 @@ export default function RecipeStepsTab({
                 >
                   <RecipeStepCard
                     key={`${step.id}-${activeStepIndex}`}
+                    isOwner={isOwner}
                     recipe={recipe}
                     step={step}
                     stepsLength={steps.length}
                     stepIndex={index}
                     paintsForStep={paintsByStepId.get(step.id) || []}
                     filteredPaints={filteredPaints}
-                    isEditingThisStep={editingStepId === step.id}
+                    isEditingThisStep={isOwner && editingStepId === step.id}
                     deleteConfirmStepId={deleteConfirmStepId}
                     setEditingStepId={setEditingStepId}
                     setDeleteConfirmStepId={setDeleteConfirmStepId}

@@ -7,6 +7,7 @@ import RecipeGallerySection from './components/recipe-gallery-section'
 import { Recipe, RecipeImage, StepPaintLink } from './components/types'
 
 type Props = {
+  isOwner: boolean
   recipe: Recipe
   stepPaintLinks: StepPaintLink[]
   recipeImages: RecipeImage[]
@@ -20,6 +21,7 @@ type Props = {
 }
 
 export default function RecipeDetailsTab({
+  isOwner,
   recipe,
   stepPaintLinks,
   recipeImages,
@@ -49,18 +51,24 @@ export default function RecipeDetailsTab({
       <RecipeInventoryCard
         recipe={recipe}
         stepPaintLinks={stepPaintLinks}
-        isEditingInventory={isEditingInventory}
+        isOwner={isOwner}
+        isEditingInventory={isOwner && isEditingInventory}
         setIsEditingInventory={setIsEditingInventory}
         updateRecipeInventoryAction={updateRecipeInventoryAction}
         updateRecipePaintOwnershipAction={updateRecipePaintOwnershipAction}
       />
 
-      <RecipeVideoCard recipeId={recipe.id} youtubeUrl={recipe.youtube_url} />
+      <RecipeVideoCard
+        recipeId={recipe.id}
+        youtubeUrl={recipe.youtube_url}
+        isOwner={isOwner}
+      />
 
       <RecipeGallerySection
         recipe={recipe}
         recipeImages={recipeImages}
-        isAddingImage={isAddingImage}
+        isOwner={isOwner}
+        isAddingImage={isOwner && isAddingImage}
         setIsAddingImage={setIsAddingImage}
         deleteConfirmImageId={deleteConfirmImageId}
         setDeleteConfirmImageId={setDeleteConfirmImageId}

@@ -20,6 +20,7 @@ type InventoryPaint = {
 export default function RecipeInventoryCard({
   recipe,
   stepPaintLinks,
+  isOwner,
   isEditingInventory,
   setIsEditingInventory,
   updateRecipeInventoryAction,
@@ -27,6 +28,7 @@ export default function RecipeInventoryCard({
 }: {
   recipe: Recipe
   stepPaintLinks: StepPaintLink[]
+  isOwner: boolean
   isEditingInventory: boolean
   setIsEditingInventory: (value: boolean) => void
   updateRecipeInventoryAction: (formData: FormData) => Promise<void>
@@ -91,20 +93,22 @@ export default function RecipeInventoryCard({
           THE PALETTE
         </h2>
 
-        <button
-          type="button"
-          onClick={() => setIsEditingInventory(!isEditingInventory)}
-          className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-        >
-          ✎
-        </button>
+        {isOwner ? (
+          <button
+            type="button"
+            onClick={() => setIsEditingInventory(!isEditingInventory)}
+            className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
+          >
+            ✎
+          </button>
+        ) : null}
       </div>
 
       {optimisticInventory.length > 0 ? (
         <div className="mt-4 space-y-3">
           {optimisticInventory.map((paint) => {
             const [paintSource] = paint.uniqueKey.split(':')
-const paintHref = `/vault/${paintSource}/${paint.id}`
+            const paintHref = `/vault/${paintSource}/${paint.id}`
 
             return (
               <div
@@ -216,7 +220,7 @@ const paintHref = `/vault/${paintSource}/${paint.id}`
         </p>
       )}
 
-      {isEditingInventory ? (
+      {isOwner && isEditingInventory ? (
         <form action={updateRecipeInventoryAction} className="mt-5 space-y-4">
           <input type="hidden" name="recipeId" value={recipe.id} />
 

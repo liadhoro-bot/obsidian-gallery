@@ -112,10 +112,15 @@ export default function RecipeDetailClient({
   updateRecipeHeaderAction={updateRecipeHeaderAction}
 />
 
-      <RecipeDetailTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      <RecipeDetailTabs
+  activeTab={activeTab}
+  setActiveTab={setActiveTab}
+  isOwner={isOwner}
+/>
 
       {activeTab === 'details' ? (
         <RecipeDetailsTab
+          isOwner={isOwner}
           recipe={recipe}
           stepPaintLinks={stepPaintLinks}
           recipeImages={recipeImages}
@@ -131,6 +136,7 @@ export default function RecipeDetailClient({
 
       {activeTab === 'steps' ? (
         <RecipeStepsTab
+          isOwner={isOwner}
           recipe={recipe}
           steps={steps}
           paintsByStepId={paintsByStepId}
@@ -147,7 +153,7 @@ export default function RecipeDetailClient({
         />
       ) : null}
 
-      {activeTab === 'add' ? (
+      {isOwner && activeTab === 'add' ? (
         <RecipeAddStepTab
           recipe={recipe}
           paints={paints}

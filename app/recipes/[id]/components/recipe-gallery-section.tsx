@@ -5,6 +5,7 @@ import { Recipe, RecipeImage } from './types'
 export default function RecipeGallerySection({
   recipe,
   recipeImages,
+  isOwner,
   isAddingImage,
   setIsAddingImage,
   deleteConfirmImageId,
@@ -15,6 +16,7 @@ export default function RecipeGallerySection({
 }: {
   recipe: Recipe
   recipeImages: RecipeImage[]
+  isOwner: boolean
   isAddingImage: boolean
   setIsAddingImage: (value: boolean) => void
   deleteConfirmImageId: string | null
@@ -28,17 +30,19 @@ export default function RecipeGallerySection({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-white">Gallery</h2>
 
-        <button
-          type="button"
-          onClick={() => setIsAddingImage(!isAddingImage)}
-          className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-          title="Add image"
-        >
-          +
-        </button>
+        {isOwner ? (
+          <button
+            type="button"
+            onClick={() => setIsAddingImage(!isAddingImage)}
+            className="rounded-full border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
+            title="Add image"
+          >
+            +
+          </button>
+        ) : null}
       </div>
 
-      {isAddingImage ? (
+      {isOwner && isAddingImage ? (
         <div className="mt-4 rounded-2xl border border-neutral-800 bg-black p-4">
           <form action={uploadRecipeImageAction} className="space-y-4">
             <input type="hidden" name="recipeId" value={recipe.id} />
@@ -107,7 +111,7 @@ export default function RecipeGallerySection({
                     <span className="inline-block rounded-full bg-cyan-500/20 px-2 py-0.5 text-[10px] font-medium text-cyan-400">
                       Featured
                     </span>
-                  ) : (
+                  ) : isOwner ? (
                     <form action={setFeaturedRecipeImageAction}>
                       <input type="hidden" name="recipeId" value={recipe.id} />
                       <input type="hidden" name="imageId" value={image.id} />
@@ -119,23 +123,25 @@ export default function RecipeGallerySection({
                         ★
                       </button>
                     </form>
-                  )}
+                  ) : null}
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDeleteConfirmImageId(
-                        deleteConfirmImageId === image.id ? null : image.id
-                      )
-                    }
-                    className="rounded-full border border-neutral-700 bg-black px-2 py-1 text-xs text-white"
-                    title="Delete image"
-                  >
-                    X
-                  </button>
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDeleteConfirmImageId(
+                          deleteConfirmImageId === image.id ? null : image.id
+                        )
+                      }
+                      className="rounded-full border border-neutral-700 bg-black px-2 py-1 text-xs text-white"
+                      title="Delete image"
+                    >
+                      X
+                    </button>
+                  ) : null}
                 </div>
 
-                {deleteConfirmImageId === image.id ? (
+                {isOwner && deleteConfirmImageId === image.id ? (
                   <div className="rounded-xl border border-neutral-700 bg-black p-3">
                     <p className="text-sm text-white">Delete this image?</p>
 

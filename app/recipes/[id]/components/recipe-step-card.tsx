@@ -30,6 +30,7 @@ function getContrastTextColor(hex?: string | null) {
 }
 
 export default function RecipeStepCard({
+  isOwner,
   recipe,
   step,
   stepsLength,
@@ -44,6 +45,7 @@ export default function RecipeStepCard({
   updateRecipeStepAction,
   deleteRecipeStepAction,
 }: {
+  isOwner: boolean
   recipe: Recipe
   step: RecipeStep
   stepsLength: number
@@ -65,7 +67,7 @@ export default function RecipeStepCard({
   return (
     <div className="relative overflow-hidden rounded-2xl border border-neutral-800 bg-[#081116] p-5 shadow-xl shadow-black/30">
       <div>
-        {deleteConfirmStepId === step.id ? (
+        {isOwner && deleteConfirmStepId === step.id ? (
           <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4">
             <p className="text-sm font-semibold text-red-100">
               Delete this step?
@@ -98,7 +100,7 @@ export default function RecipeStepCard({
           </div>
         ) : null}
 
-        {isEditingThisStep ? (
+        {isOwner && isEditingThisStep ? (
           <form
             action={async (formData) => {
               await updateRecipeStepAction(formData)
@@ -374,18 +376,20 @@ export default function RecipeStepCard({
               </p>
             )}
 
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setEditingStepId(isEditingThisStep ? null : step.id)
-                }
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white backdrop-blur transition active:scale-[0.98] active:opacity-70 hover:bg-white/10"
-                title="Edit step"
-              >
-                ✎
-              </button>
-            </div>
+            {isOwner ? (
+  <div className="mt-6 flex justify-end gap-2">
+    <button
+      type="button"
+      onClick={() =>
+        setEditingStepId(isEditingThisStep ? null : step.id)
+      }
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white backdrop-blur transition active:scale-[0.98] active:opacity-70 hover:bg-white/10"
+      title="Edit step"
+    >
+      ✎
+    </button>
+  </div>
+) : null}
           </>
         )}
       </div>
