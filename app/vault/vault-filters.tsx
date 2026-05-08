@@ -24,7 +24,7 @@ async function getAllCatalogFilterRows() {
   while (true) {
     const { data, error } = await supabase
       .from('paint_catalog')
-      .select('brand, line')
+      .select('brand,line')
       .eq('is_active', true)
       .order('brand', { ascending: true })
       .order('line', { ascending: true })
