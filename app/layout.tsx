@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
   applicationName: 'Obsidian Gallery',
 
-  manifest: '/site.webmanifest',
+  manifest: '/manifest.webmanifest',
 
   appleWebApp: {
     capable: true,

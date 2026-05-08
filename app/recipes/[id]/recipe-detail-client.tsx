@@ -16,6 +16,7 @@ import RecipeAddStepTab from './recipe-add-step-tab'
 
 type Props = {
   recipe: Recipe
+  isOwner: boolean
   steps: RecipeStep[]
   stepPaintLinks: StepPaintLink[]
   recipeImages: RecipeImage[]
@@ -37,7 +38,8 @@ type Props = {
 
 export default function RecipeDetailClient({
   recipe,
-  steps = [],
+  isOwner,
+  steps,
   stepPaintLinks,
   recipeImages,
   featuredImage,
@@ -102,12 +104,13 @@ export default function RecipeDetailClient({
   return (
     <div className="w-full">
       <RecipeHero
-        recipe={recipe}
-        featuredImage={featuredImage}
-        isEditingHeader={isEditingHeader}
-        setIsEditingHeader={setIsEditingHeader}
-        updateRecipeHeaderAction={updateRecipeHeaderAction}
-      />
+  recipe={recipe}
+  isOwner={isOwner}
+  featuredImage={featuredImage}
+  isEditingHeader={isOwner && isEditingHeader}
+  setIsEditingHeader={setIsEditingHeader}
+  updateRecipeHeaderAction={updateRecipeHeaderAction}
+/>
 
       <RecipeDetailTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 

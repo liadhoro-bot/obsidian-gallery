@@ -6,12 +6,14 @@ import { updateRecipeVisibility } from '../recipe-actions'
 
 export default function RecipeHero({
   recipe,
+  isOwner,
   featuredImage,
   isEditingHeader,
   setIsEditingHeader,
   updateRecipeHeaderAction,
 }: {
   recipe: Recipe
+  isOwner: boolean
   featuredImage: RecipeImage | null
   isEditingHeader: boolean
   setIsEditingHeader: (value: boolean) => void
@@ -48,27 +50,29 @@ export default function RecipeHero({
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-  <RecipeVisibilityPill
-    recipeId={recipe.id}
-    isPublic={recipe.is_public}
-    updateRecipeVisibilityAction={updateRecipeVisibility}
-  />
+            {isOwner ? (
+              <div className="flex items-center gap-2">
+                <RecipeVisibilityPill
+                  recipeId={recipe.id}
+                  isPublic={recipe.is_public}
+                  updateRecipeVisibilityAction={updateRecipeVisibility}
+                />
 
-  <button
-    type="button"
-    onClick={() => setIsEditingHeader(!isEditingHeader)}
-    className="rounded-full border border-neutral-600 bg-black/60 px-3 py-2 text-sm text-white"
-    title="Edit title and description"
-  >
-    ✎
-  </button>
-</div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingHeader(!isEditingHeader)}
+                  className="rounded-full border border-neutral-600 bg-black/60 px-3 py-2 text-sm text-white"
+                  title="Edit title and description"
+                >
+                  ✎
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
 
-      {isEditingHeader ? (
+      {isOwner && isEditingHeader ? (
         <div className="px-5 pb-5">
           <form
             action={updateRecipeHeaderAction}

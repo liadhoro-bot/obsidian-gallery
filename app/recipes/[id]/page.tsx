@@ -794,16 +794,21 @@ export default async function RecipeDetailPage({
     redirect('/login')
   }
 
-  const { data: recipe, error: recipeError } = await supabase
-    .from('recipes')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
+  const { data: recipe } = await supabase
+  .from('recipes')
+  .select('*')
+  .eq('id', id)
+  .single()
 
-  if (recipeError || !recipe) {
-    notFound()
-  }
+if (!recipe) {
+  notFound()
+}
+
+if (!recipe.is_public && recipe.user_id !== user.id) {
+  notFound()
+}
+
+const isOwner = recipe.user_id === user.id
 
   const { data: steps, error: stepsError } = await supabase
     .from('recipe_steps')
@@ -1006,12 +1011,11 @@ const wishlistPaintIds = new Set(
 
   
   const { data: recipeImages, error: recipeImagesError } = await supabase
-    .from('image_assets')
-    .select('*')
-    .eq('entity_type', 'recipe')
-    .eq('entity_id', id)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+  .from('image_assets')
+  .select('*')
+  .eq('entity_type', 'recipe')
+  .eq('entity_id', id)
+  .order('created_at', { ascending: false })
 
   if (recipeImagesError) {
     console.error('Error fetching recipe images:', recipeImagesError)
@@ -1034,8 +1038,9 @@ const wishlistPaintIds = new Set(
       </div>
 
       <RecipeDetailClient
-        recipe={recipe}
-        steps={steps || []}
+  recipe={recipe}
+  isOwner={isOwner}
+  steps={steps || []}
         stepPaintLinks={stepPaintLinks}
         recipeImages={recipeImages || []}
         featuredImage={featuredImage}
