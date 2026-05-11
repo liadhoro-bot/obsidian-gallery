@@ -156,6 +156,40 @@ export async function endUnitSession(unitId: string) {
     throw error
   }
 
+  const { data: unit } = await supabase
+    .from('units')
+    .select('id, name, complexity, project_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  let projectName: string | null = null
+
+  if (unit?.project_id) {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('name')
+      .eq('id', unit.project_id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    projectName = project?.name || null
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'session_stopped',
+    properties: {
+      unit_id: unitId,
+      unit_name: unit?.name || null,
+      project_id: unit?.project_id || null,
+      project_name: projectName,
+      complexity: unit?.complexity || null,
+      duration_seconds: durationSeconds,
+      duration_minutes: Math.round(durationSeconds / 60),
+    },
+  })
+
   revalidatePath(`/units/${unitId}`)
   revalidatePath('/dashboard')
   revalidatePath('/projects')
