@@ -8,6 +8,7 @@ import PaintHero from './paint-hero'
 import PaintTechnicalSpecs from './paint-technical-specs'
 import PaintOwnershipCard from './paint-ownership-card'
 import PaintRecipesUsed from './paint-recipes-used'
+import CustomPaintForm from '../../custom-paint-form'
 import {
   PaintHeroSkeleton,
   PaintTechnicalSpecsSkeleton,
@@ -20,6 +21,48 @@ type PageProps = {
     source: string
     id: string
   }>
+}
+
+async function CustomPaintEditor({
+  paintId,
+  userId,
+}: {
+  paintId: string
+  userId: string
+}) {
+  const supabase = await createClient()
+
+  const [{ data: paint, error }, { data: imageAsset }] = await Promise.all([
+    supabase
+      .from('paints')
+      .select('id, name, manufacturer, series, color_hex')
+      .eq('id', paintId)
+      .eq('user_id', userId)
+      .single(),
+
+    supabase
+      .from('image_assets')
+      .select('image_url')
+      .eq('entity_type', 'paint')
+      .eq('entity_id', paintId)
+      .eq('user_id', userId)
+      .eq('is_featured', true)
+      .maybeSingle(),
+  ])
+
+  if (error || !paint) {
+    redirect('/vault?tab=collection')
+  }
+
+  return (
+    <CustomPaintForm
+      mode="edit"
+      paint={{
+        ...paint,
+        image_url: imageAsset?.image_url || null,
+      }}
+    />
+  )
 }
 
 export default async function PaintPage({ params }: PageProps) {
@@ -46,38 +89,40 @@ export default async function PaintPage({ params }: PageProps) {
   }
 
   return (
-  <main className="min-h-screen bg-[#061012] pb-24 text-slate-100">
-    <div className="mx-auto w-full max-w-md px-4">
-      <DashboardTopBar />
-    </div>
+    <main className="min-h-screen bg-[#061012] pb-24 text-slate-100">
+      <div className="mx-auto w-full max-w-md px-4">
+        <DashboardTopBar />
+      </div>
 
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5">
+        <Link href="/vault" className="text-sm text-cyan-400">
+          ← Back to Vault
+        </Link>
 
-  <Link
-    href="/vault"
-    className="text-sm text-cyan-400"
-  >
-    ← Back to Vault
-  </Link>
+        <Suspense fallback={<PaintHeroSkeleton />}>
+          <PaintHero paintRef={paintRef} />
+        </Suspense>
 
-  <Suspense fallback={<PaintHeroSkeleton />}>
-        <PaintHero paintRef={paintRef} />
-      </Suspense>
+        {source === 'custom' ? (
+          <CustomPaintEditor paintId={id} userId={user.id} />
+        ) : (
+          <>
+            <Suspense fallback={<PaintTechnicalSpecsSkeleton />}>
+              <PaintTechnicalSpecs paintRef={paintRef} />
+            </Suspense>
 
-      <Suspense fallback={<PaintTechnicalSpecsSkeleton />}>
-        <PaintTechnicalSpecs paintRef={paintRef} />
-      </Suspense>
+            <Suspense fallback={<PaintOwnershipSkeleton />}>
+              <PaintOwnershipCard paintRef={paintRef} />
+            </Suspense>
+          </>
+        )}
 
-      <Suspense fallback={<PaintOwnershipSkeleton />}>
-        <PaintOwnershipCard paintRef={paintRef} />
-      </Suspense>
+        <Suspense fallback={<PaintRecipesSkeleton />}>
+          <PaintRecipesUsed paintRef={paintRef} />
+        </Suspense>
+      </div>
 
-      <Suspense fallback={<PaintRecipesSkeleton />}>
-        <PaintRecipesUsed paintRef={paintRef} />
-      </Suspense>
-    </div>
-
-    <MobileNav />
-  </main>
-)
+      <MobileNav />
+    </main>
+  )
 }

@@ -224,7 +224,26 @@ if (ownership === 'wishlist') {
     .order('series', { ascending: true })
     .order('name', { ascending: true })
     .range(0, 999)
+const customPaintIds =
+  customRows?.map((paint) => paint.id) || []
 
+const { data: customImageRows } =
+  customPaintIds.length > 0
+    ? await supabase
+        .from('image_assets')
+        .select('entity_id, image_url')
+        .eq('entity_type', 'paint')
+        .eq('user_id', user.id)
+        .eq('is_featured', true)
+        .in('entity_id', customPaintIds)
+    : { data: [] }
+
+const featuredImageMap = new Map(
+  (customImageRows || []).map((row) => [
+    row.entity_id,
+    row.image_url,
+  ])
+)
   const catalogPaints: VaultPaint[] =
     catalogRows?.map((paint) => ({
       id: paint.id,
@@ -252,7 +271,8 @@ if (tab === 'collection') {
       line: paint.series,
       name: paint.name,
       sku: null,
-      swatch_image_url: null,
+      swatch_image_url:
+  featuredImageMap.get(paint.id) || null,
       hex_approx: paint.color_hex,
       paint_type: paint.paint_type,
       is_owned: true,
@@ -269,7 +289,8 @@ if (tab === 'collection') {
         line: paint.series,
         name: paint.name,
         sku: null,
-        swatch_image_url: null,
+        swatch_image_url:
+  featuredImageMap.get(paint.id) || null,
         hex_approx: paint.color_hex,
         paint_type: paint.paint_type,
         is_owned: true,

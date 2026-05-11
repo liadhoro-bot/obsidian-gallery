@@ -6,7 +6,7 @@ import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import VaultFilters from './vault-filters'
 import VaultGrid from './vault-grid'
 import VaultSegmentedTabs from './vault-segmented-tabs'
-import CustomColorForm from './custom-color-form'
+import CustomPaintForm from './custom-paint-form'
 import {
   VaultFiltersSkeleton,
   VaultGridSkeleton,
@@ -86,33 +86,33 @@ export default async function VaultPage({ searchParams }: PageProps) {
           ownership={ownership}
         />
 
-        {activeTab !== 'custom' && (
+        {activeTab !== 'custom' ? (
           <Suspense fallback={<VaultFiltersSkeleton />}>
             <VaultFilters
-  q={q}
-  brand={brand}
-  line={line}
-  ownership={ownership}
-  tab={activeTab === 'collection' ? 'collection' : 'find'}
-/>
+              q={q}
+              brand={brand}
+              line={line}
+              ownership={ownership}
+              tab={activeTab === 'collection' ? 'collection' : 'find'}
+            />
           </Suspense>
-        )}
+        ) : null}
 
         {activeTab === 'custom' ? (
-          <CustomColorForm />
+          <CustomPaintForm mode="create" />
         ) : (
           <Suspense
             key={`${activeTab}-${q}-${brand}-${line}-${ownership}-${limit}`}
             fallback={<VaultGridSkeleton />}
           >
             <VaultGrid
-  q={q}
-  brand={brand}
-  line={line}
-  ownership={ownership}
-  limit={limit}
-  tab={activeTab === 'collection' ? 'collection' : 'find'}
-/>
+              q={q}
+              brand={brand}
+              line={line}
+              ownership={ownership}
+              limit={limit}
+              tab={activeTab === 'collection' ? 'collection' : 'find'}
+            />
           </Suspense>
         )}
       </div>

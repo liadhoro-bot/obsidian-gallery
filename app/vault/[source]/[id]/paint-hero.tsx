@@ -28,11 +28,13 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
           {paint.swatch_image_url ? (
             <Image
               src={paint.swatch_image_url}
-              alt={paint.name}
+              alt={paint.name || 'Paint swatch'}
               fill
               className="object-cover opacity-90"
             />
           ) : null}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
           <div className="relative z-10">
             <h1 className="text-4xl font-black leading-none text-white">
@@ -60,39 +62,63 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
     )
   }
 
-  const { data: paint } = await supabase
-    .from('paints')
-    .select('id, name, manufacturer, series, paint_type, color_hex')
-    .eq('id', paintRef.paintId)
-    .eq('user_id', paintRef.userId)
-    .maybeSingle()
+  const [{ data: paint }, { data: imageAsset }] = await Promise.all([
+    supabase
+      .from('paints')
+      .select('id, name, manufacturer, series, paint_type, color_hex')
+      .eq('id', paintRef.paintId)
+      .eq('user_id', paintRef.userId)
+      .maybeSingle(),
+
+    supabase
+      .from('image_assets')
+      .select('image_url')
+      .eq('entity_type', 'paint')
+      .eq('entity_id', paintRef.paintId)
+      .eq('user_id', paintRef.userId)
+      .eq('is_featured', true)
+      .maybeSingle(),
+  ])
 
   if (!paint) return null
 
   return (
     <section className="overflow-hidden rounded-2xl bg-slate-900 shadow-xl">
       <div
-        className="flex h-72 flex-col justify-end p-8"
+        className="relative flex h-72 flex-col justify-end p-8"
         style={{ backgroundColor: paint.color_hex || '#111827' }}
       >
-        <h1 className="text-4xl font-black leading-none text-white">
-          {paint.name}
-        </h1>
+        {imageAsset?.image_url ? (
+          <Image
+            src={imageAsset.image_url}
+            alt={paint.name || 'Custom paint swatch'}
+            fill
+            className="object-cover opacity-90"
+          />
+        ) : null}
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-slate-950/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cyan-300">
-            {paint.manufacturer || 'Custom'}
-          </span>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
 
-          {paint.series ? (
-            <span className="text-sm font-semibold text-white/80">
-              {paint.series}
+        <div className="relative z-10">
+          <h1 className="text-4xl font-black leading-none text-white">
+            {paint.name}
+          </h1>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="rounded-md bg-slate-950/70 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cyan-300">
+              {paint.manufacturer || 'Custom'}
             </span>
-          ) : null}
 
-          <span className="rounded-md bg-cyan-500/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cyan-200">
-            Editable
-          </span>
+            {paint.series ? (
+              <span className="text-sm font-semibold text-white/80">
+                {paint.series}
+              </span>
+            ) : null}
+
+            <span className="rounded-md bg-cyan-500/20 px-3 py-1 text-xs font-bold uppercase tracking-widest text-cyan-200">
+              Editable
+            </span>
+          </div>
         </div>
       </div>
     </section>

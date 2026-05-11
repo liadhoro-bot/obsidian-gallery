@@ -1,0 +1,307 @@
+import Image from 'next/image'
+import { notFound } from 'next/navigation'
+import { createClient } from '../../../utils/supabase/server'
+import DashboardTopBar from '../../dashboard/dashboard-top-bar'
+import MobileNav from '../../components/MobileNav'
+import ThemeOwnerActions from './theme-owner-actions'
+import ThemeVisibilityPill from './theme-visibility-pill'
+import ThemePaletteEditor from './theme-palette-editor'
+import Link from 'next/link'
+import { calculateThemePaletteAction } from './actions'
+
+type Props = {
+  params: Promise<{
+    id: string
+  }>
+}
+
+type ThemePaint = {
+  id: string
+  sort_order: number | null
+  paint_source: 'catalog' | 'custom'
+  catalog_paint: {
+    id: string
+    name: string | null
+    brand: string | null
+    line: string | null
+    swatch_image_url: string | null
+    hex_approx: string | null
+  } | null
+  custom_paint: {
+    id: string
+    name: string | null
+    manufacturer: string | null
+    series: string | null
+    color_hex: string | null
+  } | null
+}
+
+export default async function ThemeDetailPage({ params }: Props) {
+  const { id } = await params
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { data: theme } = await supabase
+    .from('themes')
+    .select(
+      `
+      id,
+      user_id,
+      name,
+      description,
+      image_url,
+      is_public,
+      tags,
+      created_at,
+      theme_paints (
+        id,
+        sort_order,
+        paint_source,
+        catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+          id,
+          name,
+          brand,
+          line,
+          swatch_image_url,
+          hex_approx
+        ),
+        custom_paint:paints!theme_paints_custom_paint_id_fkey (
+          id,
+          name,
+          manufacturer,
+          series,
+          color_hex
+        )
+      )
+    `
+    )
+    .eq('id', id)
+    .single()
+
+  if (!theme) {
+    notFound()
+  }
+
+  const isOwner = Boolean(user && user.id === theme.user_id)
+
+  const themePaints = ((theme.theme_paints || []) as unknown as ThemePaint[])
+  .map((paint) => ({
+    ...paint,
+    catalog_paint: Array.isArray(paint.catalog_paint)
+      ? paint.catalog_paint[0] || null
+      : paint.catalog_paint,
+    custom_paint: Array.isArray(paint.custom_paint)
+      ? paint.custom_paint[0] || null
+      : paint.custom_paint,
+  }))
+  .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+  .slice(0, 5)
+
+  const paletteSlots = Array.from({ length: 5 }).map((_, index) => {
+    return themePaints[index] || null
+  })
+const { data: catalogPaints } = await supabase
+  .from('paint_catalog')
+  .select('id, name, brand, line, sku, swatch_image_url, hex_approx')
+  .eq('is_active', true)
+  .order('name', { ascending: true })
+  .range(0, 9999)
+
+let customPaints = null
+
+if (user) {
+  const { data } = await supabase
+    .from('paints')
+    .select('id, name, manufacturer, series, color_hex')
+    .eq('user_id', user.id)
+    .order('name', { ascending: true })
+
+  customPaints = data
+}
+
+const paintOptions = [
+  ...(catalogPaints || []).map((paint) => ({
+    id: paint.id,
+    source: 'catalog' as const,
+    name: paint.name || 'Unnamed paint',
+    brand: paint.brand,
+    line: paint.line,
+    sku: paint.sku,
+    swatch_image_url: paint.swatch_image_url,
+    hex: paint.hex_approx,
+  })),
+  ...(customPaints || []).map((paint) => ({
+    id: paint.id,
+    source: 'custom' as const,
+    name: paint.name || 'Unnamed paint',
+    brand: paint.manufacturer,
+    line: paint.series,
+    sku: null,
+    swatch_image_url: null,
+    hex: paint.color_hex,
+  })),
+]
+
+const paletteEditorSlots = paletteSlots.map((themePaint, index) => {
+  const catalogPaint = themePaint?.catalog_paint
+  const customPaint = themePaint?.custom_paint
+
+  if (!themePaint) return null
+
+  return {
+  id: themePaint.id,
+  paintId:
+    catalogPaint?.id ||
+    customPaint?.id ||
+    '',
+  paintSource: themePaint.paint_source,
+  name:
+    catalogPaint?.name ||
+    customPaint?.name ||
+    `Color ${index + 1}`,
+  imageUrl: catalogPaint?.swatch_image_url || null,
+  hex:
+    catalogPaint?.hex_approx ||
+    customPaint?.color_hex ||
+    null,
+}
+})
+
+  return (
+    <main className="min-h-screen bg-[#07090d] text-white">
+      <div className="mx-auto max-w-md pb-28">
+        <div className="px-4 pt-4">
+          <DashboardTopBar />
+        </div>
+
+        <section className="relative mt-4">
+          <div className="absolute left-4 top-4 z-20">
+  <Link
+    href="/themes"
+    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-black/60"
+  >
+    ← Back to Themes
+  </Link>
+</div>
+          <div className="relative h-[340px] overflow-hidden bg-white/[0.04]">
+            {theme.image_url ? (
+              <Image
+                src={theme.image_url}
+                alt={theme.name || 'Theme image'}
+                fill
+                priority
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 via-slate-900 to-black" />
+            )}
+
+            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-[#07090d]" />
+          </div>
+
+          <div className="-mt-16 px-4">
+            <div className="relative rounded-3xl border border-white/10 bg-[#10131a]/90 p-5 shadow-2xl backdrop-blur">
+              <div className="mb-3 flex items-center gap-2">
+                {isOwner ? (
+                  
+  <ThemeVisibilityPill
+    themeId={theme.id}
+    isPublic={theme.is_public}
+    
+  />
+) : (
+  <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-white/60">
+    {theme.is_public ? 'Public theme' : 'Private theme'}
+  </span>
+)}
+
+                {isOwner && (
+                  <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-200">
+                    Owner
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-3xl font-bold tracking-tight">
+                {theme.name}
+              </h1>
+
+              {theme.description && (
+                <p className="mt-3 text-sm leading-6 text-white/65">
+                  {theme.description}
+                </p>
+              )}
+
+              {theme.tags && theme.tags.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {theme.tags.map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-white/[0.06] px-3 py-1 text-xs text-white/55"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 pt-6">
+  <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/45">
+    Palette
+  </h2>
+
+  <ThemePaletteEditor
+    themeId={theme.id}
+    isOwner={isOwner}
+    slots={paletteEditorSlots}
+    paintOptions={paintOptions}
+    mode="display"
+  />
+
+  {isOwner && theme.image_url && (
+    <form action={calculateThemePaletteAction} className="mt-4">
+      <input type="hidden" name="themeId" value={theme.id} />
+
+      <button
+        type="submit"
+        className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/[0.1]"
+      >
+        Calculate Palette
+      </button>
+    </form>
+  )}
+</section>
+
+        <section className="px-4 pt-6">
+          <button
+            type="button"
+            className="w-full rounded-2xl bg-cyan-500 px-4 py-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400"
+          >
+            Add to Project / Unit
+          </button>
+
+        </section>
+        {isOwner && (
+  <ThemeOwnerActions
+  themeId={theme.id}
+  name={theme.name}
+  description={theme.description}
+  tags={theme.tags || []}
+  isPublic={theme.is_public}
+  slots={paletteEditorSlots}
+  paintOptions={paintOptions}
+/>
+)}
+      </div>
+
+      <MobileNav />
+    </main>
+  )
+}

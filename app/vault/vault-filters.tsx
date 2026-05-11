@@ -14,6 +14,11 @@ type CatalogFilterRow = {
   line: string | null
 }
 
+type CustomFilterRow = {
+  manufacturer: string | null
+  series: string | null
+}
+
 async function getAllCatalogFilterRows() {
   const supabase = await createClient()
 
@@ -43,6 +48,21 @@ async function getAllCatalogFilterRows() {
   return allRows
 }
 
+async function getCustomFilterRows(userId: string) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('paints')
+    .select('manufacturer,series')
+    .eq('user_id', userId)
+    .order('manufacturer', { ascending: true })
+    .order('series', { ascending: true })
+
+  if (error) throw error
+
+  return (data || []) as CustomFilterRow[]
+}
+
 export default async function VaultFilters({
   q,
   brand,
@@ -50,15 +70,34 @@ export default async function VaultFilters({
   ownership,
   tab,
 }: VaultFiltersProps) {
-  const catalogRows = await getAllCatalogFilterRows()
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const [catalogRows, customRows] = await Promise.all([
+    getAllCatalogFilterRows(),
+    user ? getCustomFilterRows(user.id) : Promise.resolve([]),
+  ])
+
+  const customAsFilterRows: CatalogFilterRow[] = customRows.map((row) => ({
+    brand: row.manufacturer || 'Custom',
+    line: row.series || 'Custom Color',
+  }))
+
+  const allRows =
+    tab === 'collection'
+      ? [...catalogRows, ...customAsFilterRows]
+      : catalogRows
 
   const brands = Array.from(
-    new Set(catalogRows.map((row) => row.brand).filter(Boolean))
+    new Set(allRows.map((row) => row.brand).filter(Boolean))
   ).sort() as string[]
 
   const lines = Array.from(
     new Set(
-      catalogRows
+      allRows
         .filter((row) => !brand || row.brand === brand)
         .map((row) => row.line)
         .filter(Boolean)
