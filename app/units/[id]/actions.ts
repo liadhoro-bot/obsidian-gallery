@@ -8,6 +8,7 @@ import {
   calculateCompletionBonus,
 } from '@/lib/gamification/xp'
 import { addXP } from '@/lib/gamification/add-xp'
+import { captureServerEvent } from '../../../utils/analytics/server'
 export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   const supabase = await createClient()
 
@@ -73,6 +74,38 @@ export async function startUnitSession(unitId: string) {
   if (error) {
     throw error
   }
+
+  const { data: unit } = await supabase
+    .from('units')
+    .select('id, name, complexity, project_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  let projectName: string | null = null
+
+  if (unit?.project_id) {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('name')
+      .eq('id', unit.project_id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    projectName = project?.name || null
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'session_started',
+    properties: {
+      unit_id: unitId,
+      unit_name: unit?.name || null,
+      project_id: unit?.project_id || null,
+      project_name: projectName,
+      complexity: unit?.complexity || null,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
   return data
