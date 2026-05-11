@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { createClient } from '../../../utils/supabase/server'
+import { updatePaintOwnership } from '../../../utils/paint-ownership/update-paint-ownership'
 import { redirect, notFound } from 'next/navigation'
 import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
@@ -112,42 +113,15 @@ async function updateRecipePaintOwnership(formData: FormData) {
   const action = formData.get('action')?.toString()
   const currentValue = formData.get('currentValue')?.toString() === 'true'
 
-  console.log('PALETTE TOGGLE CLICKED:', {
-    recipeId,
-    paintCatalogId,
-    action,
-    currentValue,
-    nextValue: !currentValue,
-  })
-
   if (!recipeId || !paintCatalogId) return
   if (action !== 'owned' && action !== 'wishlist') return
 
-  const updates =
-    action === 'owned'
-      ? { is_owned: !currentValue }
-      : { is_wishlist: !currentValue }
-
-  const { data, error } = await supabase
-    .from('user_paint_ownership')
-    .upsert(
-      {
-        user_id: user.id,
-        paint_catalog_id: paintCatalogId,
-        ...updates,
-      },
-      {
-        onConflict: 'user_id,paint_catalog_id',
-      }
-    )
-    .select()
-
-  console.log('PALETTE TOGGLE RESULT:', { data, error })
-
-  if (error) {
-    console.error('Error updating recipe paint ownership:', error)
-    return
-  }
+  await updatePaintOwnership({
+    userId: user.id,
+    paintCatalogId,
+    action,
+    currentValue,
+  })
 
   revalidatePath(`/recipes/${recipeId}`)
 }

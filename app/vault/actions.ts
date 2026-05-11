@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
+import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
 
 export async function togglePaintOwnership(formData: FormData) {
   const supabase = await createClient()
@@ -20,43 +21,18 @@ export async function togglePaintOwnership(formData: FormData) {
     throw new Error('Missing paint id')
   }
 
-  const { data: existing, error: fetchError } = await supabase
-    .from('user_paint_ownership')
-    .select('id, is_owned, units_owned')
-    .eq('user_id', user.id)
-    .eq('paint_catalog_id', paintId)
-    .maybeSingle()
+  const currentValueRaw = formData.get('currentValue')
+  const currentUnitsRaw = formData.get('currentUnits')
 
-  if (fetchError) {
-    throw new Error(fetchError.message)
-  }
-
-  if (existing) {
-    const nextOwned = !existing.is_owned
-
-    const { error } = await supabase
-      .from('user_paint_ownership')
-      .update({
-        is_owned: nextOwned,
-        units_owned: nextOwned ? Math.max(existing.units_owned || 1, 1) : 0,
-      })
-      .eq('id', existing.id)
-
-    if (error) {
-      throw new Error(error.message)
-    }
-  } else {
-    const { error } = await supabase.from('user_paint_ownership').insert({
-      user_id: user.id,
-      paint_catalog_id: paintId,
-      is_owned: true,
-      units_owned: 1,
-    })
-
-    if (error) {
-      throw new Error(error.message)
-    }
-  }
+  await updatePaintOwnership({
+    userId: user.id,
+    paintCatalogId: paintId,
+    action: 'owned',
+    currentValue:
+      currentValueRaw === null ? undefined : currentValueRaw === 'true',
+    currentUnits:
+      currentUnitsRaw === null ? undefined : Number(currentUnitsRaw || 0),
+  })
 
   revalidatePath('/vault')
   revalidatePath(`/vault/catalog/${paintId}`)
@@ -99,6 +75,7 @@ export async function createCustomPaint(formData: FormData) {
 
   revalidatePath('/vault')
 }
+
 export async function togglePaintWishlist(formData: FormData) {
   const supabase = await createClient()
 
@@ -116,28 +93,19 @@ export async function togglePaintWishlist(formData: FormData) {
     throw new Error('Missing paint id')
   }
 
-  const { data: existing } = await supabase
-    .from('user_paint_ownership')
-    .select('id, is_wishlist')
-    .eq('user_id', user.id)
-    .eq('paint_catalog_id', paintId)
-    .maybeSingle()
+  const currentValueRaw = formData.get('currentValue')
+  const currentUnitsRaw = formData.get('currentUnits')
 
-  if (existing) {
-    await supabase
-      .from('user_paint_ownership')
-      .update({
-        is_wishlist: !existing.is_wishlist,
-      })
-      .eq('id', existing.id)
-  } else {
-    await supabase.from('user_paint_ownership').insert({
-      user_id: user.id,
-      paint_catalog_id: paintId,
-      is_owned: false,
-      is_wishlist: true,
-    })
-  }
+  await updatePaintOwnership({
+    userId: user.id,
+    paintCatalogId: paintId,
+    action: 'wishlist',
+    currentValue:
+      currentValueRaw === null ? undefined : currentValueRaw === 'true',
+    currentUnits:
+      currentUnitsRaw === null ? undefined : Number(currentUnitsRaw || 0),
+  })
 
   revalidatePath('/vault')
+  revalidatePath(`/vault/catalog/${paintId}`)
 }
