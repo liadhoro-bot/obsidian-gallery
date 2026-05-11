@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../../../utils/supabase/server'
+import { captureServerEvent } from '../../../../utils/analytics/server'
 
 export async function updatePaintOwnership(formData: FormData) {
   const supabase = await createClient()
@@ -31,29 +32,29 @@ export async function updatePaintOwnership(formData: FormData) {
   }
 
   if (action === 'owned') {
-  const nextOwned = !currentValue
+    const nextOwned = !currentValue
 
-  updates.is_owned = nextOwned
-  updates.units_owned = nextOwned ? Math.max(1, currentUnits) : 0
-}
+    updates.is_owned = nextOwned
+    updates.units_owned = nextOwned ? Math.max(1, currentUnits) : 0
+  }
 
-if (action === 'wishlist') {
-  updates.is_wishlist = !currentValue
-}
+  if (action === 'wishlist') {
+    updates.is_wishlist = !currentValue
+  }
 
-if (action === 'increment') {
-  const nextUnits = currentUnits + 1
+  if (action === 'increment') {
+    const nextUnits = currentUnits + 1
 
-  updates.units_owned = nextUnits
-  updates.is_owned = nextUnits > 0
-}
+    updates.units_owned = nextUnits
+    updates.is_owned = nextUnits > 0
+  }
 
-if (action === 'decrement') {
-  const nextUnits = Math.max(0, currentUnits - 1)
+  if (action === 'decrement') {
+    const nextUnits = Math.max(0, currentUnits - 1)
 
-  updates.units_owned = nextUnits
-  updates.is_owned = nextUnits > 0
-}
+    updates.units_owned = nextUnits
+    updates.is_owned = nextUnits > 0
+  }
 
   const { error } = await supabase
     .from('user_paint_ownership')
@@ -62,6 +63,31 @@ if (action === 'decrement') {
     })
 
   if (error) throw new Error(error.message)
+
+  const { data: paint } = await supabase
+    .from('paint_catalog')
+    .select('id, brand, line, name, sku, paint_type, finish')
+    .eq('id', paintCatalogId)
+    .maybeSingle()
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'paint_ownership_updated',
+    properties: {
+      paint_source: 'catalog',
+      paint_id: paintCatalogId,
+      paint_name: paint?.name || null,
+      brand: paint?.brand || null,
+      line: paint?.line || null,
+      sku: paint?.sku || null,
+      paint_type: paint?.paint_type || null,
+      finish: paint?.finish || null,
+      action,
+      is_owned: updates.is_owned ?? null,
+      is_wishlist: updates.is_wishlist ?? null,
+      units_owned: updates.units_owned ?? null,
+    },
+  })
 
   revalidatePath(`/vault/catalog/${paintCatalogId}`)
 }
