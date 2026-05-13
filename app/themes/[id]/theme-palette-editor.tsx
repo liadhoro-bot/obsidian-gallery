@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { setThemePaintSlot } from './actions'
 
@@ -26,8 +26,6 @@ type PaletteSlot = {
   hex: string | null
 } | null
 
-const PAGE_SIZE = 200
-
 export default function ThemePaletteEditor({
   themeId,
   isOwner,
@@ -45,38 +43,71 @@ export default function ThemePaletteEditor({
 
   const [activeSlot, setActiveSlot] = useState<number | null>(null)
   const [query, setQuery] = useState('')
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [remotePaints, setRemotePaints] = useState<PaintOption[]>(paintOptions)
+  const [isSearching, setIsSearching] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  const allMatchingPaints = useMemo(() => {
-    const q = query.trim().toLowerCase()
+  useEffect(() => {
+    if (activeSlot === null) return
 
-    return paintOptions
-      .filter((paint) => {
-        const searchable = [paint.name, paint.brand, paint.line, paint.sku]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
+    const controller = new AbortController()
 
-        return !q || searchable.includes(q)
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [paintOptions, query])
+    async function loadPaints() {
+      setIsSearching(true)
 
-  const filteredPaints = allMatchingPaints.slice(0, visibleCount)
+      try {
+        const params = new URLSearchParams()
+        params.set('limit', '80')
+
+        if (query.trim()) {
+          params.set('q', query.trim())
+        }
+
+        const response = await fetch(
+          `/api/theme-paint-search?${params.toString()}`,
+          { signal: controller.signal }
+        )
+
+        if (!response.ok) {
+          throw new Error('Paint search failed')
+        }
+
+        const result = await response.json()
+        setRemotePaints(result.paints || [])
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error(error)
+          setRemotePaints([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false)
+        }
+      }
+    }
+
+    const timeout = window.setTimeout(loadPaints, 250)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timeout)
+    }
+  }, [activeSlot, query])
+
+  const filteredPaints = useMemo(() => {
+    return [...remotePaints].sort((a, b) => a.name.localeCompare(b.name))
+  }, [remotePaints])
 
   function openPicker(index: number) {
     if (!isOwner) return
 
     setActiveSlot(index)
     setQuery('')
-    setVisibleCount(PAGE_SIZE)
   }
 
   function closePicker() {
     setActiveSlot(null)
     setQuery('')
-    setVisibleCount(PAGE_SIZE)
   }
 
   function choosePaint(paint: PaintOption) {
@@ -89,7 +120,7 @@ export default function ThemePaletteEditor({
     })
   }
 
-  function renderSwatch(slot: PaletteSlot, index: number) {
+  function renderSwatch(slot: PaletteSlot) {
     return (
       <>
         <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
@@ -98,6 +129,7 @@ export default function ThemePaletteEditor({
               src={slot.imageUrl}
               alt={slot.name}
               fill
+              sizes="20vw"
               className="object-cover"
             />
           ) : slot?.hex ? (
@@ -123,30 +155,16 @@ export default function ThemePaletteEditor({
     <>
       <div className="grid grid-cols-5 gap-2">
         {slots.map((slot, index) => {
-          if (!slot) {
+          if (!slot || mode === 'edit') {
             return (
               <button
-                key={index}
+                key={slot?.id || index}
                 type="button"
                 disabled={!isOwner}
                 onClick={() => openPicker(index)}
                 className="space-y-2 disabled:cursor-default"
               >
-                {renderSwatch(slot, index)}
-              </button>
-            )
-          }
-
-          if (mode === 'edit') {
-            return (
-              <button
-                key={slot.id}
-                type="button"
-                disabled={!isOwner}
-                onClick={() => openPicker(index)}
-                className="space-y-2 disabled:cursor-default"
-              >
-                {renderSwatch(slot, index)}
+                {renderSwatch(slot)}
               </button>
             )
           }
@@ -158,7 +176,7 @@ export default function ThemePaletteEditor({
 
           return (
             <Link key={slot.id} href={href} className="space-y-2">
-              {renderSwatch(slot, index)}
+              {renderSwatch(slot)}
             </Link>
           )
         })}
@@ -184,17 +202,15 @@ export default function ThemePaletteEditor({
             <input
               type="text"
               value={query}
-              onChange={(event) => {
-                setQuery(event.target.value)
-                setVisibleCount(PAGE_SIZE)
-              }}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by name, brand, line, or SKU..."
               className="mb-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none"
             />
 
             <p className="mb-3 text-xs text-white/35">
-              Showing {filteredPaints.length} of {allMatchingPaints.length}{' '}
-              matching paints
+              {isSearching
+                ? 'Searching paints...'
+                : `Showing ${filteredPaints.length} matching paints`}
             </p>
 
             <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
@@ -212,6 +228,7 @@ export default function ThemePaletteEditor({
                         src={paint.swatch_image_url}
                         alt={paint.name}
                         fill
+                        sizes="40px"
                         className="object-cover"
                       />
                     ) : paint.hex ? (
@@ -236,19 +253,7 @@ export default function ThemePaletteEditor({
                 </button>
               ))}
 
-              {filteredPaints.length < allMatchingPaints.length && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setVisibleCount((current) => current + PAGE_SIZE)
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/70 hover:bg-white/[0.07]"
-                >
-                  Load more colors
-                </button>
-              )}
-
-              {filteredPaints.length === 0 && (
+              {!isSearching && filteredPaints.length === 0 && (
                 <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/50">
                   No paints found.
                 </div>

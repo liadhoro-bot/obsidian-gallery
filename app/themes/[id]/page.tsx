@@ -104,47 +104,16 @@ export default async function ThemeDetailPage({ params }: Props) {
   const paletteSlots = Array.from({ length: 5 }).map((_, index) => {
     return themePaints[index] || null
   })
-const { data: catalogPaints } = await supabase
-  .from('paint_catalog')
-  .select('id, name, brand, line, sku, swatch_image_url, hex_approx')
-  .eq('is_active', true)
-  .order('name', { ascending: true })
-  .range(0, 9999)
-
-let customPaints = null
-
-if (user) {
-  const { data } = await supabase
-    .from('paints')
-    .select('id, name, manufacturer, series, color_hex')
-    .eq('user_id', user.id)
-    .order('name', { ascending: true })
-
-  customPaints = data
-}
-
-const paintOptions = [
-  ...(catalogPaints || []).map((paint) => ({
-    id: paint.id,
-    source: 'catalog' as const,
-    name: paint.name || 'Unnamed paint',
-    brand: paint.brand,
-    line: paint.line,
-    sku: paint.sku,
-    swatch_image_url: paint.swatch_image_url,
-    hex: paint.hex_approx,
-  })),
-  ...(customPaints || []).map((paint) => ({
-    id: paint.id,
-    source: 'custom' as const,
-    name: paint.name || 'Unnamed paint',
-    brand: paint.manufacturer,
-    line: paint.series,
-    sku: null,
-    swatch_image_url: null,
-    hex: paint.color_hex,
-  })),
-]
+const paintOptions: {
+  id: string
+  source: 'catalog' | 'custom'
+  name: string
+  brand: string | null
+  line: string | null
+  sku?: string | null
+  swatch_image_url: string | null
+  hex: string | null
+}[] = []
 
 const paletteEditorSlots = paletteSlots.map((themePaint, index) => {
   const catalogPaint = themePaint?.catalog_paint
@@ -262,7 +231,7 @@ const paletteEditorSlots = paletteSlots.map((themePaint, index) => {
     isOwner={isOwner}
     slots={paletteEditorSlots}
     paintOptions={paintOptions}
-    mode="display"
+    mode={isOwner ? 'edit' : 'display'}
   />
 
   {isOwner && theme.image_url && (
