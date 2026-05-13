@@ -8,6 +8,7 @@ const navItems = [
   { name: 'Projects', href: '/projects', icon: '/icons/nav/projects.svg' },
   { name: 'Vault', href: '/vault', icon: '/icons/nav/vault.svg' },
   { name: 'Recipes', href: '/recipes', icon: '/icons/nav/recipes.svg' },
+  { name: 'Themes', href: '/themes', icon: '/icons/nav/themes.svg' },
 ]
 
 export default function MobileNav() {
@@ -15,7 +16,7 @@ export default function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#061018]/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-md items-center justify-around px-3">
+      <div className="mx-auto flex h-16 max-w-md items-center justify-around px-2">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -29,7 +30,7 @@ export default function MobileNav() {
               }`}
             >
               <span
-                className="h-7 w-7 bg-current"
+                className="h-6 w-6 bg-current"
                 style={{
                   maskImage: `url(${item.icon})`,
                   WebkitMaskImage: `url(${item.icon})`,
@@ -42,7 +43,7 @@ export default function MobileNav() {
                 }}
               />
 
-              <span className="text-[10px] font-bold uppercase tracking-[0.16em]">
+              <span className="text-[8px] font-bold uppercase tracking-[0.14em]">
                 {item.name}
               </span>
             </Link>
@@ -51,4 +52,4 @@ export default function MobileNav() {
       </div>
     </nav>
   )
-} 
+}

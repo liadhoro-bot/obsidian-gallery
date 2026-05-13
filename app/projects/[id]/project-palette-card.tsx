@@ -1,35 +1,129 @@
-export default function ProjectPaletteCard() {
-  const paletteSwatches = [
-    { name: 'Bone', hex: '#d8c9a3' },
-    { name: 'Shadow', hex: '#3f4852' },
-    { name: 'Bronze', hex: '#9b6a36' },
-    { name: 'Verdigris', hex: '#4fae9b' },
-    { name: 'Rim', hex: '#1f2933' },
-  ]
+import Link from 'next/link'
+
+type ThemePaint = {
+  id: string
+  sort_order: number | null
+  paint_source: string | null
+  paint_catalog_id: string | null
+  custom_paint_id: string | null
+  catalog_paint?: {
+    id: string
+    name: string | null
+    hex_approx: string | null
+    swatch_image_url: string | null
+  } | null
+  custom_paint?: {
+    id: string
+    name: string | null
+    color_hex: string | null
+  } | null
+}
+
+type Theme = {
+  id: string
+  name: string | null
+  description: string | null
+  theme_paints: ThemePaint[]
+} | null
+
+type Props = {
+  theme: Theme
+  projectId: string
+}
+
+export default function ProjectPaletteCard({ theme, projectId }: Props) {
+  const swatches =
+    theme?.theme_paints
+      ?.slice()
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      .slice(0, 5) ?? []
+
+  if (!theme) {
+    return (
+      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+        <p className="text-sm uppercase tracking-wider text-cyan-400">
+          Project Palette
+        </p>
+
+        <h2 className="mt-1 text-xl font-semibold">No theme selected</h2>
+
+        <p className="mt-2 text-sm text-neutral-400">
+          Choose a theme to define the visual identity of this project.
+        </p>
+
+        <div className="mt-4">
+          <Link
+            href={`/themes?tab=mine&selectForProject=${projectId}`}
+            className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-neutral-950 transition active:scale-95"
+          >
+            Choose from Themes
+          </Link>
+        </div>
+      </section>
+    )
+  }
 
   return (
-    <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
-      <p className="text-sm uppercase tracking-wider text-cyan-400">
-        Project Palette
-      </p>
-      <h2 className="mt-1 text-xl font-semibold">Main Colors</h2>
-      <p className="mt-2 text-sm text-neutral-400">
-        Placeholder palette for now. Later this can pull paints from units and recipes.
-      </p>
+    <Link href={`/themes/${theme.id}`} className="block">
+      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm transition hover:border-cyan-400/40 active:scale-[0.99]">
+        <p className="text-sm uppercase tracking-wider text-cyan-400">
+          Project Palette
+        </p>
 
-      <div className="mt-4 grid grid-cols-5 gap-2">
-        {paletteSwatches.map((paint) => (
-          <div key={paint.name} className="min-w-0">
-            <div
-              className="aspect-square rounded-xl border border-white/10 shadow-inner"
-              style={{ backgroundColor: paint.hex }}
-            />
-            <p className="mt-1 truncate text-center text-[10px] font-semibold text-white/60">
-              {paint.name}
-            </p>
-          </div>
-        ))}
-      </div>
-    </section>
+        <h2 className="mt-1 text-xl font-semibold">
+          {theme.name || 'Untitled Theme'}
+        </h2>
+
+        <p className="mt-2 text-sm text-neutral-400">
+          {theme.description || 'No description'}
+        </p>
+
+        <div className="mt-4 grid grid-cols-5 gap-2">
+          {swatches.map((paint) => {
+            const displayName =
+              paint.paint_source === 'custom'
+                ? paint.custom_paint?.name
+                : paint.catalog_paint?.name
+
+            const displayHex =
+              paint.paint_source === 'custom'
+                ? paint.custom_paint?.color_hex
+                : paint.catalog_paint?.hex_approx
+
+            const imageUrl =
+              paint.paint_source === 'custom'
+                ? null
+                : paint.catalog_paint?.swatch_image_url
+
+            return (
+              <div key={paint.id} className="min-w-0">
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={displayName || 'Color swatch'}
+                    className="aspect-square w-full rounded-xl border border-white/10 object-cover shadow-inner"
+                  />
+                ) : (
+                  <div
+                    className="aspect-square rounded-xl border border-white/10 shadow-inner"
+                    style={{
+                      backgroundColor: displayHex || '#262626',
+                    }}
+                  />
+                )}
+
+                <p className="mt-1 truncate text-center text-[10px] font-semibold text-white/60">
+                  {displayName || 'Color'}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+
+        <p className="mt-4 text-xs font-semibold text-cyan-300">
+          Open theme →
+        </p>
+      </section>
+    </Link>
   )
 }

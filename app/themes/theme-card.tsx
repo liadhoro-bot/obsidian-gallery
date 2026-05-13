@@ -34,16 +34,23 @@ type Theme = {
   theme_paints?: ThemePaint[] | null
 }
 
+type Props = {
+  theme: Theme
+  currentUserId: string
+  isSaved?: boolean
+  selectForProject?: string | null
+  attachThemeToProjectAction?: (formData: FormData) => Promise<void>
+}
+
 export default function ThemeCard({
   theme,
   currentUserId,
   isSaved = false,
-}: {
-  theme: Theme
-  currentUserId: string
-  isSaved?: boolean
-}) {
+  selectForProject = null,
+  attachThemeToProjectAction,
+}: Props) {
   const isOwner = theme.user_id === currentUserId
+  const isSelectingForProject = Boolean(selectForProject)
 
   const swatches = (theme.theme_paints || [])
     .map((paint) => {
@@ -65,55 +72,61 @@ export default function ThemeCard({
     .sort((a, b) => a.sort_order - b.sort_order)
     .slice(0, 5)
 
+  const imageBlock = (
+    <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-cyan-500/25 via-slate-900 to-black">
+      {theme.image_url ? (
+        <Image
+          src={theme.image_url}
+          alt={theme.name || 'Theme image'}
+          fill
+          className="object-cover"
+        />
+      ) : null}
+
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black/55" />
+
+      <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-full border border-white/10 bg-black/35 p-1 backdrop-blur">
+        {Array.from({ length: 5 }).map((_, index) => {
+          const swatch = swatches[index]
+
+          return (
+            <div
+              key={swatch?.id || index}
+              className="relative h-6 w-6 overflow-hidden rounded-md border border-white/20 bg-white/10 shadow-sm"
+            >
+              {swatch?.imageUrl ? (
+                <Image
+                  src={swatch.imageUrl}
+                  alt="Theme swatch"
+                  fill
+                  className="object-cover"
+                />
+              ) : swatch?.hex ? (
+                <div
+                  className="h-full w-full"
+                  style={{ backgroundColor: swatch.hex }}
+                />
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="absolute bottom-2 left-2 right-9">
+        <h3 className="line-clamp-2 text-sm font-bold leading-tight text-white">
+          {theme.name}
+        </h3>
+      </div>
+    </div>
+  )
+
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] shadow-lg">
-      <Link href={`/themes/${theme.id}`}>
-        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-cyan-500/25 via-slate-900 to-black">
-          {theme.image_url ? (
-            <Image
-              src={theme.image_url}
-              alt={theme.name || 'Theme image'}
-              fill
-              className="object-cover"
-            />
-          ) : null}
-
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black/55" />
-
-          <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-full border border-white/10 bg-black/35 p-1 backdrop-blur">
-            {Array.from({ length: 5 }).map((_, index) => {
-              const swatch = swatches[index]
-
-              return (
-                <div
-                  key={swatch?.id || index}
-                  className="relative h-6 w-6 overflow-hidden rounded-md border border-white/20 bg-white/10 shadow-sm"
-                >
-                  {swatch?.imageUrl ? (
-                    <Image
-                      src={swatch.imageUrl}
-                      alt="Theme swatch"
-                      fill
-                      className="object-cover"
-                    />
-                  ) : swatch?.hex ? (
-                    <div
-                      className="h-full w-full"
-                      style={{ backgroundColor: swatch.hex }}
-                    />
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="absolute bottom-2 left-2 right-9">
-            <h3 className="line-clamp-2 text-sm font-bold leading-tight text-white">
-              {theme.name}
-            </h3>
-          </div>
-        </div>
-      </Link>
+      {isSelectingForProject ? (
+        imageBlock
+      ) : (
+        <Link href={`/themes/${theme.id}`}>{imageBlock}</Link>
+      )}
 
       <div className="space-y-2 p-3">
         <div className="flex flex-wrap gap-1.5">
@@ -134,12 +147,26 @@ export default function ThemeCard({
           )}
         </div>
 
-        <button
-          type="button"
-          className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/65"
-        >
-          {isOwner ? 'Your Theme' : isSaved ? 'Saved' : 'Save'}
-        </button>
+        {isSelectingForProject && attachThemeToProjectAction ? (
+          <form action={attachThemeToProjectAction}>
+            <input type="hidden" name="projectId" value={selectForProject ?? ''} />
+            <input type="hidden" name="themeId" value={theme.id} />
+
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-cyan-400 px-3 py-2 text-xs font-semibold text-neutral-950 transition active:scale-95"
+            >
+              Use For Project
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/65"
+          >
+            {isOwner ? 'Your Theme' : isSaved ? 'Saved' : 'Save'}
+          </button>
+        )}
       </div>
     </div>
   )

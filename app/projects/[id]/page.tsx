@@ -355,11 +355,36 @@ export default async function ProjectDetailPage({
   }
 
   const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .single()
+  .from('projects')
+  .select(`
+    *,
+    theme:themes (
+      id,
+      name,
+      description,
+      theme_paints (
+        id,
+        sort_order,
+        paint_source,
+        paint_catalog_id,
+        custom_paint_id,
+        catalog_paint:paint_catalog (
+          id,
+          name,
+          hex_approx,
+          swatch_image_url
+        ),
+       custom_paint:paints (
+  id,
+  name,
+  color_hex
+)
+      )
+    )
+  `)
+  .eq('id', id)
+  .eq('user_id', user.id)
+  .single()
 
   const { data: units, error: unitsError } = await supabase
     .from('units')
@@ -452,6 +477,7 @@ const allStagesError =
 
       <ProjectDetailClient
         project={project}
+        projectTheme={project?.theme ?? null}
         projectError={projectError}
         projectId={id}
         featuredProjectImage={featuredProjectImage}

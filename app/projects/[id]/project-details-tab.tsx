@@ -3,6 +3,7 @@ import ProjectGalleryCard from './project-gallery-card'
 
 type Props = {
   project: any
+  projectTheme: any
   projectId: string
   projectImages: any[]
   projectImagesError: any
@@ -13,6 +14,7 @@ type Props = {
 
 export default function ProjectDetailsTab({
   project,
+  projectTheme,
   projectId,
   projectImages,
   projectImagesError,
@@ -32,7 +34,7 @@ export default function ProjectDetailsTab({
         </p>
       </section>
 
-      <ProjectPaletteCard />
+      <ProjectPaletteCard theme={projectTheme} projectId={projectId} />
 
       <ProjectGalleryCard
         project={project}

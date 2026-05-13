@@ -9,13 +9,37 @@ import MobileNav from '../components/MobileNav'
 type Props = {
   searchParams: Promise<{
     tab?: string
+    selectForProject?: string
   }>
 }
+async function attachThemeToProject(formData: FormData) {
+  'use server'
 
+  const supabase = await createClient()
+
+  const projectId = formData.get('projectId')?.toString()
+  const themeId = formData.get('themeId')?.toString()
+
+  if (!projectId || !themeId) return
+
+  const { error } = await supabase
+    .from('projects')
+    .update({
+      theme_id: themeId,
+    })
+    .eq('id', projectId)
+
+  if (error) {
+    console.error('Error attaching theme to project:', error)
+    return
+  }
+
+  redirect(`/projects/${projectId}`)
+}
 export default async function ThemesPage({ searchParams }: Props) {
   const params = await searchParams
   const tab = params.tab || 'find'
-
+  const selectForProject = params.selectForProject || null
   const supabase = await createClient()
 
   const {
@@ -174,11 +198,12 @@ export default async function ThemesPage({ searchParams }: Props) {
             {(publicThemes ?? []).length > 0 ? (
               (publicThemes ?? []).map((theme) => (
                 <ThemeCard
-                  key={theme.id}
-                  theme={theme}
-                  currentUserId={user.id}
-                  isSaved={savedThemeIds.includes(theme.id)}
-                />
+  theme={theme}
+  currentUserId={user.id}
+  isSaved={savedThemeIds.includes(theme.id)}
+  selectForProject={selectForProject}
+  attachThemeToProjectAction={attachThemeToProject}
+/>
               ))
             ) : (
               <div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/60">
@@ -193,10 +218,11 @@ export default async function ThemesPage({ searchParams }: Props) {
             {myAndSavedThemes.length > 0 ? (
               myAndSavedThemes.map((theme: any) => (
                 <ThemeCard
-                  key={theme.id}
-                  theme={theme}
-                  currentUserId={user.id}
-                  isSaved={savedThemeIds.includes(theme.id)}
+                 theme={theme}
+                 currentUserId={user.id}
+                 isSaved={savedThemeIds.includes(theme.id)}
+                 selectForProject={selectForProject}
+                 attachThemeToProjectAction={attachThemeToProject}
                 />
               ))
             ) : (

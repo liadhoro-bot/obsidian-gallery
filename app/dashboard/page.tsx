@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import MobileNav from '../components/MobileNav'
+import DashboardTabs from './dashboard-tabs'
 import DashboardTopBar from './dashboard-top-bar'
 import DashboardWelcome from './dashboard-welcome'
 import DashboardXpCard from './dashboard-xp-card'
@@ -37,23 +38,31 @@ export default async function DashboardPage() {
 
         <DashboardWelcome />
 
-        <DashboardXpCard />
+        <DashboardTabs
+          profileContent={
+            <div className="grid gap-5">
+              <DashboardXpCard />
+              <DashboardHobbyBadges />
 
-        <Suspense fallback={<StatsSkeleton />}>
-          <DashboardMetadataGrid userId={user.id} />
-        </Suspense>
+              <Suspense fallback={<StatsSkeleton />}>
+                <DashboardMetadataGrid userId={user.id} />
+              </Suspense>
+            </div>
+          }
+          paintingTableContent={
+            <div className="grid gap-5">
+              <DashboardQuickActions />
 
-        <Suspense fallback={<FeaturedUnitSkeleton />}>
-          <DashboardUnitInProgress userId={user.id} />
-        </Suspense>
+              <Suspense fallback={<FeaturedUnitSkeleton />}>
+                <DashboardUnitInProgress userId={user.id} />
+              </Suspense>
 
-        <DashboardQuickActions />
-
-        <DashboardHobbyBadges />
-
-        <Suspense fallback={<BenchUnitsSkeleton />}>
-          <DashboardActiveBench userId={user.id} />
-        </Suspense>
+              <Suspense fallback={<BenchUnitsSkeleton />}>
+                <DashboardActiveBench userId={user.id} />
+              </Suspense>
+            </div>
+          }
+        />
       </div>
 
       <MobileNav />

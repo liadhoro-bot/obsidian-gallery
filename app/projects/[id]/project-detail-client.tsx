@@ -8,6 +8,7 @@ import ProjectAddUnitTab from './project-add-unit-tab'
 
 type Props = {
   project: any
+  projectTheme: any
   projectError: any
   projectId: string
   featuredProjectImage: any
@@ -30,6 +31,7 @@ export type ProjectDetailTab = 'details' | 'units' | 'add'
 
 export default function ProjectDetailClient({
   project,
+  projectTheme,
   projectError,
   projectId,
   featuredProjectImage,
@@ -85,6 +87,7 @@ export default function ProjectDetailClient({
       {activeTab === 'details' ? (
         <ProjectDetailsTab
           project={project}
+          projectTheme={projectTheme}
           projectId={projectId}
           projectImages={projectImages}
           projectImagesError={projectImagesError}
