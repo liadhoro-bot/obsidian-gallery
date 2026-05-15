@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import MobileNav from '../components/MobileNav'
 import SettingsProfileCard from './settings-profile-card'
-import SettingsAccountSection from './settings-account-section'
-import SettingsPreferencesSection from './settings-preferences-section'
 import SettingsSupportSection from './settings-support-section'
 import SettingsSessionSection from './settings-session-section'
 import {
@@ -31,15 +29,7 @@ export default async function SettingsPage() {
           <SettingsProfileCard />
         </Suspense>
 
-        <Suspense fallback={<SettingsCardSkeleton />}>
-          <SettingsAccountSection />
-        </Suspense>
-
-        <Suspense fallback={<SettingsCardSkeleton />}>
-          <SettingsPreferencesSection />
-        </Suspense>
-
-        <Suspense fallback={<SettingsCardSkeleton />}>
+                <Suspense fallback={<SettingsCardSkeleton />}>
           <SettingsSupportSection />
         </Suspense>
 

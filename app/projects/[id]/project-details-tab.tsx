@@ -1,5 +1,6 @@
 import ProjectPaletteCard from './project-palette-card'
 import ProjectGalleryCard from './project-gallery-card'
+import DeleteProjectCard from './delete-project-card'
 
 type Props = {
   project: any
@@ -10,6 +11,7 @@ type Props = {
   uploadProjectImageAction: (formData: FormData) => Promise<void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
+  deleteProjectAction: (formData: FormData) => Promise<void>
 }
 
 export default function ProjectDetailsTab({
@@ -21,6 +23,7 @@ export default function ProjectDetailsTab({
   uploadProjectImageAction,
   setFeaturedProjectImageAction,
   deleteProjectImageAction,
+  deleteProjectAction,
 }: Props) {
   return (
     <div className="mt-5 grid gap-5">
@@ -36,7 +39,7 @@ export default function ProjectDetailsTab({
 
       <ProjectPaletteCard theme={projectTheme} projectId={projectId} />
 
-      <ProjectGalleryCard
+            <ProjectGalleryCard
         project={project}
         projectId={projectId}
         projectImages={projectImages}
@@ -44,6 +47,11 @@ export default function ProjectDetailsTab({
         uploadProjectImageAction={uploadProjectImageAction}
         setFeaturedProjectImageAction={setFeaturedProjectImageAction}
         deleteProjectImageAction={deleteProjectImageAction}
+      />
+
+      <DeleteProjectCard
+        projectId={projectId}
+        deleteProjectAction={deleteProjectAction}
       />
     </div>
   )

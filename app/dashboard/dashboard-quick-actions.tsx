@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 const actions = [
   {
-    label: 'New Paint',
+    label: 'Add Paint',
     href: '/vault?newPaint=1',
     icon: '✚',
     color: 'text-cyan-400',

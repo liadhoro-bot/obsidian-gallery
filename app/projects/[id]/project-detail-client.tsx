@@ -25,6 +25,7 @@ type Props = {
   uploadProjectImageAction: (formData: FormData) => Promise<void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
+  deleteProjectAction: (formData: FormData) => Promise<void>
 }
 
 export type ProjectDetailTab = 'details' | 'units' | 'add'
@@ -45,6 +46,7 @@ export default function ProjectDetailClient({
   uploadProjectImageAction,
   setFeaturedProjectImageAction,
   deleteProjectImageAction,
+  deleteProjectAction,
 }: Props) {
   const [activeTab, setActiveTab] = useState<ProjectDetailTab>('details')
 
@@ -94,6 +96,8 @@ export default function ProjectDetailClient({
           uploadProjectImageAction={uploadProjectImageAction}
           setFeaturedProjectImageAction={setFeaturedProjectImageAction}
           deleteProjectImageAction={deleteProjectImageAction}
+          deleteProjectAction={deleteProjectAction}
+          
         />
       ) : null}
 

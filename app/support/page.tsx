@@ -28,36 +28,34 @@ export default function SupportPage() {
           </div>
         </div>
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-xl shadow-black/20">
-          <div className="mb-4 flex justify-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
-              ❤️
-            </div>
-          </div>
+        <section className="rounded-3xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/10 via-white/[0.04] to-white/[0.02] p-5 shadow-xl shadow-black/20">
+  <div className="flex items-start gap-4">
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/30 bg-cyan-400/10 text-xl text-cyan-200">
+      ❤️
+    </div>
 
-          <h1 className="text-center text-2xl font-bold">
-            Support Obsidian Gallery
-          </h1>
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">
+        Support the App
+      </p>
 
-          <div className="mt-3 text-center text-sm leading-6 text-slate-300 space-y-3">
-  <p>
-    <strong>Obsidian Gallery is a passion project.</strong><br />
-    Built by a hobbyist who wanted a better way to manage painting and wargaming.
-  </p>
+      <h1 className="mt-2 text-2xl font-black leading-tight text-white">
+        Keep the workshop running
+      </h1>
 
-  <p>
-    As the app grows, so do the costs — hosting, storage, and development.
-  </p>
+      <p className="mt-3 text-sm leading-6 text-slate-300">
+  Obsidian Gallery is a passion project built by a miniature painter and
+  tabletop wargamer who wanted a better way to organize projects, recipes,
+  palettes, and hobby progress.
 
-  <p>
-    Any support helps keep it running and improving. But more than that, it shows that the app is truly useful to someone out there.
-  </p>
-
-  <p>
-    Thanks for using Obsidian Gallery, and for considering supporting it. ❤️
-  </p>
-</div>
-        </section>
+  <span className="block mt-3">
+    Every bit of support helps keep the app alive and growing - covering
+    hosting, storage, development time, and future features for the community.
+  </span>
+</p>
+    </div>
+  </div>
+</section>
 
         <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
           <h2 className="text-sm font-semibold text-slate-100">

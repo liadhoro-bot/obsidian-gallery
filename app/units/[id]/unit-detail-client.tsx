@@ -13,6 +13,7 @@ import {
 import { createClient } from '../../../utils/supabase/client'
 import { toggleStepDone } from './actions'
 import UnitSessionTracker from './components/unit-session-tracker'
+import ProjectPaletteCard from '../../projects/[id]/project-palette-card'
 
 type Unit = {
   id: string
@@ -54,6 +55,7 @@ type Session = {
 
 type Props = {
   unit: Unit
+  projectTheme: Theme
   images: UnitImage[]
   featuredImage: UnitImage | null
   steps: ProgressStep[]
@@ -61,9 +63,34 @@ type Props = {
   activeSession: Session | null
   sessions: Session[]
 }
+type ThemePaint = {
+  id: string
+  sort_order: number | null
+  paint_source: string | null
+  paint_catalog_id: string | null
+  custom_paint_id: string | null
+  catalog_paint?: {
+    id: string
+    name: string | null
+    hex_approx: string | null
+    swatch_image_url: string | null
+  } | null
+  custom_paint?: {
+    id: string
+    name: string | null
+    color_hex: string | null
+  } | null
+}
 
+type Theme = {
+  id: string
+  name: string | null
+  description: string | null
+  theme_paints: ThemePaint[]
+} | null
 export default function UnitDetailClient({
   unit,
+  projectTheme,
   images,
   featuredImage,
   steps,
@@ -501,7 +528,12 @@ const showFinalDone = finalDoneStep?.status === 'done'
   )
 })()}
         </section>
-
+<section className="mt-6">
+  <ProjectPaletteCard
+    theme={projectTheme}
+    projectId={unit.project_id || ''}
+  />
+</section>
         <section className="mt-10">
           <div className="mb-2 flex items-center justify-between">
             <div>

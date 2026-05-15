@@ -62,3 +62,34 @@ export async function updateAvatar(formData: FormData) {
   revalidatePath('/settings')
   revalidatePath('/dashboard')
 }
+export async function updateUsername(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const username = String(formData.get('username') || '')
+    .trim()
+    .replace(/^@/, '')
+
+  if (!username) {
+    throw new Error('Username is required')
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ username })
+    .eq('id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath('/settings')
+  revalidatePath('/dashboard')
+}

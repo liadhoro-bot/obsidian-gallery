@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import ProjectDetailClient from './project-detail-client'
 import { Suspense } from 'react'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
+import { deleteProject } from './actions'
 
 async function addUnit(formData: FormData) {
   'use server'
@@ -494,6 +495,7 @@ const allStagesError =
         uploadProjectImageAction={uploadProjectImage}
         setFeaturedProjectImageAction={setFeaturedProjectImage}
         deleteProjectImageAction={deleteProjectImage}
+        deleteProjectAction={deleteProject}
       />
     </div>
 

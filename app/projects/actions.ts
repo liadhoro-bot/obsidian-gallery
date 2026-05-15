@@ -22,17 +22,23 @@ export async function addProject(formData: FormData) {
     throw new Error('Project name is required')
   }
 
-  const { error } = await supabase.from('projects').insert([
-    {
-      user_id: user.id,
-      name,
-      description: descriptionRaw || null,
-    },
-  ])
+  const { data: newProject, error } = await supabase
+    .from('projects')
+    .insert([
+      {
+        user_id: user.id,
+        name,
+        description: descriptionRaw || null,
+      },
+    ])
+    .select('id')
+    .single()
 
-  if (error) {
-    throw new Error(error.message || 'Failed to create project')
+  if (error || !newProject) {
+    throw new Error(error?.message || 'Failed to create project')
   }
 
   revalidatePath('/projects')
+
+  redirect(`/projects/${newProject.id}`)
 }

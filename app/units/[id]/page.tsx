@@ -4,6 +4,7 @@ import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import UnitDetailClient from './unit-detail-client'
+import ProjectPaletteCard from '../../projects/[id]/project-palette-card'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -26,12 +27,38 @@ export default async function UnitDetailPage({ params }: PageProps) {
   .from('units')
   .select(`
     id,
-name,
-complexity,
-unit_size,
-deadline,
-is_active,
-project_id
+    name,
+    complexity,
+    unit_size,
+    deadline,
+    is_active,
+    project_id,
+    project:projects (
+      id,
+      theme:themes (
+        id,
+        name,
+        description,
+        theme_paints (
+          id,
+          sort_order,
+          paint_source,
+          paint_catalog_id,
+          custom_paint_id,
+          catalog_paint:paint_catalog (
+            id,
+            name,
+            hex_approx,
+            swatch_image_url
+          ),
+          custom_paint:paints (
+            id,
+            name,
+            color_hex
+          )
+        )
+      )
+    )
   `)
   .eq('id', id)
   .eq('user_id', user.id)
@@ -236,7 +263,19 @@ project_id
     ) ?? null
   const featuredImage =
     images?.find((img) => img.is_featured) ?? images?.[0] ?? null
+const projectThemeRaw = unit.project?.[0]?.theme?.[0] ?? null
 
+const projectTheme = projectThemeRaw
+  ? {
+      ...projectThemeRaw,
+      theme_paints:
+        projectThemeRaw.theme_paints?.map((paint) => ({
+          ...paint,
+          catalog_paint: paint.catalog_paint?.[0] ?? null,
+          custom_paint: paint.custom_paint?.[0] ?? null,
+        })) ?? [],
+    }
+  : null
   return (
   <main className="min-h-screen bg-[#081018] text-white">
     <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
@@ -246,6 +285,7 @@ project_id
 
       <UnitDetailClient
         unit={unit}
+        projectTheme={projectTheme}
         images={images ?? []}
         featuredImage={featuredImage}
         steps={steps ?? []}

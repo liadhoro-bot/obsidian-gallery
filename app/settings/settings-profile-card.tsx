@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { createClient } from '../../utils/supabase/server'
 import { updateAvatar } from './settings-actions'
 import AvatarUploadInput from './avatar-upload-input'
+import SettingsProfileEditor from './settings-profile-editor'
 
 export default async function SettingsProfileCard() {
   const supabase = await createClient()
@@ -71,12 +72,8 @@ export default async function SettingsProfileCard() {
           </span>
         </div>
 
-        <button
-          type="button"
-          className="mt-5 rounded-xl bg-white/10 px-5 py-3 text-sm font-semibold text-slate-100"
-        >
-          Edit Profile
-        </button>
+        <SettingsProfileEditor username={username} />
+        
       </div>
     </section>
   )

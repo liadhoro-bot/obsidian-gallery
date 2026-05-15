@@ -1,0 +1,193 @@
+'use client'
+
+import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { setProjectPaletteSlot } from './actions'
+
+type PaintOption = {
+  id: string
+  source: 'catalog' | 'custom'
+  name: string
+  brand: string | null
+  line: string | null
+  sku?: string | null
+  swatch_image_url: string | null
+  hex: string | null
+}
+
+type Props = {
+  projectId: string
+  slotIndex?: number
+}
+
+export default function ProjectPaletteStarter({
+  projectId,
+  slotIndex,
+}: Props) {
+  const router = useRouter()
+  const [activeSlot, setActiveSlot] = useState<number | null>(null)
+  const [query, setQuery] = useState('')
+  const [paints, setPaints] = useState<PaintOption[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    if (activeSlot === null) return
+
+    const controller = new AbortController()
+
+    async function loadPaints() {
+      setIsSearching(true)
+
+      try {
+        const params = new URLSearchParams()
+        params.set('limit', '80')
+
+        if (query.trim()) {
+          params.set('q', query.trim())
+        }
+
+        const response = await fetch(
+          `/api/theme-paint-search?${params.toString()}`,
+          { signal: controller.signal }
+        )
+
+        const result = await response.json()
+        setPaints(result.paints || [])
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error(error)
+          setPaints([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false)
+        }
+      }
+    }
+
+    const timeout = window.setTimeout(loadPaints, 250)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timeout)
+    }
+  }, [activeSlot, query])
+
+  const filteredPaints = useMemo(() => {
+    return [...paints].sort((a, b) => a.name.localeCompare(b.name))
+  }, [paints])
+
+  function closePicker() {
+    setActiveSlot(null)
+    setQuery('')
+  }
+
+  function choosePaint(paint: PaintOption) {
+    if (activeSlot === null) return
+
+    startTransition(async () => {
+      await setProjectPaletteSlot(projectId, activeSlot, paint.source, paint.id)
+      closePicker()
+      router.refresh()
+    })
+  }
+
+  return (
+    <>
+      <div className={slotIndex === undefined ? 'grid grid-cols-5 gap-2' : ''}>
+        {Array.from({ length: slotIndex === undefined ? 5 : 1 }).map(
+          (_, localIndex) => {
+            const index = slotIndex ?? localIndex
+
+            return (
+              <button
+                key={index}
+                type="button"
+                onClick={() => {
+                  setActiveSlot(index)
+                  setQuery('')
+                }}
+                className="flex aspect-square w-full min-w-0 items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/[0.03] text-lg font-semibold text-white/30 transition hover:border-cyan-400/50 hover:text-cyan-300 active:scale-95"
+              >
+                +
+              </button>
+            )
+          }
+        )}
+      </div>
+
+      {activeSlot !== null ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/70 px-4 pb-4 sm:items-center">
+          <div className="mx-auto max-h-[80vh] w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#10131a] p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white">
+                Choose Color {activeSlot + 1}
+              </h3>
+
+              <button
+                type="button"
+                onClick={closePicker}
+                className="text-sm text-white/50"
+              >
+                Close
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by name, brand, line, or SKU..."
+              className="mb-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none"
+            />
+
+            <p className="mb-3 text-xs text-white/35">
+              {isSearching
+                ? 'Searching paints...'
+                : `Showing ${filteredPaints.length} matching paints`}
+            </p>
+
+            <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+              {filteredPaints.map((paint) => (
+                <button
+                  key={`${paint.source}-${paint.id}`}
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => choosePaint(paint)}
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-left hover:bg-white/[0.06] disabled:opacity-50"
+                >
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
+                    {paint.swatch_image_url ? (
+                      <img
+                        src={paint.swatch_image_url}
+                        alt={paint.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : paint.hex ? (
+                      <div
+                        className="h-full w-full"
+                        style={{ backgroundColor: paint.hex }}
+                      />
+                    ) : null}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {paint.name}
+                    </p>
+                    <p className="truncate text-xs text-white/40">
+                      {[paint.brand, paint.line, paint.sku]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  )
+}
