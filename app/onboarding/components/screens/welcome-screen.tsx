@@ -1,38 +1,40 @@
+import Image from 'next/image'
+
 export default function WelcomeScreen() {
   return (
-    <section className="flex min-h-[520px] flex-col justify-between rounded-[2rem] border border-white/10 bg-slate-950/70 p-6 shadow-[0_0_40px_rgba(34,211,238,0.06)]">
-      <div className="space-y-4">
-        <div className="inline-flex w-fit rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
+    <section className="relative min-h-screen overflow-hidden bg-black">
+      <Image
+        src="/onboarding/welcome-hero.jpeg"
+        alt="Miniature painting hobby workspace"
+        fill
+        priority
+        className="object-cover brightness-110"
+      />
+
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/65" />
+
+      <div className="relative z-10 flex min-h-screen flex-col justify-between p-5">
+        <div className="w-full rounded-full border border-cyan-300/45 bg-black/15 px-5 py-4 text-center text-lg font-black uppercase tracking-[0.28em] text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.14)] backdrop-blur-sm">
           Obsidian Gallery
         </div>
 
-        <div className="space-y-4 pt-8">
-          <h1 className="text-4xl font-black leading-tight text-white">
-            Your miniature hobby.
+        <div className="space-y-5 pb-14">
+          <h1 className="max-w-sm text-[2.6rem] font-black leading-[1.08] tracking-[-0.03em] text-white drop-shadow-[0_6px_22px_rgba(0,0,0,0.9)]">
+            Your miniature workspace.
             <br />
-            Organized beautifully.
+            Organized to perfection.
           </h1>
 
-          <p className="max-w-sm text-base leading-7 text-white/60">
+          <p className="max-w-sm text-base leading-7 text-white/80 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
             Track projects, manage paints, build recipes, create themes, and
-            see your hobby progress come to life.
+            see your model progress come to life.
           </p>
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-black/30 p-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-xs font-black text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.12)]">
-            Projects
-          </div>
-
-          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-xs font-black text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.12)]">
-            Vault
-          </div>
-
-          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4 text-center text-xs font-black text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.12)]">
-            Recipes
-          </div>
+          <button
+  type="button"
+  className="mt-2 h-14 w-full rounded-3xl bg-cyan-300 px-6 text-sm font-black uppercase tracking-[0.22em] text-slate-950 shadow-[0_0_40px_rgba(34,211,238,0.35)] transition hover:bg-cyan-200 active:scale-[0.99]"
+>
+  Start Here
+</button>
         </div>
       </div>
     </section>

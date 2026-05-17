@@ -89,20 +89,22 @@ const nextLabel = useMemo(() => {
   return (
     <main className="min-h-screen bg-[#03070b] text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-8 pt-5">
-        <header className="mb-5 flex items-center justify-between">
-          <OnboardingProgress
-            currentStep={currentStep}
-            totalSteps={steps.length}
-          />
+        {!isFirstStep ? (
+  <header className="mb-5 flex items-center justify-between">
+    <OnboardingProgress
+      currentStep={currentStep}
+      totalSteps={steps.length}
+    />
 
-          <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-            {currentStep + 1}/{steps.length}
-          </div>
-        </header>
+    <div className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+      {currentStep + 1}/{steps.length}
+    </div>
+  </header>
+) : null}
 
         <div className="flex-1">{activeStep.component}</div>
 
-        {!['project', 'legal'].includes(activeStep.id) ? (
+        {!isFirstStep && !['project', 'legal'].includes(activeStep.id) ? (
   <footer className="mt-5 grid grid-cols-[1fr_1.4fr] gap-3">
           <button
             type="button"

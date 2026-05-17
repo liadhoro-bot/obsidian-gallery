@@ -41,6 +41,7 @@ export type RecipeStep = {
   step_number: number
   title: string
   instructions: string
+  image_url: string | null
 }
 
 export type Recipe = {

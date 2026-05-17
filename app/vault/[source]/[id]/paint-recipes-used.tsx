@@ -25,16 +25,12 @@ export default async function PaintRecipesUsed({
       role,
       ratio_text,
       recipe_steps (
-        id,
-        title,
-        recipes (
-          id,
-          name,
-          description,
-          image_url,
-          user_id
-        )
-      )
+  id,
+  step_number,
+  title,
+  instructions,
+  image_url
+)
     `)
     .eq('paint_source', paintRef.source)
     .eq(paintColumn, paintRef.paintId)

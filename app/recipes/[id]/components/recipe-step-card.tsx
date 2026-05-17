@@ -64,9 +64,43 @@ export default function RecipeStepCard({
   const paint2 = paintsForStep[1]?.paint || null
   const paint3 = paintsForStep[2]?.paint || null
 
+  const stepImageUrl =
+    typeof step.image_url === 'string' ? step.image_url.trim() : ''
+
+  const hasStepImage =
+    stepImageUrl.startsWith('http://') || stepImageUrl.startsWith('https://')
+
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-neutral-800 bg-[#081116] p-5 shadow-xl shadow-black/30">
-      <div>
+    <div
+      className={
+        hasStepImage
+          ? 'relative overflow-hidden rounded-2xl border border-neutral-800 bg-[#081116] shadow-xl shadow-black/30'
+          : 'relative overflow-hidden rounded-2xl border border-neutral-800 bg-[#081116] p-5 shadow-xl shadow-black/30'
+      }
+    >
+      {hasStepImage ? (
+        <div className="relative aspect-[16/10] w-full overflow-hidden">
+          <img
+            src={stepImageUrl}
+            alt={step.title}
+            className="h-full w-full object-cover"
+          />
+
+          <div className="absolute inset-0 bg-gradient-to-t from-[#081116] via-[#081116]/20 to-transparent" />
+
+          <div className="absolute bottom-0 left-0 right-0 p-6">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+              Step {String(step.step_number).padStart(2, '0')}
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black text-white">
+              {step.title}
+            </h2>
+          </div>
+        </div>
+      ) : null}
+
+      <div className={hasStepImage ? 'p-5' : ''}>
         {isOwner && deleteConfirmStepId === step.id ? (
           <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4">
             <p className="text-sm font-semibold text-red-100">
@@ -107,6 +141,7 @@ export default function RecipeStepCard({
               setEditingStepId(null)
               setDeleteConfirmStepId(null)
             }}
+            encType="multipart/form-data"
             className="mt-4 space-y-4 rounded-2xl border border-neutral-800 bg-black p-4"
           >
             <input type="hidden" name="recipeId" value={recipe.id} />
@@ -192,12 +227,36 @@ export default function RecipeStepCard({
               />
             </div>
 
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">
+                Step Image
+              </label>
+
+              {hasStepImage ? (
+                <img
+                  src={stepImageUrl}
+                  alt={step.title}
+                  className="mb-3 h-32 w-full rounded-xl object-cover"
+                />
+              ) : null}
+
+              <input
+                type="file"
+                name="step_image"
+                accept="image/*"
+                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:text-sm file:font-bold file:text-black"
+              />
+            </div>
+
             <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
               <p className="text-sm font-medium text-white">Paint 1</p>
 
               <div className="mt-3 space-y-3">
                 <PaintPicker
-                  key={`${step.id}-paint1-${getPaintSelectValue(paint1, filteredPaints)}`}
+                  key={`${step.id}-paint1-${getPaintSelectValue(
+                    paint1,
+                    filteredPaints
+                  )}`}
                   name="paintId1"
                   paints={filteredPaints}
                   defaultValue={getPaintSelectValue(paint1, filteredPaints)}
@@ -218,7 +277,10 @@ export default function RecipeStepCard({
 
               <div className="mt-3 space-y-3">
                 <PaintPicker
-                  key={`${step.id}-paint2-${getPaintSelectValue(paint2, filteredPaints)}`}
+                  key={`${step.id}-paint2-${getPaintSelectValue(
+                    paint2,
+                    filteredPaints
+                  )}`}
                   name="paintId2"
                   paints={filteredPaints}
                   defaultValue={getPaintSelectValue(paint2, filteredPaints)}
@@ -239,7 +301,10 @@ export default function RecipeStepCard({
 
               <div className="mt-3 space-y-3">
                 <PaintPicker
-                  key={`${step.id}-paint3-${getPaintSelectValue(paint3, filteredPaints)}`}
+                  key={`${step.id}-paint3-${getPaintSelectValue(
+                    paint3,
+                    filteredPaints
+                  )}`}
                   name="paintId3"
                   paints={filteredPaints}
                   defaultValue={getPaintSelectValue(paint3, filteredPaints)}
@@ -276,24 +341,25 @@ export default function RecipeStepCard({
           </form>
         ) : (
           <>
-            <div className="mb-8 flex items-start gap-4">
-              <div
-                key={step.step_number}
-                className="animate-[stepNumberIn_500ms_cubic-bezier(0.22,1,0.36,1)] text-5xl font-black leading-none text-neutral-500/40"
-              >
-                {String(step.step_number).padStart(2, '0')}
-              </div>
+            {!hasStepImage ? (
+              <div className="mb-8 flex items-start gap-4">
+                <div
+                  key={step.step_number}
+                  className="animate-[stepNumberIn_500ms_cubic-bezier(0.22,1,0.36,1)] text-5xl font-black leading-none text-neutral-500/40"
+                >
+                  {String(step.step_number).padStart(2, '0')}
+                </div>
 
-              <h3 className="pt-1 text-2xl font-bold leading-tight text-white">
-                {step.title}
-              </h3>
-            </div>
+                <h3 className="pt-1 text-2xl font-bold leading-tight text-white">
+                  {step.title}
+                </h3>
+              </div>
+            ) : null}
 
             {paintsForStep.length > 0 && (
               <div className="mb-10 flex justify-center gap-5">
                 {paintsForStep.slice(0, 3).map((link) => {
                   const paint = link.paint
-
                   if (!paint) return null
 
                   const ratio = parseInt(link.ratio_text || '1', 10) || 1
@@ -360,12 +426,9 @@ export default function RecipeStepCard({
               {paintsForStep
                 .map((p) => {
                   const paint = p.paint
-
                   if (!paint) return ''
 
-                  return [paint.brand, paint.name]
-                    .filter(Boolean)
-                    .join(' ')
+                  return [paint.brand, paint.name].filter(Boolean).join(' ')
                 })
                 .join(' + ')}
             </p>
@@ -377,19 +440,19 @@ export default function RecipeStepCard({
             )}
 
             {isOwner ? (
-  <div className="mt-6 flex justify-end gap-2">
-    <button
-      type="button"
-      onClick={() =>
-        setEditingStepId(isEditingThisStep ? null : step.id)
-      }
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white backdrop-blur transition active:scale-[0.98] active:opacity-70 hover:bg-white/10"
-      title="Edit step"
-    >
-      ✎
-    </button>
-  </div>
-) : null}
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditingStepId(isEditingThisStep ? null : step.id)
+                  }
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white backdrop-blur transition active:scale-[0.98] active:opacity-70 hover:bg-white/10"
+                  title="Edit step"
+                >
+                  ✎
+                </button>
+              </div>
+            ) : null}
           </>
         )}
       </div>

@@ -83,7 +83,11 @@ export default function RecipeAddStepTab({
           </div>
         </div>
 
-        <form action={addRecipeStepAction} className="space-y-4">
+        <form
+          action={addRecipeStepAction}
+          encType="multipart/form-data"
+          className="space-y-4"
+        >
           <input type="hidden" name="recipeId" value={recipe.id} />
 
           <div>
@@ -110,12 +114,24 @@ export default function RecipeAddStepTab({
               className="w-full resize-none rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-white"
             />
           </div>
+
+          <div>
+            <label className="mb-1 block text-sm text-neutral-300">
+              Step Image
+            </label>
+            <input
+              type="file"
+              name="step_image"
+              accept="image/*"
+              className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-3 text-sm text-white file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:text-sm file:font-bold file:text-black"
+            />
+          </div>
+
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm uppercase tracking-wider text-cyan-400">
                 Add Paints To Step
               </p>
-
               <h3 className="mt-1 text-lg font-semibold text-white">
                 Step Paints
               </h3>
@@ -134,111 +150,113 @@ export default function RecipeAddStepTab({
               ☰ Paint Filters
             </button>
           </div>
-                  {isPaintFiltersOpen ? (
-          <div className="mb-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-                        <div className="mb-4 flex items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
-                Paint Filters
+
+          {isPaintFiltersOpen ? (
+            <div className="mb-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">
+                  Paint Filters
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaintSearch('')
+                      setPaintBrand('all')
+                      setPaintLine('all')
+                      setPaintOwnership('all')
+                    }}
+                    className="rounded-lg border border-neutral-700 bg-black px-3 py-2 text-xs text-white transition active:scale-[0.98] active:opacity-70 hover:bg-neutral-800"
+                  >
+                    Reset
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPaintFiltersOpen(false)}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/70 transition active:scale-[0.98] active:opacity-70 hover:bg-white/10 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div>
+                  <label className="mb-1 block text-sm text-neutral-300">
+                    Search
+                  </label>
+                  <input
+                    type="text"
+                    value={paintSearch}
+                    onChange={(event) => setPaintSearch(event.target.value)}
+                    placeholder="Search by name or SKU"
+                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm text-neutral-300">
+                    Brand
+                  </label>
+                  <select
+                    value={paintBrand}
+                    onChange={(event) => {
+                      setPaintBrand(event.target.value)
+                      setPaintLine('all')
+                    }}
+                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="all">All brands</option>
+                    {availableBrands.map((brand) => (
+                      <option key={brand} value={brand}>
+                        {brand}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm text-neutral-300">
+                    Line
+                  </label>
+                  <select
+                    value={paintLine}
+                    onChange={(event) => setPaintLine(event.target.value)}
+                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="all">All lines</option>
+                    {availableLines.map((line) => (
+                      <option key={line} value={line}>
+                        {line}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm text-neutral-300">
+                    Ownership
+                  </label>
+                  <select
+                    value={paintOwnership}
+                    onChange={(event) => setPaintOwnership(event.target.value)}
+                    className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+                  >
+                    <option value="all">All</option>
+                    <option value="owned">Owned</option>
+                    <option value="not_owned">Not owned</option>
+                  </select>
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs text-neutral-400">
+                Showing {filteredPaints.length} paints
               </p>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaintSearch('')
-                    setPaintBrand('all')
-                    setPaintLine('all')
-                    setPaintOwnership('all')
-                  }}
-                  className="rounded-lg border border-neutral-700 bg-black px-3 py-2 text-xs text-white transition active:scale-[0.98] active:opacity-70 hover:bg-neutral-800"
-                >
-                  Reset
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsPaintFiltersOpen(false)}
-                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold text-white/70 transition active:scale-[0.98] active:opacity-70 hover:bg-white/10 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
             </div>
+          ) : null}
 
-            <div className="grid gap-3">
-              <div>
-                <label className="mb-1 block text-sm text-neutral-300">
-                  Search
-                </label>
-                <input
-                  type="text"
-                  value={paintSearch}
-                  onChange={(event) => setPaintSearch(event.target.value)}
-                  placeholder="Search by name or SKU"
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm text-neutral-300">
-                  Brand
-                </label>
-                <select
-                  value={paintBrand}
-                  onChange={(event) => {
-                    setPaintBrand(event.target.value)
-                    setPaintLine('all')
-                  }}
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                >
-                  <option value="all">All brands</option>
-                  {availableBrands.map((brand) => (
-                    <option key={brand} value={brand}>
-                      {brand}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm text-neutral-300">
-                  Line
-                </label>
-                <select
-                  value={paintLine}
-                  onChange={(event) => setPaintLine(event.target.value)}
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                >
-                  <option value="all">All lines</option>
-                  {availableLines.map((line) => (
-                    <option key={line} value={line}>
-                      {line}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm text-neutral-300">
-                  Ownership
-                </label>
-                <select
-                  value={paintOwnership}
-                  onChange={(event) => setPaintOwnership(event.target.value)}
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
-                >
-                  <option value="all">All</option>
-                  <option value="owned">Owned</option>
-                  <option value="not_owned">Not owned</option>
-                </select>
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-neutral-400">
-              Showing {filteredPaints.length} paints
-            </p>
-          </div>
-        ) : null}
           {[1, 2, 3].map((num) => (
             <div
               key={num}
@@ -355,9 +373,9 @@ export default function RecipeAddStepTab({
             </div>
 
             <SubmitButton
-              idleText="Save Paint"
-              pendingText="Saving paint..."
-              className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-black"
+              idleText="Create Custom Paint"
+              pendingText="Creating..."
+              className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-black shadow-lg shadow-cyan-500/20"
             />
           </form>
         ) : null}
