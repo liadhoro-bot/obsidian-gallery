@@ -30,6 +30,7 @@ type Theme = {
   name: string
   description: string | null
   image_url: string | null
+  hero_image_url?: string | null
   is_public: boolean | null
   theme_paints?: ThemePaint[] | null
 }
@@ -42,6 +43,18 @@ type Props = {
   attachThemeToProjectAction?: (formData: FormData) => Promise<void>
 }
 
+function safeImageUrl(value: string | null | undefined) {
+  if (!value) return null
+
+  const trimmed = value.trim()
+
+  if (!trimmed) return null
+
+  return trimmed.startsWith('https://') || trimmed.startsWith('http://')
+    ? trimmed
+    : null
+}
+
 export default function ThemeCard({
   theme,
   currentUserId,
@@ -51,6 +64,8 @@ export default function ThemeCard({
 }: Props) {
   const isOwner = theme.user_id === currentUserId
   const isSelectingForProject = Boolean(selectForProject)
+
+  const heroUrl = safeImageUrl(theme.image_url || theme.hero_image_url)
 
   const swatches = (theme.theme_paints || [])
     .map((paint) => {
@@ -65,7 +80,7 @@ export default function ThemeCard({
       return {
         id: paint.id,
         sort_order: paint.sort_order || 0,
-        imageUrl: catalogPaint?.swatch_image_url || null,
+        imageUrl: safeImageUrl(catalogPaint?.swatch_image_url),
         hex: catalogPaint?.hex_approx || customPaint?.color_hex || null,
       }
     })
@@ -74,11 +89,12 @@ export default function ThemeCard({
 
   const imageBlock = (
     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-cyan-500/25 via-slate-900 to-black">
-      {theme.image_url ? (
+      {heroUrl ? (
         <Image
-          src={theme.image_url}
+          src={heroUrl}
           alt={theme.name || 'Theme image'}
           fill
+          sizes="(max-width: 768px) 50vw, 240px"
           className="object-cover"
         />
       ) : null}
@@ -99,6 +115,7 @@ export default function ThemeCard({
                   src={swatch.imageUrl}
                   alt="Theme swatch"
                   fill
+                  sizes="24px"
                   className="object-cover"
                 />
               ) : swatch?.hex ? (
