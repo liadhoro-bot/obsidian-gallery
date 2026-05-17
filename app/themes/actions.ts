@@ -11,21 +11,25 @@ export async function createTheme(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) return
+  if (!user) {
+    redirect('/login')
+  }
 
   const name = String(formData.get('name') || '').trim()
   const description = String(formData.get('description') || '').trim()
   const tagsInput = String(formData.get('tags') || '').trim()
   const imageFile = formData.get('image') as File | null
 
-  if (!name) return
+  if (!name) {
+    throw new Error('Theme name is required.')
+  }
 
   const tags = tagsInput
     .split(',')
     .map((tag) => tag.trim())
     .filter(Boolean)
 
-  const { data: theme, error } = await supabase
+  const { data: theme, error: themeError } = await supabase
     .from('themes')
     .insert({
       user_id: user.id,
@@ -34,19 +38,25 @@ export async function createTheme(formData: FormData) {
       tags,
       is_public: false,
     })
-    .select()
+    .select('id')
     .single()
 
-  if (error || !theme) {
-    console.error(error)
-    return
+  if (themeError) {
+    throw new Error(themeError.message)
   }
 
-  let imageUrl: string | null = null
+  if (!theme?.id) {
+    throw new Error('Theme was created, but no theme id was returned.')
+  }
 
   if (imageFile && imageFile.size > 0) {
+    if (!imageFile.type.startsWith('image/')) {
+      throw new Error('Uploaded file must be an image.')
+    }
+
     const fileExt = imageFile.name.split('.').pop() || 'jpg'
-    const filePath = `themes/${theme.id}/hero.${fileExt}`
+    const cleanExt = fileExt.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+    const filePath = `themes/${theme.id}/hero.${cleanExt}`
 
     const { error: uploadError } = await supabase.storage
       .from('obsidian-images')
@@ -55,17 +65,23 @@ export async function createTheme(formData: FormData) {
         contentType: imageFile.type,
       })
 
-    if (!uploadError) {
-      const { data } = supabase.storage
-        .from('obsidian-images')
-        .getPublicUrl(filePath)
+    if (uploadError) {
+      throw new Error(uploadError.message)
+    }
 
-      imageUrl = data.publicUrl
+    const { data } = supabase.storage
+      .from('obsidian-images')
+      .getPublicUrl(filePath)
 
-      await supabase
-        .from('themes')
-        .update({ image_url: imageUrl })
-        .eq('id', theme.id)
+    const imageUrl = data.publicUrl
+
+    const { error: updateError } = await supabase
+      .from('themes')
+      .update({ image_url: imageUrl })
+      .eq('id', theme.id)
+
+    if (updateError) {
+      throw new Error(updateError.message)
     }
   }
 
@@ -87,9 +103,17 @@ export async function createTheme(formData: FormData) {
   }
 
   if (paintRows.length > 0) {
-    await supabase.from('theme_paints').insert(paintRows)
+    const { error: paintsError } = await supabase
+      .from('theme_paints')
+      .insert(paintRows)
+
+    if (paintsError) {
+      throw new Error(paintsError.message)
+    }
   }
 
   revalidatePath('/themes')
+  revalidatePath(`/themes/${theme.id}`)
+
   redirect(`/themes/${theme.id}`)
 }
