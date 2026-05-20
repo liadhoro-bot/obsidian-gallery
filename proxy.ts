@@ -6,6 +6,8 @@ export default async function proxy(request: NextRequest) {
     request,
   })
 
+  const pathname = request.nextUrl.pathname
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -31,13 +33,44 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname === '/onboarding' ||
+    pathname === '/settings/terms' ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/legal') ||
+    pathname.includes('.')
+
+  if (!user) {
+    return response
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('terms_accepted_at')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const hasAcceptedTerms = Boolean(profile?.terms_accepted_at)
+
+  if (!hasAcceptedTerms && !isPublicRoute) {
+    return NextResponse.redirect(new URL('/onboarding', request.url))
+  }
+
+  if (hasAcceptedTerms && pathname === '/onboarding') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
 
   return response
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|pdf)$).*)',
   ],
 }

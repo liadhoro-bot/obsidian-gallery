@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '../../utils/supabase/client'
+import GoogleLoginButton from './google-login-button'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -60,7 +61,15 @@ export default function LoginPage() {
               placeholder="you@example.com"
             />
           </div>
+<GoogleLoginButton />
 
+<div className="flex items-center gap-3">
+  <div className="h-px flex-1 bg-white/10" />
+  <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+    Or continue with email
+  </span>
+  <div className="h-px flex-1 bg-white/10" />
+</div>
           <button
             type="submit"
             disabled={loading}

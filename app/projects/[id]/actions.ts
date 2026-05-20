@@ -242,24 +242,35 @@ export async function calculateProjectPaletteAction(formData: FormData) {
   const usedPaintIds = new Set<string>()
 
   const paintRows = extractedHexes
-    .map((hex, index) => {
-      const nearestPaint = findNearestPaint(
-        hex,
-        catalogColors.filter((paint) => !usedPaintIds.has(paint.id))
-      )
+  .map((hex, index) => {
+    const nearestPaint = findNearestPaint(
+      hex,
+      catalogColors.filter((paint) => !usedPaintIds.has(paint.id))
+    )
 
-      if (!nearestPaint?.id) return null
+    if (!nearestPaint?.id) return null
 
-      usedPaintIds.add(nearestPaint.id)
+    usedPaintIds.add(nearestPaint.id)
 
-      return {
-        theme_id: themeId,
-        paint_source: 'catalog',
-        paint_catalog_id: nearestPaint.id,
-        custom_paint_id: null,
-        sort_order: index + 1,
-      }
-    })
+    return {
+      theme_id: themeId,
+      paint_source: 'catalog',
+      paint_catalog_id: nearestPaint.id,
+      custom_paint_id: null,
+      sort_order: index,
+    }
+  })
+  .filter(
+    (
+      row
+    ): row is {
+      theme_id: string
+      paint_source: string
+      paint_catalog_id: string
+      custom_paint_id: null
+      sort_order: number
+    } => row !== null
+  )
     .filter(Boolean)
 
   await supabase.from('theme_paints').delete().eq('theme_id', themeId)

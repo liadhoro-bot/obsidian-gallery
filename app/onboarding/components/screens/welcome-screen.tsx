@@ -1,6 +1,10 @@
 import Image from 'next/image'
 
-export default function WelcomeScreen() {
+type Props = {
+  onNext: () => void
+}
+
+export default function WelcomeScreen({ onNext }: Props) {
   return (
     <section className="relative min-h-screen overflow-hidden bg-black">
       <Image
@@ -29,12 +33,14 @@ export default function WelcomeScreen() {
             Track projects, manage paints, build recipes, create themes, and
             see your model progress come to life.
           </p>
+
           <button
-  type="button"
-  className="mt-2 h-14 w-full rounded-3xl bg-cyan-300 px-6 text-sm font-black uppercase tracking-[0.22em] text-slate-950 shadow-[0_0_40px_rgba(34,211,238,0.35)] transition hover:bg-cyan-200 active:scale-[0.99]"
->
-  Start Here
-</button>
+            type="button"
+            onClick={onNext}
+            className="mt-2 h-14 w-full rounded-3xl bg-cyan-300 px-6 text-sm font-black uppercase tracking-[0.22em] text-slate-950 shadow-[0_0_40px_rgba(34,211,238,0.35)] transition hover:bg-cyan-200 active:scale-[0.99]"
+          >
+            Start Here
+          </button>
         </div>
       </div>
     </section>
