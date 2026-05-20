@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
+
 import MobileNav from '../components/MobileNav'
 import DashboardTabs from './dashboard-tabs'
 import DashboardTopBar from './dashboard-top-bar'
@@ -11,6 +12,7 @@ import DashboardUnitInProgress from './dashboard-unit-in-progress'
 import DashboardActiveBench from './dashboard-active-bench'
 import DashboardQuickActions from './dashboard-quick-actions'
 import DashboardHobbyBadges from './dashboard-hobby-badges'
+
 import {
   BenchUnitsSkeleton,
   FeaturedUnitSkeleton,
@@ -29,11 +31,19 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
+  const profilePromise = Promise.resolve(
+  supabase
+    .from('profiles')
+    .select('avatar_url, level')
+    .eq('id', user.id)
+    .single()
+)
+
   return (
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={<TopBarSkeleton />}>
-          <DashboardTopBar userId={user.id} />
+          <DashboardTopBar profilePromise={profilePromise} />
         </Suspense>
 
         <DashboardWelcome />

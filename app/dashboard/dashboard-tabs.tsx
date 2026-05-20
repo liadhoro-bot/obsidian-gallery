@@ -13,7 +13,7 @@ export default function DashboardTabs({
   profileContent,
   paintingTableContent,
 }: DashboardTabsProps) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('profile')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('painting-table')
 
   const tabs: {
     key: ActiveTab

@@ -124,7 +124,7 @@ export default async function DashboardMetadataGrid({
   .select('duration_seconds, created_at')
   .eq('user_id', resolvedUserId)
   .order('created_at', { ascending: false })
-  .limit(120),
+  .limit(60),
   ])
 
   const totalUnits = totalUnitsResult.count ?? 0

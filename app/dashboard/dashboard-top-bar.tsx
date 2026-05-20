@@ -3,30 +3,52 @@ import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
 import SupportButton from '../components/SupportButton'
 
+type ProfileResult = {
+  data: {
+    avatar_url: string | null
+    level: number | null
+  } | null
+}
+
+type ProfilePromise = Promise<ProfileResult>
+
+type DashboardTopBarProps = {
+  userId?: string
+  profilePromise?: ProfilePromise
+}
+
 export default async function DashboardTopBar({
   userId,
-}: {
-  userId?: string
-}) {
-  const supabase = await createClient()
+  profilePromise,
+}: DashboardTopBarProps) {
+  let profile: ProfileResult['data'] = null
 
-  let resolvedUserId = userId
+  if (profilePromise) {
+    const result = await profilePromise
+    profile = result.data
+  } else {
+    const supabase = await createClient()
 
-  if (!resolvedUserId) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    let resolvedUserId = userId
 
-    if (!user) return null
+    if (!resolvedUserId) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    resolvedUserId = user.id
+      resolvedUserId = user?.id
+    }
+
+    if (resolvedUserId) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, level')
+        .eq('id', resolvedUserId)
+        .single()
+
+      profile = data
+    }
   }
-
-  const { data: profile } = await supabase
-  .from('profiles')
-  .select('avatar_url, level')
-  .eq('id', resolvedUserId)
-  .single()
 
   const avatarUrl = profile?.avatar_url || null
   const level = profile?.level ?? 0
@@ -47,6 +69,7 @@ export default async function DashboardTopBar({
                 fill
                 className="object-cover"
                 sizes="48px"
+                priority
               />
             </div>
           ) : (
@@ -57,16 +80,15 @@ export default async function DashboardTopBar({
         </Link>
 
         <div>
-  <p className="text-xs uppercase tracking-[0.2em] text-white/50">
-    Obsidian Gallery
-  </p>
-  <p className="text-sm font-medium text-white/90">
-    Lv. {level} Painter
-  </p>
-</div>
+          <p className="text-xs uppercase tracking-[0.2em] text-white/50">
+            Obsidian Gallery
+          </p>
+          <p className="text-sm font-medium text-white/90">
+            Lv. {level} Painter
+          </p>
+        </div>
       </div>
 
-      {/* 🔥 REPLACEMENT HERE */}
       <SupportButton />
     </div>
   )

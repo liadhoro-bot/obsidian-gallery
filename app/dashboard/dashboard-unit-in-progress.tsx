@@ -23,10 +23,10 @@ export default async function DashboardUnitInProgress({
 
   const { data: units, error } = await supabase
     .from('units')
-    .select('id, name, updated_at, project_id')
+    .select('id, name, updated_at')
     .eq('user_id', resolvedUserId)
     .order('updated_at', { ascending: false })
-    .limit(6)
+    .limit(4)
 
   if (error || !units?.length) {
     return (
@@ -39,20 +39,28 @@ export default async function DashboardUnitInProgress({
     )
   }
 
-  const { data: doneRows } = await supabase
-    .from('unit_stage_progress')
-    .select('unit_id, is_done')
-    .in(
-      'unit_id',
-      units.map((u) => u.id)
-    )
-    .eq('stage_key', 'done')
+  const unitIds = units.map((unit) => unit.id)
+
+  const [{ data: doneRows }, { data: featuredImages }] = await Promise.all([
+    supabase
+      .from('unit_stage_progress')
+      .select('unit_id, is_done')
+      .in('unit_id', unitIds)
+      .eq('stage_key', 'done'),
+
+    supabase
+      .from('image_assets')
+      .select('entity_id, image_url')
+      .eq('entity_type', 'unit')
+      .in('entity_id', unitIds)
+      .eq('is_featured', true),
+  ])
 
   const doneSet = new Set(
-    (doneRows || []).filter((r) => r.is_done).map((r) => r.unit_id)
+    (doneRows || []).filter((row) => row.is_done).map((row) => row.unit_id)
   )
 
-  const inProgressUnit = units.find((u) => !doneSet.has(u.id)) || null
+  const inProgressUnit = units.find((unit) => !doneSet.has(unit.id)) || null
 
   if (!inProgressUnit) {
     return (
@@ -67,13 +75,9 @@ export default async function DashboardUnitInProgress({
     )
   }
 
-  const { data: featuredImage } = await supabase
-    .from('image_assets')
-    .select('entity_id, image_url')
-    .eq('entity_type', 'unit')
-    .eq('entity_id', inProgressUnit.id)
-    .eq('is_featured', true)
-    .maybeSingle()
+  const featuredImage = featuredImages?.find(
+    (image) => image.entity_id === inProgressUnit.id
+  )
 
   return (
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
@@ -86,7 +90,7 @@ export default async function DashboardUnitInProgress({
               fill
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 420px"
-              priority={false}
+              priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#081018] via-[#081018]/65 to-[#081018]/20" />
           </>
@@ -94,7 +98,7 @@ export default async function DashboardUnitInProgress({
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-950/40 to-slate-900" />
         )}
 
-        <div className="relative z-10 flex h-full flex-col justify-end p-5">
+        <div className="relative z-10 flex min-h-[260px] flex-col justify-end p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">
             In Progress
           </p>
