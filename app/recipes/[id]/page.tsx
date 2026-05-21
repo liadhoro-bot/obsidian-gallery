@@ -7,6 +7,7 @@ import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 import RecipeDetailClient from './recipe-detail-client'
 import RecipeVideoCard from './recipe-video-card'
+import { captureServerEvent } from '../../../utils/analytics/server'
 
 function parsePaintSelection(rawValue: string) {
   if (!rawValue) {
@@ -171,7 +172,9 @@ async function createCustomPaint(formData: FormData) {
 
   if (!recipeId || !name) return
 
-  const { error } = await supabase.from('paints').insert([
+  const { data: paint, error } = await supabase
+  .from('paints')
+  .insert([
     {
       user_id: user.id,
       name,
@@ -181,11 +184,29 @@ async function createCustomPaint(formData: FormData) {
       color_hex: colorHex,
     },
   ])
+  .select('id')
+  .single()
 
   if (error) {
     console.error('Error creating custom paint:', error)
     return
   }
+
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'custom_color_created',
+  properties: {
+    custom_paint_id: paint?.id || null,
+    paint_name: name,
+    manufacturer,
+    series,
+    paint_type: paintType,
+    has_color_hex: Boolean(colorHex),
+    has_swatch_image: false,
+    source: 'recipe_page',
+    recipe_id: recipeId,
+  },
+})
 
   revalidatePath(`/recipes/${recipeId}`)
 }

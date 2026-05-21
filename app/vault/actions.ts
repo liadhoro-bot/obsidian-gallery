@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
 import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
+import { captureServerEvent } from '../../utils/analytics/server'
 
 export async function togglePaintOwnership(formData: FormData) {
   const supabase = await createClient()
@@ -57,7 +58,9 @@ export async function createCustomPaint(formData: FormData) {
 
   if (!name) return
 
-  const { error } = await supabase.from('paints').insert([
+  const { data: paint, error } = await supabase
+  .from('paints')
+  .insert([
     {
       user_id: user.id,
       name,
@@ -67,11 +70,28 @@ export async function createCustomPaint(formData: FormData) {
       color_hex: colorHex,
     },
   ])
+  .select('id')
+  .single()
 
   if (error) {
     console.error('Error creating custom paint:', error)
     return
   }
+
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'custom_color_created',
+  properties: {
+    custom_paint_id: paint?.id || null,
+    paint_name: name,
+    manufacturer,
+    series,
+    paint_type: paintType,
+    has_color_hex: Boolean(colorHex),
+    has_swatch_image: false,
+    source: 'vault_actions',
+  },
+})
 
   revalidatePath('/vault')
 }

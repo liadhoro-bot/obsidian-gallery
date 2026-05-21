@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../../utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { captureServerEvent } from '../../../utils/analytics/server'
 import {
   extractPaletteFromImage,
   findNearestPaint,
@@ -275,10 +276,23 @@ export async function calculateProjectPaletteAction(formData: FormData) {
 
   await supabase.from('theme_paints').delete().eq('theme_id', themeId)
 
-  if (paintRows.length > 0) {
-    await supabase.from('theme_paints').insert(paintRows)
-  }
+if (paintRows.length > 0) {
+  await supabase.from('theme_paints').insert(paintRows)
+}
 
-  revalidatePath(`/projects/${projectId}`)
-  revalidatePath(`/themes/${themeId}`)
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'palette_calculator_used',
+  properties: {
+    source_type: 'project',
+    source_id: projectId,
+    project_id: projectId,
+    theme_id: themeId,
+    extracted_colors_count: extractedHexes.length,
+    matched_paints_count: paintRows.length,
+  },
+})
+
+revalidatePath(`/projects/${projectId}`)
+revalidatePath(`/themes/${themeId}`)
 }

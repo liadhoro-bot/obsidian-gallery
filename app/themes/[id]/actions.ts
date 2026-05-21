@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../../utils/supabase/server'
+import { captureServerEvent } from '../../../utils/analytics/server'
 import {
   extractPaletteFromImage,
   findNearestPaint,
@@ -292,6 +293,18 @@ export async function calculateThemePaletteAction(formData: FormData) {
       custom_paint_id: null,
     }))
   )
+
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'palette_calculator_used',
+  properties: {
+    source_type: 'theme',
+    source_id: themeId,
+    theme_id: themeId,
+    extracted_colors_count: extractedHexes.length,
+    matched_paints_count: matchedPaints.length,
+  },
+})
 
   revalidatePath('/themes')
   revalidatePath(`/themes/${themeId}`)

@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
+import { captureServerEvent } from '../../utils/analytics/server'
 
 function cleanText(value: FormDataEntryValue | null, fallback = '') {
   const text = String(value || '').trim()
@@ -104,6 +105,21 @@ export async function createCustomPaintAction(formData: FormData) {
     .single()
 
   if (error) throw new Error(error.message)
+
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'custom_color_created',
+  properties: {
+    custom_paint_id: paint.id,
+    paint_name: name,
+    manufacturer,
+    series,
+    paint_type: 'custom',
+    has_color_hex: Boolean(color_hex),
+    has_swatch_image: Boolean(file && file.size > 0),
+    source: 'vault_custom_paint_actions',
+  },
+})
 
   await uploadCustomPaintSwatch({
     supabase,

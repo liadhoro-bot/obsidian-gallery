@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '../../utils/supabase/server'
+import { captureServerEvent } from '../../utils/analytics/server'
 
 const IMAGE_BUCKET = 'obsidian-images'
 
@@ -157,6 +158,18 @@ export async function createFirstProjectUnitAction(
       error: unitError?.message || 'Could not create your unit.',
     }
   }
+
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'unit_created',
+  properties: {
+    unit_id: unit.id,
+    unit_name: unitName,
+    project_id: project.id,
+    has_deadline: Boolean(deadline),
+    source: 'onboarding',
+  },
+})
 
   if (image instanceof File && image.size > 0) {
     const isAllowedImage =

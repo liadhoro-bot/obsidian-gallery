@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
+import { captureServerEvent } from '../../utils/analytics/server'
 
 export async function createTheme(formData: FormData) {
   const supabase = await createClient()
@@ -84,6 +85,21 @@ export async function createTheme(formData: FormData) {
       throw new Error(updateError.message)
     }
   }
+
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'theme_created',
+  properties: {
+    theme_id: theme.id,
+    theme_name: name,
+    is_public: false,
+    has_description: Boolean(description),
+    has_tags: tags.length > 0,
+    tag_count: tags.length,
+    has_image: Boolean(imageFile && imageFile.size > 0),
+    source: 'themes_page',
+  },
+})
 
   const paintRows = []
 

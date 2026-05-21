@@ -6,6 +6,7 @@ import ProjectDetailClient from './project-detail-client'
 import { Suspense } from 'react'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { deleteProject } from './actions'
+import { captureServerEvent } from '../../../utils/analytics/server'
 
 async function addUnit(formData: FormData) {
   'use server'
@@ -49,6 +50,18 @@ async function addUnit(formData: FormData) {
     return
   }
 
+await captureServerEvent({
+  distinctId: user.id,
+  event: 'unit_created',
+  properties: {
+    unit_id: insertedUnit.id,
+    unit_name: name,
+    project_id: projectId,
+    model_count: Number.isNaN(modelCount) ? 1 : modelCount,
+    has_notes: Boolean(notes),
+    source: 'project_page',
+  },
+})
   const progressSteps = [
     {
       step_key: 'assembled',
