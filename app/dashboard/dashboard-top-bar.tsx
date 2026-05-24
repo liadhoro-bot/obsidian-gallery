@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
 import SupportButton from '../components/SupportButton'
+import DownloadAppButton from '../components/download-app-button'
 
 type ProfileResult = {
   data: {
@@ -89,7 +90,10 @@ export default async function DashboardTopBar({
         </div>
       </div>
 
-      <SupportButton />
+      <div className="flex items-center gap-2">
+  <DownloadAppButton />
+  <SupportButton />
+</div>
     </div>
   )
 }
