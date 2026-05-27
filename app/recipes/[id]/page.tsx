@@ -339,7 +339,8 @@ async function updateRecipeStep(formData: FormData) {
   const recipeId = formData.get('recipeId')?.toString()
   const stepId = formData.get('stepId')?.toString()
   const title = formData.get('title')?.toString().trim()
-const instructions = formData.get('instructions')?.toString().trim() || null
+  const instructions = formData.get('instructions')?.toString().trim() || null
+  const stepImage = formData.get('step_image') as File | null
 
   const paintId1 = formData.get('paintId1')?.toString() || ''
   const ratio1 = formData.get('ratio1')?.toString().trim() || null
@@ -350,27 +351,49 @@ const instructions = formData.get('instructions')?.toString().trim() || null
   const paintId3 = formData.get('paintId3')?.toString() || ''
   const ratio3 = formData.get('ratio3')?.toString().trim() || null
 
-  console.log('updateRecipeStep submitted values:', {
-    recipeId,
-    stepId,
-    title,
-    instructions,
-    paintId1,
-    ratio1,
-    paintId2,
-    ratio2,
-    paintId3,
-    ratio3,
-  })
-
   if (!recipeId || !stepId || !title) return
 
-const { error: stepUpdateError } = await supabase
-  .from('recipe_steps')
-  .update({
+  let imageUrl: string | null = null
+
+  if (stepImage && stepImage.size > 0) {
+    const fileExt = stepImage.name.split('.').pop() || 'jpg'
+    const fileName = `${user.id}/recipe-steps/${stepId}-${Date.now()}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('obsidian-images')
+      .upload(fileName, stepImage, {
+        cacheControl: '3600',
+        upsert: true,
+      })
+
+    if (uploadError) {
+      console.error('Error uploading step image:', uploadError)
+      return
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('obsidian-images').getPublicUrl(fileName)
+
+    imageUrl = publicUrl
+  }
+
+  const updatePayload: {
+    title: string
+    instructions: string | null
+    image_url?: string
+  } = {
     title,
     instructions,
-  })
+  }
+
+  if (imageUrl) {
+    updatePayload.image_url = imageUrl
+  }
+
+  const { error: stepUpdateError } = await supabase
+    .from('recipe_steps')
+    .update(updatePayload)
     .eq('id', stepId)
 
   if (stepUpdateError) {
@@ -395,58 +418,50 @@ const { error: stepUpdateError } = await supabase
   const stepPaintsToInsert = []
 
   if (paintId1) {
-  stepPaintsToInsert.push({
-    recipe_step_id: stepId,
-    user_id: user.id,
-    paint_source: paint1.paint_source,
-    paint_catalog_id: paint1.paint_catalog_id,
-    custom_paint_id: paint1.custom_paint_id,
-    paint_order: 1,
-    ratio_text: ratio1,
-  })
-}
+    stepPaintsToInsert.push({
+      recipe_step_id: stepId,
+      user_id: user.id,
+      paint_source: paint1.paint_source,
+      paint_catalog_id: paint1.paint_catalog_id,
+      custom_paint_id: paint1.custom_paint_id,
+      paint_order: 1,
+      ratio_text: ratio1,
+    })
+  }
 
   if (paintId2) {
-  stepPaintsToInsert.push({
-    recipe_step_id: stepId,
-    user_id: user.id,
-    paint_source: paint2.paint_source,
-    paint_catalog_id: paint2.paint_catalog_id,
-    custom_paint_id: paint2.custom_paint_id,
-    paint_order: 2,
-    ratio_text: ratio2,
-  })
-}
+    stepPaintsToInsert.push({
+      recipe_step_id: stepId,
+      user_id: user.id,
+      paint_source: paint2.paint_source,
+      paint_catalog_id: paint2.paint_catalog_id,
+      custom_paint_id: paint2.custom_paint_id,
+      paint_order: 2,
+      ratio_text: ratio2,
+    })
+  }
 
   if (paintId3) {
-  stepPaintsToInsert.push({
-    recipe_step_id: stepId,
-    user_id: user.id,
-    paint_source: paint3.paint_source,
-    paint_catalog_id: paint3.paint_catalog_id,
-    custom_paint_id: paint3.custom_paint_id,
-    paint_order: 3,
-    ratio_text: ratio3,
-  })
-}
-
-  console.log('stepPaintsToInsert before insert:', stepPaintsToInsert)
+    stepPaintsToInsert.push({
+      recipe_step_id: stepId,
+      user_id: user.id,
+      paint_source: paint3.paint_source,
+      paint_catalog_id: paint3.paint_catalog_id,
+      custom_paint_id: paint3.custom_paint_id,
+      paint_order: 3,
+      ratio_text: ratio3,
+    })
+  }
 
   if (stepPaintsToInsert.length > 0) {
-    const { data: insertedPaintLinks, error: insertPaintLinksError } =
-      await supabase
-        .from('recipe_step_paints')
-        .insert(stepPaintsToInsert)
-        .select()
+    const { error: insertPaintLinksError } = await supabase
+      .from('recipe_step_paints')
+      .insert(stepPaintsToInsert)
 
     if (insertPaintLinksError) {
       console.error('Error re-adding recipe step paints:', insertPaintLinksError)
       return
     }
-
-    console.log('Inserted recipe_step_paints rows:', insertedPaintLinks)
-  } else {
-    console.log('No paint rows to insert. stepPaintsToInsert is empty.')
   }
 
   revalidatePath(`/recipes/${recipeId}`)

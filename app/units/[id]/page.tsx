@@ -4,7 +4,6 @@ import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import UnitDetailClient from './unit-detail-client'
-import ProjectPaletteCard from '../../projects/[id]/project-palette-card'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -24,67 +23,67 @@ export default async function UnitDetailPage({ params }: PageProps) {
   }
 
   const { data: unit, error: unitError } = await supabase
-  .from('units')
-  .select(`
-    id,
-    name,
-    complexity,
-    unit_size,
-    deadline,
-    is_active,
-    project_id,
-    project:projects (
+    .from('units')
+    .select(`
       id,
-      theme:themes (
+      name,
+      complexity,
+      unit_size,
+      deadline,
+      is_active,
+      project_id,
+      project:projects (
         id,
-        name,
-        description,
-        theme_paints (
+        theme:themes (
           id,
-          sort_order,
-          paint_source,
-          paint_catalog_id,
-          custom_paint_id,
-          catalog_paint:paint_catalog (
+          name,
+          description,
+          theme_paints (
             id,
-            name,
-            hex_approx,
-            swatch_image_url
-          ),
-          custom_paint:paints (
-            id,
-            name,
-            color_hex
+            sort_order,
+            paint_source,
+            paint_catalog_id,
+            custom_paint_id,
+            catalog_paint:paint_catalog (
+              id,
+              name,
+              hex_approx,
+              swatch_image_url
+            ),
+            custom_paint:paints (
+              id,
+              name,
+              color_hex
+            )
           )
         )
       )
-    )
-  `)
-  .eq('id', id)
-  .eq('user_id', user.id)
-  .single()
+    `)
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
 
   if (unitError || !unit) {
     notFound()
   }
 
   const { data: images, error: imagesError } = await supabase
-  .from('image_assets')
-  .select(`
-    id,
-    image_url,
-    is_featured,
-    created_at,
-    sort_order,
-    alt_text,
-    storage_bucket,
-    storage_path
-  `)
-  .eq('entity_type', 'unit')
-  .eq('entity_id', id)
-  .eq('user_id', user.id)
-  .order('sort_order', { ascending: true })
-  .order('created_at', { ascending: false })
+    .from('image_assets')
+    .select(`
+      id,
+      image_url,
+      is_featured,
+      created_at,
+      sort_order,
+      alt_text,
+      storage_bucket,
+      storage_path
+    `)
+    .eq('entity_type', 'unit')
+    .eq('entity_id', id)
+    .eq('user_id', user.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (imagesError) {
     throw new Error(imagesError.message)
@@ -187,18 +186,18 @@ export default async function UnitDetailPage({ params }: PageProps) {
     steps = reloadSteps.data ?? []
   }
 
-    let { data: sessions, error: sessionsError } = await supabase
-  .from('unit_sessions')
-  .select(`
-    id,
-    started_at,
-    ended_at,
-    duration_seconds,
-    user_id
-  `)
-  .eq('unit_id', id)
-  .eq('user_id', user.id)
-  .order('started_at', { ascending: false })
+  let { data: sessions, error: sessionsError } = await supabase
+    .from('unit_sessions')
+    .select(`
+      id,
+      started_at,
+      ended_at,
+      duration_seconds,
+      user_id
+    `)
+    .eq('unit_id', id)
+    .eq('user_id', user.id)
+    .order('started_at', { ascending: false })
 
   if (sessionsError) {
     throw new Error(sessionsError.message)
@@ -231,17 +230,17 @@ export default async function UnitDetailPage({ params }: PageProps) {
       }
 
       const reload = await supabase
-  .from('unit_sessions')
-  .select(`
-    id,
-    started_at,
-    ended_at,
-    duration_seconds,
-    user_id
-  `)
-  .eq('unit_id', id)
-  .eq('user_id', user.id)
-  .order('started_at', { ascending: false })
+        .from('unit_sessions')
+        .select(`
+          id,
+          started_at,
+          ended_at,
+          duration_seconds,
+          user_id
+        `)
+        .eq('unit_id', id)
+        .eq('user_id', user.id)
+        .order('started_at', { ascending: false })
 
       if (reload.error) {
         throw new Error(reload.error.message)
@@ -261,41 +260,88 @@ export default async function UnitDetailPage({ params }: PageProps) {
       (session) =>
         session.ended_at === null && session.user_id === user.id
     ) ?? null
+
   const featuredImage =
     images?.find((img) => img.is_featured) ?? images?.[0] ?? null
-const projectThemeRaw = unit.project?.[0]?.theme?.[0] ?? null
+const { data: stagePaintRows, error: stagePaintsError } = await supabase
+  .from('unit_stage_paints')
+  .select(`
+    id,
+    unit_id,
+    progress_step_id,
+    paint_source,
+    paint_catalog_id,
+    custom_paint_id,
+    sort_order,
+    catalog_paint:paint_catalog (
+      id,
+      name,
+      brand,
+      line,
+      hex_approx,
+      swatch_image_url
+    ),
+    custom_paint:paints (
+      id,
+      name,
+      manufacturer,
+      series,
+      color_hex
+    )
+  `)
+  .eq('unit_id', id)
+  .eq('user_id', user.id)
+  .order('sort_order', { ascending: true })
 
-const projectTheme = projectThemeRaw
-  ? {
-      ...projectThemeRaw,
-      theme_paints:
-        projectThemeRaw.theme_paints?.map((paint) => ({
-          ...paint,
-          catalog_paint: paint.catalog_paint?.[0] ?? null,
-          custom_paint: paint.custom_paint?.[0] ?? null,
-        })) ?? [],
-    }
-  : null
+if (stagePaintsError) {
+  throw new Error(stagePaintsError.message)
+}
+
+const stagePaints =
+  stagePaintRows?.map((paint) => ({
+    ...paint,
+    catalog_paint: Array.isArray(paint.catalog_paint)
+      ? paint.catalog_paint[0] ?? null
+      : paint.catalog_paint ?? null,
+    custom_paint: Array.isArray(paint.custom_paint)
+      ? paint.custom_paint[0] ?? null
+      : paint.custom_paint ?? null,
+  })) ?? []
+  const projectThemeRaw = unit.project?.[0]?.theme?.[0] ?? null
+
+  const projectTheme = projectThemeRaw
+    ? {
+        ...projectThemeRaw,
+        theme_paints:
+          projectThemeRaw.theme_paints?.map((paint) => ({
+            ...paint,
+            catalog_paint: paint.catalog_paint?.[0] ?? null,
+            custom_paint: paint.custom_paint?.[0] ?? null,
+          })) ?? [],
+      }
+    : null
+
   return (
-  <main className="min-h-screen bg-[#081018] text-white">
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-      <Suspense fallback={null}>
-        <DashboardTopBar />
-      </Suspense>
+    <main className="min-h-screen bg-[#081018] text-white">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
+        <Suspense fallback={null}>
+          <DashboardTopBar />
+        </Suspense>
 
-      <UnitDetailClient
-        unit={unit}
-        projectTheme={projectTheme}
-        images={images ?? []}
-        featuredImage={featuredImage}
-        steps={steps ?? []}
-        totalLoggedSeconds={totalLoggedSeconds}
-        activeSession={currentActiveSession}
-        sessions={sessions ?? []}
-      />
-    </div>
+        <UnitDetailClient
+  unit={unit}
+  projectTheme={projectTheme}
+  images={images ?? []}
+  featuredImage={featuredImage}
+  steps={steps ?? []}
+  totalLoggedSeconds={totalLoggedSeconds}
+  activeSession={currentActiveSession}
+  sessions={sessions ?? []}
+  stagePaints={stagePaints}
+/>
+      </div>
 
-    <MobileNav />
-  </main>
-)
+      <MobileNav />
+    </main>
+  )
 }

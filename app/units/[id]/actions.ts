@@ -556,3 +556,376 @@ export async function deleteUnitSession(formData: FormData) {
   revalidatePath('/dashboard')
   revalidatePath('/projects')
 }
+export async function assignRecipeToStage(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+  const progressStepId = String(formData.get('progressStepId') || '')
+  const recipeId = String(formData.get('recipeId') || '')
+
+  if (!unitId || !progressStepId || !recipeId) {
+    throw new Error('Missing recipe stage details')
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
+
+  const { data: step, error: stepError } = await supabase
+    .from('unit_progress_steps')
+    .select('id')
+    .eq('id', progressStepId)
+    .eq('unit_id', unitId)
+    .maybeSingle()
+
+  if (stepError) {
+    throw stepError
+  }
+
+  if (!step) {
+    throw new Error('Progress step not found')
+  }
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .select('id, user_id, is_public')
+    .eq('id', recipeId)
+    .maybeSingle()
+
+  if (recipeError) {
+    throw recipeError
+  }
+
+  if (!recipe) {
+    throw new Error('Recipe not found')
+  }
+
+  const { data: savedRecipe, error: savedRecipeError } = await supabase
+    .from('saved_recipes')
+    .select('id')
+    .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (savedRecipeError) {
+    throw savedRecipeError
+  }
+
+  const canUseRecipe =
+    recipe.user_id === user.id || recipe.is_public === true || !!savedRecipe
+
+  if (!canUseRecipe) {
+    throw new Error('You cannot assign this recipe')
+  }
+
+  const { error } = await supabase.from('unit_stage_recipes').upsert(
+    {
+      unit_id: unitId,
+      progress_step_id: progressStepId,
+      recipe_id: recipeId,
+      user_id: user.id,
+    },
+    {
+      onConflict: 'progress_step_id',
+    }
+  )
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/recipes')
+}
+
+export async function removeRecipeFromStage(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+  const progressStepId = String(formData.get('progressStepId') || '')
+
+  if (!unitId || !progressStepId) {
+    throw new Error('Missing recipe stage details')
+  }
+
+  const { error } = await supabase
+    .from('unit_stage_recipes')
+    .delete()
+    .eq('unit_id', unitId)
+    .eq('progress_step_id', progressStepId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+}
+
+export async function addPaintToStage(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+  const progressStepId = String(formData.get('progressStepId') || '')
+  const paintSource = String(formData.get('paintSource') || '') as
+    | 'catalog'
+    | 'custom'
+  const paintId = String(formData.get('paintId') || '')
+
+  if (!unitId || !progressStepId || !paintSource || !paintId) {
+    throw new Error('Missing stage paint details')
+  }
+
+  if (paintSource !== 'catalog' && paintSource !== 'custom') {
+    throw new Error('Invalid paint source')
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
+
+  const { data: step, error: stepError } = await supabase
+    .from('unit_progress_steps')
+    .select('id')
+    .eq('id', progressStepId)
+    .eq('unit_id', unitId)
+    .maybeSingle()
+
+  if (stepError) {
+    throw stepError
+  }
+
+  if (!step) {
+    throw new Error('Progress step not found')
+  }
+
+  if (paintSource === 'catalog') {
+    const { data: catalogPaint, error: catalogPaintError } = await supabase
+      .from('paint_catalog')
+      .select('id')
+      .eq('id', paintId)
+      .maybeSingle()
+
+    if (catalogPaintError) {
+      throw catalogPaintError
+    }
+
+    if (!catalogPaint) {
+      throw new Error('Catalog paint not found')
+    }
+
+    const { data: existingPaint, error: existingPaintError } = await supabase
+      .from('unit_stage_paints')
+      .select('id')
+      .eq('progress_step_id', progressStepId)
+      .eq('paint_catalog_id', paintId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (existingPaintError) {
+      throw existingPaintError
+    }
+
+    if (existingPaint) {
+      revalidatePath(`/units/${unitId}`)
+      return
+    }
+  }
+
+  if (paintSource === 'custom') {
+    const { data: customPaint, error: customPaintError } = await supabase
+      .from('paints')
+      .select('id')
+      .eq('id', paintId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (customPaintError) {
+      throw customPaintError
+    }
+
+    if (!customPaint) {
+      throw new Error('Custom paint not found')
+    }
+
+    const { data: existingPaint, error: existingPaintError } = await supabase
+      .from('unit_stage_paints')
+      .select('id')
+      .eq('progress_step_id', progressStepId)
+      .eq('custom_paint_id', paintId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (existingPaintError) {
+      throw existingPaintError
+    }
+
+    if (existingPaint) {
+      revalidatePath(`/units/${unitId}`)
+      return
+    }
+  }
+
+  const { count, error: countError } = await supabase
+    .from('unit_stage_paints')
+    .select('id', { count: 'exact', head: true })
+    .eq('progress_step_id', progressStepId)
+    .eq('user_id', user.id)
+
+  if (countError) {
+    throw countError
+  }
+
+  const { error } = await supabase.from('unit_stage_paints').insert({
+    unit_id: unitId,
+    progress_step_id: progressStepId,
+    paint_source: paintSource,
+    paint_catalog_id: paintSource === 'catalog' ? paintId : null,
+    custom_paint_id: paintSource === 'custom' ? paintId : null,
+    user_id: user.id,
+    sort_order: count ?? 0,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+}
+
+export async function removePaintFromStage(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+  const stagePaintId = String(formData.get('stagePaintId') || '')
+
+  if (!unitId || !stagePaintId) {
+    throw new Error('Missing stage paint details')
+  }
+
+  const { error } = await supabase
+    .from('unit_stage_paints')
+    .delete()
+    .eq('id', stagePaintId)
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+}
+export async function deleteUnitImage(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+  const imageId = String(formData.get('imageId') || '')
+
+  if (!unitId || !imageId) {
+    throw new Error('Missing image details')
+  }
+
+  const { data: image, error: imageError } = await supabase
+    .from('image_assets')
+    .select('id, storage_bucket, storage_path')
+    .eq('id', imageId)
+    .eq('entity_type', 'unit')
+    .eq('entity_id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (imageError) {
+    throw imageError
+  }
+
+  if (!image) {
+    throw new Error('Image not found')
+  }
+
+  if (image.storage_bucket && image.storage_path) {
+    const { error: storageError } = await supabase.storage
+      .from(image.storage_bucket)
+      .remove([image.storage_path])
+
+    if (storageError) {
+      throw storageError
+    }
+  }
+
+  const { error: deleteError } = await supabase
+    .from('image_assets')
+    .delete()
+    .eq('id', imageId)
+    .eq('entity_type', 'unit')
+    .eq('entity_id', unitId)
+    .eq('user_id', user.id)
+
+  if (deleteError) {
+    throw deleteError
+  }
+
+  revalidatePath(`/units/${unitId}`)
+}

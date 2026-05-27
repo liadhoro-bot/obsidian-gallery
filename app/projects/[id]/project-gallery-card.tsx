@@ -23,6 +23,7 @@ export default function ProjectGalleryCard({
   deleteProjectImageAction,
 }: Props) {
   const [isAddingImage, setIsAddingImage] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<any | null>(null)
   const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)
 
   return (
@@ -104,11 +105,17 @@ export default function ProjectGalleryCard({
               className="rounded-2xl border border-neutral-800 bg-neutral-950 p-2"
             >
               <div className="relative">
-                <img
-                  src={image.image_url}
-                  alt={image.alt_text || project?.name || 'Project image'}
-                  className="h-28 w-full rounded-xl object-cover"
-                />
+                <button
+  type="button"
+  onClick={() => setSelectedImage(image)}
+  className="block w-full"
+>
+  <img
+    src={image.image_url}
+    alt={image.alt_text || project?.name || 'Project image'}
+    className="h-28 w-full rounded-xl object-cover transition hover:scale-[1.02]"
+  />
+</button>
 
                 <div className="absolute right-2 top-2 flex items-center gap-2">
                   {image.is_featured ? (
@@ -175,6 +182,35 @@ export default function ProjectGalleryCard({
           No gallery images yet.
         </p>
       )}
+      {selectedImage && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+    onClick={() => setSelectedImage(null)}
+  >
+    <button
+      type="button"
+      onClick={() => setSelectedImage(null)}
+      className="absolute right-4 top-4 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur"
+    >
+      Close
+    </button>
+
+    <div
+      className="max-h-[92vh] max-w-6xl overflow-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <img
+        src={selectedImage.image_url}
+        alt={
+          selectedImage.alt_text ||
+          project?.name ||
+          'Project image'
+        }
+        className="max-h-[92vh] rounded-2xl object-contain"
+      />
+    </div>
+  </div>
+)}
     </section>
   )
 }
