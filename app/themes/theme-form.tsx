@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { createTheme } from './actions'
 
@@ -10,6 +10,7 @@ type PaintOption = {
   name: string
   brand: string | null
   line: string | null
+  sku?: string | null
   swatch_image_url: string | null
   hex: string | null
 }
@@ -24,20 +25,75 @@ export default function ThemeForm({
   )
   const [activeSlot, setActiveSlot] = useState<number | null>(null)
   const [query, setQuery] = useState('')
+  const [catalogPaints, setCatalogPaints] = useState<PaintOption[]>(
+    paints.filter((paint) => paint.source === 'catalog').slice(0, 80)
+  )
+  const [isSearching, setIsSearching] = useState(false)
+
+  useEffect(() => {
+    if (activeSlot === null) return
+
+    const controller = new AbortController()
+
+    async function loadCatalogPaints() {
+      setIsSearching(true)
+
+      try {
+        const params = new URLSearchParams()
+        params.set('limit', '80')
+
+        if (query.trim()) {
+          params.set('q', query.trim())
+        }
+
+        const response = await fetch(
+          `/api/theme-paint-search?${params.toString()}`,
+          { signal: controller.signal }
+        )
+
+        if (!response.ok) {
+          throw new Error('Paint search failed')
+        }
+
+        const result = await response.json()
+        setCatalogPaints(result.paints || [])
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error(error)
+          setCatalogPaints([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false)
+        }
+      }
+    }
+
+    const timeout = window.setTimeout(loadCatalogPaints, 250)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timeout)
+    }
+  }, [activeSlot, query])
 
   const filteredPaints = useMemo(() => {
     const q = query.toLowerCase().trim()
+    const customPaints = paints.filter((paint) => paint.source === 'custom')
+    const matchingCustomPaints = q
+      ? customPaints.filter((paint) =>
+          `${paint.name} ${paint.brand || ''} ${paint.line || ''} ${
+            paint.sku || ''
+          }`
+            .toLowerCase()
+            .includes(q)
+        )
+      : customPaints.slice(0, 20)
 
-    if (!q) return paints.slice(0, 80)
-
-    return paints
-      .filter((paint) =>
-        `${paint.name} ${paint.brand || ''} ${paint.line || ''}`
-          .toLowerCase()
-          .includes(q)
-      )
-      .slice(0, 80)
-  }, [paints, query])
+    return [...catalogPaints, ...matchingCustomPaints].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )
+  }, [catalogPaints, paints, query])
 
   function choosePaint(paint: PaintOption) {
     if (activeSlot === null) return
@@ -158,9 +214,15 @@ export default function ThemeForm({
             type="text"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search paints..."
-            className="mb-3 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none"
+            placeholder="Search by name, brand, line, or SKU..."
+            className="mb-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none"
           />
+
+          <p className="mb-3 text-xs text-white/35">
+            {isSearching
+              ? 'Searching paints...'
+              : `Showing ${filteredPaints.length} matching paints`}
+          </p>
 
           <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {filteredPaints.map((paint) => (
@@ -191,11 +253,19 @@ export default function ThemeForm({
                     {paint.name}
                   </p>
                   <p className="truncate text-xs text-white/45">
-                    {[paint.brand, paint.line].filter(Boolean).join(' / ')}
+                    {[paint.brand, paint.line, paint.sku]
+                      .filter(Boolean)
+                      .join(' / ')}
                   </p>
                 </div>
               </button>
             ))}
+
+            {!isSearching && filteredPaints.length === 0 && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/50">
+                No paints found.
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -12,6 +12,49 @@ type Props = {
     selectForProject?: string
   }>
 }
+
+type ThemePaintSummary = {
+  id: string
+  sort_order: number | null
+  catalog_paint:
+    | {
+        swatch_image_url: string | null
+        hex_approx: string | null
+      }
+    | {
+        swatch_image_url: string | null
+        hex_approx: string | null
+      }[]
+    | null
+  custom_paint:
+    | {
+        color_hex: string | null
+      }
+    | {
+        color_hex: string | null
+      }[]
+    | null
+}
+
+type ThemeSummary = {
+  id: string
+  user_id: string | null
+  name: string
+  description: string | null
+  image_url: string | null
+  is_public: boolean | null
+  theme_paints?: ThemePaintSummary[] | null
+}
+
+type SavedThemeRow = {
+  theme_id: string
+  themes: ThemeSummary | ThemeSummary[] | null
+}
+
+function firstValue<T>(value: T | T[] | null) {
+  return Array.isArray(value) ? value[0] ?? null : value
+}
+
 async function attachThemeToProject(formData: FormData) {
   'use server'
 
@@ -125,24 +168,26 @@ export default async function ThemesPage({ searchParams }: Props) {
         .eq('user_id', user.id),
     ])
 
-  const savedThemes =
-    savedRows
-      ?.map((row: any) => row.themes)
-      .filter(Boolean) ?? []
+  const publicThemeRows = (publicThemes ?? []) as ThemeSummary[]
+  const myThemeRows = (myThemes ?? []) as ThemeSummary[]
+  const savedThemeRows = (savedRows ?? []) as SavedThemeRow[]
 
-  const savedThemeIds = (savedRows ?? []).map((row: any) => row.theme_id)
+  const savedThemes = savedThemeRows
+    .map((row) => firstValue(row.themes))
+    .filter((theme): theme is ThemeSummary => Boolean(theme))
+
+  const savedThemeIds = savedThemeRows.map((row) => row.theme_id)
 
   const myAndSavedThemes = [
-    ...(myThemes ?? []),
+    ...myThemeRows,
     ...savedThemes.filter(
-      (savedTheme: any) =>
-        !(myThemes ?? []).some((theme) => theme.id === savedTheme.id)
+      (savedTheme) => !myThemeRows.some((theme) => theme.id === savedTheme.id)
     ),
   ]
 
   const { data: catalogPaints } = await supabase
     .from('paint_catalog')
-    .select('id, name, brand, line, swatch_image_url, hex_approx')
+    .select('id, name, brand, line, sku, swatch_image_url, hex_approx')
     .eq('is_active', true)
     .order('brand', { ascending: true })
     .order('line', { ascending: true })
@@ -162,6 +207,7 @@ export default async function ThemesPage({ searchParams }: Props) {
       name: paint.name || 'Unnamed paint',
       brand: paint.brand,
       line: paint.line,
+      sku: paint.sku,
       swatch_image_url: paint.swatch_image_url,
       hex: paint.hex_approx,
     })),
@@ -196,14 +242,15 @@ export default async function ThemesPage({ searchParams }: Props) {
         {tab === 'find' && (
           <div className="grid grid-cols-2 gap-3">
             {(publicThemes ?? []).length > 0 ? (
-              (publicThemes ?? []).map((theme) => (
+              publicThemeRows.map((theme) => (
                 <ThemeCard
-  theme={theme}
-  currentUserId={user.id}
-  isSaved={savedThemeIds.includes(theme.id)}
-  selectForProject={selectForProject}
-  attachThemeToProjectAction={attachThemeToProject}
-/>
+                  key={theme.id}
+                  theme={theme}
+                  currentUserId={user.id}
+                  isSaved={savedThemeIds.includes(theme.id)}
+                  selectForProject={selectForProject}
+                  attachThemeToProjectAction={attachThemeToProject}
+                />
               ))
             ) : (
               <div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/60">
@@ -216,13 +263,14 @@ export default async function ThemesPage({ searchParams }: Props) {
         {tab === 'mine' && (
           <div className="grid grid-cols-2 gap-3">
             {myAndSavedThemes.length > 0 ? (
-              myAndSavedThemes.map((theme: any) => (
+              myAndSavedThemes.map((theme) => (
                 <ThemeCard
-                 theme={theme}
-                 currentUserId={user.id}
-                 isSaved={savedThemeIds.includes(theme.id)}
-                 selectForProject={selectForProject}
-                 attachThemeToProjectAction={attachThemeToProject}
+                  key={theme.id}
+                  theme={theme}
+                  currentUserId={user.id}
+                  isSaved={savedThemeIds.includes(theme.id)}
+                  selectForProject={selectForProject}
+                  attachThemeToProjectAction={attachThemeToProject}
                 />
               ))
             ) : (
