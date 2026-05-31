@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
-import MobileNav from '../components/MobileNav'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import VaultFilters from './vault-filters'
 import VaultGrid from './vault-grid'
@@ -11,6 +10,7 @@ import {
   VaultFiltersSkeleton,
   VaultGridSkeleton,
 } from './vault-skeletons'
+import { createPerfTimer } from '../../utils/perf/server'
 
 type VaultTab = 'find' | 'collection' | 'custom'
 
@@ -32,17 +32,20 @@ function resolveVaultTab(tab?: string): VaultTab {
 }
 
 export default async function VaultPage({ searchParams }: PageProps) {
+  const perf = createPerfTimer('/vault')
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   if (!user) {
     redirect('/login')
   }
 
   const resolvedSearchParams = await searchParams
+  perf.mark('search params')
 
   const activeTab = resolveVaultTab(resolvedSearchParams.tab)
 
@@ -55,6 +58,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
       : resolvedSearchParams.ownership || 'all'
 
   const limit = Math.max(24, Number(resolvedSearchParams.limit || 24))
+  perf.total()
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
@@ -116,8 +120,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
           </Suspense>
         )}
       </div>
-
-      <MobileNav />
     </main>
   )
 }
+

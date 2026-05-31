@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import MobileNav from '../components/MobileNav'
 import FeedbackCard from './feedback-card'
 
 const payboxLink = 'https://links.payboxapp.com/oPJxbFBZM2b'
@@ -63,7 +62,7 @@ export default function SupportPage() {
           </h2>
 
           <p className="mt-1 text-xs leading-5 text-slate-400">
-            These are suggestions only. We can't reliably pre-fill
+            These are suggestions only. We can&apos;t reliably pre-fill
             the payment amount from the app.
           </p>
 
@@ -144,8 +143,6 @@ export default function SupportPage() {
 
         <FeedbackCard />
       </div>
-
-      <MobileNav />
     </main>
   )
 }

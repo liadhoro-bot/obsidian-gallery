@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import { updateRecipeYoutubeUrl } from './recipe-actions'
 
@@ -113,9 +114,12 @@ export default function RecipeVideoCard({
           {draftVideoId ? (
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
               <div className="relative">
-                <img
+                <Image
                   src={`https://img.youtube.com/vi/${draftVideoId}/hqdefault.jpg`}
                   alt="YouTube video preview"
+                  width={480}
+                  height={360}
+                  sizes="(max-width: 768px) 100vw, 420px"
                   className="aspect-video w-full object-cover"
                 />
 

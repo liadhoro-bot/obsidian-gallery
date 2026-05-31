@@ -1,13 +1,18 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { createClient } from '../../../utils/supabase/server'
 import { updatePaintOwnership } from '../../../utils/paint-ownership/update-paint-ownership'
 import { redirect, notFound } from 'next/navigation'
-import MobileNav from '../../components/MobileNav'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import RecipeDetailClient from './recipe-detail-client'
-import RecipeVideoCard from './recipe-video-card'
 import { captureServerEvent } from '../../../utils/analytics/server'
+import {
+  getCachedCatalogPaintOptions,
+  getCachedPublicRecipe,
+  getCachedPublicRecipeAssets,
+} from '../../../lib/public-cache'
+import { createPerfTimer } from '../../../utils/perf/server'
 
 function parsePaintSelection(rawValue: string) {
   if (!rawValue) {
@@ -45,6 +50,12 @@ function parsePaintSelection(rawValue: string) {
   }
 }
 
+function revalidateRecipeCaches(recipeId: string) {
+  revalidatePath(`/recipes/${recipeId}`)
+  revalidateTag(`recipe:${recipeId}`, 'max')
+  revalidateTag('public-recipes', 'max')
+}
+
 async function updateRecipeHeader(formData: FormData) {
   'use server'
 
@@ -69,7 +80,7 @@ async function updateRecipeHeader(formData: FormData) {
     return
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function updateRecipeInventory(formData: FormData) {
@@ -95,7 +106,7 @@ async function updateRecipeInventory(formData: FormData) {
     return
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function updateRecipePaintOwnership(formData: FormData) {
@@ -124,7 +135,7 @@ async function updateRecipePaintOwnership(formData: FormData) {
     currentValue,
   })
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function updateRecipeTips(formData: FormData) {
@@ -149,7 +160,7 @@ async function updateRecipeTips(formData: FormData) {
     return
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function createCustomPaint(formData: FormData) {
@@ -208,7 +219,7 @@ await captureServerEvent({
   },
 })
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function addRecipeStep(formData: FormData) {
@@ -322,7 +333,7 @@ if (!recipeId || !title) return
     }
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function updateRecipeStep(formData: FormData) {
@@ -464,7 +475,7 @@ async function updateRecipeStep(formData: FormData) {
     }
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function deleteRecipeStep(formData: FormData) {
@@ -515,7 +526,7 @@ async function deleteRecipeStep(formData: FormData) {
     }
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function moveRecipeStep(formData: FormData) {
@@ -616,7 +627,7 @@ async function moveRecipeStep(formData: FormData) {
     }
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function uploadRecipeImage(formData: FormData) {
@@ -689,7 +700,7 @@ async function uploadRecipeImage(formData: FormData) {
     return
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function setFeaturedRecipeImage(formData: FormData) {
@@ -723,7 +734,7 @@ async function setFeaturedRecipeImage(formData: FormData) {
     return
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
 async function deleteRecipeImage(formData: FormData) {
@@ -785,54 +796,151 @@ async function deleteRecipeImage(formData: FormData) {
     }
   }
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidateRecipeCaches(recipeId)
 }
 
-export default async function RecipeDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
+async function deleteRecipe(formData: FormData) {
+  'use server'
+
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
+  if (!user) return
+
+  const recipeId = formData.get('recipeId')?.toString()
+
+  if (!recipeId) return
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('id', recipeId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (recipeError) {
+    console.error('Error fetching recipe for delete:', recipeError)
+    return
   }
 
-  const { data: recipe } = await supabase
-  .from('recipes')
-  .select('*')
-  .eq('id', id)
-  .single()
-
-if (!recipe) {
-  notFound()
-}
-
-if (!recipe.is_public && recipe.user_id !== user.id) {
-  notFound()
-}
-
-const isOwner = recipe.user_id === user.id
+  if (!recipe) {
+    return
+  }
 
   const { data: steps, error: stepsError } = await supabase
     .from('recipe_steps')
-    .select('*')
-    .eq('recipe_id', id)
-    .order('step_number', { ascending: true })
+    .select('id')
+    .eq('recipe_id', recipeId)
+
+  if (stepsError) {
+    console.error('Error fetching recipe steps for delete:', stepsError)
+    return
+  }
+
+  const stepIds = steps?.map((step) => step.id) || []
+
+  if (stepIds.length > 0) {
+    const { error: stepPaintsError } = await supabase
+      .from('recipe_step_paints')
+      .delete()
+      .in('recipe_step_id', stepIds)
+
+    if (stepPaintsError) {
+      console.error('Error deleting recipe step paints:', stepPaintsError)
+      return
+    }
+  }
+
+  const { error: stageRecipesError } = await supabase
+    .from('unit_stage_recipes')
+    .delete()
+    .eq('recipe_id', recipeId)
+
+  if (stageRecipesError) {
+    console.error('Error deleting recipe stage links:', stageRecipesError)
+    return
+  }
+
+  const { error: savedRecipesError } = await supabase
+    .from('saved_recipes')
+    .delete()
+    .eq('recipe_id', recipeId)
+
+  if (savedRecipesError) {
+    console.error('Error deleting saved recipe links:', savedRecipesError)
+    return
+  }
+
+  const { error: imageAssetsError } = await supabase
+    .from('image_assets')
+    .delete()
+    .eq('entity_type', 'recipe')
+    .eq('entity_id', recipeId)
+
+  if (imageAssetsError) {
+    console.error('Error deleting recipe images:', imageAssetsError)
+    return
+  }
+
+  const { error: recipeStepsError } = await supabase
+    .from('recipe_steps')
+    .delete()
+    .eq('recipe_id', recipeId)
+
+  if (recipeStepsError) {
+    console.error('Error deleting recipe steps:', recipeStepsError)
+    return
+  }
+
+  const { error: deleteRecipeError } = await supabase
+    .from('recipes')
+    .delete()
+    .eq('id', recipeId)
+    .eq('user_id', user.id)
+
+  if (deleteRecipeError) {
+    console.error('Error deleting recipe:', deleteRecipeError)
+    return
+  }
+
+  revalidatePath('/recipes')
+  revalidatePath('/dashboard')
+  revalidateTag(`recipe:${recipeId}`, 'max')
+  revalidateTag('public-recipes', 'max')
+
+  redirect('/recipes')
+}
+
+async function getPrivateRecipeAssets(supabase: Awaited<ReturnType<typeof createClient>>, recipeId: string) {
+  const [{ data: steps, error: stepsError }, { data: recipeImages, error: recipeImagesError }] =
+    await Promise.all([
+      supabase
+        .from('recipe_steps')
+        .select('id, step_number, title, instructions, image_url')
+        .eq('recipe_id', recipeId)
+        .order('step_number', { ascending: true }),
+      supabase
+        .from('image_assets')
+        .select('id, image_url, is_featured, alt_text')
+        .eq('entity_type', 'recipe')
+        .eq('entity_id', recipeId)
+        .order('created_at', { ascending: false }),
+    ])
 
   if (stepsError) {
     console.error('Error fetching recipe steps:', stepsError)
   }
 
+  if (recipeImagesError) {
+    console.error('Error fetching recipe images:', recipeImagesError)
+  }
+
   const stepIds = steps?.map((step) => step.id) || []
 
-  const { data: rawStepPaintLinks, error: stepPaintLinksError } =
+  const { data: stepPaintLinks, error: stepPaintLinksError } =
     stepIds.length > 0
       ? await supabase
           .from('recipe_step_paints')
@@ -869,55 +977,92 @@ const isOwner = recipe.user_id === user.id
     console.error('Error fetching recipe step paint links:', stepPaintLinksError)
   }
 
-  const { data: paintsCatalog, error: paintsCatalogError } = await supabase
-    .from('paint_catalog')
-    .select(`
-      id,
-      brand,
-      line,
-      name,
-      sku,
-      swatch_image_url,
-      hex_approx,
-      finish,
-      paint_type
-    `)
-    .eq('is_active', true)
-    .order('brand', { ascending: true })
-    .order('line', { ascending: true })
-    .order('name', { ascending: true })
+  return {
+    steps: steps || [],
+    images: recipeImages || [],
+    stepPaintLinks: stepPaintLinks || [],
+  }
+}
 
-  if (paintsCatalogError) {
-    console.error('Error fetching paint catalog:', paintsCatalogError)
+export default async function RecipeDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const perf = createPerfTimer('/recipes/[id]')
+  const { id } = await params
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
+
+  if (!user) {
+    redirect('/login')
   }
 
-  const { data: ownershipRows, error: ownershipError } = await supabase
-    .from('user_paint_ownership')
-    .select('paint_catalog_id, is_owned, is_wishlist')
-    .eq('user_id', user.id)
+  const cachedPublicRecipe = await getCachedPublicRecipe(id)
+  const { data: privateRecipe } = cachedPublicRecipe
+    ? { data: null }
+    : await supabase
+        .from('recipes')
+        .select('id, name, description, inventory_required, expert_tips, youtube_url, is_public, user_id')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+  const recipe = cachedPublicRecipe || privateRecipe
+  perf.mark('main Supabase query')
+
+if (!recipe) {
+  notFound()
+}
+
+const isOwner = recipe.user_id === user.id
+
+  const [
+    recipeAssets,
+    paintsCatalog,
+    { data: ownershipRows, error: ownershipError },
+    { data: customPaintRows, error: customPaintRowsError },
+  ] = await Promise.all([
+    cachedPublicRecipe
+      ? getCachedPublicRecipeAssets(id)
+      : getPrivateRecipeAssets(supabase, id),
+    getCachedCatalogPaintOptions(),
+    supabase
+      .from('user_paint_ownership')
+      .select('paint_catalog_id, is_owned, is_wishlist')
+      .eq('user_id', user.id),
+    supabase
+      .from('paints')
+      .select(`
+        id,
+        name,
+        manufacturer,
+        series,
+        paint_type,
+        color_hex
+      `)
+      .eq('user_id', user.id)
+      .order('manufacturer', { ascending: true })
+      .order('series', { ascending: true })
+      .order('name', { ascending: true }),
+  ])
+  perf.mark('secondary Supabase queries')
 
   if (ownershipError) {
     console.error('Error fetching user paint ownership:', ownershipError)
   }
 
-  const { data: customPaintRows, error: customPaintRowsError } = await supabase
-    .from('paints')
-    .select(`
-      id,
-      name,
-      manufacturer,
-      series,
-      paint_type,
-      color_hex
-    `)
-    .eq('user_id', user.id)
-    .order('manufacturer', { ascending: true })
-    .order('series', { ascending: true })
-    .order('name', { ascending: true })
-
   if (customPaintRowsError) {
     console.error('Error fetching custom paints:', customPaintRowsError)
   }
+
+  const steps = recipeAssets.steps
+  const rawStepPaintLinks = recipeAssets.stepPaintLinks
+  const recipeImages = recipeAssets.images
 
   const ownedPaintIds = new Set(
     (ownershipRows || [])
@@ -1019,20 +1164,10 @@ const wishlistPaintIds = new Set(
     }
   }) || []
 
-  
-  const { data: recipeImages, error: recipeImagesError } = await supabase
-  .from('image_assets')
-  .select('*')
-  .eq('entity_type', 'recipe')
-  .eq('entity_id', id)
-  .order('created_at', { ascending: false })
-
-  if (recipeImagesError) {
-    console.error('Error fetching recipe images:', recipeImagesError)
-  }
-
   const featuredImage =
     recipeImages?.find((img) => img.is_featured) || recipeImages?.[0] || null
+  perf.mark('image/gallery queries')
+  perf.total()
 
   return (
   <main className="min-h-screen bg-[#081018] text-white">
@@ -1042,9 +1177,9 @@ const wishlistPaintIds = new Set(
       </Suspense>
 
       <div>
-        <a href="/recipes" className="text-cyan-400 text-sm">
+        <Link href="/recipes" className="text-cyan-400 text-sm">
           ← Back to Recipes
-        </a>
+        </Link>
       </div>
 
       <RecipeDetailClient
@@ -1067,10 +1202,10 @@ const wishlistPaintIds = new Set(
         deleteRecipeImageAction={deleteRecipeImage}
         createCustomPaintAction={createCustomPaint}
         updateRecipePaintOwnershipAction={updateRecipePaintOwnership}
+        deleteRecipeAction={deleteRecipe}
       />
     </div>
-
-    <MobileNav />
   </main>
 )
 }
+

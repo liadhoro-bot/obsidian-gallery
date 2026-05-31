@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addPaintToStage } from '../actions'
@@ -193,9 +194,12 @@ export default function StagePaintPicker({
                         className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.08] disabled:opacity-60"
                       >
                         {paint.swatch_image_url ? (
-                          <img
+                          <Image
                             src={paint.swatch_image_url}
                             alt={paint.name || 'Paint swatch'}
+                            width={48}
+                            height={48}
+                            sizes="48px"
                             className="h-12 w-12 shrink-0 rounded-xl border border-white/10 object-cover"
                           />
                         ) : (

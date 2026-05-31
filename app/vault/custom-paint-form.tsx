@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import {
   createCustomPaintAction,
   updateCustomPaintAction,
-  deleteCustomPaintAction,
 } from './custom-paint-actions'
 
 type CustomPaint = {
@@ -39,8 +38,6 @@ export default function CustomPaintForm({
   )
 
   const [toast, setToast] = useState('')
-  const [showDeleteModal, setShowDeleteModal] =
-    useState(false)
 
   const [previewImage, setPreviewImage] = useState<
     string | null
@@ -124,25 +121,6 @@ export default function CustomPaintForm({
           error instanceof Error
             ? error.message
             : 'Something went wrong.'
-        )
-      }
-    })
-  }
-
-  function handleDelete() {
-    if (!paint?.id) return
-
-    const formData = new FormData()
-    formData.set('paintId', paint.id)
-
-    startTransition(async () => {
-      try {
-        await deleteCustomPaintAction(formData)
-      } catch (error) {
-        setToast(
-          error instanceof Error
-            ? error.message
-            : 'Failed to delete paint.'
         )
       }
     })
@@ -289,39 +267,26 @@ export default function CustomPaintForm({
           </div>
         </section>
 
-        <div className="space-y-3">
-          <button
-            type="button"
-            disabled={isPending || !name.trim()}
-            onClick={handleSave}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.25em] text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.35)] transition active:scale-[0.98] active:opacity-70 disabled:opacity-50"
-          >
-            {isPending ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
-            ) : null}
-
-            <span>
-              {mode === 'edit'
-                ? isPending
-                  ? 'Saving Changes...'
-                  : 'Save Changes'
-                : isPending
-                ? 'Saving Color...'
-                : 'Save Color'}
-            </span>
-          </button>
-
-          {mode === 'edit' ? (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => setShowDeleteModal(true)}
-              className="inline-flex w-full items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 px-5 py-4 text-sm font-black uppercase tracking-[0.25em] text-red-300 transition active:scale-[0.98] active:opacity-70 disabled:opacity-50"
-            >
-              Delete Custom Paint
-            </button>
+        <button
+          type="button"
+          disabled={isPending || !name.trim()}
+          onClick={handleSave}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.25em] text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.35)] transition active:scale-[0.98] active:opacity-70 disabled:opacity-50"
+        >
+          {isPending ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
           ) : null}
-        </div>
+
+          <span>
+            {mode === 'edit'
+              ? isPending
+                ? 'Saving Changes...'
+                : 'Save Changes'
+              : isPending
+              ? 'Saving Color...'
+              : 'Save Color'}
+          </span>
+        </button>
       </div>
 
       {toast ? (
@@ -330,41 +295,6 @@ export default function CustomPaintForm({
         </div>
       ) : null}
 
-      {showDeleteModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-slate-950 p-5 shadow-2xl">
-            <h3 className="text-lg font-black text-white">
-              Delete Custom Paint?
-            </h3>
-
-            <p className="mt-2 text-sm leading-6 text-white/65">
-              This permanently deletes the custom paint and
-              cannot be undone.
-            </p>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setShowDeleteModal(false)
-                }
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black uppercase tracking-[0.18em] text-white/70"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isPending}
-                className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-black uppercase tracking-[0.18em] text-red-300"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   )
 }

@@ -1,13 +1,15 @@
 'use client'
 
+import Image from 'next/image'
 import { useState } from 'react'
 import SubmitButton from '../../components/SubmitButton'
+import type { ProjectImage, ProjectRow, SerializableError } from './types'
 
 type Props = {
-  project: any
+  project: ProjectRow | null
   projectId: string
-  projectImages: any[]
-  projectImagesError: any
+  projectImages: ProjectImage[]
+  projectImagesError: SerializableError | null
   uploadProjectImageAction: (formData: FormData) => Promise<void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
@@ -23,7 +25,7 @@ export default function ProjectGalleryCard({
   deleteProjectImageAction,
 }: Props) {
   const [isAddingImage, setIsAddingImage] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<any | null>(null)
+  const [selectedImage, setSelectedImage] = useState<ProjectImage | null>(null)
   const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)
 
   return (
@@ -110,9 +112,12 @@ export default function ProjectGalleryCard({
   onClick={() => setSelectedImage(image)}
   className="block w-full"
 >
-  <img
+  <Image
     src={image.image_url}
     alt={image.alt_text || project?.name || 'Project image'}
+    width={240}
+    height={112}
+    sizes="(max-width: 640px) 50vw, 140px"
     className="h-28 w-full rounded-xl object-cover transition hover:scale-[1.02]"
   />
 </button>
@@ -199,13 +204,16 @@ export default function ProjectGalleryCard({
       className="max-h-[92vh] max-w-6xl overflow-auto"
       onClick={(e) => e.stopPropagation()}
     >
-      <img
+      <Image
         src={selectedImage.image_url}
         alt={
           selectedImage.alt_text ||
           project?.name ||
           'Project image'
         }
+        width={1400}
+        height={1400}
+        sizes="100vw"
         className="max-h-[92vh] rounded-2xl object-contain"
       />
     </div>

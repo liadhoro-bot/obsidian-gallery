@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
+import dynamic from 'next/dynamic'
+
+const ZoomImage = dynamic(() => import('./zoomable-gallery-image'))
 
 type GalleryImage = {
   id: string
@@ -92,26 +94,10 @@ export default function GalleryImageCard({
             className="h-full max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <TransformWrapper
-              initialScale={1}
-              minScale={1}
-              maxScale={5}
-              doubleClick={{ mode: 'zoomIn' }}
-              pinch={{ disabled: false }}
-              wheel={{ disabled: false }}
-            >
-              <TransformComponent
-                wrapperClass="!h-full !w-full"
-                contentClass="!h-full !w-full flex items-center justify-center"
-              >
-                <img
-                  src={image.image_url}
-                  alt={image.alt_text || 'Gallery image'}
-                  className="max-h-[92vh] max-w-full select-none rounded-2xl object-contain"
-                  draggable={false}
-                />
-              </TransformComponent>
-            </TransformWrapper>
+            <ZoomImage
+              src={image.image_url}
+              alt={image.alt_text || 'Gallery image'}
+            />
           </div>
         </div>
       )}

@@ -3,11 +3,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
-import MobileNav from '../../components/MobileNav'
 import ThemeOwnerActions from './theme-owner-actions'
 import ThemeVisibilityPill from './theme-visibility-pill'
 import ThemePaletteEditor from './theme-palette-editor'
-import { calculateThemePaletteAction } from './actions'
+import DeleteConfirmationCard from '../../components/delete-confirmation-card'
+import { calculateThemePaletteAction, deleteTheme } from './actions'
+import { getCachedPublicTheme } from '../../../lib/public-cache'
+import { createPerfTimer } from '../../../utils/perf/server'
 
 type Props = {
   params: Promise<{
@@ -70,6 +72,7 @@ function safeImageUrl(value: string | null | undefined) {
 }
 
 export default async function ThemeDetailPage({ params }: Props) {
+  const perf = createPerfTimer('/themes/[id]')
   const { id } = await params
 
   const supabase = await createClient()
@@ -77,47 +80,57 @@ export default async function ThemeDetailPage({ params }: Props) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
-  const { data: theme, error: themeError } = await supabase
-    .from('themes')
-    .select(
-      `
-      id,
-      user_id,
-      name,
-      description,
-      image_url,
-      is_public,
-      tags,
-      created_at,
-      theme_paints (
-        id,
-        sort_order,
-        paint_source,
-        catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
-          id,
-          name,
-          brand,
-          line,
-          swatch_image_url,
-          hex_approx
-        ),
-        custom_paint:paints!theme_paints_custom_paint_id_fkey (
-          id,
-          name,
-          manufacturer,
-          series,
-          color_hex
-        )
-      )
-    `
-    )
-    .eq('id', id)
-    .maybeSingle()
+  const cachedPublicTheme = await getCachedPublicTheme(id)
+  const { data: privateTheme, error: themeError } = cachedPublicTheme
+    ? { data: null, error: null }
+    : user
+      ? await supabase
+          .from('themes')
+          .select(
+            `
+            id,
+            user_id,
+            name,
+            description,
+            image_url,
+            is_public,
+            tags,
+            created_at,
+            theme_paints (
+              id,
+              sort_order,
+              paint_source,
+              catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+                id,
+                name,
+                brand,
+                line,
+                swatch_image_url,
+                hex_approx
+              ),
+              custom_paint:paints!theme_paints_custom_paint_id_fkey (
+                id,
+                name,
+                manufacturer,
+                series,
+                color_hex
+              )
+            )
+          `
+          )
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+      : { data: null, error: null }
 
   if (themeError) {
     throw new Error(themeError.message)
   }
+
+  const theme = cachedPublicTheme || privateTheme
+  perf.mark('main Supabase query')
 
   if (!theme) {
     notFound()
@@ -125,6 +138,7 @@ export default async function ThemeDetailPage({ params }: Props) {
 
   const isOwner = Boolean(user && user.id === theme.user_id)
   const heroUrl = safeImageUrl(theme.image_url)
+  perf.total()
 
   const themePaints = ((theme.theme_paints || []) as unknown as ThemePaint[])
     .map((paint) => {
@@ -304,9 +318,22 @@ export default async function ThemeDetailPage({ params }: Props) {
             paintOptions={paintOptions}
           />
         )}
-      </div>
 
-      <MobileNav />
+        {isOwner && (
+          <section className="px-4 pt-6">
+            <DeleteConfirmationCard
+              itemId={theme.id}
+              itemIdFieldName="themeId"
+              title="Delete Theme"
+              buttonLabel="Delete This Theme"
+              initialDescription="Permanently delete this theme from your gallery."
+              confirmDescription="If you delete this theme, it will be removed along with its palette, saved copies, and project links. This action cannot be undone."
+              deleteAction={deleteTheme}
+            />
+          </section>
+        )}
+      </div>
     </main>
   )
 }
+

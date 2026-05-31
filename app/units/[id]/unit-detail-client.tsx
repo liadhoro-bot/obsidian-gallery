@@ -3,14 +3,13 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   deleteUnitImage,
+  deleteUnit,
   expireUnitSessionAtTwoHours,
   removePaintFromStage,
   setFeaturedUnitImage,
-  toggleUnitActive,
   toggleStepDone,
   updateUnitDetails,
 } from './actions'
@@ -19,6 +18,7 @@ import UnitSessionTracker from './components/unit-session-tracker'
 import ProjectPaletteCard from '../../projects/[id]/project-palette-card'
 import GalleryImageCard from '@/app/components/gallery/gallery-image-card'
 import StagePaintPicker from './components/stage-paint-picker'
+import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 
 type Unit = {
   id: string
@@ -111,7 +111,6 @@ type Props = {
   unit: Unit
   projectTheme: Theme
   images: UnitImage[]
-  featuredImage: UnitImage | null
   steps: ProgressStep[]
   totalLoggedSeconds: number
   activeSession: Session | null
@@ -276,7 +275,6 @@ export default function UnitDetailClient({
   unit,
   projectTheme,
   images,
-  featuredImage,
   steps,
   totalLoggedSeconds,
   activeSession,
@@ -285,7 +283,7 @@ export default function UnitDetailClient({
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [liveNow, setLiveNow] = useState(Date.now())
+  const [liveNow, setLiveNow] = useState(() => Date.now())
   const [optimisticSteps, setOptimisticSteps] = useState(steps)
   const [activeTab, setActiveTab] = useState<'overview' | 'progress'>(
     'overview'
@@ -396,13 +394,6 @@ export default function UnitDetailClient({
 
       await toggleStepDone(formData)
 
-      router.refresh()
-    })
-  }
-
-  const handleToggleActive = (nextValue: boolean) => {
-    startTransition(async () => {
-      await toggleUnitActive(unit.id, nextValue)
       router.refresh()
     })
   }
@@ -548,53 +539,6 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
   return (
     <div className="w-full">
-      <div className="relative">
-        <div className="relative h-[260px] w-full overflow-hidden">
-          {featuredImage ? (
-            <Image
-              src={featuredImage.image_url}
-              alt={featuredImage.alt_text || unit.name}
-              fill
-              className="object-cover opacity-50"
-            />
-          ) : (
-            <div className="h-full w-full bg-[#0b1622]" />
-          )}
-
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#050b12]" />
-        </div>
-
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-4">
-          <Link
-            href={unit.project_id ? `/projects/${unit.project_id}` : '/projects'}
-            className="text-sm text-cyan-400"
-          >
-            ← Back
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => handleToggleActive(!unit.is_active)}
-            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide ${
-              unit.is_active
-                ? 'bg-cyan-400 text-black'
-                : 'bg-white/10 text-white'
-            }`}
-            disabled={isPending}
-          >
-            {unit.is_active ? 'Active' : 'Inactive'}
-          </button>
-        </div>
-
-        <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-6">
-          <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
-            Unit Details
-          </p>
-          <h1 className="mt-2 text-4xl font-bold leading-tight">
-            {unit.name}
-          </h1>
-        </div>
-      </div>
 
       <div className="mt-4 grid gap-5">
   <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
@@ -885,10 +829,13 @@ const paintsForStage = stagePaints
             : paint.catalog_paint?.swatch_image_url
 
         return imageUrl ? (
-          <img
+          <Image
             key={paint.id}
             src={imageUrl}
             alt="Paint"
+            width={24}
+            height={24}
+            sizes="24px"
             className="h-6 w-6 rounded-full border border-[#07111b] object-cover"
           />
         ) : (
@@ -915,6 +862,7 @@ const paintsForStage = stagePaints
                           src={stagePhoto.image_url}
                           alt={stagePhoto.alt_text || step.step_label}
                           fill
+                          sizes="48px"
                           className="object-cover"
                         />
                       </div>
@@ -986,9 +934,12 @@ const paintsForStage = stagePaints
               </button>
 
               {imageUrl ? (
-                <img
+                <Image
                   src={imageUrl}
                   alt={displayName || 'Paint swatch'}
+                  width={96}
+                  height={96}
+                  sizes="64px"
                   className="aspect-square w-full rounded-lg border border-white/10 object-cover"
                 />
               ) : (
@@ -1081,6 +1032,18 @@ const paintsForStage = stagePaints
           </div>
         </section>
       )}
+
+      <div className="mt-5">
+        <DeleteConfirmationCard
+          itemId={unit.id}
+          itemIdFieldName="unitId"
+          title="Delete Unit"
+          buttonLabel="Delete This Unit"
+          initialDescription="Permanently delete this unit from your gallery."
+          confirmDescription="If you delete this unit, it will be removed along with all the progress, sessions, paints, recipes, and images it contains. This action cannot be undone."
+          deleteAction={deleteUnit}
+        />
+      </div>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import PaintSwatch from './paint-swatch'
 import { Paint } from './types'
 
@@ -18,11 +18,18 @@ export default function PaintPicker({
   defaultValue?: string
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedValue, setSelectedValue] = useState(defaultValue || '')
+  const [selectedState, setSelectedState] = useState({
+    defaultValue: defaultValue || '',
+    value: defaultValue || '',
+  })
+  const selectedValue =
+    selectedState.defaultValue === (defaultValue || '')
+      ? selectedState.value
+      : defaultValue || ''
 
-  useEffect(() => {
-    setSelectedValue(defaultValue || '')
-  }, [defaultValue])
+  function setSelectedValue(value: string) {
+    setSelectedState({ defaultValue: defaultValue || '', value })
+  }
 
   const selectedPaint = useMemo(
     () =>

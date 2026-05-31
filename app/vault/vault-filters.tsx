@@ -1,4 +1,5 @@
 import { createClient } from '../../utils/supabase/server'
+import { getCachedCatalogFilterRows } from '../../lib/public-cache'
 import VaultFiltersClient from './vault-filters-client'
 
 type VaultFiltersProps = {
@@ -17,35 +18,6 @@ type CatalogFilterRow = {
 type CustomFilterRow = {
   manufacturer: string | null
   series: string | null
-}
-
-async function getAllCatalogFilterRows() {
-  const supabase = await createClient()
-
-  const pageSize = 1000
-  let from = 0
-  let allRows: CatalogFilterRow[] = []
-
-  while (true) {
-    const { data, error } = await supabase
-      .from('paint_catalog')
-      .select('brand,line')
-      .eq('is_active', true)
-      .order('brand', { ascending: true })
-      .order('line', { ascending: true })
-      .range(from, from + pageSize - 1)
-
-    if (error) throw error
-
-    const rows = data || []
-    allRows = [...allRows, ...rows]
-
-    if (rows.length < pageSize) break
-
-    from += pageSize
-  }
-
-  return allRows
 }
 
 async function getCustomFilterRows(userId: string) {
@@ -77,7 +49,7 @@ export default async function VaultFilters({
   } = await supabase.auth.getUser()
 
   const [catalogRows, customRows] = await Promise.all([
-    getAllCatalogFilterRows(),
+    getCachedCatalogFilterRows(),
     user ? getCustomFilterRows(user.id) : Promise.resolve([]),
   ])
 

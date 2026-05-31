@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
@@ -13,6 +14,47 @@ const navItems = [
 
 export default function MobileNav() {
   const pathname = usePathname()
+  const router = useRouter()
+  const shouldHide =
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/onboarding') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/settings/terms')
+
+  useEffect(() => {
+    if (shouldHide) {
+      return
+    }
+
+    const win = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+
+    const prefetch = () => {
+      for (const item of navItems) {
+        if (item.href !== pathname) {
+          router.prefetch(item.href)
+        }
+      }
+    }
+
+    if (win.requestIdleCallback && win.cancelIdleCallback) {
+      const idleId = win.requestIdleCallback(prefetch, { timeout: 2500 })
+      return () => win.cancelIdleCallback?.(idleId)
+    }
+
+    const timeoutId = window.setTimeout(prefetch, 1200)
+    return () => window.clearTimeout(timeoutId)
+  }, [pathname, router, shouldHide])
+
+  if (shouldHide) {
+    return null
+  }
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#061018]/95 backdrop-blur">

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import {
   calculateUnitXP,
@@ -302,6 +303,90 @@ export async function updateUnitDetails(formData: FormData) {
   revalidatePath('/dashboard')
   revalidatePath('/')
   revalidatePath('/projects')
+}
+
+export async function deleteUnit(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+
+  if (!unitId) {
+    throw new Error('Missing unit ID')
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id, project_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) {
+    return
+  }
+
+  await supabase
+    .from('image_assets')
+    .delete()
+    .eq('entity_type', 'unit')
+    .eq('entity_id', unitId)
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('unit_stage_paints')
+    .delete()
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('unit_stage_recipes')
+    .delete()
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('unit_sessions')
+    .delete()
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('unit_progress_steps')
+    .delete()
+    .eq('unit_id', unitId)
+
+  await supabase
+    .from('unit_stage_progress')
+    .delete()
+    .eq('unit_id', unitId)
+
+  await supabase
+    .from('units')
+    .delete()
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/projects')
+
+  if (unit.project_id) {
+    revalidatePath(`/projects/${unit.project_id}`)
+    redirect(`/projects/${unit.project_id}`)
+  }
+
+  redirect('/projects')
 }
 
 export async function expireUnitSessionAtTwoHours(unitId: string) {

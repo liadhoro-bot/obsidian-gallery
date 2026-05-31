@@ -1,4 +1,5 @@
 import { createClient } from '../../../../utils/supabase/server'
+import { getCachedCatalogPaint } from '../../../../lib/public-cache'
 
 type PaintRef = {
   source: 'catalog' | 'custom'
@@ -20,13 +21,7 @@ export default async function PaintTechnicalSpecs({
   } | null = null
 
   if (paintRef.source === 'catalog') {
-    const { data } = await supabase
-      .from('paint_catalog')
-      .select('sku, finish, paint_type')
-      .eq('id', paintRef.paintId)
-      .maybeSingle()
-
-    specs = data
+    specs = await getCachedCatalogPaint(paintRef.paintId)
   } else {
     const { data } = await supabase
       .from('paints')

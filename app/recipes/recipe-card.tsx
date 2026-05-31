@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import PrefetchLink from '../components/prefetch-link'
 import { saveRecipe, unsaveRecipe } from './actions'
 
 type Recipe = {
@@ -21,7 +21,7 @@ type Props = {
 export default function RecipeCard({ recipe, mode, isSaved }: Props) {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] shadow-lg">
-      <Link href={`/recipes/${recipe.id}`}>
+      <PrefetchLink href={`/recipes/${recipe.id}`} viewportPrefetch>
         <div className="relative aspect-square bg-white/5">
           {recipe.image_url ? (
             <Image
@@ -36,14 +36,14 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
             </div>
           )}
         </div>
-      </Link>
+      </PrefetchLink>
 
       <div className="flex flex-1 flex-col space-y-2 p-3">
-        <Link href={`/recipes/${recipe.id}`}>
+        <PrefetchLink href={`/recipes/${recipe.id}`}>
           <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-5 text-white">
             {recipe.name || 'Untitled Recipe'}
           </h3>
-        </Link>
+        </PrefetchLink>
 
         <p className="line-clamp-1 text-xs text-white/55">
           {mode === 'mine'

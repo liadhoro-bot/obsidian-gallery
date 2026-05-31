@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '../../../utils/supabase/server'
 export async function updateRecipeVisibility(formData: FormData) {
   const supabase = await createClient()
@@ -26,6 +26,8 @@ export async function updateRecipeVisibility(formData: FormData) {
 
   revalidatePath(`/recipes/${recipeId}`)
   revalidatePath('/recipes')
+  revalidateTag(`recipe:${recipeId}`, 'max')
+  revalidateTag('public-recipes', 'max')
 }
 export async function updateRecipeYoutubeUrl(formData: FormData) {
   const supabase = await createClient()
@@ -53,4 +55,6 @@ export async function updateRecipeYoutubeUrl(formData: FormData) {
   if (error) throw error
 
   revalidatePath(`/recipes/${recipeId}`)
+  revalidateTag(`recipe:${recipeId}`, 'max')
+  revalidateTag('public-recipes', 'max')
 }

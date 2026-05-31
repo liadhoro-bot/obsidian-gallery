@@ -1,5 +1,6 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import { saveTheme, unsaveTheme } from './actions'
+import PrefetchLink from '../components/prefetch-link'
 
 type ThemePaint = {
   id: string
@@ -142,7 +143,9 @@ export default function ThemeCard({
       {isSelectingForProject ? (
         imageBlock
       ) : (
-        <Link href={`/themes/${theme.id}`}>{imageBlock}</Link>
+        <PrefetchLink href={`/themes/${theme.id}`} viewportPrefetch>
+          {imageBlock}
+        </PrefetchLink>
       )}
 
       <div className="space-y-2 p-3">
@@ -176,12 +179,23 @@ export default function ThemeCard({
               Use For Project
             </button>
           </form>
+        ) : !isOwner ? (
+          <form action={isSaved ? unsaveTheme : saveTheme}>
+            <input type="hidden" name="themeId" value={theme.id} />
+
+            <button
+              type="submit"
+              className="w-full rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-400/20"
+            >
+              {isSaved ? 'Saved' : 'Save'}
+            </button>
+          </form>
         ) : (
           <button
             type="button"
             className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/65"
           >
-            {isOwner ? 'Your Theme' : isSaved ? 'Saved' : 'Save'}
+            Your Theme
           </button>
         )}
       </div>

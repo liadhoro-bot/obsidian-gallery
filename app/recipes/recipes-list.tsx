@@ -52,7 +52,7 @@ export default async function RecipesList({ q }: Props) {
   const recipeRows = (recipes || []) as RecipeRow[]
   const recipeIds = recipeRows.map((recipe) => recipe.id)
 
-  let imageMap = new Map<string, RecipeImageRow>()
+  const imageMap = new Map<string, RecipeImageRow>()
 
   if (recipeIds.length > 0) {
     const { data: images, error: imagesError } = await supabase

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import BarcodeScannerModal from './barcode-scanner-modal'
 
@@ -34,12 +34,12 @@ export default function VaultFiltersClient({
     tab === 'collection' ? 'owned' : ownership || 'all'
   )
 
-  function pushVaultParams(nextValues?: {
+  const pushVaultParams = useCallback((nextValues?: {
     q?: string
     brand?: string
     line?: string
     ownership?: string
-  }) {
+  }) => {
     const params = new URLSearchParams()
 
     params.set('tab', tab)
@@ -60,9 +60,9 @@ export default function VaultFiltersClient({
     startTransition(() => {
       router.replace(`/vault?${params.toString()}`)
     })
-  }
+  }, [localBrand, localLine, localOwnership, router, searchValue, startTransition, tab])
 
-  function updateParam(key: string, value: string) {
+  const updateParam = useCallback((key: string, value: string) => {
     const nextQ = key === 'q' ? value : searchValue
     const nextBrand = key === 'brand' ? value : localBrand
     const nextLine = key === 'brand' ? '' : key === 'line' ? value : localLine
@@ -75,7 +75,7 @@ export default function VaultFiltersClient({
       line: nextLine,
       ownership: nextOwnership,
     })
-  }
+  }, [localBrand, localLine, localOwnership, pushVaultParams, searchValue])
 
   function handleBarcodeDetected(barcode: string) {
     const cleanedBarcode = barcode.replace(/\D/g, '')
@@ -110,7 +110,7 @@ export default function VaultFiltersClient({
     }, 500)
 
     return () => clearTimeout(timeout)
-  }, [searchValue, q])
+  }, [searchValue, q, updateParam])
 
   return (
     <div className="space-y-4">

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { createClient } from '../../../../utils/supabase/server'
+import { getCachedCatalogPaint } from '../../../../lib/public-cache'
 
 type PaintRef = {
   source: 'catalog' | 'custom'
@@ -11,11 +12,7 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
   const supabase = await createClient()
 
   if (paintRef.source === 'catalog') {
-    const { data: paint } = await supabase
-      .from('paint_catalog')
-      .select('id, name, brand, line, sku, swatch_image_url, hex_approx')
-      .eq('id', paintRef.paintId)
-      .maybeSingle()
+    const paint = await getCachedCatalogPaint(paintRef.paintId)
 
     if (!paint) return null
 
@@ -30,6 +27,8 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
               src={paint.swatch_image_url}
               alt={paint.name || 'Paint swatch'}
               fill
+              priority
+              sizes="(max-width: 768px) 100vw, 420px"
               className="object-cover opacity-90"
             />
           ) : null}
@@ -93,6 +92,8 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
             src={imageAsset.image_url}
             alt={paint.name || 'Custom paint swatch'}
             fill
+            priority
+            sizes="(max-width: 768px) 100vw, 420px"
             className="object-cover opacity-90"
           />
         ) : null}

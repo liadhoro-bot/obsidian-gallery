@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Recipe, RecipeImage } from './types'
 
 export default function RecipeGallerySection({
@@ -99,9 +100,12 @@ export default function RecipeGallerySection({
               key={image.id}
               className="overflow-hidden rounded-2xl border border-neutral-800 bg-black"
             >
-              <img
+              <Image
                 src={image.image_url}
                 alt={image.alt_text || recipe.name}
+                width={320}
+                height={160}
+                sizes="(max-width: 768px) 50vw, 200px"
                 className="h-40 w-full object-cover"
               />
 

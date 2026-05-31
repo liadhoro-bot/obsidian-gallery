@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 type PaintSwatchPaint = {
   hex_approx: string | null
   swatch_image_url: string | null
@@ -19,9 +21,12 @@ export default function PaintSwatch({
       title={paint.name || 'Paint'}
     >
       {paint.swatch_image_url ? (
-        <img
+        <Image
           src={paint.swatch_image_url}
           alt={paint.name || 'Paint'}
+          width={size === 'sm' ? 20 : 24}
+          height={size === 'sm' ? 20 : 24}
+          sizes={size === 'sm' ? '20px' : '24px'}
           className="h-full w-full object-cover"
         />
       ) : (

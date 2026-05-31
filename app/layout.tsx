@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
@@ -7,6 +7,9 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { PHProvider } from './providers/posthog-provider'
 import PostHogUserIdentifier from './providers/posthog-user-identifier'
+
+import CuratorButton from './components/curator/curator-button'
+import MobileNav from './components/MobileNav'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -47,7 +50,9 @@ export const metadata: Metadata = {
       },
     ],
   },
+}
 
+export const viewport: Viewport = {
   themeColor: '#0f0f10',
 }
 
@@ -67,9 +72,13 @@ export default function RootLayout({
           {children}
         </PHProvider>
 
+        <CuratorButton hideOnDashboard />
+        <MobileNav />
+
         <Analytics />
         <SpeedInsights />
       </body>
     </html>
   )
 }
+

@@ -1,12 +1,12 @@
 import { createClient } from '../../../utils/supabase/server'
 import { redirect } from 'next/navigation'
-import MobileNav from '../../components/MobileNav'
 import { revalidatePath } from 'next/cache'
 import ProjectDetailClient from './project-detail-client'
 import { Suspense } from 'react'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { deleteProject } from './actions'
 import { captureServerEvent } from '../../../utils/analytics/server'
+import type { ProjectImage, UnitImage, UnitStage } from './types'
 
 async function addUnit(formData: FormData) {
   'use server'
@@ -455,7 +455,9 @@ const allStagesError =
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
 
-  const stagesByUnitId = (allStages ?? []).reduce<Record<string, any[]>>(
+  const stagesByUnitId = ((allStages ?? []) as UnitStage[]).reduce<
+    Record<string, UnitStage[]>
+  >(
     (acc, stage) => {
       if (!acc[stage.unit_id]) {
         acc[stage.unit_id] = []
@@ -466,7 +468,9 @@ const allStagesError =
     {}
   )
 
-  const imagesByUnitId = (allUnitImages ?? []).reduce<Record<string, any[]>>(
+  const imagesByUnitId = ((allUnitImages ?? []) as UnitImage[]).reduce<
+    Record<string, UnitImage[]>
+  >(
     (acc, image) => {
       if (!acc[image.entity_id]) {
         acc[image.entity_id] = []
@@ -477,9 +481,10 @@ const allStagesError =
     {}
   )
 
+  const projectImageRows = (projectImages ?? []) as ProjectImage[]
   const featuredProjectImage =
-    (projectImages ?? []).find((image) => image.is_featured) ||
-    (projectImages ?? [])[0] ||
+    projectImageRows.find((image) => image.is_featured) ||
+    projectImageRows[0] ||
     null
 
   return (
@@ -495,7 +500,7 @@ const allStagesError =
         projectError={projectError}
         projectId={id}
         featuredProjectImage={featuredProjectImage}
-        projectImages={projectImages ?? []}
+        projectImages={projectImageRows}
         units={units ?? []}
         unitsError={unitsError}
         allStagesError={allStagesError}
@@ -511,8 +516,6 @@ const allStagesError =
         deleteProjectAction={deleteProject}
       />
     </div>
-
-    <MobileNav />
   </main>
 )
 }

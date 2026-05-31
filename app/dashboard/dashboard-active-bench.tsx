@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import PrefetchLink from '../components/prefetch-link'
 import { createClient } from '../../utils/supabase/server'
 
 type StageProgressRow = {
@@ -139,9 +139,10 @@ export default async function DashboardActiveBench({
           const progress = progressMap.get(unit.id) || 0
 
           return (
-            <Link
+            <PrefetchLink
               key={unit.id}
               href={`/units/${unit.id}`}
+              viewportPrefetch
               className="flex overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:bg-white/[0.08]"
             >
               <div className="relative w-[30%] min-h-[110px]">
@@ -188,7 +189,7 @@ export default async function DashboardActiveBench({
                   </div>
                 </div>
               </div>
-            </Link>
+            </PrefetchLink>
           )
         })}
       </div>

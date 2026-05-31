@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import ProjectPaletteStarter from './project-palette-starter'
 import { calculateProjectPaletteAction } from './actions'
@@ -122,9 +123,12 @@ export default function ProjectPaletteCard({ theme, projectId }: Props) {
           return (
             <div key={paint.id} className="min-w-0">
               {imageUrl ? (
-                <img
+                <Image
                   src={imageUrl}
                   alt={displayName || 'Color swatch'}
+                  width={96}
+                  height={96}
+                  sizes="64px"
                   className="aspect-square w-full rounded-xl border border-white/10 object-cover shadow-inner"
                 />
               ) : (

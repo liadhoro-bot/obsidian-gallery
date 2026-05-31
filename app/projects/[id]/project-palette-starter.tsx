@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { setProjectPaletteSlot } from './actions'
@@ -159,9 +160,12 @@ export default function ProjectPaletteStarter({
                 >
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
                     {paint.swatch_image_url ? (
-                      <img
+                      <Image
                         src={paint.swatch_image_url}
                         alt={paint.name}
+                        width={40}
+                        height={40}
+                        sizes="40px"
                         className="h-full w-full object-cover"
                       />
                     ) : paint.hex ? (

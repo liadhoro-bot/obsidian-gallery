@@ -1,13 +1,19 @@
 import ProjectPaletteCard from './project-palette-card'
 import ProjectGalleryCard from './project-gallery-card'
 import DeleteProjectCard from './delete-project-card'
+import type {
+  ProjectImage,
+  ProjectRow,
+  ProjectTheme,
+  SerializableError,
+} from './types'
 
 type Props = {
-  project: any
-  projectTheme: any
+  project: ProjectRow | null
+  projectTheme: ProjectTheme | null
   projectId: string
-  projectImages: any[]
-  projectImagesError: any
+  projectImages: ProjectImage[]
+  projectImagesError: SerializableError | null
   uploadProjectImageAction: (formData: FormData) => Promise<void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>

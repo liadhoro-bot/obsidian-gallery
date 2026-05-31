@@ -13,6 +13,7 @@ import RecipeDetailTabs, { RecipeDetailTab } from './recipe-detail-tabs'
 import RecipeDetailsTab from './recipe-details-tab'
 import RecipeStepsTab from './recipe-steps-tab'
 import RecipeAddStepTab from './recipe-add-step-tab'
+import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 
 type Props = {
   recipe: Recipe
@@ -34,6 +35,7 @@ type Props = {
   setFeaturedRecipeImageAction: (formData: FormData) => Promise<void>
   deleteRecipeImageAction: (formData: FormData) => Promise<void>
   updateRecipePaintOwnershipAction: (formData: FormData) => Promise<void>
+  deleteRecipeAction: (formData: FormData) => Promise<void>
 }
 
 export default function RecipeDetailClient({
@@ -55,6 +57,7 @@ export default function RecipeDetailClient({
   setFeaturedRecipeImageAction,
   deleteRecipeImageAction,
   updateRecipePaintOwnershipAction,
+  deleteRecipeAction,
 }: Props) {
   const [activeTab, setActiveTab] = useState<RecipeDetailTab>('details')
   const [isEditingHeader, setIsEditingHeader] = useState(false)
@@ -169,6 +172,20 @@ export default function RecipeDetailClient({
           createCustomPaintAction={createCustomPaintAction}
           addRecipeStepAction={addRecipeStepAction}
         />
+      ) : null}
+
+      {isOwner ? (
+        <div className="mt-5">
+          <DeleteConfirmationCard
+            itemId={recipe.id}
+            itemIdFieldName="recipeId"
+            title="Delete Recipe"
+            buttonLabel="Delete This Recipe"
+            initialDescription="Permanently delete this recipe from your gallery."
+            confirmDescription="If you delete this recipe, it will be removed along with all the steps, paints, gallery images, and saved copies attached to it. This action cannot be undone."
+            deleteAction={deleteRecipeAction}
+          />
+        </div>
       ) : null}
     </div>
   )

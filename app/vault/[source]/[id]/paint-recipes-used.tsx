@@ -8,6 +8,34 @@ type PaintRef = {
   userId: string
 }
 
+type RecipeUsage = {
+  id: string
+  name: string | null
+  description: string | null
+  imageUrl: string | null
+  role: string | null
+  ratio: string | null
+}
+
+type StepPaintUsageRow = {
+  role: string | null
+  ratio_text: string | null
+  recipe_steps?: {
+    recipes?: {
+      id: string
+      name: string | null
+      description: string | null
+      image_url: string | null
+      user_id: string
+    } | null
+  } | null
+}
+
+type RecipeImageRow = {
+  entity_id: string
+  image_url: string | null
+}
+
 export default async function PaintRecipesUsed({
   paintRef,
 }: {
@@ -35,9 +63,11 @@ export default async function PaintRecipesUsed({
     .eq('paint_source', paintRef.source)
     .eq(paintColumn, paintRef.paintId)
 
+  const stepPaintRows = (stepPaints ?? []) as unknown as StepPaintUsageRow[]
+
   const recipes =
-    stepPaints
-      ?.map((item: any) => {
+    stepPaintRows
+      .map((item) => {
         const recipe = item.recipe_steps?.recipes
 
         if (!recipe || recipe.user_id !== paintRef.userId) {
@@ -53,11 +83,11 @@ export default async function PaintRecipesUsed({
           ratio: item.ratio_text,
         }
       })
-      .filter(Boolean) ?? []
+      .filter((recipe): recipe is RecipeUsage => Boolean(recipe))
 
   const uniqueRecipes = Array.from(
-    new Map(recipes.map((recipe: any) => [recipe.id, recipe])).values()
-  ) as any[]
+    new Map(recipes.map((recipe) => [recipe.id, recipe])).values()
+  ) as RecipeUsage[]
 
   const recipeIds = uniqueRecipes.map((recipe) => recipe.id)
 
@@ -75,8 +105,11 @@ export default async function PaintRecipesUsed({
 
     imageByRecipeId = new Map(
       imageRows
-        ?.filter((image: any) => image.image_url)
-        .map((image: any) => [image.entity_id, image.image_url]) ?? []
+        ?.filter(
+          (image: RecipeImageRow): image is RecipeImageRow & { image_url: string } =>
+            Boolean(image.image_url)
+        )
+        .map((image) => [image.entity_id, image.image_url]) ?? []
     )
   }
 
@@ -100,7 +133,7 @@ export default async function PaintRecipesUsed({
             This paint is not used in any saved recipes yet.
           </div>
         ) : (
-          recipesWithImages.map((recipe: any) => (
+          recipesWithImages.map((recipe) => (
             <Link
               key={recipe.id}
               href={`/recipes/${recipe.id}`}

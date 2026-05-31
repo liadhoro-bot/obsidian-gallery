@@ -1,6 +1,7 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { FormEvent, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createCustomPaint } from './actions'
 
@@ -26,25 +27,53 @@ export default function VaultFiltersForm({
   const router = useRouter()
   const hasActiveFilters = Boolean(q || brand || line || ownership)
 
-  const [isOpen, setIsOpen] = useState(hasActiveFilters)
-  const [searchValue, setSearchValue] = useState(q)
-  const [brandValue, setBrandValue] = useState(brand)
-  const [lineValue, setLineValue] = useState(line)
-  const [ownershipValue, setOwnershipValue] = useState(ownership)
+  const [isOpenState, setIsOpenState] = useState({
+    hasActiveFilters,
+    value: hasActiveFilters,
+  })
+  const [searchState, setSearchState] = useState({ source: q, value: q })
+  const [brandState, setBrandState] = useState({ source: brand, value: brand })
+  const [lineState, setLineState] = useState({ source: line, value: line })
+  const [ownershipState, setOwnershipState] = useState({
+    source: ownership || 'owned',
+    value: ownership || 'owned',
+  })
   const [isAddingCustomPaint, setIsAddingCustomPaint] = useState(false)
+  const isOpen =
+    isOpenState.hasActiveFilters === hasActiveFilters
+      ? isOpenState.value
+      : hasActiveFilters
+  const searchValue = searchState.source === q ? searchState.value : q
+  const brandValue = brandState.source === brand ? brandState.value : brand
+  const lineValue = lineState.source === line ? lineState.value : line
+  const ownershipSource = ownership || 'owned'
+  const ownershipValue =
+    ownershipState.source === ownershipSource
+      ? ownershipState.value
+      : ownershipSource
 
-useEffect(() => {
-  setSearchValue(q)
-  setBrandValue(brand)
-  setLineValue(line)
-  setOwnershipValue(ownership || 'owned')
-}, [q, brand, line, ownership])
+  function setIsOpen(value: boolean | ((current: boolean) => boolean)) {
+    setIsOpenState({
+      hasActiveFilters,
+      value: typeof value === 'function' ? value(isOpen) : value,
+    })
+  }
 
-  useEffect(() => {
-    if (hasActiveFilters) {
-      setIsOpen(true)
-    }
-  }, [hasActiveFilters])
+  function setSearchValue(value: string) {
+    setSearchState({ source: q, value })
+  }
+
+  function setBrandValue(value: string) {
+    setBrandState({ source: brand, value })
+  }
+
+  function setLineValue(value: string) {
+    setLineState({ source: line, value })
+  }
+
+  function setOwnershipValue(value: string) {
+    setOwnershipState({ source: ownershipSource, value })
+  }
 
   const lineOptions = useMemo(() => {
     const filtered = allLines.filter((item) => {
@@ -272,12 +301,12 @@ function handleFilterSubmit(event: FormEvent<HTMLFormElement>) {
               Apply filters
             </button>
 
-            <a
+            <Link
               href="/vault?ownership=owned"
               className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2 font-bold text-white hover:border-neutral-500"
             >
               Reset
-            </a>
+            </Link>
           </div>
         </form>
       ) : null}

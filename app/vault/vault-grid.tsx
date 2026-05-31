@@ -24,46 +24,6 @@
     is_wishlist: boolean
   }
 
-  const PAGE_SIZE = 24
-
-  function getBrandAbbreviation(brand?: string | null) {
-    const normalized = (brand || '').toLowerCase()
-
-    if (normalized.includes('vallejo')) return 'VAL'
-    if (normalized.includes('warhammer')) return 'WHC'
-    if (normalized.includes('citadel')) return 'WHC'
-    if (normalized.includes('army painter')) return 'TAP'
-    if (normalized.includes('rust-oleum')) return 'ROL'
-    if (normalized.includes('custom')) return 'CUS'
-
-    return (brand || 'UNK').slice(0, 3).toUpperCase()
-  }
-
-  function buildLimitHref({
-    q,
-    brand,
-    line,
-    ownership,
-    limit,
-  }: {
-    q: string
-    brand: string
-    line: string
-    ownership: string
-    limit: number
-  }) {
-    const params = new URLSearchParams()
-
-    if (q) params.set('q', q)
-    if (brand) params.set('brand', brand)
-    if (line) params.set('line', line)
-    if (ownership) params.set('ownership', ownership)
-    if (limit > PAGE_SIZE) params.set('limit', String(limit))
-
-    const query = params.toString()
-    return query ? `/vault?${query}` : '/vault'
-  }
-
   export default async function VaultGrid({
     q,
     brand,
@@ -323,8 +283,6 @@
     tab === 'collection'
       ? ownedCatalogCount + customCount
       : catalogCount || 0
-
-  const hasNextPage = limit < totalCount
 
     if (visiblePaints.length === 0) {
       return (

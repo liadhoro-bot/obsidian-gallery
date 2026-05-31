@@ -1,25 +1,36 @@
 'use client'
 
+import Image from 'next/image'
+import Link from 'next/link'
 import { useState } from 'react'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
 import ProjectAddUnitTab from './project-add-unit-tab'
+import type {
+  ProjectImage,
+  ProjectRow,
+  ProjectTheme,
+  ProjectUnit,
+  SerializableError,
+  UnitImage,
+  UnitStage,
+} from './types'
 
 type Props = {
-  project: any
-  projectTheme: any
-  projectError: any
+  project: ProjectRow | null
+  projectTheme: ProjectTheme | null
+  projectError: SerializableError | null
   projectId: string
-  featuredProjectImage: any
-  projectImages: any[]
-  units: any[]
-  unitsError: any
-  allStagesError: any
-  allUnitImagesError: any
-  projectImagesError: any
-  stagesByUnitId: Record<string, any[]>
-  imagesByUnitId: Record<string, any[]>
+  featuredProjectImage: ProjectImage | null
+  projectImages: ProjectImage[]
+  units: ProjectUnit[]
+  unitsError: SerializableError | null
+  allStagesError: SerializableError | null
+  allUnitImagesError: SerializableError | null
+  projectImagesError: SerializableError | null
+  stagesByUnitId: Record<string, UnitStage[]>
+  imagesByUnitId: Record<string, UnitImage[]>
   addUnitAction: (formData: FormData) => Promise<void>
   setFeaturedUnitAction: (formData: FormData) => Promise<void>
   uploadProjectImageAction: (formData: FormData) => Promise<void>
@@ -52,16 +63,19 @@ export default function ProjectDetailClient({
 
   return (
     <div className="w-full">
-      <a href="/projects" className="text-sm text-cyan-400">
+      <Link href="/projects" className="text-sm text-cyan-400">
         ← Back to Projects
-      </a>
+      </Link>
 
       {featuredProjectImage ? (
-        <div className="mt-4 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900">
-          <img
+        <div className="relative mt-4 h-64 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900">
+          <Image
             src={featuredProjectImage.image_url}
             alt={featuredProjectImage.alt_text || project?.name || 'Project image'}
-            className="h-64 w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 420px"
+            priority
+            className="object-cover"
           />
         </div>
       ) : (

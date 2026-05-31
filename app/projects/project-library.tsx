@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import Image from 'next/image'
+import PrefetchLink from '../components/prefetch-link'
 
 export type ProjectWithImage = {
   id: string
@@ -30,16 +31,20 @@ export default function ProjectLibrary({ projects }: ProjectLibraryProps) {
       {projects.length > 0 ? (
         <div className="mt-5 grid gap-4">
           {projects.map((project) => (
-            <Link
+            <PrefetchLink
               key={project.id}
               href={`/projects/${project.id}`}
+              viewportPrefetch
               className="block overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/80 transition active:scale-[0.98] active:opacity-70 hover:border-cyan-500"
             >
               {project.primaryImage ? (
                 <div className="overflow-hidden border-b border-neutral-800">
-                  <img
+                  <Image
                     src={project.primaryImage.image_url}
                     alt={project.primaryImage.alt_text || project.name}
+                    width={384}
+                    height={160}
+                    sizes="(max-width: 768px) 100vw, 420px"
                     className="h-40 w-full object-cover"
                   />
                 </div>
@@ -58,7 +63,7 @@ export default function ProjectLibrary({ projects }: ProjectLibraryProps) {
                   {project.description || 'No description'}
                 </p>
               </div>
-            </Link>
+            </PrefetchLink>
           ))}
         </div>
       ) : (

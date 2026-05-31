@@ -20,10 +20,6 @@ function buildHref(tab: VaultTab) {
 
 export default function VaultSegmentedTabs({
   activeTab,
-  q,
-  brand,
-  line,
-  ownership,
 }: VaultSegmentedTabsProps) {
   const tabs: {
     key: VaultTab

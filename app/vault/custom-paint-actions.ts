@@ -187,6 +187,43 @@ export async function deleteCustomPaintAction(formData: FormData) {
 
   if (!paintId) throw new Error('Paint ID is missing.')
 
+  const { data: paint, error: paintError } = await supabase
+    .from('paints')
+    .select('id')
+    .eq('id', paintId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (paintError) throw new Error(paintError.message)
+  if (!paint) throw new Error('Paint not found.')
+
+  await supabase
+    .from('recipe_step_paints')
+    .delete()
+    .eq('paint_source', 'custom')
+    .eq('custom_paint_id', paintId)
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('unit_stage_paints')
+    .delete()
+    .eq('paint_source', 'custom')
+    .eq('custom_paint_id', paintId)
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('theme_paints')
+    .delete()
+    .eq('paint_source', 'custom')
+    .eq('custom_paint_id', paintId)
+
+  await supabase
+    .from('image_assets')
+    .delete()
+    .eq('entity_type', 'paint')
+    .eq('entity_id', paintId)
+    .eq('user_id', user.id)
+
   const { error } = await supabase
     .from('paints')
     .delete()

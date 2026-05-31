@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import PrefetchLink from '../components/prefetch-link'
 import { createClient } from '../../utils/supabase/server'
 
 export default async function DashboardUnitInProgress({
@@ -114,12 +114,12 @@ export default async function DashboardUnitInProgress({
           </div>
 
           <div className="mt-5">
-            <Link
+            <PrefetchLink
               href={`/units/${inProgressUnit.id}`}
               className="inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
             >
               Resume Painting
-            </Link>
+            </PrefetchLink>
           </div>
         </div>
       </div>

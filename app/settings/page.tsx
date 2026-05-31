@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
-import MobileNav from '../components/MobileNav'
 import SettingsProfileCard from './settings-profile-card'
 import SettingsSupportSection from './settings-support-section'
 import SettingsSessionSection from './settings-session-section'
@@ -37,8 +36,6 @@ export default async function SettingsPage() {
           <SettingsSessionSection />
         </Suspense>
       </div>
-
-      <MobileNav />
     </main>
   )
 }

@@ -1,8 +1,10 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
+import { getDashboardCuratorPrompt } from '../../utils/curator/get-dashboard-curator-prompt'
+import { createPerfTimer } from '../../utils/perf/server'
 
-import MobileNav from '../components/MobileNav'
+import CuratorButton from '../components/curator/curator-button'
 import DashboardTabs from './dashboard-tabs'
 import DashboardTopBar from './dashboard-top-bar'
 import DashboardWelcome from './dashboard-welcome'
@@ -20,25 +22,36 @@ import {
   TopBarSkeleton,
 } from './dashboard-skeletons'
 
+async function DashboardCuratorButton() {
+  const perf = createPerfTimer('/dashboard:curator')
+  const curatorPrompt = await getDashboardCuratorPrompt()
+  perf.mark('Curator logic')
+  perf.total()
+
+  return <CuratorButton curatorPrompt={curatorPrompt} />
+}
+
 export default async function DashboardPage() {
+  const perf = createPerfTimer('/dashboard')
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   if (!user) {
     redirect('/login')
   }
 
   const profilePromise = Promise.resolve(
-  supabase
-    .from('profiles')
-    .select('avatar_url, level')
-    .eq('id', user.id)
-    .single()
-)
-
+    supabase
+      .from('profiles')
+      .select('avatar_url, level')
+      .eq('id', user.id)
+      .single()
+  )
+  perf.total()
   return (
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
@@ -74,8 +87,10 @@ export default async function DashboardPage() {
           }
         />
       </div>
-
-      <MobileNav />
+      <Suspense fallback={null}>
+        <DashboardCuratorButton />
+      </Suspense>
     </main>
   )
 }
+

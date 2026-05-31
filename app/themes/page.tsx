@@ -4,7 +4,11 @@ import ThemeTabsClient from './theme-tabs-client'
 import ThemeCard from './theme-card'
 import ThemeForm from './theme-form'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
-import MobileNav from '../components/MobileNav'
+import {
+  getCachedCatalogPaintOptions,
+  getCachedPublicThemes,
+} from '../../lib/public-cache'
+import { createPerfTimer } from '../../utils/perf/server'
 
 type Props = {
   searchParams: Promise<{
@@ -80,6 +84,7 @@ async function attachThemeToProject(formData: FormData) {
   redirect(`/projects/${projectId}`)
 }
 export default async function ThemesPage({ searchParams }: Props) {
+  const perf = createPerfTimer('/themes')
   const params = await searchParams
   const tab = params.tab || 'find'
   const selectForProject = params.selectForProject || null
@@ -88,38 +93,19 @@ export default async function ThemesPage({ searchParams }: Props) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   if (!user) redirect('/login')
 
-  const [{ data: publicThemes }, { data: myThemes }, { data: savedRows }] =
+  const [
+    publicThemes,
+    { data: myThemes },
+    { data: savedRows },
+    catalogPaints,
+    { data: customPaints },
+  ] =
     await Promise.all([
-      supabase
-        .from('themes')
-        .select(`
-  id,
-  user_id,
-  name,
-  description,
-  image_url,
-  is_public,
-  created_at,
-  theme_paints (
-    id,
-    sort_order,
-    paint_source,
-    catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
-      id,
-      swatch_image_url,
-      hex_approx
-    ),
-    custom_paint:paints!theme_paints_custom_paint_id_fkey (
-      id,
-      color_hex
-    )
-  )
-`)
-        .eq('is_public', true)
-        .order('created_at', { ascending: false }),
+      getCachedPublicThemes(),
 
       supabase
         .from('themes')
@@ -161,12 +147,35 @@ export default async function ThemesPage({ searchParams }: Props) {
             description,
             image_url,
             is_public,
-            created_at
+            created_at,
+            theme_paints (
+              id,
+              sort_order,
+              paint_source,
+              catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+                id,
+                swatch_image_url,
+                hex_approx
+              ),
+              custom_paint:paints!theme_paints_custom_paint_id_fkey (
+                id,
+                color_hex
+              )
+            )
           )
         `
         )
         .eq('user_id', user.id),
+
+      getCachedCatalogPaintOptions(),
+
+      supabase
+        .from('paints')
+        .select('id, name, manufacturer, series, color_hex')
+        .eq('user_id', user.id)
+        .order('name', { ascending: true }),
     ])
+  perf.mark('main Supabase query')
 
   const publicThemeRows = (publicThemes ?? []) as ThemeSummary[]
   const myThemeRows = (myThemes ?? []) as ThemeSummary[]
@@ -184,21 +193,6 @@ export default async function ThemesPage({ searchParams }: Props) {
       (savedTheme) => !myThemeRows.some((theme) => theme.id === savedTheme.id)
     ),
   ]
-
-  const { data: catalogPaints } = await supabase
-    .from('paint_catalog')
-    .select('id, name, brand, line, sku, swatch_image_url, hex_approx')
-    .eq('is_active', true)
-    .order('brand', { ascending: true })
-    .order('line', { ascending: true })
-    .order('name', { ascending: true })
-    .range(0, 4999)
-
-  const { data: customPaints } = await supabase
-    .from('paints')
-    .select('id, name, manufacturer, series, color_hex')
-    .eq('user_id', user.id)
-    .order('name', { ascending: true })
 
   const paintOptions = [
     ...(catalogPaints || []).map((paint) => ({
@@ -221,6 +215,7 @@ export default async function ThemesPage({ searchParams }: Props) {
       hex: paint.color_hex,
     })),
   ]
+  perf.total()
 
   return (
     <main className="min-h-screen bg-[#03070b] pb-24 text-white">
@@ -283,8 +278,7 @@ export default async function ThemesPage({ searchParams }: Props) {
 
         {tab === 'create' && <ThemeForm paints={paintOptions} />}
       </div>
-
-      <MobileNav />
     </main>
   )
 }
+

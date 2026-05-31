@@ -14,6 +14,10 @@ export function PaintOwnershipSkeleton() {
   return <SkeletonBlock className="h-44" />
 }
 
+export function PaintEditorSkeleton() {
+  return <SkeletonBlock className="h-96" />
+}
+
 export function PaintRecipesSkeleton() {
   return (
     <div className="space-y-3">

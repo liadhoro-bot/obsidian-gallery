@@ -60,23 +60,8 @@ export default function RecipesPageClient({
     recipe.name?.toLowerCase().includes(mySearch.toLowerCase())
   )
 
-    return (
+  return (
     <section className="space-y-5">
-      <section className="space-y-4">
-        <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-400">
-          Paint Scheme Management
-        </p>
-
-        <h1 className="text-4xl font-black tracking-tight text-white">
-          The Recipe Library
-        </h1>
-
-        <p className="text-base leading-7 text-neutral-400">
-          Browse public painting recipes, save your favorites, and build custom
-          step-by-step schemes for your miniatures.
-        </p>
-      </section>
-
       {/* ✅ TABS */}
       <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
         <button

@@ -1,5 +1,8 @@
+import Image from 'next/image'
+import Link from 'next/link'
 import { createClient } from '../../../utils/supabase/server'
 import { setFeaturedUnit } from './actions'
+import type { UnitImage, UnitStage } from './types'
 
 type Props = {
   projectId: string
@@ -53,13 +56,17 @@ export default async function ProjectUnitsSection({ projectId, userId }: Props) 
       .order('created_at', { ascending: true }),
   ])
 
-  const stagesByUnitId = (stages ?? []).reduce<Record<string, any[]>>((acc, stage) => {
+  const stagesByUnitId = ((stages ?? []) as UnitStage[]).reduce<
+    Record<string, UnitStage[]>
+  >((acc, stage) => {
     if (!acc[stage.unit_id]) acc[stage.unit_id] = []
     acc[stage.unit_id].push(stage)
     return acc
   }, {})
 
-  const imagesByUnitId = (unitImages ?? []).reduce<Record<string, any[]>>((acc, image) => {
+  const imagesByUnitId = ((unitImages ?? []) as UnitImage[]).reduce<
+    Record<string, UnitImage[]>
+  >((acc, image) => {
     if (!acc[image.entity_id]) acc[image.entity_id] = []
     acc[image.entity_id].push(image)
     return acc
@@ -98,12 +105,12 @@ export default async function ProjectUnitsSection({ projectId, userId }: Props) 
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <a
+                    <Link
                       href={`/units/${unit.id}`}
                       className="text-lg font-semibold text-cyan-400"
                     >
                       {unit.name}
-                    </a>
+                    </Link>
 
                     {unit.is_featured && (
                       <span className="rounded-full bg-yellow-400 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black">
@@ -132,9 +139,12 @@ export default async function ProjectUnitsSection({ projectId, userId }: Props) 
 
               {primaryImage ? (
                 <div className="mt-3 overflow-hidden rounded-xl border border-neutral-800">
-                  <img
+                  <Image
                     src={primaryImage.image_url}
                     alt={unit.name}
+                    width={320}
+                    height={160}
+                    sizes="(max-width: 640px) 100vw, 200px"
                     className="h-40 w-full object-cover"
                   />
                 </div>
@@ -154,12 +164,12 @@ export default async function ProjectUnitsSection({ projectId, userId }: Props) 
               </div>
 
               <p className="mt-3">
-                <a
+                <Link
                   href={`/units/${unit.id}`}
                   className="text-sm text-cyan-400 hover:underline"
                 >
                   Open unit page →
-                </a>
+                </Link>
               </p>
             </div>
           )

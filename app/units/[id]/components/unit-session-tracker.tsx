@@ -73,7 +73,7 @@ export default function UnitSessionTracker({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-const [nowTick, setNowTick] = useState(Date.now())
+  const [nowTick, setNowTick] = useState(() => Date.now())
 
 useEffect(() => {
   if (!activeSession) return

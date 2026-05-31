@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
@@ -130,6 +130,82 @@ await captureServerEvent({
 
   revalidatePath('/themes')
   revalidatePath(`/themes/${theme.id}`)
+  revalidateTag('public-themes', 'max')
+  revalidateTag(`theme:${theme.id}`, 'max')
 
   redirect(`/themes/${theme.id}`)
+}
+
+export async function saveTheme(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
+  const themeId = String(formData.get('themeId') || '')
+
+  if (!themeId) throw new Error('Missing theme id')
+
+  const { data: theme, error: themeError } = await supabase
+    .from('themes')
+    .select('id, name, user_id, is_public')
+    .eq('id', themeId)
+    .maybeSingle()
+
+  if (themeError) throw themeError
+
+  if (!theme || !theme.is_public) {
+    throw new Error('Theme is not available to save.')
+  }
+
+  if (theme.user_id === user.id) {
+    revalidatePath('/themes')
+    return
+  }
+
+  const { error } = await supabase.from('saved_themes').upsert({
+    user_id: user.id,
+    theme_id: themeId,
+  })
+
+  if (error) throw error
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'theme_saved',
+    properties: {
+      theme_id: themeId,
+      theme_name: theme.name || null,
+      creator_id: theme.user_id || null,
+    },
+  })
+
+  revalidatePath('/themes')
+}
+
+export async function unsaveTheme(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
+  const themeId = String(formData.get('themeId') || '')
+
+  if (!themeId) throw new Error('Missing theme id')
+
+  const { error } = await supabase
+    .from('saved_themes')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('theme_id', themeId)
+
+  if (error) throw error
+
+  revalidatePath('/themes')
 }

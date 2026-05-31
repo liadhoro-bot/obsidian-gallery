@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '../../../utils/supabase/server'
 
 type Props = {
@@ -41,11 +42,14 @@ export default async function ProjectHeader({ projectId, userId }: Props) {
   return (
     <>
       {featuredProjectImage ? (
-        <div className="mt-4 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900">
-          <img
+        <div className="relative mt-4 h-64 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900">
+          <Image
             src={featuredProjectImage.image_url}
             alt={featuredProjectImage.alt_text || project?.name || 'Project image'}
-            className="h-64 w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 420px"
+            priority
+            className="object-cover"
           />
         </div>
       ) : (

@@ -1,12 +1,19 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import { captureServerEvent } from '../../../utils/analytics/server'
 import {
   extractPaletteFromImage,
   findNearestPaint,
 } from './palette-utils'
+
+function revalidateThemeCaches(themeId: string) {
+  revalidateThemeCaches(themeId)
+  revalidateTag('public-themes', 'max')
+  revalidateTag(`theme:${themeId}`, 'max')
+}
 
 export async function toggleThemeVisibility(themeId: string, nextValue: boolean) {
   const supabase = await createClient()
@@ -85,8 +92,66 @@ export async function updateTheme(themeId: string, formData: FormData) {
     .eq('id', themeId)
     .eq('user_id', user.id)
 
+  revalidateThemeCaches(themeId)
+}
+
+export async function deleteTheme(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return
+
+  const themeId = String(formData.get('themeId') || '')
+
+  if (!themeId) return
+
+  const { data: theme, error: themeError } = await supabase
+    .from('themes')
+    .select('id')
+    .eq('id', themeId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (themeError) {
+    throw themeError
+  }
+
+  if (!theme) {
+    return
+  }
+
+  await supabase
+    .from('projects')
+    .update({ theme_id: null })
+    .eq('theme_id', themeId)
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('saved_themes')
+    .delete()
+    .eq('theme_id', themeId)
+
+  await supabase
+    .from('theme_paints')
+    .delete()
+    .eq('theme_id', themeId)
+
+  await supabase
+    .from('themes')
+    .delete()
+    .eq('id', themeId)
+    .eq('user_id', user.id)
+
   revalidatePath('/themes')
-  revalidatePath(`/themes/${themeId}`)
+  revalidatePath('/projects')
+  revalidatePath('/dashboard')
+  revalidateTag('public-themes', 'max')
+  revalidateTag(`theme:${themeId}`, 'max')
+
+  redirect('/themes')
 }
 export async function setThemePaintSlot(
   themeId: string,
@@ -127,7 +192,7 @@ export async function setThemePaintSlot(
     custom_paint_id: paintSource === 'custom' ? paintId : null,
   })
 
-  revalidatePath(`/themes/${themeId}`)
+  revalidateThemeCaches(themeId)
 }
 export async function searchThemePaints(query: string) {
   const supabase = await createClient()
@@ -141,7 +206,25 @@ export async function searchThemePaints(query: string) {
   const baseSelect =
     'id, name, brand, line, sku, swatch_image_url, hex_approx'
 
-  let catalogPaints: any[] = []
+  type CatalogPaintSearchRow = {
+    id: string
+    name: string | null
+    brand: string | null
+    line: string | null
+    sku?: string | null
+    swatch_image_url: string | null
+    hex_approx: string | null
+  }
+
+  type CustomPaintSearchRow = {
+    id: string
+    name: string | null
+    manufacturer: string | null
+    series: string | null
+    color_hex: string | null
+  }
+
+  let catalogPaints: CatalogPaintSearchRow[] = []
 
   if (!q) {
     const { data } = await supabase
@@ -151,7 +234,7 @@ export async function searchThemePaints(query: string) {
       .order('name', { ascending: true })
       .limit(120)
 
-    catalogPaints = data || []
+    catalogPaints = (data || []) as CatalogPaintSearchRow[]
   } else {
     const searches = await Promise.all([
       supabase
@@ -183,8 +266,10 @@ export async function searchThemePaints(query: string) {
         .limit(80),
     ])
 
-    const merged = searches.flatMap((result) => result.data || [])
-    const unique = new Map<string, any>()
+    const merged = searches.flatMap(
+      (result) => (result.data || []) as CatalogPaintSearchRow[]
+    )
+    const unique = new Map<string, CatalogPaintSearchRow>()
 
     for (const paint of merged) {
       unique.set(paint.id, paint)
@@ -195,7 +280,7 @@ export async function searchThemePaints(query: string) {
     )
   }
 
-  let customPaints: any[] = []
+  let customPaints: CustomPaintSearchRow[] = []
 
   if (user) {
     const customQuery = supabase
@@ -209,7 +294,7 @@ export async function searchThemePaints(query: string) {
       ? await customQuery.ilike('name', `%${q}%`)
       : await customQuery
 
-    customPaints = data || []
+    customPaints = (data || []) as CustomPaintSearchRow[]
   }
 
   return [
@@ -306,6 +391,6 @@ await captureServerEvent({
   },
 })
 
-  revalidatePath('/themes')
-  revalidatePath(`/themes/${themeId}`)
+  revalidateThemeCaches(themeId)
 }
+

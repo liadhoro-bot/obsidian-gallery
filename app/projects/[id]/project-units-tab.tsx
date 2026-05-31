@@ -1,8 +1,12 @@
+import Image from 'next/image'
+import Link from 'next/link'
+import type { ProjectUnit, SerializableError, UnitImage, UnitStage } from './types'
+
 type Props = {
-  units: any[]
-  unitsError: any
-  stagesByUnitId: Record<string, any[]>
-  imagesByUnitId: Record<string, any[]>
+  units: ProjectUnit[]
+  unitsError: SerializableError | null
+  stagesByUnitId: Record<string, UnitStage[]>
+  imagesByUnitId: Record<string, UnitImage[]>
 }
 
 export default function ProjectUnitsTab({
@@ -86,17 +90,19 @@ export default function ProjectUnitsTab({
             const percent = heroUnit.percent
 
             return (
-              <a
+              <Link
                 href={`/units/${heroUnit.id}`}
                 className="block overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] transition active:scale-[0.98] active:opacity-70"
               >
                 <div className="relative min-h-[220px]">
                   {primaryImage ? (
                     <>
-                      <img
+                      <Image
                         src={primaryImage.image_url}
                         alt={heroUnit.name}
-                        className="absolute inset-0 h-full w-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 420px"
+                        className="object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#081018] via-[#081018]/60 to-transparent" />
                     </>
@@ -144,7 +150,7 @@ export default function ProjectUnitsTab({
                     </div>
                   </div>
                 </div>
-              </a>
+              </Link>
             )
           })()}
 
@@ -156,7 +162,7 @@ export default function ProjectUnitsTab({
             const percent = unit.percent
 
             return (
-              <a
+              <Link
                 key={unit.id}
                 href={`/units/${unit.id}`}
                 className="flex overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] transition active:scale-[0.98] active:opacity-70 hover:bg-white/[0.08]"
@@ -164,10 +170,12 @@ export default function ProjectUnitsTab({
                 <div className="relative min-h-[110px] w-[30%]">
                   {primaryImage ? (
                     <>
-                      <img
+                      <Image
                         src={primaryImage.image_url}
                         alt={unit.name}
-                        className="absolute inset-0 h-full w-full object-cover"
+                        fill
+                        sizes="120px"
+                        className="object-cover"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#081018] via-[#081018]/60 to-transparent" />
                     </>
@@ -207,7 +215,7 @@ export default function ProjectUnitsTab({
                     </div>
                   </div>
                 </div>
-              </a>
+              </Link>
             )
           })}
         </div>

@@ -2,19 +2,22 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../../../utils/supabase/server'
-import MobileNav from '../../../components/MobileNav'
 import DashboardTopBar from '../../../dashboard/dashboard-top-bar'
 import PaintHero from './paint-hero'
 import PaintTechnicalSpecs from './paint-technical-specs'
 import PaintOwnershipCard from './paint-ownership-card'
 import PaintRecipesUsed from './paint-recipes-used'
 import CustomPaintForm from '../../custom-paint-form'
+import { deleteCustomPaintAction } from '../../custom-paint-actions'
+import DeleteConfirmationCard from '../../../components/delete-confirmation-card'
 import {
   PaintHeroSkeleton,
+  PaintEditorSkeleton,
   PaintTechnicalSpecsSkeleton,
   PaintOwnershipSkeleton,
   PaintRecipesSkeleton,
 } from './paint-skeletons'
+import { createPerfTimer } from '../../../../utils/perf/server'
 
 type PageProps = {
   params: Promise<{
@@ -66,6 +69,7 @@ async function CustomPaintEditor({
 }
 
 export default async function PaintPage({ params }: PageProps) {
+  const perf = createPerfTimer('/vault/[source]/[id]')
   const { source, id } = await params
 
   const supabase = await createClient()
@@ -73,6 +77,7 @@ export default async function PaintPage({ params }: PageProps) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   if (!user) {
     redirect('/login')
@@ -81,6 +86,7 @@ export default async function PaintPage({ params }: PageProps) {
   if (!id || !['catalog', 'custom'].includes(source)) {
     redirect('/vault')
   }
+  perf.total()
 
   const paintRef = {
     source: source as 'catalog' | 'custom',
@@ -104,7 +110,9 @@ export default async function PaintPage({ params }: PageProps) {
         </Suspense>
 
         {source === 'custom' ? (
-          <CustomPaintEditor paintId={id} userId={user.id} />
+          <Suspense fallback={<PaintEditorSkeleton />}>
+            <CustomPaintEditor paintId={id} userId={user.id} />
+          </Suspense>
         ) : (
           <>
             <Suspense fallback={<PaintTechnicalSpecsSkeleton />}>
@@ -120,9 +128,20 @@ export default async function PaintPage({ params }: PageProps) {
         <Suspense fallback={<PaintRecipesSkeleton />}>
           <PaintRecipesUsed paintRef={paintRef} />
         </Suspense>
-      </div>
 
-      <MobileNav />
+        {source === 'custom' ? (
+          <DeleteConfirmationCard
+            itemId={id}
+            itemIdFieldName="paintId"
+            title="Delete Custom Paint"
+            buttonLabel="Delete Custom Paint"
+            initialDescription="Permanently delete this custom paint from your vault."
+            confirmDescription="If you delete this custom paint, it will be removed from your vault and any recipe paint links that use it. This action cannot be undone."
+            deleteAction={deleteCustomPaintAction}
+          />
+        ) : null}
+      </div>
     </main>
   )
 }
+

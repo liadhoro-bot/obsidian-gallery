@@ -35,7 +35,7 @@ export default function PaintOwnershipControls({
   )
 
   function runAction(action: 'owned' | 'wishlist' | 'increment' | 'decrement') {
-    let nextState = { ...optimistic }
+    const nextState = { ...optimistic }
 
     if (action === 'owned') {
       const nextOwned = !optimistic.isOwned

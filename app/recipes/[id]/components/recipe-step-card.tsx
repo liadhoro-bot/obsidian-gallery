@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import PaintPicker from './paint-picker'
 import { Paint, Recipe, RecipeStep, StepPaintLink } from './types'
 import SubmitButton from '../../../components/SubmitButton'
@@ -31,23 +32,6 @@ function getContrastTextColor(hex?: string | null) {
   return brightness > 150 ? '#05070a' : '#fff'
 }
 
-function getPaintColor(paint: StepPaintLink['paint'] | null) {
-  return paint?.hex_approx || '#555555'
-}
-
-function DropletIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M12 2.5c-.35 0-.68.16-.9.43C9.55 4.83 5.25 10.28 5.25 14.1A6.75 6.75 0 0 0 18.75 14.1c0-3.82-4.3-9.27-5.85-11.17A1.16 1.16 0 0 0 12 2.5Zm0 16.25a4.65 4.65 0 0 1-4.65-4.65c0-.41.34-.75.75-.75s.75.34.75.75A3.15 3.15 0 0 0 12 17.25c.41 0 .75.34.75.75s-.34.75-.75.75Z" />
-    </svg>
-  )
-}
-
 function PaintSwatch({
   link,
   large = false,
@@ -71,9 +55,12 @@ function PaintSwatch({
         }
       >
         {paint.swatch_image_url ? (
-          <img
+          <Image
             src={paint.swatch_image_url}
             alt={paint.name || 'Paint'}
+            width={large ? 320 : 80}
+            height={large ? 320 : 80}
+            sizes={large ? '(max-width: 768px) 100vw, 320px' : '80px'}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -122,7 +109,6 @@ export default function RecipeStepCard({
   recipe,
   step,
   stepsLength,
-  stepIndex,
   paintsForStep,
   filteredPaints,
   isEditingThisStep,
@@ -266,9 +252,12 @@ export default function RecipeStepCard({
                 </label>
 
                 {hasStepImage ? (
-                  <img
+                  <Image
                     src={stepImageUrl}
                     alt={step.title}
+                    width={320}
+                    height={128}
+                    sizes="(max-width: 768px) 100vw, 420px"
                     className="mb-3 h-32 w-full rounded-xl object-cover"
                   />
                 ) : null}
@@ -406,9 +395,11 @@ export default function RecipeStepCard({
             {hasStepImage ? (
               <>
                 <div className="relative aspect-[4/3] w-full overflow-hidden rounded-b-[2rem]">
-                  <img
+                  <Image
                     src={stepImageUrl}
                     alt={step.title}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 420px"
                     className="h-full w-full object-cover"
                   />
 

@@ -1,23 +1,15 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
-import MobileNav from '../components/MobileNav'
 import { createClient } from '../../utils/supabase/server'
 import ProjectsTabs from './projects-tabs'
 import { addProject } from './actions'
 import { ProjectWithImage } from './project-library'
+import { createPerfTimer } from '../../utils/perf/server'
 
-export default async function ProjectsPage() {
+async function ProjectsTabsContent({ userId }: { userId: string }) {
+  const perf = createPerfTimer('/projects:content')
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
-  }
-
   const { data: projects, error: projectsError } = await supabase
     .from('projects')
     .select(`
@@ -26,16 +18,17 @@ export default async function ProjectsPage() {
       description,
       created_at
     `)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (projectsError) {
     throw new Error(projectsError.message)
   }
+  perf.mark('main Supabase query')
 
   const projectIds = (projects ?? []).map((project) => project.id)
 
-  let featuredImagesByProjectId: Record<
+  const featuredImagesByProjectId: Record<
     string,
     {
       image_url: string
@@ -54,7 +47,7 @@ export default async function ProjectsPage() {
         created_at
       `)
       .eq('entity_type', 'project')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .in('entity_id', projectIds)
       .order('created_at', { ascending: true })
 
@@ -80,6 +73,7 @@ export default async function ProjectsPage() {
       }
     }
   }
+  perf.mark('image/gallery queries')
 
   const projectsWithImages: ProjectWithImage[] = (projects ?? []).map(
     (project) => ({
@@ -87,6 +81,59 @@ export default async function ProjectsPage() {
       primaryImage: featuredImagesByProjectId[project.id] || null,
     })
   )
+
+  return (
+    <ProjectsTabs
+      projects={projectsWithImages}
+      addProjectAction={addProject}
+    />
+  )
+}
+
+function ProjectsTabsSkeleton() {
+  return (
+    <div className="grid gap-5 animate-pulse">
+      <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1">
+        <div className="h-10 rounded-xl bg-white/10" />
+        <div className="h-10 rounded-xl bg-white/10" />
+      </div>
+
+      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5">
+        <div className="h-4 w-32 rounded bg-neutral-800" />
+        <div className="mt-3 h-6 w-36 rounded bg-neutral-800" />
+        <div className="mt-5 grid gap-4">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div
+              key={index}
+              className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/80"
+            >
+              <div className="h-40 bg-neutral-800" />
+              <div className="p-4">
+                <div className="h-5 w-32 rounded bg-neutral-800" />
+                <div className="mt-3 h-4 w-full rounded bg-neutral-800" />
+                <div className="mt-2 h-4 w-4/5 rounded bg-neutral-800" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+export default async function ProjectsPage() {
+  const perf = createPerfTimer('/projects')
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
+
+  if (!user) {
+    redirect('/login')
+  }
+  perf.total()
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
@@ -105,13 +152,11 @@ export default async function ProjectsPage() {
           </p>
         </header>
 
-        <ProjectsTabs
-          projects={projectsWithImages}
-          addProjectAction={addProject}
-        />
+        <Suspense fallback={<ProjectsTabsSkeleton />}>
+          <ProjectsTabsContent userId={user.id} />
+        </Suspense>
       </div>
-
-      <MobileNav />
     </main>
   )
 }
+
