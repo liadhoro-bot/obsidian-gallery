@@ -23,7 +23,10 @@ type CuratorTemplate = {
   title: string | null
   body: string | null
   body_lines: string[] | null
+  question: string | null
+  primary_cta_label: string | null
   primary_cta_href: string | null
+  secondary_cta_label: string | null
   weight: number | null
 }
 
@@ -194,7 +197,9 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
 
     const { data: templates } = await supabase
       .from('curator_message_templates')
-      .select('id, key, title, body, body_lines, primary_cta_href, weight')
+      .select(
+        'id, key, title, body, body_lines, question, primary_cta_label, primary_cta_href, secondary_cta_label, weight'
+      )
       .eq('surface', 'dashboard')
       .eq('category', rule.category)
       .eq('is_active', true)
@@ -212,8 +217,10 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
       title: selectedTemplate.title ?? 'The Curator',
       body: selectedTemplate.body ?? '',
       bodyLines: selectedTemplate.body_lines ?? undefined,
-      ctaLabel: rule.cta_label ?? 'Continue',
+      question: selectedTemplate.question,
+      ctaLabel: selectedTemplate.primary_cta_label ?? rule.cta_label ?? 'Continue',
       ctaHref: getFallbackCtaHref(rule, selectedTemplate),
+      secondaryCtaLabel: selectedTemplate.secondary_cta_label,
       autoOpen: rule.auto_open,
       state,
     }

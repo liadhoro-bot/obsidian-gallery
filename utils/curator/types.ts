@@ -16,8 +16,10 @@ export type DashboardCuratorPrompt = {
   title: string
   body: string
   bodyLines?: string[]
+  question?: string | null
   ctaLabel: string
   ctaHref: string
+  secondaryCtaLabel?: string | null
   autoOpen: boolean
   state: DashboardCuratorState
 }

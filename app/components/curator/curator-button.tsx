@@ -45,14 +45,11 @@ function mapPromptToMessage(curatorPrompt: DashboardCuratorPrompt): CuratorMessa
     category: curatorPrompt.category,
     variant: 'phase_2',
     title: curatorPrompt.title,
-    bodyLines: curatorPrompt.bodyLines?.length
-      ? curatorPrompt.bodyLines
-      : curatorPrompt.body
-        ? [curatorPrompt.body]
-        : [],
+    bodyLines: curatorPrompt.bodyLines ?? [],
+    question: curatorPrompt.question,
     primaryCtaLabel: curatorPrompt.ctaLabel,
     primaryCtaHref: curatorPrompt.ctaHref,
-    secondaryCtaLabel: 'Not Now',
+    secondaryCtaLabel: curatorPrompt.secondaryCtaLabel,
     imageUrl: '/curator/the-curator.png',
   }
 }
