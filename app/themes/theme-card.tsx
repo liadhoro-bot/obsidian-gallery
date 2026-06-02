@@ -5,6 +5,8 @@ import PrefetchLink from '../components/prefetch-link'
 type ThemePaint = {
   id: string
   sort_order: number | null
+  paint_catalog_id?: string | null
+  custom_paint_id?: string | null
   catalog_paint:
     | {
         swatch_image_url: string | null
@@ -56,6 +58,10 @@ function safeImageUrl(value: string | null | undefined) {
     : null
 }
 
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
 export default function ThemeCard({
   theme,
   currentUserId,
@@ -70,13 +76,16 @@ export default function ThemeCard({
 
   const swatches = (theme.theme_paints || [])
     .map((paint) => {
-      const catalogPaint = Array.isArray(paint.catalog_paint)
-        ? paint.catalog_paint[0]
-        : paint.catalog_paint
-
-      const customPaint = Array.isArray(paint.custom_paint)
-        ? paint.custom_paint[0]
-        : paint.custom_paint
+      const relationPaint = paint as ThemePaint & {
+        paint_catalog?: ThemePaint['catalog_paint']
+        paints?: ThemePaint['custom_paint']
+      }
+      const catalogPaint = firstRelation(
+        relationPaint.catalog_paint ?? relationPaint.paint_catalog
+      )
+      const customPaint = firstRelation(
+        relationPaint.custom_paint ?? relationPaint.paints
+      )
 
       return {
         id: paint.id,

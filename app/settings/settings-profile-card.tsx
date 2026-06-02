@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { createClient } from '../../utils/supabase/server'
 import { updateAvatar } from './settings-actions'
+import BackButton from '../components/back-button'
 import AvatarUploadInput from './avatar-upload-input'
 import SettingsProfileEditor from './settings-profile-editor'
 
@@ -29,7 +30,11 @@ export default async function SettingsProfileCard() {
   const avatarUrl = profile?.avatar_url
 
   return (
-    <section className="rounded-3xl border border-white/5 bg-white/[0.04] p-6 shadow-lg">
+    <section className="relative rounded-3xl border border-white/5 bg-white/[0.04] p-6 shadow-lg">
+      <div className="absolute left-4 top-4 z-20">
+        <BackButton fallbackHref="/dashboard" />
+      </div>
+
       <div className="flex flex-col items-center text-center">
         <form action={updateAvatar}>
           <label className="relative block h-28 w-28 cursor-pointer overflow-hidden rounded-3xl border border-cyan-400/30 bg-slate-900">

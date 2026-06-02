@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import Link from 'next/link'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { createClient } from '../../../utils/supabase/server'
 import { updatePaintOwnership } from '../../../utils/paint-ownership/update-paint-ownership'
@@ -1175,12 +1174,6 @@ const wishlistPaintIds = new Set(
       <Suspense fallback={null}>
         <DashboardTopBar />
       </Suspense>
-
-      <div>
-        <Link href="/recipes" className="text-cyan-400 text-sm">
-          ← Back to Recipes
-        </Link>
-      </div>
 
       <RecipeDetailClient
   recipe={recipe}

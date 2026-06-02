@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useState } from 'react'
+import BackButton from '../../components/back-button'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
@@ -32,6 +32,7 @@ type Props = {
   stagesByUnitId: Record<string, UnitStage[]>
   imagesByUnitId: Record<string, UnitImage[]>
   addUnitAction: (formData: FormData) => Promise<void>
+  updateProjectHeaderAction: (formData: FormData) => Promise<void>
   setFeaturedUnitAction: (formData: FormData) => Promise<void>
   uploadProjectImageAction: (formData: FormData) => Promise<void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
@@ -54,43 +55,107 @@ export default function ProjectDetailClient({
   stagesByUnitId,
   imagesByUnitId,
   addUnitAction,
+  updateProjectHeaderAction,
   uploadProjectImageAction,
   setFeaturedProjectImageAction,
   deleteProjectImageAction,
   deleteProjectAction,
 }: Props) {
   const [activeTab, setActiveTab] = useState<ProjectDetailTab>('details')
+  const [isEditingHeader, setIsEditingHeader] = useState(false)
+  const projectName = project?.name || 'Untitled Project'
 
   return (
     <div className="w-full">
-      <Link href="/projects" className="text-sm text-cyan-400">
-        ← Back to Projects
-      </Link>
-
-      {featuredProjectImage ? (
-        <div className="relative mt-4 h-64 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900">
+      <div className="relative h-64 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900">
+        {featuredProjectImage ? (
           <Image
             src={featuredProjectImage.image_url}
-            alt={featuredProjectImage.alt_text || project?.name || 'Project image'}
+            alt={featuredProjectImage.alt_text || projectName}
             fill
             sizes="(max-width: 768px) 100vw, 420px"
             priority
             className="object-cover"
           />
-        </div>
-      ) : (
-        <div className="mt-4 flex h-64 items-center justify-center rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 text-sm text-neutral-500">
-          No featured image yet
-        </div>
-      )}
+        ) : (
+          <div className="h-full w-full bg-[#0b1622]" />
+        )}
 
-      <div className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-5 shadow-sm">
-        <p className="text-xs uppercase tracking-[0.2em] text-cyan-400">
-          Project Detail
-        </p>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#050b12]" />
 
-        <h1 className="mt-2 text-3xl font-bold text-white">{project?.name}</h1>
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-4">
+          <BackButton fallbackHref="/projects" />
+
+          <button
+            type="button"
+            onClick={() => setIsEditingHeader((current) => !current)}
+            className="rounded-full border border-white/10 bg-black/40 px-4 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-black/60"
+          >
+            {isEditingHeader ? 'Close' : 'Edit'}
+          </button>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-6">
+          <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
+            Project Detail
+          </p>
+          <h1 className="mt-2 text-4xl font-bold leading-tight text-white">
+            {projectName}
+          </h1>
+        </div>
       </div>
+
+      {isEditingHeader ? (
+        <form
+          action={updateProjectHeaderAction}
+          className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-4"
+        >
+          <input type="hidden" name="projectId" value={projectId} />
+
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">
+                Name
+              </label>
+              <input
+                name="name"
+                defaultValue={projectName}
+                required
+                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-neutral-300">
+                Description
+              </label>
+              <textarea
+                name="description"
+                defaultValue={project?.description || ''}
+                rows={3}
+                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
+              >
+                Save
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsEditingHeader(false)}
+                className="rounded-xl border border-neutral-700 px-4 py-2 text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </form>
+      ) : null}
 
       <ProjectDetailTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 

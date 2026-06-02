@@ -22,6 +22,7 @@ export default function DeleteConfirmationCard({
   deleteAction,
 }: Props) {
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isDeleteArmed, setIsDeleteArmed] = useState(false)
 
   if (!isConfirming) {
     return (
@@ -40,7 +41,10 @@ export default function DeleteConfirmationCard({
 
         <button
           type="button"
-          onClick={() => setIsConfirming(true)}
+          onClick={() => {
+            setIsConfirming(true)
+            setIsDeleteArmed(false)
+          }}
           className="mt-5 w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-400 transition hover:bg-red-500/20"
         >
           {buttonLabel}
@@ -66,7 +70,10 @@ export default function DeleteConfirmationCard({
       <div className="mt-5 grid grid-cols-2 gap-3">
         <button
           type="button"
-          onClick={() => setIsConfirming(false)}
+          onClick={() => {
+            setIsConfirming(false)
+            setIsDeleteArmed(false)
+          }}
           className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-sm font-bold text-slate-200 transition hover:bg-white/15"
         >
           Cancel
@@ -77,7 +84,18 @@ export default function DeleteConfirmationCard({
 
           <button
             type="submit"
-            className="w-full rounded-2xl border border-red-500/40 bg-red-500/20 px-5 py-4 text-sm font-black text-red-300 transition hover:bg-red-500/30"
+            onClick={(event) => {
+              if (!isDeleteArmed) {
+                event.preventDefault()
+                setIsDeleteArmed(true)
+              }
+            }}
+            className={[
+              'w-full rounded-2xl border px-5 py-4 text-sm font-black transition',
+              isDeleteArmed
+                ? 'border-red-400 bg-red-600 text-white shadow-[0_0_24px_rgba(239,68,68,0.35)] hover:bg-red-500'
+                : 'border-red-500/40 bg-red-500/20 text-red-300 hover:bg-red-500/30',
+            ].join(' ')}
           >
             Delete Anyway
           </button>

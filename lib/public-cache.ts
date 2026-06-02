@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 
 const ONE_DAY = 60 * 60 * 24
 const TEN_MINUTES = 60 * 10
+const CACHE_VERSION = 'v2.8.1'
 
 export const getCachedCatalogFilterRows = unstable_cache(
   async () => {
@@ -34,7 +35,7 @@ export const getCachedCatalogFilterRows = unstable_cache(
 
     return allRows
   },
-  ['paint-catalog-filter-rows'],
+  [CACHE_VERSION, 'paint-catalog-filter-rows'],
   {
     tags: ['paint-catalog'],
     revalidate: ONE_DAY,
@@ -55,7 +56,7 @@ export const getCachedCatalogPaintOptions = unstable_cache(
 
     return data || []
   },
-  ['paint-catalog-options'],
+  [CACHE_VERSION, 'paint-catalog-options'],
   {
     tags: ['paint-catalog'],
     revalidate: ONE_DAY,
@@ -69,14 +70,13 @@ export function getCachedCatalogPaint(paintId: string) {
         .from('paint_catalog')
         .select('id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type')
         .eq('id', id)
-        .eq('is_active', true)
         .maybeSingle()
 
       if (error) throw error
 
       return data
     },
-    ['paint-detail', paintId],
+    [CACHE_VERSION, 'paint-detail', paintId],
     {
       tags: ['paint-catalog', `paint:${paintId}`],
       revalidate: ONE_DAY,
@@ -96,7 +96,7 @@ export const getCachedPublicRecipes = unstable_cache(
 
     return data || []
   },
-  ['public-recipes-list'],
+  [CACHE_VERSION, 'public-recipes-list'],
   {
     tags: ['public-recipes'],
     revalidate: TEN_MINUTES,
@@ -117,7 +117,7 @@ export function getCachedPublicRecipe(recipeId: string) {
 
       return data
     },
-    ['public-recipe-detail', recipeId],
+    [CACHE_VERSION, 'public-recipe-detail', recipeId],
     {
       tags: ['public-recipes', `recipe:${recipeId}`],
       revalidate: TEN_MINUTES,
@@ -189,7 +189,7 @@ export function getCachedPublicRecipeAssets(recipeId: string) {
         stepPaintLinks: stepPaintLinks || [],
       }
     },
-    ['public-recipe-assets', recipeId],
+    [CACHE_VERSION, 'public-recipe-assets', recipeId],
     {
       tags: ['public-recipes', `recipe:${recipeId}`],
       revalidate: TEN_MINUTES,
@@ -213,6 +213,8 @@ export const getCachedPublicThemes = unstable_cache(
           id,
           sort_order,
           paint_source,
+          paint_catalog_id,
+          custom_paint_id,
           catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
             id,
             swatch_image_url,
@@ -231,7 +233,7 @@ export const getCachedPublicThemes = unstable_cache(
 
     return data || []
   },
-  ['public-themes-list'],
+  [CACHE_VERSION, 'public-themes-list'],
   {
     tags: ['public-themes'],
     revalidate: TEN_MINUTES,
@@ -256,6 +258,8 @@ export function getCachedPublicTheme(themeId: string) {
             id,
             sort_order,
             paint_source,
+            paint_catalog_id,
+            custom_paint_id,
             catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
               id,
               name,
@@ -281,7 +285,7 @@ export function getCachedPublicTheme(themeId: string) {
 
       return data
     },
-    ['public-theme-detail', themeId],
+    [CACHE_VERSION, 'public-theme-detail', themeId],
     {
       tags: ['public-themes', `theme:${themeId}`],
       revalidate: TEN_MINUTES,

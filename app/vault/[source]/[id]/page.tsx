@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../../../utils/supabase/server'
+import BackButton from '../../../components/back-button'
 import DashboardTopBar from '../../../dashboard/dashboard-top-bar'
 import PaintHero from './paint-hero'
 import PaintTechnicalSpecs from './paint-technical-specs'
@@ -101,13 +101,15 @@ export default async function PaintPage({ params }: PageProps) {
       </div>
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5">
-        <Link href="/vault" className="text-sm text-cyan-400">
-          ← Back to Vault
-        </Link>
+        <div className="relative">
+          <div className="absolute left-4 top-4 z-20">
+            <BackButton fallbackHref="/vault" />
+          </div>
 
-        <Suspense fallback={<PaintHeroSkeleton />}>
-          <PaintHero paintRef={paintRef} />
-        </Suspense>
+          <Suspense fallback={<PaintHeroSkeleton />}>
+            <PaintHero paintRef={paintRef} />
+          </Suspense>
+        </div>
 
         {source === 'custom' ? (
           <Suspense fallback={<PaintEditorSkeleton />}>

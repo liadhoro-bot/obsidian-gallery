@@ -1,6 +1,7 @@
 'use client'
 
 import { Recipe, RecipeImage } from './types'
+import BackButton from '../../../components/back-button'
 import RecipeVisibilityPill from './recipe-visibility-pill'
 import { updateRecipeVisibility } from '../recipe-actions'
 
@@ -22,6 +23,10 @@ export default function RecipeHero({
   return (
     <section className="mt-4 border-y border-neutral-800 bg-neutral-950">
       <div className="relative">
+        <div className="absolute left-4 top-4 z-20">
+          <BackButton fallbackHref="/recipes" />
+        </div>
+
         {featuredImage ? (
           <>
             <div
@@ -34,49 +39,47 @@ export default function RecipeHero({
           <div className={`${isEditingHeader ? 'h-72' : 'h-56'} w-full bg-neutral-900`} />
         )}
 
-        <div className="absolute inset-x-0 bottom-0 p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-orange-400">
-                Recipe Detail
-              </p>
+        {isOwner ? (
+          <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+            <RecipeVisibilityPill
+              recipeId={recipe.id}
+              isPublic={recipe.is_public}
+              updateRecipeVisibilityAction={updateRecipeVisibility}
+            />
 
-              <h1 className="mt-2 text-4xl font-bold text-white">
-                {recipe.name}
-              </h1>
-
-              <p className="mt-3 max-w-lg text-sm text-neutral-300">
-                {recipe.description || 'No description yet.'}
-              </p>
-            </div>
-
-            {isOwner ? (
-              <div className="flex items-center gap-2">
-                <RecipeVisibilityPill
-                  recipeId={recipe.id}
-                  isPublic={recipe.is_public}
-                  updateRecipeVisibilityAction={updateRecipeVisibility}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setIsEditingHeader(!isEditingHeader)}
-                  className="rounded-full border border-neutral-600 bg-black/60 px-3 py-2 text-sm text-white"
-                  title="Edit title and description"
-                >
-                  ✎
-                </button>
-              </div>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => setIsEditingHeader(!isEditingHeader)}
+              className="rounded-full border border-neutral-600 bg-black/60 px-3 py-2 text-sm text-white"
+              title="Edit title and description"
+            >
+              Edit
+            </button>
           </div>
+        ) : null}
+
+        <div className="absolute inset-x-0 bottom-0 z-10 p-5">
+          <p className="text-xs uppercase tracking-[0.2em] text-orange-400">
+            Recipe
+          </p>
+
+          <h1 className="mt-2 text-4xl font-bold text-white">
+            {recipe.name}
+          </h1>
         </div>
+      </div>
+
+      <div className="px-5 py-4">
+        <p className="text-sm leading-6 text-neutral-300">
+          {recipe.description || 'No description yet.'}
+        </p>
       </div>
 
       {isOwner && isEditingHeader ? (
         <div className="px-5 pb-5">
           <form
             action={updateRecipeHeaderAction}
-            className="-mt-2 rounded-2xl border border-neutral-700 bg-black/85 p-4"
+            className="rounded-2xl border border-neutral-700 bg-black/85 p-4"
           >
             <input type="hidden" name="recipeId" value={recipe.id} />
 

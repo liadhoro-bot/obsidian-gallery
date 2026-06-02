@@ -19,7 +19,10 @@ type Props = {
 
 type ThemePaintSummary = {
   id: string
+  theme_id?: string | null
   sort_order: number | null
+  paint_catalog_id?: string | null
+  custom_paint_id?: string | null
   catalog_paint:
     | {
         swatch_image_url: string | null
@@ -57,6 +60,89 @@ type SavedThemeRow = {
 
 function firstValue<T>(value: T | T[] | null) {
   return Array.isArray(value) ? value[0] ?? null : value
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+function themeHasSwatchData(theme: ThemeSummary) {
+  return Boolean(
+    theme.theme_paints?.some((paint) => {
+      const catalogPaint = firstRelation(paint.catalog_paint)
+      const customPaint = firstRelation(paint.custom_paint)
+
+      return Boolean(
+        catalogPaint?.swatch_image_url ||
+          catalogPaint?.hex_approx ||
+          customPaint?.color_hex
+      )
+    })
+  )
+}
+
+async function hydrateMissingThemeSwatches(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  themes: ThemeSummary[]
+) {
+  const themeIds = Array.from(
+    new Set(
+      themes
+        .filter((theme) => !themeHasSwatchData(theme))
+        .map((theme) => theme.id)
+    )
+  )
+
+  if (themeIds.length === 0) {
+    return themes
+  }
+
+  const { data, error } = await supabase
+    .from('theme_paints')
+    .select(`
+      id,
+      theme_id,
+      sort_order,
+      paint_source,
+      paint_catalog_id,
+      custom_paint_id,
+      catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+        id,
+        swatch_image_url,
+        hex_approx
+      ),
+      custom_paint:paints!theme_paints_custom_paint_id_fkey (
+        id,
+        color_hex
+      )
+    `)
+    .in('theme_id', themeIds)
+    .order('sort_order', { ascending: true })
+
+  if (error || !data) {
+    return themes
+  }
+
+  const paintsByThemeId = new Map<string, ThemePaintSummary[]>()
+
+  for (const paint of data as unknown as ThemePaintSummary[]) {
+    if (!paint.theme_id) continue
+
+    const paints = paintsByThemeId.get(paint.theme_id) ?? []
+    paints.push(paint)
+    paintsByThemeId.set(paint.theme_id, paints)
+  }
+
+  return themes.map((theme) => {
+    const themePaints = paintsByThemeId.get(theme.id)
+
+    return themePaints
+      ? {
+          ...theme,
+          theme_paints: themePaints,
+        }
+      : theme
+  })
 }
 
 async function attachThemeToProject(formData: FormData) {
@@ -121,6 +207,8 @@ export default async function ThemesPage({ searchParams }: Props) {
     id,
     sort_order,
     paint_source,
+    paint_catalog_id,
+    custom_paint_id,
     catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
       id,
       swatch_image_url,
@@ -152,6 +240,8 @@ export default async function ThemesPage({ searchParams }: Props) {
               id,
               sort_order,
               paint_source,
+              paint_catalog_id,
+              custom_paint_id,
               catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
                 id,
                 swatch_image_url,
@@ -177,13 +267,31 @@ export default async function ThemesPage({ searchParams }: Props) {
     ])
   perf.mark('main Supabase query')
 
-  const publicThemeRows = (publicThemes ?? []) as ThemeSummary[]
-  const myThemeRows = (myThemes ?? []) as ThemeSummary[]
+  const rawPublicThemeRows = (publicThemes ?? []) as ThemeSummary[]
+  const rawMyThemeRows = (myThemes ?? []) as ThemeSummary[]
   const savedThemeRows = (savedRows ?? []) as SavedThemeRow[]
 
-  const savedThemes = savedThemeRows
+  const rawSavedThemes = savedThemeRows
     .map((row) => firstValue(row.themes))
     .filter((theme): theme is ThemeSummary => Boolean(theme))
+
+  const hydratedThemes = await hydrateMissingThemeSwatches(
+    supabase,
+    [...rawPublicThemeRows, ...rawMyThemeRows, ...rawSavedThemes]
+  )
+  const hydratedThemeById = new Map(
+    hydratedThemes.map((theme) => [theme.id, theme])
+  )
+
+  const publicThemeRows = rawPublicThemeRows.map(
+    (theme) => hydratedThemeById.get(theme.id) ?? theme
+  )
+  const myThemeRows = rawMyThemeRows.map(
+    (theme) => hydratedThemeById.get(theme.id) ?? theme
+  )
+  const savedThemes = rawSavedThemes.map(
+    (theme) => hydratedThemeById.get(theme.id) ?? theme
+  )
 
   const savedThemeIds = savedThemeRows.map((row) => row.theme_id)
 

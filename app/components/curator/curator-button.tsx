@@ -73,7 +73,7 @@ export default function CuratorButton({
       return { surface: 'unit', entityId: pathname.split('/')[2] ?? null }
     }
 
-    if (pathname?.startsWith('/projects/')) {
+    if (pathname === '/projects' || pathname?.startsWith('/projects/')) {
       return { surface: 'project', entityId: pathname.split('/')[2] ?? null }
     }
 

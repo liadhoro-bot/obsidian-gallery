@@ -10,7 +10,8 @@ import {
 } from './palette-utils'
 
 function revalidateThemeCaches(themeId: string) {
-  revalidateThemeCaches(themeId)
+  revalidatePath('/themes')
+  revalidatePath(`/themes/${themeId}`)
   revalidateTag('public-themes', 'max')
   revalidateTag(`theme:${themeId}`, 'max')
 }
@@ -24,7 +25,7 @@ export async function toggleThemeVisibility(themeId: string, nextValue: boolean)
 
   if (!user) return
 
-  await supabase
+  const { error } = await supabase
     .from('themes')
     .update({
       is_public: nextValue,
@@ -33,8 +34,9 @@ export async function toggleThemeVisibility(themeId: string, nextValue: boolean)
     .eq('id', themeId)
     .eq('user_id', user.id)
 
-  revalidatePath('/themes')
-  revalidatePath(`/themes/${themeId}`)
+  if (error) throw error
+
+  revalidateThemeCaches(themeId)
 }
 
 export async function updateTheme(themeId: string, formData: FormData) {

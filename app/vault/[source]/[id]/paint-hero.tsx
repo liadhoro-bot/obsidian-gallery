@@ -12,7 +12,18 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
   const supabase = await createClient()
 
   if (paintRef.source === 'catalog') {
-    const paint = await getCachedCatalogPaint(paintRef.paintId)
+    const cachedPaint = await getCachedCatalogPaint(paintRef.paintId)
+    const paint =
+      cachedPaint ||
+      (
+        await supabase
+          .from('paint_catalog')
+          .select(
+            'id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type'
+          )
+          .eq('id', paintRef.paintId)
+          .maybeSingle()
+      ).data
 
     if (!paint) return null
 

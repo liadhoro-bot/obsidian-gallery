@@ -13,6 +13,7 @@ type PageProps = {
 type UnitDetailUnit = {
   id: string
   name: string
+  notes: string | null
   complexity: number | null
   unit_size: number | null
   deadline: string | null
@@ -392,6 +393,7 @@ export default async function UnitDetailPage({ params }: PageProps) {
     .select(`
       id,
       name,
+      notes,
       complexity,
       unit_size,
       deadline,

@@ -305,6 +305,47 @@ export async function updateUnitDetails(formData: FormData) {
   revalidatePath('/projects')
 }
 
+export async function updateUnitHeader(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') ?? '')
+  const name = String(formData.get('name') ?? '').trim()
+  const description = String(formData.get('description') ?? '').trim()
+
+  if (!unitId) {
+    throw new Error('Missing unit ID')
+  }
+
+  if (!name) {
+    throw new Error('Unit name is required')
+  }
+
+  const { error } = await supabase
+    .from('units')
+    .update({
+      name,
+      notes: description || null,
+    })
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/projects')
+}
+
 export async function deleteUnit(formData: FormData) {
   const supabase = await createClient()
 

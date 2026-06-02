@@ -12,6 +12,7 @@ import {
   setFeaturedUnitImage,
   toggleStepDone,
   updateUnitDetails,
+  updateUnitHeader,
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
 import UnitSessionTracker from './components/unit-session-tracker'
@@ -23,6 +24,7 @@ import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 type Unit = {
   id: string
   name: string
+  notes: string | null
   complexity: number | null
   unit_size: number | null
   deadline: string | null
@@ -290,6 +292,7 @@ export default function UnitDetailClient({
   )
   const [openStageId, setOpenStageId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isEditingDetails, setIsEditingDetails] = useState(false)
   const [complexityInput, setComplexityInput] = useState(
     unit.complexity ? String(unit.complexity) : ''
@@ -328,6 +331,24 @@ export default function UnitDetailClient({
   useEffect(() => {
     setOptimisticSteps(steps)
   }, [steps])
+
+  useEffect(() => {
+    function openHeaderEditor() {
+      setIsEditingHeader(true)
+
+      requestAnimationFrame(() => {
+        document
+          .getElementById('unit-header-editor')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+
+    window.addEventListener('unit-header:edit', openHeaderEditor)
+
+    return () => {
+      window.removeEventListener('unit-header:edit', openHeaderEditor)
+    }
+  }, [])
 
   const displayedLoggedSeconds = activeSession
     ? totalLoggedSeconds +
@@ -402,6 +423,14 @@ export default function UnitDetailClient({
     startTransition(async () => {
       await updateUnitDetails(formData)
       setIsEditingDetails(false)
+      router.refresh()
+    })
+  }
+
+  const handleUpdateHeader = (formData: FormData) => {
+    startTransition(async () => {
+      await updateUnitHeader(formData)
+      setIsEditingHeader(false)
       router.refresh()
     })
   }
@@ -540,6 +569,63 @@ const handleRemoveStagePhoto = (imageId: string) => {
   return (
     <div className="w-full">
 
+      <section
+        id="unit-header-editor"
+        className="mt-4 scroll-mt-4 rounded-2xl border border-white/10 bg-white/5 p-4"
+      >
+        {!isEditingHeader ? (
+          <p className="text-sm leading-6 text-white/65">
+            {unit.notes || 'No description yet.'}
+          </p>
+        ) : (
+          <form action={handleUpdateHeader} className="space-y-3">
+            <input type="hidden" name="unitId" value={unit.id} />
+
+            <div>
+              <label className="mb-1 block text-sm text-white/60">
+                Name
+              </label>
+              <input
+                name="name"
+                defaultValue={unit.name}
+                required
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm text-white/60">
+                Description
+              </label>
+              <textarea
+                name="description"
+                defaultValue={unit.notes || ''}
+                rows={3}
+                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={isPending}
+                className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:opacity-60"
+              >
+                Save
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsEditingHeader(false)}
+                className="rounded-xl border border-white/10 px-4 py-2 text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+
       <div className="mt-4 grid gap-5">
   <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
     {[
@@ -569,7 +655,10 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
       {activeTab === 'overview' && (
         <div>
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div
+            id="unit-details-editor"
+            className="mt-4 scroll-mt-4 rounded-2xl border border-white/10 bg-white/5 p-4"
+          >
             <div className="mb-3 flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-wide text-white/50">
                 Unit Details

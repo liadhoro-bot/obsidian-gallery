@@ -141,6 +141,37 @@ await captureServerEvent({
   revalidatePath(`/projects/${projectId}`)
 }
 
+async function updateProjectHeader(formData: FormData) {
+  'use server'
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const projectId = formData.get('projectId')?.toString()
+  const name = formData.get('name')?.toString().trim()
+  const description = formData.get('description')?.toString().trim()
+
+  if (!projectId || !name) return
+
+  await supabase
+    .from('projects')
+    .update({
+      name,
+      description: description || null,
+    })
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+
+  revalidatePath(`/projects/${projectId}`)
+}
+
 async function setFeaturedUnit(formData: FormData) {
   'use server'
 
@@ -509,6 +540,7 @@ const allStagesError =
         stagesByUnitId={stagesByUnitId}
         imagesByUnitId={imagesByUnitId}
         addUnitAction={addUnit}
+        updateProjectHeaderAction={updateProjectHeader}
         setFeaturedUnitAction={setFeaturedUnit}
         uploadProjectImageAction={uploadProjectImage}
         setFeaturedProjectImageAction={setFeaturedProjectImage}

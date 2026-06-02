@@ -1,14 +1,14 @@
-import Link from 'next/link'
+import BackButton from '../../components/back-button'
 
 export default function TermsPage() {
   return (
     <main className="min-h-screen bg-[#061012] px-4 py-6 text-slate-100">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5">
-        <Link href="/settings" className="text-sm font-bold text-cyan-300">
-  ← Back to Settings
-</Link>
+        <section className="relative rounded-3xl border border-white/10 bg-white/[0.04] p-5 pt-16">
+          <div className="absolute left-4 top-4 z-20">
+            <BackButton fallbackHref="/settings" />
+          </div>
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">
             Legal
           </p>
