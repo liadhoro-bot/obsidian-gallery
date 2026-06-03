@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useTransition } from 'react'
 import { updateRecipeYoutubeUrl } from './recipe-actions'
 
 type RecipeVideoCardProps = {
@@ -51,6 +51,7 @@ export default function RecipeVideoCard({
 }: RecipeVideoCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draftUrl, setDraftUrl] = useState(youtubeUrl || '')
+  const [isPending, startTransition] = useTransition()
 
   const embedUrl = useMemo(() => getYoutubeEmbedUrl(youtubeUrl), [youtubeUrl])
   const draftVideoId = useMemo(() => getYoutubeVideoId(draftUrl), [draftUrl])
@@ -89,8 +90,10 @@ export default function RecipeVideoCard({
       {isOwner && isEditing ? (
         <form
           action={async (formData) => {
-            await updateRecipeYoutubeUrl(formData)
-            setIsEditing(false)
+            startTransition(async () => {
+              await updateRecipeYoutubeUrl(formData)
+              setIsEditing(false)
+            })
           }}
           className="flex flex-col gap-4"
         >
@@ -148,10 +151,13 @@ export default function RecipeVideoCard({
           <div className="flex gap-2">
             <button
               type="submit"
-              disabled={!draftVideoId}
-              className="flex-1 rounded-2xl bg-cyan-400 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={!draftVideoId || isPending}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-4 py-3 font-bold text-slate-950 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
             >
-              Add Video
+              {isPending ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : null}
+              <span>{isPending ? 'Adding...' : 'Add Video'}</span>
             </button>
 
             <button

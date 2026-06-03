@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import RecipeHero from './components/recipe-hero'
 import {
   Paint,
@@ -36,6 +37,7 @@ type Props = {
   deleteRecipeImageAction: (formData: FormData) => Promise<void>
   updateRecipePaintOwnershipAction: (formData: FormData) => Promise<void>
   deleteRecipeAction: (formData: FormData) => Promise<void>
+  actionRow?: ReactNode
 }
 
 export default function RecipeDetailClient({
@@ -58,6 +60,7 @@ export default function RecipeDetailClient({
   deleteRecipeImageAction,
   updateRecipePaintOwnershipAction,
   deleteRecipeAction,
+  actionRow,
 }: Props) {
   const [activeTab, setActiveTab] = useState<RecipeDetailTab>('details')
   const [isEditingHeader, setIsEditingHeader] = useState(false)
@@ -114,6 +117,8 @@ export default function RecipeDetailClient({
   setIsEditingHeader={setIsEditingHeader}
   updateRecipeHeaderAction={updateRecipeHeaderAction}
 />
+
+      {actionRow}
 
       <RecipeDetailTabs
   activeTab={activeTab}

@@ -65,13 +65,18 @@ export default function ThemeVisibilityPill({
                 type="button"
                 onClick={confirmToggle}
                 disabled={isPending}
-                className="rounded-xl bg-cyan-500 px-4 py-3 text-sm font-bold text-slate-950 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
               >
-                {isPending
-                  ? 'Updating...'
-                  : isPublic
-                    ? 'Make Private'
-                    : 'Make Public'}
+                {isPending ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : null}
+                <span>
+                  {isPending
+                    ? 'Updating...'
+                    : isPublic
+                      ? 'Make Private'
+                      : 'Make Public'}
+                </span>
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { saveTheme, unsaveTheme } from './actions'
 import PrefetchLink from '../components/prefetch-link'
+import SubmitButton from '../components/SubmitButton'
 
 type ThemePaint = {
   id: string
@@ -181,23 +182,21 @@ export default function ThemeCard({
             <input type="hidden" name="projectId" value={selectForProject ?? ''} />
             <input type="hidden" name="themeId" value={theme.id} />
 
-            <button
-              type="submit"
+            <SubmitButton
+              idleText="Use For Project"
+              pendingText="Applying..."
               className="w-full rounded-xl bg-cyan-400 px-3 py-2 text-xs font-semibold text-neutral-950 transition active:scale-95"
-            >
-              Use For Project
-            </button>
+            />
           </form>
         ) : !isOwner ? (
           <form action={isSaved ? unsaveTheme : saveTheme}>
             <input type="hidden" name="themeId" value={theme.id} />
 
-            <button
-              type="submit"
+            <SubmitButton
+              idleText={isSaved ? 'Saved' : 'Save'}
+              pendingText={isSaved ? 'Removing...' : 'Saving...'}
               className="w-full rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-400/20"
-            >
-              {isSaved ? 'Saved' : 'Save'}
-            </button>
+            />
           </form>
         ) : (
           <button

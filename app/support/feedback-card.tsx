@@ -69,9 +69,12 @@ export default function FeedbackCard() {
           <button
             type="submit"
             disabled={isPending || !message.trim()}
-            className="inline-flex w-full items-center justify-center rounded-2xl bg-violet-400 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-violet-300 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-400 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-violet-300 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
           >
-            {isPending ? 'Sending...' : 'Send feedback'}
+            {isPending ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : null}
+            <span>{isPending ? 'Sending...' : 'Send feedback'}</span>
           </button>
         </form>
       )}

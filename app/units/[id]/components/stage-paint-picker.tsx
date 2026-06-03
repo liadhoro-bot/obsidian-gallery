@@ -191,7 +191,7 @@ export default function StagePaintPicker({
                         type="button"
                         onClick={() => handleSelectPaint(paint)}
                         disabled={isPending}
-                        className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.08] disabled:opacity-60"
+                        className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.08] disabled:cursor-not-allowed disabled:bg-neutral-700/70 disabled:text-white/60 disabled:opacity-70"
                       >
                         {paint.swatch_image_url ? (
                           <Image
@@ -222,6 +222,10 @@ export default function StagePaintPicker({
                         <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-300">
                           {source}
                         </div>
+
+                        {isPending ? (
+                          <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent text-white/70" />
+                        ) : null}
                       </button>
                     )
                   })}

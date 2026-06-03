@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState, useTransition } from 'react'
 
 const tabs = [
   { key: 'find', label: 'Find Theme' },
@@ -11,13 +12,22 @@ const tabs = [
 export default function ThemeTabsClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [, startTransition] = useTransition()
 
   const currentTab = searchParams.get('tab') || 'find'
+  const [optimisticTab, setOptimisticTab] = useState(currentTab)
+
+  useEffect(() => {
+    setOptimisticTab(currentTab)
+  }, [currentTab])
 
   function setTab(tab: string) {
+    setOptimisticTab(tab)
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', tab)
-    router.push(`/themes?${params.toString()}`)
+    startTransition(() => {
+      router.push(`/themes?${params.toString()}`)
+    })
   }
 
   return (
@@ -27,7 +37,7 @@ export default function ThemeTabsClient() {
           key={tab.key}
           type="button"
           onClick={() => setTab(tab.key)}
-          className={tabClass(currentTab === tab.key)}
+          className={tabClass(optimisticTab === tab.key)}
         >
           {tab.label}
         </button>

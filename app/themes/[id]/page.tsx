@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
+import SubmitButton from '../../components/SubmitButton'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import ThemeDetailHero from './theme-detail-hero'
 import ThemePaletteEditor from './theme-palette-editor'
@@ -7,6 +8,13 @@ import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 import { calculateThemePaletteAction, deleteTheme } from './actions'
 import { getCachedPublicTheme } from '../../../lib/public-cache'
 import { createPerfTimer } from '../../../utils/perf/server'
+import ContentActionRow from '../../components/social/content-action-row'
+import {
+  reportTheme,
+  toggleThemeLike,
+  toggleThemeSave,
+} from '../../components/social/actions'
+import { getThemeSocialState } from '../../components/social/data'
 
 type Props = {
   params: Promise<{
@@ -200,11 +208,14 @@ export default async function ThemeDetailPage({ params }: Props) {
   const isOwner = Boolean(user && user.id === theme.user_id)
   const heroUrl = safeImageUrl(theme.image_url)
 
-  const hydratedThemePaintRows = await getHydratedThemePaints(
-    supabase,
-    theme.id,
-    (theme.theme_paints || []) as unknown as ThemePaint[]
-  )
+  const [hydratedThemePaintRows, socialState] = await Promise.all([
+    getHydratedThemePaints(
+      supabase,
+      theme.id,
+      (theme.theme_paints || []) as unknown as ThemePaint[]
+    ),
+    getThemeSocialState(supabase, theme.id, user?.id),
+  ])
   perf.mark('secondary Supabase queries')
 
   const themePaints = hydratedThemePaintRows
@@ -278,6 +289,19 @@ export default async function ThemeDetailPage({ params }: Props) {
           isPublic={theme.is_public}
         />
 
+        <ContentActionRow
+          contentId={theme.id}
+          contentType="theme"
+          likeCount={socialState.likeCount}
+          saveCount={socialState.saveCount}
+          viewerHasLiked={socialState.viewerHasLiked}
+          viewerHasSaved={socialState.viewerHasSaved}
+          viewerHasReported={socialState.viewerHasReported}
+          toggleLikeAction={toggleThemeLike}
+          toggleSaveAction={toggleThemeSave}
+          reportAction={reportTheme}
+        />
+
         <section className="px-4 pt-6">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/45">
             Palette
@@ -295,12 +319,11 @@ export default async function ThemeDetailPage({ params }: Props) {
             <form action={calculateThemePaletteAction} className="mt-4">
               <input type="hidden" name="themeId" value={theme.id} />
 
-              <button
-                type="submit"
+              <SubmitButton
+                idleText="Calculate Palette"
+                pendingText="Calculating..."
                 className="w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4 text-sm font-semibold text-white transition hover:bg-white/[0.1]"
-              >
-                Calculate Palette
-              </button>
+              />
             </form>
           )}
         </section>

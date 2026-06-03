@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import SubmitButton from '../../../components/SubmitButton'
 import { Recipe, RecipeImage } from './types'
 
 export default function RecipeGallerySection({
@@ -74,12 +75,11 @@ export default function RecipeGallerySection({
             </div>
 
             <div className="flex gap-2">
-              <button
-                type="submit"
+              <SubmitButton
+                idleText="Upload Image"
+                pendingText="Uploading..."
                 className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
-              >
-                Upload Image
-              </button>
+              />
 
               <button
                 type="button"
@@ -153,12 +153,11 @@ export default function RecipeGallerySection({
                       <form action={deleteRecipeImageAction}>
                         <input type="hidden" name="recipeId" value={recipe.id} />
                         <input type="hidden" name="imageId" value={image.id} />
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          idleText="Delete"
+                          pendingText="Deleting..."
                           className="rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm font-medium text-black"
-                        >
-                          Delete
-                        </button>
+                        />
                       </form>
 
                       <button

@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { useTransition } from 'react'
 import { Recipe, RecipeImage } from './types'
 import BackButton from '../../../components/back-button'
 import RecipeVisibilityPill from './recipe-visibility-pill'
@@ -20,6 +22,17 @@ export default function RecipeHero({
   setIsEditingHeader: (value: boolean) => void
   updateRecipeHeaderAction: (formData: FormData) => Promise<void>
 }) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+
+  function handleUpdateHeader(formData: FormData) {
+    startTransition(async () => {
+      await updateRecipeHeaderAction(formData)
+      setIsEditingHeader(false)
+      router.refresh()
+    })
+  }
+
   return (
     <section className="mt-4 border-y border-neutral-800 bg-neutral-950">
       <div className="relative">
@@ -69,16 +82,10 @@ export default function RecipeHero({
         </div>
       </div>
 
-      <div className="px-5 py-4">
-        <p className="text-sm leading-6 text-neutral-300">
-          {recipe.description || 'No description yet.'}
-        </p>
-      </div>
-
       {isOwner && isEditingHeader ? (
         <div className="px-5 pb-5">
           <form
-            action={updateRecipeHeaderAction}
+            action={handleUpdateHeader}
             className="rounded-2xl border border-neutral-700 bg-black/85 p-4"
           >
             <input type="hidden" name="recipeId" value={recipe.id} />
@@ -120,9 +127,13 @@ export default function RecipeHero({
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
+                  disabled={isPending}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
                 >
-                  Save
+                  {isPending ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : null}
+                  <span>{isPending ? 'Saving...' : 'Save'}</span>
                 </button>
 
                 <button

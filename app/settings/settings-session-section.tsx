@@ -1,4 +1,5 @@
 import { logout } from './settings-actions'
+import SubmitButton from '../components/SubmitButton'
 
 export default async function SettingsSessionSection() {
   return (
@@ -13,12 +14,11 @@ export default async function SettingsSessionSection() {
       </div>
 
       <form action={logout} className="mt-4">
-        <button
-          type="submit"
+        <SubmitButton
+          idleText="Logout"
+          pendingText="Logging out..."
           className="w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-400"
-        >
-          Logout
-        </button>
+        />
       </form>
     </section>
   )

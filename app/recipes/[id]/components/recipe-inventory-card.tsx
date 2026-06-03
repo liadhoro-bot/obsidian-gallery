@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useOptimistic } from 'react'
+import SubmitButton from '../../../components/SubmitButton'
 import PaintSwatch from './paint-swatch'
 import { Recipe, StepPaintLink } from './types'
 
@@ -237,12 +238,11 @@ export default function RecipeInventoryCard({
           </div>
 
           <div className="flex gap-2">
-            <button
-              type="submit"
+            <SubmitButton
+              idleText="Save"
+              pendingText="Saving..."
               className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
-            >
-              Save
-            </button>
+            />
 
             <button
               type="button"

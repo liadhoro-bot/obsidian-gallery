@@ -222,9 +222,12 @@ export default function VaultGridClient({
           type="button"
           onClick={loadMore}
           disabled={loading}
-          className="rounded-full bg-cyan-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 transition active:scale-95 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 transition active:scale-95 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
         >
-          {loading ? 'Loading...' : 'Load more'}
+          {loading ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : null}
+          <span>{loading ? 'Loading...' : 'Load more'}</span>
         </button>
       </div>
     </section>

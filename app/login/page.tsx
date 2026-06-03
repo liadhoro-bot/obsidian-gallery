@@ -73,9 +73,12 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
           >
-            {loading ? 'Sending...' : 'Send Magic Link'}
+            {loading ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            ) : null}
+            <span>{loading ? 'Sending...' : 'Send Magic Link'}</span>
           </button>
         </form>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import SubmitButton from '../../../components/SubmitButton'
 
 export default function RecipeVisibilityPill({
   recipeId,
@@ -42,12 +43,11 @@ export default function RecipeVisibilityPill({
           </p>
 
           <div className="mt-4 flex gap-2">
-            <button
-              type="submit"
+            <SubmitButton
+              idleText="Make public"
+              pendingText="Publishing..."
               className="rounded-full bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950"
-            >
-              Make public
-            </button>
+            />
 
             <button
               type="button"

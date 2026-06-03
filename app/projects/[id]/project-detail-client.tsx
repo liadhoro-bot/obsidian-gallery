@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import BackButton from '../../components/back-button'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
@@ -61,9 +62,19 @@ export default function ProjectDetailClient({
   deleteProjectImageAction,
   deleteProjectAction,
 }: Props) {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<ProjectDetailTab>('details')
   const [isEditingHeader, setIsEditingHeader] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const projectName = project?.name || 'Untitled Project'
+
+  function handleUpdateHeader(formData: FormData) {
+    startTransition(async () => {
+      await updateProjectHeaderAction(formData)
+      setIsEditingHeader(false)
+      router.refresh()
+    })
+  }
 
   return (
     <div className="w-full">
@@ -107,7 +118,7 @@ export default function ProjectDetailClient({
 
       {isEditingHeader ? (
         <form
-          action={updateProjectHeaderAction}
+          action={handleUpdateHeader}
           className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-4"
         >
           <input type="hidden" name="projectId" value={projectId} />
@@ -140,9 +151,13 @@ export default function ProjectDetailClient({
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
+                disabled={isPending}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
               >
-                Save
+                {isPending ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : null}
+                <span>{isPending ? 'Saving...' : 'Save'}</span>
               </button>
 
               <button

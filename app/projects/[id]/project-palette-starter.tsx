@@ -156,7 +156,7 @@ export default function ProjectPaletteStarter({
                   type="button"
                   disabled={isPending}
                   onClick={() => choosePaint(paint)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-left hover:bg-white/[0.06] disabled:opacity-50"
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-left hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:bg-neutral-700/70 disabled:text-white/60 disabled:opacity-70"
                 >
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
                     {paint.swatch_image_url ? (
@@ -186,6 +186,10 @@ export default function ProjectPaletteStarter({
                         .join(' · ')}
                     </p>
                   </div>
+
+                  {isPending ? (
+                    <span className="ml-auto h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent text-white/70" />
+                  ) : null}
                 </button>
               ))}
             </div>

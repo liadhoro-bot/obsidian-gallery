@@ -1,6 +1,7 @@
 'use client'
 
 import { Recipe } from './types'
+import SubmitButton from '../../../components/SubmitButton'
 
 export default function RecipeTipsCard({
   recipe,
@@ -39,12 +40,11 @@ export default function RecipeTipsCard({
           />
 
           <div className="flex gap-2">
-            <button
-              type="submit"
+            <SubmitButton
+              idleText="Save"
+              pendingText="Saving..."
               className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
-            >
-              Save
-            </button>
+            />
 
             <button
               type="button"

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import SubmitButton from './components/SubmitButton'
 
 type Props = {
   addProjectAction: (formData: FormData) => Promise<void>
@@ -56,12 +57,11 @@ export default function ProjectsPageClient({ addProjectAction }: Props) {
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="submit"
+              <SubmitButton
+                idleText="Create Project"
+                pendingText="Creating..."
                 className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-black transition hover:bg-cyan-400"
-              >
-                Create Project
-              </button>
+              />
 
               <button
                 type="button"

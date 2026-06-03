@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import SubmitButton from './SubmitButton'
 
 type Props = {
   itemId: string
@@ -82,8 +83,9 @@ export default function DeleteConfirmationCard({
         <form action={deleteAction}>
           <input type="hidden" name={itemIdFieldName} value={itemId} />
 
-          <button
-            type="submit"
+          <SubmitButton
+            idleText="Delete Anyway"
+            pendingText="Deleting..."
             onClick={(event) => {
               if (!isDeleteArmed) {
                 event.preventDefault()
@@ -96,9 +98,7 @@ export default function DeleteConfirmationCard({
                 ? 'border-red-400 bg-red-600 text-white shadow-[0_0_24px_rgba(239,68,68,0.35)] hover:bg-red-500'
                 : 'border-red-500/40 bg-red-500/20 text-red-300 hover:bg-red-500/30',
             ].join(' ')}
-          >
-            Delete Anyway
-          </button>
+          />
         </form>
       </div>
     </section>

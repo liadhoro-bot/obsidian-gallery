@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import SubmitButton from '../../components/SubmitButton'
 import { createClient } from '../../../utils/supabase/server'
 import { setFeaturedUnit } from './actions'
 import type { UnitImage, UnitStage } from './types'
@@ -124,16 +125,15 @@ export default async function ProjectUnitsSection({ projectId, userId }: Props) 
                   <input type="hidden" name="unitId" value={unit.id} />
                   <input type="hidden" name="projectId" value={projectId} />
 
-                  <button
-                    type="submit"
+                  <SubmitButton
+                    idleText={unit.is_featured ? 'Featured' : 'Set Featured'}
+                    pendingText="Updating..."
                     className={`rounded-lg px-3 py-2 text-xs font-medium ${
                       unit.is_featured
                         ? 'bg-yellow-400 text-black'
                         : 'bg-neutral-800 text-white'
                     }`}
-                  >
-                    {unit.is_featured ? 'Featured' : 'Set Featured'}
-                  </button>
+                  />
                 </form>
               </div>
 

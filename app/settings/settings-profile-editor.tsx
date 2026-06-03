@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import SubmitButton from '../components/SubmitButton'
 import { updateUsername } from './settings-actions'
 
 export default function SettingsProfileEditor({
@@ -40,12 +41,11 @@ export default function SettingsProfileEditor({
           Cancel
         </button>
 
-        <button
-          type="submit"
+        <SubmitButton
+          idleText="Save"
+          pendingText="Saving..."
           className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950"
-        >
-          Save
-        </button>
+        />
       </div>
     </form>
   )

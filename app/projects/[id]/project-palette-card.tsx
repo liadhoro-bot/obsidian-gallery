@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import SubmitButton from '../../components/SubmitButton'
 import ProjectPaletteStarter from './project-palette-starter'
 import { calculateProjectPaletteAction } from './actions'
 
@@ -65,12 +66,11 @@ export default function ProjectPaletteCard({ theme, projectId }: Props) {
   <form action={calculateProjectPaletteAction}>
     <input type="hidden" name="projectId" value={projectId} />
 
-    <button
-      type="submit"
+    <SubmitButton
+      idleText="Magic Palette"
+      pendingText="Calculating..."
       className="inline-flex rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-300 transition active:scale-95"
-    >
-      Magic Palette
-    </button>
+    />
   </form>
 </div>
       </section>

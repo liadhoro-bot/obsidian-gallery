@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import PrefetchLink from '../components/prefetch-link'
+import SubmitButton from '../components/SubmitButton'
 import { saveRecipe, unsaveRecipe } from './actions'
 
 type Recipe = {
@@ -57,20 +58,20 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
   <form action={isSaved ? unsaveRecipe : saveRecipe} className="mt-auto">
     <input type="hidden" name="recipeId" value={recipe.id} />
 
-    <button
-      type="submit"
+    <SubmitButton
+      idleText={isSaved ? 'SAVED' : 'SAVE'}
+      pendingText={isSaved ? 'REMOVING...' : 'SAVING...'}
       className="group flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-bold tracking-wider text-cyan-300 transition hover:bg-cyan-400/20"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        className="h-3.5 w-3.5 fill-current opacity-80 transition group-hover:opacity-100"
-        aria-hidden="true"
-      >
-        <path d="M6 3.5C6 2.67 6.67 2 7.5 2h9c.83 0 1.5.67 1.5 1.5V21l-6-3.5L6 21V3.5Z" />
-      </svg>
-
-      {isSaved ? 'SAVED' : 'SAVE'}
-    </button>
+      leadingIcon={
+        <svg
+          viewBox="0 0 24 24"
+          className="h-3.5 w-3.5 fill-current opacity-80 transition group-hover:opacity-100"
+          aria-hidden="true"
+        >
+          <path d="M6 3.5C6 2.67 6.67 2 7.5 2h9c.83 0 1.5.67 1.5 1.5V21l-6-3.5L6 21V3.5Z" />
+        </svg>
+      }
+    />
   </form>
 ) : (
   <div className="mt-auto inline-flex rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">

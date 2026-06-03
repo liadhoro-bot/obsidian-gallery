@@ -12,6 +12,13 @@ import {
   getCachedPublicRecipeAssets,
 } from '../../../lib/public-cache'
 import { createPerfTimer } from '../../../utils/perf/server'
+import ContentActionRow from '../../components/social/content-action-row'
+import {
+  reportRecipe,
+  toggleRecipeLike,
+  toggleRecipeSave,
+} from '../../components/social/actions'
+import { getRecipeSocialState } from '../../components/social/data'
 
 function parsePaintSelection(rawValue: string) {
   if (!rawValue) {
@@ -997,19 +1004,17 @@ export default async function RecipeDetailPage({
   } = await supabase.auth.getUser()
   perf.mark('auth/session fetch')
 
-  if (!user) {
-    redirect('/login')
-  }
-
   const cachedPublicRecipe = await getCachedPublicRecipe(id)
   const { data: privateRecipe } = cachedPublicRecipe
     ? { data: null }
-    : await supabase
-        .from('recipes')
-        .select('id, name, description, inventory_required, expert_tips, youtube_url, is_public, user_id')
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .maybeSingle()
+    : user
+      ? await supabase
+          .from('recipes')
+          .select('id, name, description, inventory_required, expert_tips, youtube_url, is_public, user_id')
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .maybeSingle()
+      : { data: null }
 
   const recipe = cachedPublicRecipe || privateRecipe
   perf.mark('main Supabase query')
@@ -1018,36 +1023,42 @@ if (!recipe) {
   notFound()
 }
 
-const isOwner = recipe.user_id === user.id
+const isOwner = Boolean(user && recipe.user_id === user.id)
 
   const [
     recipeAssets,
     paintsCatalog,
     { data: ownershipRows, error: ownershipError },
     { data: customPaintRows, error: customPaintRowsError },
+    socialState,
   ] = await Promise.all([
     cachedPublicRecipe
       ? getCachedPublicRecipeAssets(id)
       : getPrivateRecipeAssets(supabase, id),
     getCachedCatalogPaintOptions(),
-    supabase
-      .from('user_paint_ownership')
-      .select('paint_catalog_id, is_owned, is_wishlist')
-      .eq('user_id', user.id),
-    supabase
-      .from('paints')
-      .select(`
-        id,
-        name,
-        manufacturer,
-        series,
-        paint_type,
-        color_hex
-      `)
-      .eq('user_id', user.id)
-      .order('manufacturer', { ascending: true })
-      .order('series', { ascending: true })
-      .order('name', { ascending: true }),
+    user
+      ? supabase
+          .from('user_paint_ownership')
+          .select('paint_catalog_id, is_owned, is_wishlist')
+          .eq('user_id', user.id)
+      : Promise.resolve({ data: [], error: null }),
+    user
+      ? supabase
+          .from('paints')
+          .select(`
+            id,
+            name,
+            manufacturer,
+            series,
+            paint_type,
+            color_hex
+          `)
+          .eq('user_id', user.id)
+          .order('manufacturer', { ascending: true })
+          .order('series', { ascending: true })
+          .order('name', { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    getRecipeSocialState(supabase, id, user?.id),
   ])
   perf.mark('secondary Supabase queries')
 
@@ -1196,6 +1207,21 @@ const wishlistPaintIds = new Set(
         createCustomPaintAction={createCustomPaint}
         updateRecipePaintOwnershipAction={updateRecipePaintOwnership}
         deleteRecipeAction={deleteRecipe}
+        actionRow={
+          <ContentActionRow
+            contentId={recipe.id}
+            contentType="recipe"
+            className=""
+            likeCount={socialState.likeCount}
+            saveCount={socialState.saveCount}
+            viewerHasLiked={socialState.viewerHasLiked}
+            viewerHasSaved={socialState.viewerHasSaved}
+            viewerHasReported={socialState.viewerHasReported}
+            toggleLikeAction={toggleRecipeLike}
+            toggleSaveAction={toggleRecipeSave}
+            reportAction={reportRecipe}
+          />
+        }
       />
     </div>
   </main>

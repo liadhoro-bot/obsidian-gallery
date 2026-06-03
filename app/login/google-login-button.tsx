@@ -69,7 +69,7 @@ export default function GoogleLoginButton() {
           backdrop-blur-xl
           transition
           hover:border-cyan-300/45 hover:bg-cyan-300/[0.10]
-          disabled:cursor-not-allowed disabled:opacity-60
+          disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70
           active:scale-[0.985]
         "
       >
@@ -80,7 +80,14 @@ export default function GoogleLoginButton() {
         </span>
 
         <span className="relative">
-          {isLoading ? 'Opening Google...' : 'Continue with Google'}
+          {isLoading ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Opening Google...
+            </span>
+          ) : (
+            'Continue with Google'
+          )}
         </span>
       </button>
 
