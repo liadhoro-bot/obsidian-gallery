@@ -40,11 +40,13 @@ export async function sendReportNotification({
     const resend = new Resend(resendKey)
 
     await resend.emails.send({
-      from: 'Obsidian Gallery <reports@obsidian-gallery.app>',
+      from: 'Obsidian Gallery <onboarding@resend.dev>',
       to: adminEmail,
       subject,
       text: body,
     })
+
+    console.info(`Report notification email sent to ${adminEmail}`)
   } catch (error) {
     console.error('Report notification email failed:', error)
   }
