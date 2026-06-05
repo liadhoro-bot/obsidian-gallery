@@ -19,6 +19,11 @@ import {
   toggleRecipeSave,
 } from '../../components/social/actions'
 import { getRecipeSocialState } from '../../components/social/data'
+import {
+  getSafeImageExtension,
+  type GalleryUploadResult,
+  validateGalleryImageFile,
+} from '../../../utils/images/gallery-upload'
 
 function parsePaintSelection(rawValue: string) {
   if (!rawValue) {
@@ -651,32 +656,11 @@ async function uploadRecipeImage(formData: FormData) {
 
   const recipeId = formData.get('recipeId')?.toString()
   const altText = formData.get('altText')?.toString().trim() || null
-  const file = formData.get('image') as File | null
+  const files = formData
+    .getAll('image')
+    .filter((value): value is File => value instanceof File && value.size > 0)
 
-  if (!recipeId || !file || file.size === 0) return
-
-  const fileExt = file.name.split('.').pop() || 'jpg'
-  const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
-  const filePath = `recipes/${recipeId}/${fileName}`
-
-  const arrayBuffer = await file.arrayBuffer()
-  const fileBuffer = Buffer.from(arrayBuffer)
-
-  const { error: uploadError } = await supabase.storage
-    .from('obsidian-images')
-    .upload(filePath, fileBuffer, {
-      contentType: file.type,
-      upsert: false,
-    })
-
-  if (uploadError) {
-    console.error('Error uploading recipe image:', uploadError)
-    return
-  }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from('obsidian-images').getPublicUrl(filePath)
+  if (!recipeId || files.length === 0) return
 
   const { data: existingFeatured } = await supabase
     .from('image_assets')
@@ -686,27 +670,87 @@ async function uploadRecipeImage(formData: FormData) {
     .eq('is_featured', true)
     .limit(1)
 
-  const shouldBeFeatured = !existingFeatured || existingFeatured.length === 0
+  const result: GalleryUploadResult = {
+    uploadedCount: 0,
+    failed: [],
+  }
+  const hasFeaturedImage = Boolean(
+    existingFeatured && existingFeatured.length > 0
+  )
 
-  const { error: insertError } = await supabase.from('image_assets').insert([
-    {
-      user_id: user.id,
-      entity_type: 'recipe',
-      entity_id: recipeId,
-      image_url: publicUrl,
-      is_featured: shouldBeFeatured,
-      storage_bucket: 'obsidian-images',
-      storage_path: filePath,
-      alt_text: altText,
-    },
-  ])
+  for (const file of files) {
+    const validationError = validateGalleryImageFile(file)
 
-  if (insertError) {
-    console.error('Error saving recipe image asset:', insertError)
-    return
+    if (validationError) {
+      result.failed.push({ fileName: file.name, reason: validationError })
+      continue
+    }
+
+    const fileExt = getSafeImageExtension(file.name)
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+    const filePath = `recipes/${recipeId}/${fileName}`
+    const arrayBuffer = await file.arrayBuffer()
+    const fileBuffer = Buffer.from(arrayBuffer)
+
+    const { error: uploadError } = await supabase.storage
+      .from('obsidian-images')
+      .upload(filePath, fileBuffer, {
+        contentType: file.type,
+        upsert: false,
+      })
+
+    if (uploadError) {
+      console.error('Error uploading recipe image:', uploadError)
+      result.failed.push({ fileName: file.name, reason: uploadError.message })
+      continue
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('obsidian-images').getPublicUrl(filePath)
+
+    const shouldBeFeatured = !hasFeaturedImage && result.uploadedCount === 0
+
+    const { error: insertError } = await supabase.from('image_assets').insert([
+      {
+        user_id: user.id,
+        entity_type: 'recipe',
+        entity_id: recipeId,
+        image_url: publicUrl,
+        is_featured: shouldBeFeatured,
+        storage_bucket: 'obsidian-images',
+        storage_path: filePath,
+        alt_text: altText,
+      },
+    ])
+
+    if (insertError) {
+      console.error('Error saving recipe image asset:', insertError)
+      await supabase.storage.from('obsidian-images').remove([filePath])
+      result.failed.push({ fileName: file.name, reason: insertError.message })
+      continue
+    }
+
+    result.uploadedCount += 1
+
+    await captureServerEvent({
+      distinctId: user.id,
+      event: 'image_uploaded',
+      properties: {
+        surface: 'recipe_gallery',
+        recipe_id: recipeId,
+        entity_id: recipeId,
+        image_count: 1,
+        is_featured: shouldBeFeatured,
+      },
+    })
   }
 
-  revalidateRecipeCaches(recipeId)
+  if (result.uploadedCount > 0) {
+    revalidateRecipeCaches(recipeId)
+  }
+
+  return result
 }
 
 async function setFeaturedRecipeImage(formData: FormData) {

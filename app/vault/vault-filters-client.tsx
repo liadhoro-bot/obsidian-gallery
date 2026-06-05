@@ -144,9 +144,15 @@ export default function VaultFiltersClient({
           }}
           className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none"
         >
-          <option value="">Brand</option>
+          <option value="" className="bg-slate-950 text-white">
+            Brand
+          </option>
           {brands.map((brandOption) => (
-            <option key={brandOption} value={brandOption}>
+            <option
+              key={brandOption}
+              value={brandOption}
+              className="bg-slate-950 text-white"
+            >
               {brandOption}
             </option>
           ))}
@@ -160,9 +166,15 @@ export default function VaultFiltersClient({
           }}
           className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none"
         >
-          <option value="">Line</option>
+          <option value="" className="bg-slate-950 text-white">
+            Line
+          </option>
           {lines.map((lineOption) => (
-            <option key={lineOption} value={lineOption}>
+            <option
+              key={lineOption}
+              value={lineOption}
+              className="bg-slate-950 text-white"
+            >
               {lineOption}
             </option>
           ))}
@@ -178,13 +190,26 @@ export default function VaultFiltersClient({
           className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none disabled:opacity-70"
         >
           {tab === 'collection' ? (
-            <option value="owned">Owned</option>
+            <option value="owned" className="bg-slate-950 text-white">
+              Owned
+            </option>
           ) : (
             <>
-              <option value="all">All</option>
-              <option value="owned">Owned</option>
-              <option value="unowned">Unowned</option>
-              <option value="wishlist">Wishlist</option>
+              <option value="all" className="bg-slate-950 text-white">
+                All
+              </option>
+              <option value="owned" className="bg-slate-950 text-white">
+                Owned
+              </option>
+              <option value="unowned" className="bg-slate-950 text-white">
+                Unowned
+              </option>
+              <option value="wishlist" className="bg-slate-950 text-white">
+                Wishlist
+              </option>
+              <option value="custom" className="bg-slate-950 text-white">
+                Custom
+              </option>
             </>
           )}
         </select>

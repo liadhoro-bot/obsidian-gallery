@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import RecipesPageClient from './recipes-page-client'
-import { getCachedPublicRecipes } from '../../lib/public-cache'
 import { createPerfTimer } from '../../utils/perf/server'
 
 type RecipeRow = {
@@ -25,13 +24,41 @@ function firstValue<T>(value: T | T[] | null) {
   return Array.isArray(value) ? value[0] ?? null : value
 }
 
+async function fetchPublicRecipes(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const pageSize = 1000
+  let from = 0
+  let allRecipes: RecipeRow[] = []
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('id, name, description, image_url, is_public, created_at, user_id')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+
+    if (error) throw error
+
+    const recipes = (data || []) as RecipeRow[]
+    allRecipes = [...allRecipes, ...recipes]
+
+    if (recipes.length < pageSize) break
+
+    from += pageSize
+  }
+
+  return allRecipes
+}
+
 async function RecipesContent({ userId }: { userId: string }) {
   const perf = createPerfTimer('/recipes:content')
   const supabase = await createClient()
 
   const [publicRecipes, { data: myRecipes }, { data: savedRows }] =
     await Promise.all([
-      getCachedPublicRecipes(),
+      fetchPublicRecipes(supabase),
 
       supabase
         .from('recipes')
@@ -64,10 +91,27 @@ async function RecipesContent({ userId }: { userId: string }) {
   const savedRecipes = typedSavedRows
     .map((row) => firstValue(row.recipes))
     .filter((recipe): recipe is RecipeRow => Boolean(recipe))
+  const publicRecipeMap = new Map<string, RecipeRow>()
+
+  for (const recipe of publicRecipes) {
+    publicRecipeMap.set(recipe.id, recipe)
+  }
+
+  for (const recipe of myRecipes ?? []) {
+    if (recipe.is_public) {
+      publicRecipeMap.set(recipe.id, recipe)
+    }
+  }
+
+  const allPublicRecipes = Array.from(publicRecipeMap.values()).sort(
+    (a, b) =>
+      new Date(b.created_at || 0).getTime() -
+      new Date(a.created_at || 0).getTime()
+  )
 
   // Collect all recipe IDs for image lookup
   const recipeIds = [
-    ...(publicRecipes ?? []).map((r) => r.id),
+    ...allPublicRecipes.map((r) => r.id),
     ...(myRecipes ?? []).map((r) => r.id),
     ...savedRecipes.map((r) => r.id),
   ]
@@ -95,7 +139,7 @@ async function RecipesContent({ userId }: { userId: string }) {
 
   return (
     <RecipesPageClient
-      publicRecipes={withRecipeImages(publicRecipes ?? [])}
+      publicRecipes={withRecipeImages(allPublicRecipes)}
       myRecipes={withRecipeImages(myRecipes ?? [])}
       savedRecipes={withRecipeImages(savedRecipes)}
       savedRecipeIds={typedSavedRows.map((row) => row.recipe_id)}
@@ -160,9 +204,14 @@ export default async function RecipesPage() {
             The Recipe Library
           </h1>
 
+          <p className="text-sm font-medium text-neutral-200">
+            Record, share, and discover painting recipes.
+          </p>
           <p className="text-base leading-7 text-neutral-400">
-            Browse public painting recipes, save your favorites, and build custom
-            step-by-step schemes for your miniatures.
+            Browse community recipes for inspiration, or turn your techniques
+            into step-by-step guides with paint combinations and progress photos.
+            Learn from the community, preserve your knowledge, and make it easy
+            to recreate successful paint schemes across projects.
           </p>
         </section>
 

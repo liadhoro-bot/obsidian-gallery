@@ -15,6 +15,7 @@ import RecipeDetailsTab from './recipe-details-tab'
 import RecipeStepsTab from './recipe-steps-tab'
 import RecipeAddStepTab from './recipe-add-step-tab'
 import DeleteConfirmationCard from '../../components/delete-confirmation-card'
+import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
   recipe: Recipe
@@ -32,7 +33,7 @@ type Props = {
   updateRecipeStepAction: (formData: FormData) => Promise<void>
   deleteRecipeStepAction: (formData: FormData) => Promise<void>
   moveRecipeStepAction: (formData: FormData) => Promise<void>
-  uploadRecipeImageAction: (formData: FormData) => Promise<void>
+  uploadRecipeImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedRecipeImageAction: (formData: FormData) => Promise<void>
   deleteRecipeImageAction: (formData: FormData) => Promise<void>
   updateRecipePaintOwnershipAction: (formData: FormData) => Promise<void>

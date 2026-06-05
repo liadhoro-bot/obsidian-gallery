@@ -10,6 +10,11 @@ import {
 } from '@/lib/gamification/xp'
 import { addXP } from '@/lib/gamification/add-xp'
 import { captureServerEvent } from '../../../utils/analytics/server'
+import {
+  getSafeImageExtension,
+  type GalleryUploadResult,
+  validateGalleryImageFile,
+} from '../../../utils/images/gallery-upload'
 export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   const supabase = await createClient()
 
@@ -251,6 +256,132 @@ export async function setFeaturedUnitImage(unitId: string, imageId: string) {
   revalidatePath(`/units/${unitId}`)
   revalidatePath('/dashboard')
   revalidatePath('/projects')
+}
+
+export async function uploadUnitGalleryImages(
+  formData: FormData
+): Promise<GalleryUploadResult | void> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+  const files = formData
+    .getAll('image')
+    .filter((value): value is File => value instanceof File && value.size > 0)
+
+  if (!unitId || files.length === 0) return
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id, project_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
+
+  const { data: existingFeatured } = await supabase
+    .from('image_assets')
+    .select('id')
+    .eq('entity_type', 'unit')
+    .eq('entity_id', unitId)
+    .eq('is_featured', true)
+    .limit(1)
+
+  const result: GalleryUploadResult = {
+    uploadedCount: 0,
+    failed: [],
+  }
+  const hasFeaturedImage = Boolean(
+    existingFeatured && existingFeatured.length > 0
+  )
+
+  for (const file of files) {
+    const validationError = validateGalleryImageFile(file)
+
+    if (validationError) {
+      result.failed.push({ fileName: file.name, reason: validationError })
+      continue
+    }
+
+    const fileExt = getSafeImageExtension(file.name)
+    const filePath = `units/${unitId}/${crypto.randomUUID()}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('obsidian-images')
+      .upload(filePath, file, {
+        contentType: file.type,
+        upsert: false,
+      })
+
+    if (uploadError) {
+      result.failed.push({ fileName: file.name, reason: uploadError.message })
+      continue
+    }
+
+    const { data } = supabase.storage
+      .from('obsidian-images')
+      .getPublicUrl(filePath)
+
+    const shouldBeFeatured = !hasFeaturedImage && result.uploadedCount === 0
+
+    const { error: insertError } = await supabase.from('image_assets').insert({
+      entity_type: 'unit',
+      entity_id: unitId,
+      image_url: data.publicUrl,
+      user_id: user.id,
+      storage_bucket: 'obsidian-images',
+      storage_path: filePath,
+      is_featured: shouldBeFeatured,
+      sort_order: 0,
+      alt_text: null,
+    })
+
+    if (insertError) {
+      await supabase.storage.from('obsidian-images').remove([filePath])
+      result.failed.push({ fileName: file.name, reason: insertError.message })
+      continue
+    }
+
+    result.uploadedCount += 1
+
+    await captureServerEvent({
+      distinctId: user.id,
+      event: 'image_uploaded',
+      properties: {
+        surface: 'unit_gallery',
+        unit_id: unitId,
+        entity_id: unitId,
+        project_id: unit.project_id,
+        image_count: 1,
+        is_featured: shouldBeFeatured,
+      },
+    })
+  }
+
+  if (result.uploadedCount > 0) {
+    revalidatePath(`/units/${unitId}`)
+    revalidatePath('/dashboard')
+    revalidatePath('/projects')
+    if (unit.project_id) {
+      revalidatePath(`/projects/${unit.project_id}`)
+    }
+  }
+
+  return result
 }
 
 export async function updateUnitDetails(formData: FormData) {

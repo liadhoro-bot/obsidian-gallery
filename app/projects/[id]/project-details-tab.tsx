@@ -7,6 +7,7 @@ import type {
   ProjectTheme,
   SerializableError,
 } from './types'
+import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
   project: ProjectRow | null
@@ -14,7 +15,7 @@ type Props = {
   projectId: string
   projectImages: ProjectImage[]
   projectImagesError: SerializableError | null
-  uploadProjectImageAction: (formData: FormData) => Promise<void>
+  uploadProjectImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectAction: (formData: FormData) => Promise<void>

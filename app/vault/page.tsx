@@ -76,9 +76,13 @@ export default async function VaultPage({ searchParams }: PageProps) {
             The Paint Vault
           </h1>
 
-          <p className="mt-4 text-base leading-7 text-neutral-400">
-            Your curated collection of premium pigments and mediums. Organised
-            for high-speed reference and palette synchronization.
+          <p className="mt-4 text-sm font-medium text-neutral-200">
+            Your personal paint inventory
+          </p>
+          <p className="mt-2 text-base leading-7 text-neutral-400">
+            Keep track of every paint you own or want, and the custom mixes
+            you've created. Manage your collection, avoid buying duplicates,
+            export with ease, and seamlessly connect to your recipes and themes.
           </p>
         </section>
 

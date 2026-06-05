@@ -1,16 +1,18 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import SubmitButton from '../../components/SubmitButton'
 import type { ProjectImage, ProjectRow, SerializableError } from './types'
+import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
   project: ProjectRow | null
   projectId: string
   projectImages: ProjectImage[]
   projectImagesError: SerializableError | null
-  uploadProjectImageAction: (formData: FormData) => Promise<void>
+  uploadProjectImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
 }
@@ -27,6 +29,65 @@ export default function ProjectGalleryCard({
   const [isAddingImage, setIsAddingImage] = useState(false)
   const [selectedImage, setSelectedImage] = useState<ProjectImage | null>(null)
   const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [filePreviews, setFilePreviews] = useState<
+    { file: File; previewUrl: string }[]
+  >([])
+
+  useEffect(() => {
+    const previews = selectedFiles.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }))
+
+    setFilePreviews(previews)
+
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
+    }
+  }, [selectedFiles])
+
+  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    setUploadError(null)
+    setSelectedFiles(Array.from(event.target.files ?? []))
+  }
+
+  function removePendingFile(indexToRemove: number) {
+    setSelectedFiles((current) =>
+      current.filter((_, index) => index !== indexToRemove)
+    )
+  }
+
+  async function handleUpload(formData: FormData) {
+    if (selectedFiles.length === 0) {
+      setUploadError('Choose at least one image to upload.')
+      return
+    }
+
+    const uploadFormData = new FormData()
+    uploadFormData.set('projectId', projectId)
+    uploadFormData.set('altText', formData.get('altText')?.toString() || '')
+    selectedFiles.forEach((file) => uploadFormData.append('image', file))
+
+    setUploadError(null)
+
+    const result = await uploadProjectImageAction(uploadFormData)
+
+    if (result?.failed.length) {
+      setUploadError(
+        `Could not upload ${result.failed
+          .map((failure) => `${failure.fileName}: ${failure.reason}`)
+          .join('; ')}`
+      )
+    } else {
+      setSelectedFiles([])
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   return (
     <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
@@ -54,7 +115,7 @@ export default function ProjectGalleryCard({
 
       {isAddingImage ? (
         <form
-          action={uploadProjectImageAction}
+          action={handleUpload}
           encType="multipart/form-data"
           className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-950 p-4"
         >
@@ -69,10 +130,47 @@ export default function ProjectGalleryCard({
                 type="file"
                 name="image"
                 accept="image/*"
+                multiple
                 required
+                ref={fileInputRef}
+                onChange={handleFileSelection}
                 className="w-full text-sm text-neutral-300 file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-black"
               />
             </div>
+
+            {filePreviews.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {filePreviews.map((preview, index) => (
+                  <div
+                    key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
+                    className="relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900"
+                  >
+                    <Image
+                      src={preview.previewUrl}
+                      alt={preview.file.name}
+                      width={120}
+                      height={96}
+                      unoptimized
+                      className="h-20 w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(index)}
+                      className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-0.5 text-xs font-bold text-white"
+                      aria-label={`Remove ${preview.file.name}`}
+                    >
+                      X
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {uploadError ? (
+              <p className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+                {uploadError}
+              </p>
+            ) : null}
 
             <div>
               <label className="mb-1 block text-sm text-neutral-300">
@@ -87,8 +185,17 @@ export default function ProjectGalleryCard({
             </div>
 
             <SubmitButton
-              idleText="Upload image"
-              pendingText="Uploading image..."
+              idleText={
+                selectedFiles.length > 1
+                  ? `Upload ${selectedFiles.length} images`
+                  : 'Upload image'
+              }
+              pendingText={
+                selectedFiles.length > 1
+                  ? 'Uploading images...'
+                  : 'Uploading image...'
+              }
+              disabled={selectedFiles.length === 0}
               className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-black"
             />
           </div>

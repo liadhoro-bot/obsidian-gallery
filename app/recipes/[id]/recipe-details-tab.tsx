@@ -5,6 +5,7 @@ import RecipeVideoCard from './recipe-video-card'
 import RecipeInventoryCard from './components/recipe-inventory-card'
 import RecipeGallerySection from './components/recipe-gallery-section'
 import { Recipe, RecipeImage, StepPaintLink } from './components/types'
+import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
   isOwner: boolean
@@ -15,7 +16,7 @@ type Props = {
   setIsEditingInventory: (value: boolean) => void
   updateRecipeInventoryAction: (formData: FormData) => Promise<void>
   updateRecipePaintOwnershipAction: (formData: FormData) => Promise<void>
-  uploadRecipeImageAction: (formData: FormData) => Promise<void>
+  uploadRecipeImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedRecipeImageAction: (formData: FormData) => Promise<void>
   deleteRecipeImageAction: (formData: FormData) => Promise<void>
 }

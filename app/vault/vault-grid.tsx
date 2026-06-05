@@ -1,5 +1,6 @@
   import { createClient } from '../../utils/supabase/server'
   import VaultGridClient from './vault-grid-client'
+  import VaultExportButton from './vault-export-button'
 
   type VaultGridProps = {
     q: string
@@ -61,27 +62,6 @@
     )
 
     const ownedIds = Array.from(ownedSet)
-  // ---------- COLLECTION COUNTS ----------
-  let ownedCatalogCount = 0
-  let customCount = 0
-
-  if (tab === 'collection') {
-    if (ownedIds.length > 0) {
-      const { count } = await supabase
-        .from('paint_catalog')
-        .select('id', { count: 'exact', head: true })
-        .in('id', ownedIds)
-
-      ownedCatalogCount = count || 0
-    }
-
-    const { count } = await supabase
-      .from('paints')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-
-    customCount = count || 0
-  }
     let catalogQuery = supabase
       .from('paint_catalog')
       .select(
@@ -165,6 +145,12 @@
       catalogQuery = catalogQuery.in('id', wishlistIds)
     }
   }
+
+  if (ownership === 'custom') {
+    catalogQuery = catalogQuery.in('id', [
+      '00000000-0000-0000-0000-000000000000',
+    ])
+  }
   }
 
     const { data: catalogRows, count: catalogCount } = await catalogQuery
@@ -175,14 +161,17 @@
 
     let customQuery = supabase
       .from('paints')
-      .select(`
+      .select(
+        `
         id,
         name,
         manufacturer,
         series,
         paint_type,
         color_hex
-      `)
+      `,
+        { count: 'exact' }
+      )
       .eq('user_id', user.id)
 
     if (q) {
@@ -197,7 +186,7 @@
       customQuery = customQuery.eq('series', line)
     }
 
-    const { data: customRows } = await customQuery
+    const { data: customRows, count: customCount } = await customQuery
       .order('manufacturer', { ascending: true })
       .order('series', { ascending: true })
       .order('name', { ascending: true })
@@ -258,7 +247,7 @@
       })) || []
   } else {
     // Find Color behavior (optional inclusion)
-    if (ownership !== 'unowned') {
+    if (ownership === 'all' || ownership === 'custom') {
       customPaints =
         customRows?.map((paint) => ({
           id: paint.id,
@@ -281,8 +270,11 @@
 
     const totalCount =
     tab === 'collection'
-      ? ownedCatalogCount + customCount
-      : catalogCount || 0
+      ? (catalogCount || 0) + (customCount || 0)
+      : (catalogCount || 0) +
+        (ownership === 'all' || ownership === 'custom'
+          ? customCount || 0
+          : 0)
 
     if (visiblePaints.length === 0) {
       return (
@@ -301,10 +293,17 @@
 
     return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-black uppercase tracking-[0.22em] text-white/75">
+      <div className="flex items-center justify-between gap-3">
+        <p className="min-w-0 text-sm font-black uppercase tracking-[0.22em] text-white/75">
           Showing: {totalCount} colors
         </p>
+        <VaultExportButton
+          tab={tab}
+          q={q}
+          brand={brand}
+          line={line}
+          ownership={ownership}
+        />
       </div>
 
       <VaultGridClient

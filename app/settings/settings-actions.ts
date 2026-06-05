@@ -63,6 +63,17 @@ export async function updateAvatar(formData: FormData) {
   revalidatePath('/dashboard')
 }
 export async function updateUsername(formData: FormData) {
+  return updateUsernameAction(null, formData)
+}
+
+export type UpdateUsernameState = {
+  error: string | null
+}
+
+export async function updateUsernameAction(
+  _prevState: UpdateUsernameState | null,
+  formData: FormData
+): Promise<UpdateUsernameState> {
   const supabase = await createClient()
 
   const {
@@ -70,7 +81,7 @@ export async function updateUsername(formData: FormData) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    throw new Error('Not authenticated')
+    return { error: 'Please sign in again before updating your profile.' }
   }
 
   const username = String(formData.get('username') || '')
@@ -78,7 +89,7 @@ export async function updateUsername(formData: FormData) {
     .replace(/^@/, '')
 
   if (!username) {
-    throw new Error('Username is required')
+    return { error: 'Username cannot be empty.' }
   }
 
   const { error } = await supabase
@@ -87,9 +98,11 @@ export async function updateUsername(formData: FormData) {
     .eq('id', user.id)
 
   if (error) {
-    throw error
+    return { error: error.message }
   }
 
   revalidatePath('/settings')
   revalidatePath('/dashboard')
+
+  return { error: null }
 }

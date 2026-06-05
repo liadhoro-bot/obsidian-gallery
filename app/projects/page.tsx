@@ -143,12 +143,15 @@ export default async function ProjectsPage() {
         </Suspense>
 
         <header>
-          <p className="text-sm uppercase tracking-[0.2em] text-cyan-400">
-            Obsidian Gallery
+          <h1 className="text-3xl font-bold">Projects</h1>
+          <p className="mt-2 text-sm font-medium text-neutral-200">
+            Plan and organize your painting campaigns
           </p>
-          <h1 className="mt-2 text-3xl font-bold">Projects</h1>
-          <p className="mt-2 text-sm text-neutral-400">
-            Track armies, units, and painting progress across your collection.
+          <p className="mt-2 text-sm leading-6 text-neutral-400">
+            Projects group related units into a single collection - whether
+            it's an army, warband, or display force. Use Projects to organize
+            your units, track deadlines, manage palettes, organize your units,
+            and collect inspiration, reference images, and showcase photos.
           </p>
         </header>
 

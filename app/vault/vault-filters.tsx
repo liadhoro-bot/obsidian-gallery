@@ -1,5 +1,4 @@
 import { createClient } from '../../utils/supabase/server'
-import { getCachedCatalogFilterRows } from '../../lib/public-cache'
 import VaultFiltersClient from './vault-filters-client'
 
 type VaultFiltersProps = {
@@ -20,9 +19,39 @@ type CustomFilterRow = {
   series: string | null
 }
 
-async function getCustomFilterRows(userId: string) {
-  const supabase = await createClient()
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
+async function getCatalogFilterRows(supabase: SupabaseClient) {
+  const pageSize = 1000
+  let from = 0
+  let allRows: CatalogFilterRow[] = []
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('paint_catalog')
+      .select('brand,line')
+      .eq('is_active', true)
+      .order('brand', { ascending: true })
+      .order('line', { ascending: true })
+      .range(from, from + pageSize - 1)
+
+    if (error) throw error
+
+    const rows = (data || []) as CatalogFilterRow[]
+    allRows = [...allRows, ...rows]
+
+    if (rows.length < pageSize) break
+
+    from += pageSize
+  }
+
+  return allRows
+}
+
+async function getCustomFilterRows(
+  supabase: SupabaseClient,
+  userId: string
+) {
   const { data, error } = await supabase
     .from('paints')
     .select('manufacturer,series')
@@ -49,8 +78,8 @@ export default async function VaultFilters({
   } = await supabase.auth.getUser()
 
   const [catalogRows, customRows] = await Promise.all([
-    getCachedCatalogFilterRows(),
-    user ? getCustomFilterRows(user.id) : Promise.resolve([]),
+    getCatalogFilterRows(supabase),
+    user ? getCustomFilterRows(supabase, user.id) : Promise.resolve([]),
   ])
 
   const customAsFilterRows: CatalogFilterRow[] = customRows.map((row) => ({

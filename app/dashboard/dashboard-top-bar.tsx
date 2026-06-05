@@ -8,6 +8,7 @@ type ProfileResult = {
   data: {
     avatar_url: string | null
     level: number | null
+    username: string | null
   } | null
 }
 
@@ -16,6 +17,12 @@ type ProfilePromise = Promise<ProfileResult>
 type DashboardTopBarProps = {
   userId?: string
   profilePromise?: ProfilePromise
+}
+
+function getAvatarInitials(username?: string | null) {
+  const letters = (username || '').replace(/^@/, '').match(/[a-z0-9]/gi)
+
+  return letters?.slice(0, 2).join('').toUpperCase() || 'OG'
 }
 
 export default async function DashboardTopBar({
@@ -43,7 +50,7 @@ export default async function DashboardTopBar({
     if (resolvedUserId) {
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url, level')
+        .select('avatar_url, level, username')
         .eq('id', resolvedUserId)
         .single()
 
@@ -53,6 +60,7 @@ export default async function DashboardTopBar({
 
   const avatarUrl = profile?.avatar_url || null
   const level = profile?.level ?? 0
+  const avatarInitials = getAvatarInitials(profile?.username)
 
   return (
     <div className="flex items-center justify-between">
@@ -75,7 +83,7 @@ export default async function DashboardTopBar({
             </div>
           ) : (
             <div className="flex h-12 w-12 items-center justify-center rounded-full border border-cyan-400/30 bg-white/5 text-sm font-semibold text-cyan-300">
-              LV
+              {avatarInitials}
             </div>
           )}
         </Link>

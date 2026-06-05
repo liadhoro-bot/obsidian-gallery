@@ -6,8 +6,14 @@ export default function ThemesLoading() {
 
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Theme Library</h1>
-          <p className="mt-2 text-sm text-white/60">
-            Build and share miniature painting palettes.
+          <p className="mt-2 text-sm font-medium text-neutral-200">
+            Solve the hardest part: choosing the colors
+          </p>
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            Themes let you capture color palettes, reference images, and visual
+            concepts in one place. Explore community schemes, create your own,
+            and give every project a clear artistic direction before the first
+            coat of paint.
           </p>
         </div>
 

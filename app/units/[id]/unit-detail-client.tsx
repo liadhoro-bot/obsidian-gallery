@@ -13,6 +13,7 @@ import {
   toggleStepDone,
   updateUnitDetails,
   updateUnitHeader,
+  uploadUnitGalleryImages,
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
 import UnitSessionTracker from './components/unit-session-tracker'
@@ -292,6 +293,13 @@ export default function UnitDetailClient({
   )
   const [openStageId, setOpenStageId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [selectedGalleryFiles, setSelectedGalleryFiles] = useState<File[]>([])
+  const [galleryUploadError, setGalleryUploadError] = useState<string | null>(
+    null
+  )
+  const [galleryFilePreviews, setGalleryFilePreviews] = useState<
+    { file: File; previewUrl: string }[]
+  >([])
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isEditingDetails, setIsEditingDetails] = useState(false)
   const [complexityInput, setComplexityInput] = useState(
@@ -331,6 +339,19 @@ export default function UnitDetailClient({
   useEffect(() => {
     setOptimisticSteps(steps)
   }, [steps])
+
+  useEffect(() => {
+    const previews = selectedGalleryFiles.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }))
+
+    setGalleryFilePreviews(previews)
+
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
+    }
+  }, [selectedGalleryFiles])
 
   useEffect(() => {
     function openHeaderEditor() {
@@ -471,6 +492,44 @@ const handleRemoveStagePhoto = (imageId: string) => {
     fileInputRef.current?.click()
   }
 
+  const handleRemovePendingGalleryFile = (indexToRemove: number) => {
+    setSelectedGalleryFiles((current) =>
+      current.filter((_, index) => index !== indexToRemove)
+    )
+  }
+
+  const handleUploadSelectedGalleryFiles = () => {
+    if (selectedGalleryFiles.length === 0) {
+      setGalleryUploadError('Choose at least one image to upload.')
+      return
+    }
+
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.set('unitId', unit.id)
+      selectedGalleryFiles.forEach((file) => formData.append('image', file))
+
+      setGalleryUploadError(null)
+
+      const result = await uploadUnitGalleryImages(formData)
+
+      if (result?.failed.length) {
+        setGalleryUploadError(
+          `Could not upload ${result.failed
+            .map((failure) => `${failure.fileName}: ${failure.reason}`)
+            .join('; ')}`
+        )
+      } else {
+        setSelectedGalleryFiles([])
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      }
+
+      router.refresh()
+    })
+  }
+
   const uploadUnitImage = async ({
     file,
     altText,
@@ -532,19 +591,8 @@ const handleRemoveStagePhoto = (imageId: string) => {
   const handleFileChange = async (
     event: ChangeEvent<HTMLInputElement>
   ) => {
-    const file = event.target.files?.[0]
-
-    if (!file) {
-      return
-    }
-
-    await uploadUnitImage({
-      file,
-      altText: null,
-      makeFeaturedIfEmpty: true,
-    })
-
-    event.target.value = ''
+    setGalleryUploadError(null)
+    setSelectedGalleryFiles(Array.from(event.target.files ?? []))
   }
 
   const handleStageFileChange = async (
@@ -824,9 +872,86 @@ const handleRemoveStagePhoto = (imageId: string) => {
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={handleFileChange}
             />
+
+            {galleryFilePreviews.length > 0 ? (
+              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {galleryFilePreviews.map((preview, index) => (
+                    <div
+                      key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
+                      className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30"
+                    >
+                      <Image
+                        src={preview.previewUrl}
+                        alt={preview.file.name}
+                        width={120}
+                        height={96}
+                        unoptimized
+                        className="h-20 w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemovePendingGalleryFile(index)}
+                        className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-0.5 text-xs font-black text-white"
+                        aria-label={`Remove ${preview.file.name}`}
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {galleryUploadError ? (
+                  <p className="mt-3 rounded-xl border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">
+                    {galleryUploadError}
+                  </p>
+                ) : null}
+
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUploadSelectedGalleryFiles}
+                    disabled={isPending || selectedGalleryFiles.length === 0}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+                  >
+                    {isPending ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : null}
+                    <span>
+                      {isPending
+                        ? selectedGalleryFiles.length > 1
+                          ? 'Uploading images...'
+                          : 'Uploading image...'
+                        : selectedGalleryFiles.length > 1
+                          ? `Upload ${selectedGalleryFiles.length} images`
+                          : 'Upload image'}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedGalleryFiles([])
+                      setGalleryUploadError(null)
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = ''
+                      }
+                    }}
+                    className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/70"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : galleryUploadError ? (
+              <p className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">
+                {galleryUploadError}
+              </p>
+            ) : null}
 
             <div className="mt-4 grid grid-cols-2 gap-4">
               {images.map((image) => (

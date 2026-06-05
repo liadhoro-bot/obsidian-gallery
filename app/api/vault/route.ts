@@ -39,6 +39,7 @@ export async function GET(req: Request) {
   )
 
   const ownedIds = Array.from(ownedSet)
+  const wishlistIds = Array.from(wishlistSet)
 
   let query = supabase
     .from('paint_catalog')
@@ -66,7 +67,9 @@ export async function GET(req: Request) {
     query = query.eq('line', line)
   }
 
-  if (ownership === 'owned') {
+  if (ownership === 'custom') {
+    query = query.in('id', ['00000000-0000-0000-0000-000000000000'])
+  } else if (ownership === 'owned') {
     if (ownedIds.length === 0) {
       query = query.in('id', ['00000000-0000-0000-0000-000000000000'])
     } else {
@@ -74,20 +77,25 @@ export async function GET(req: Request) {
     }
   }
 
-  if (ownership === 'not_owned' && ownedIds.length > 0) {
+  if (ownership === 'unowned' && ownedIds.length > 0) {
     query = query.not('id', 'in', `(${ownedIds.join(',')})`)
+  }
+
+  if (ownership === 'wishlist') {
+    if (wishlistIds.length === 0) {
+      query = query.in('id', ['00000000-0000-0000-0000-000000000000'])
+    } else {
+      query = query.in('id', wishlistIds)
+    }
   }
 
   const { data } = await query
     .order('brand', { ascending: true })
     .order('line', { ascending: true })
     .order('name', { ascending: true })
-    .range(from, to + 1)
+    .range(0, to + 1)
 
-  const rows = data || []
-  const hasMore = rows.length > to - from + 1
-
-  const paints = rows.slice(0, to - from + 1).map((paint) => ({
+  const catalogPaints = (data || []).map((paint) => ({
     id: paint.id,
     source: 'catalog',
     brand: paint.brand,
@@ -100,6 +108,81 @@ export async function GET(req: Request) {
     is_owned: ownedSet.has(paint.id),
     is_wishlist: wishlistSet.has(paint.id),
   }))
+
+  let customPaints: {
+    id: string
+    source: 'custom'
+    brand: string | null
+    line: string | null
+    name: string | null
+    sku: null
+    swatch_image_url: string | null
+    hex_approx: string | null
+    paint_type: string | null
+    is_owned: boolean
+    is_wishlist: boolean
+  }[] = []
+
+  if (ownership === 'all' || ownership === 'custom') {
+    let customQuery = supabase
+      .from('paints')
+      .select('id, name, manufacturer, series, paint_type, color_hex')
+      .eq('user_id', user.id)
+
+    if (q) {
+      customQuery = customQuery.or(`name.ilike.%${q}%,manufacturer.ilike.%${q}%`)
+    }
+
+    if (brand) {
+      customQuery = customQuery.eq('manufacturer', brand)
+    }
+
+    if (line) {
+      customQuery = customQuery.eq('series', line)
+    }
+
+    const { data: customRows } = await customQuery
+      .order('manufacturer', { ascending: true })
+      .order('series', { ascending: true })
+      .order('name', { ascending: true })
+      .range(0, to + 1)
+
+    const customPaintIds = customRows?.map((paint) => paint.id) || []
+
+    const { data: customImageRows } =
+      customPaintIds.length > 0
+        ? await supabase
+            .from('image_assets')
+            .select('entity_id, image_url')
+            .eq('entity_type', 'paint')
+            .eq('user_id', user.id)
+            .eq('is_featured', true)
+            .in('entity_id', customPaintIds)
+        : { data: [] }
+
+    const featuredImageMap = new Map(
+      (customImageRows || []).map((row) => [row.entity_id, row.image_url])
+    )
+
+    customPaints =
+      customRows?.map((paint) => ({
+        id: paint.id,
+        source: 'custom',
+        brand: paint.manufacturer,
+        line: paint.series,
+        name: paint.name,
+        sku: null,
+        swatch_image_url: featuredImageMap.get(paint.id) || null,
+        hex_approx: paint.color_hex,
+        paint_type: paint.paint_type,
+        is_owned: true,
+        is_wishlist: false,
+      })) || []
+  }
+
+  const rows = [...catalogPaints, ...customPaints]
+  const paints = rows.slice(from, to + 1)
+  const hasMore = rows.length > to + 1
 
   return NextResponse.json({ paints, hasMore })
 }

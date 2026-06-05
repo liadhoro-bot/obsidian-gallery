@@ -47,7 +47,7 @@ export default async function DashboardPage() {
   const profilePromise = Promise.resolve(
     supabase
       .from('profiles')
-      .select('avatar_url, level')
+      .select('avatar_url, level, username')
       .eq('id', user.id)
       .single()
   )

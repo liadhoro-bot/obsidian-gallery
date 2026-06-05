@@ -17,6 +17,7 @@ import type {
   UnitImage,
   UnitStage,
 } from './types'
+import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
   project: ProjectRow | null
@@ -35,7 +36,7 @@ type Props = {
   addUnitAction: (formData: FormData) => Promise<void>
   updateProjectHeaderAction: (formData: FormData) => Promise<void>
   setFeaturedUnitAction: (formData: FormData) => Promise<void>
-  uploadProjectImageAction: (formData: FormData) => Promise<void>
+  uploadProjectImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectAction: (formData: FormData) => Promise<void>

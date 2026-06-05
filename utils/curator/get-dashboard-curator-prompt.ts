@@ -71,8 +71,8 @@ function weightedPick<T extends { weight: number | null }>(items: T[]) {
 }
 
 function getFallbackCtaHref(rule: CuratorRule, template: CuratorTemplate) {
-  if (rule.cta_href) return rule.cta_href
-  if (template.primary_cta_href) return template.primary_cta_href
+  if (template.primary_cta_href?.trim()) return template.primary_cta_href.trim()
+  if (rule.cta_href?.trim()) return rule.cta_href.trim()
 
   const keyAndCategory = `${rule.key} ${rule.category}`.toLowerCase()
 

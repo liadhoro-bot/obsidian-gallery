@@ -1,8 +1,11 @@
 'use client'
 
 import Image from 'next/image'
+import { useEffect, useRef, useState } from 'react'
+import type { ChangeEvent } from 'react'
 import SubmitButton from '../../../components/SubmitButton'
 import { Recipe, RecipeImage } from './types'
+import type { GalleryUploadResult } from '../../../../utils/images/gallery-upload'
 
 export default function RecipeGallerySection({
   recipe,
@@ -23,10 +26,70 @@ export default function RecipeGallerySection({
   setIsAddingImage: (value: boolean) => void
   deleteConfirmImageId: string | null
   setDeleteConfirmImageId: (value: string | null) => void
-  uploadRecipeImageAction: (formData: FormData) => Promise<void>
+  uploadRecipeImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedRecipeImageAction: (formData: FormData) => Promise<void>
   deleteRecipeImageAction: (formData: FormData) => Promise<void>
 }) {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [filePreviews, setFilePreviews] = useState<
+    { file: File; previewUrl: string }[]
+  >([])
+
+  useEffect(() => {
+    const previews = selectedFiles.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }))
+
+    setFilePreviews(previews)
+
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
+    }
+  }, [selectedFiles])
+
+  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    setUploadError(null)
+    setSelectedFiles(Array.from(event.target.files ?? []))
+  }
+
+  function removePendingFile(indexToRemove: number) {
+    setSelectedFiles((current) =>
+      current.filter((_, index) => index !== indexToRemove)
+    )
+  }
+
+  async function handleUpload(formData: FormData) {
+    if (selectedFiles.length === 0) {
+      setUploadError('Choose at least one image to upload.')
+      return
+    }
+
+    const uploadFormData = new FormData()
+    uploadFormData.set('recipeId', recipe.id)
+    uploadFormData.set('altText', formData.get('altText')?.toString() || '')
+    selectedFiles.forEach((file) => uploadFormData.append('image', file))
+
+    setUploadError(null)
+
+    const result = await uploadRecipeImageAction(uploadFormData)
+
+    if (result?.failed.length) {
+      setUploadError(
+        `Could not upload ${result.failed
+          .map((failure) => `${failure.fileName}: ${failure.reason}`)
+          .join('; ')}`
+      )
+    } else {
+      setSelectedFiles([])
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
   return (
     <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
       <div className="flex items-center justify-between">
@@ -46,7 +109,7 @@ export default function RecipeGallerySection({
 
       {isOwner && isAddingImage ? (
         <div className="mt-4 rounded-2xl border border-neutral-800 bg-black p-4">
-          <form action={uploadRecipeImageAction} className="space-y-4">
+          <form action={handleUpload} className="space-y-4">
             <input type="hidden" name="recipeId" value={recipe.id} />
 
             <div>
@@ -57,10 +120,47 @@ export default function RecipeGallerySection({
                 name="image"
                 type="file"
                 accept="image/*"
+                multiple
                 required
+                ref={fileInputRef}
+                onChange={handleFileSelection}
                 className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-500 file:px-3 file:py-2 file:font-medium file:text-black"
               />
             </div>
+
+            {filePreviews.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {filePreviews.map((preview, index) => (
+                  <div
+                    key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
+                    className="relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950"
+                  >
+                    <Image
+                      src={preview.previewUrl}
+                      alt={preview.file.name}
+                      width={120}
+                      height={96}
+                      unoptimized
+                      className="h-20 w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(index)}
+                      className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-0.5 text-xs font-bold text-white"
+                      aria-label={`Remove ${preview.file.name}`}
+                    >
+                      X
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {uploadError ? (
+              <p className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+                {uploadError}
+              </p>
+            ) : null}
 
             <div>
               <label className="mb-1 block text-sm text-neutral-300">
@@ -76,8 +176,17 @@ export default function RecipeGallerySection({
 
             <div className="flex gap-2">
               <SubmitButton
-                idleText="Upload Image"
-                pendingText="Uploading..."
+                idleText={
+                  selectedFiles.length > 1
+                    ? `Upload ${selectedFiles.length} images`
+                    : 'Upload image'
+                }
+                pendingText={
+                  selectedFiles.length > 1
+                    ? 'Uploading images...'
+                    : 'Uploading image...'
+                }
+                disabled={selectedFiles.length === 0}
                 className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
               />
 

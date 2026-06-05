@@ -7,6 +7,11 @@ import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { deleteProject } from './actions'
 import { captureServerEvent } from '../../../utils/analytics/server'
 import type { ProjectImage, UnitImage, UnitStage } from './types'
+import {
+  getSafeImageExtension,
+  type GalleryUploadResult,
+  validateGalleryImageFile,
+} from '../../../utils/images/gallery-upload'
 
 async function addUnit(formData: FormData) {
   'use server'
@@ -220,38 +225,11 @@ async function uploadProjectImage(formData: FormData) {
 
   const projectId = formData.get('projectId')?.toString()
   const altText = formData.get('altText')?.toString().trim() || null
-  const file = formData.get('image') as File | null
+  const files = formData
+    .getAll('image')
+    .filter((value): value is File => value instanceof File && value.size > 0)
 
-  if (!projectId || !file || file.size === 0) return
-
-  const fileExt = file.name.split('.').pop() || 'jpg'
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`
-  const filePath = `projects/${projectId}/${fileName}`
-
-  const arrayBuffer = await file.arrayBuffer()
-  const fileBuffer = new Uint8Array(arrayBuffer)
-
-  const { error: uploadError } = await supabase.storage
-    .from('obsidian-images')
-    .upload(filePath, fileBuffer, {
-      contentType: file.type,
-      upsert: false,
-    })
-
-  if (uploadError) {
-    console.error('Error uploading project image:', uploadError)
-    throw new Error(`Upload failed: ${JSON.stringify(uploadError)}`)
-  }
-
-  const publicUrlResult = supabase.storage
-    .from('obsidian-images')
-    .getPublicUrl(filePath)
-
-  const publicUrl = publicUrlResult?.data?.publicUrl
-
-  if (!publicUrl) {
-    throw new Error('Could not generate public URL for uploaded image')
-  }
+  if (!projectId || files.length === 0) return
 
   const { data: existingImages } = await supabase
     .from('image_assets')
@@ -259,11 +237,56 @@ async function uploadProjectImage(formData: FormData) {
     .eq('entity_type', 'project')
     .eq('entity_id', projectId)
 
-  const isFirstImage = !existingImages || existingImages.length === 0
+  const result: GalleryUploadResult = {
+    uploadedCount: 0,
+    failed: [],
+  }
+  const hasExistingImages = Boolean(existingImages && existingImages.length > 0)
 
-  const { error: insertError } = await supabase
-    .from('image_assets')
-    .insert([
+  for (const file of files) {
+    const validationError = validateGalleryImageFile(file)
+
+    if (validationError) {
+      result.failed.push({ fileName: file.name, reason: validationError })
+      continue
+    }
+
+    const fileExt = getSafeImageExtension(file.name)
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+    const filePath = `projects/${projectId}/${fileName}`
+    const arrayBuffer = await file.arrayBuffer()
+    const fileBuffer = new Uint8Array(arrayBuffer)
+
+    const { error: uploadError } = await supabase.storage
+      .from('obsidian-images')
+      .upload(filePath, fileBuffer, {
+        contentType: file.type,
+        upsert: false,
+      })
+
+    if (uploadError) {
+      console.error('Error uploading project image:', uploadError)
+      result.failed.push({ fileName: file.name, reason: uploadError.message })
+      continue
+    }
+
+    const publicUrlResult = supabase.storage
+      .from('obsidian-images')
+      .getPublicUrl(filePath)
+
+    const publicUrl = publicUrlResult?.data?.publicUrl
+
+    if (!publicUrl) {
+      result.failed.push({
+        fileName: file.name,
+        reason: 'Could not generate public URL for uploaded image.',
+      })
+      continue
+    }
+
+    const isFirstImage = !hasExistingImages && result.uploadedCount === 0
+
+    const { error: insertError } = await supabase.from('image_assets').insert([
       {
         user_id: user.id,
         entity_type: 'project',
@@ -272,15 +295,38 @@ async function uploadProjectImage(formData: FormData) {
         alt_text: altText,
         is_featured: isFirstImage,
         is_primary: isFirstImage,
+        storage_bucket: 'obsidian-images',
+        storage_path: filePath,
       },
     ])
 
-  if (insertError) {
-    console.error('Error saving project image asset:', insertError)
-    throw new Error(`Image asset save failed: ${JSON.stringify(insertError)}`)
+    if (insertError) {
+      console.error('Error saving project image asset:', insertError)
+      await supabase.storage.from('obsidian-images').remove([filePath])
+      result.failed.push({ fileName: file.name, reason: insertError.message })
+      continue
+    }
+
+    result.uploadedCount += 1
+
+    await captureServerEvent({
+      distinctId: user.id,
+      event: 'image_uploaded',
+      properties: {
+        surface: 'project_gallery',
+        project_id: projectId,
+        entity_id: projectId,
+        image_count: 1,
+        is_featured: isFirstImage,
+      },
+    })
   }
 
-  revalidatePath(`/projects/${projectId}`)
+  if (result.uploadedCount > 0) {
+    revalidatePath(`/projects/${projectId}`)
+  }
+
+  return result
 }
 
 async function setFeaturedProjectImage(formData: FormData) {

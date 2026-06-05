@@ -54,6 +54,18 @@ function mapPromptToMessage(curatorPrompt: DashboardCuratorPrompt): CuratorMessa
   }
 }
 
+function normalizeInternalHref(href?: string | null) {
+  const trimmedHref = href?.trim()
+
+  if (!trimmedHref) return null
+
+  if (trimmedHref.startsWith('/') && !trimmedHref.startsWith('//')) {
+    return trimmedHref
+  }
+
+  return null
+}
+
 export default function CuratorButton({
   curatorPrompt,
   hideOnDashboard = false,
@@ -183,18 +195,19 @@ export default function CuratorButton({
 
   async function handleCtaClick() {
     const ctaHref = curatorPrompt?.ctaHref ?? message?.primaryCtaHref
+    const normalizedCtaHref = normalizeInternalHref(ctaHref)
 
     ctaClickedRef.current = true
 
-    await logPromptEvent('cta_clicked', {
-      ctaHref,
+    void logPromptEvent('cta_clicked', {
+      ctaHref: normalizedCtaHref ?? ctaHref,
       ctaLabel: curatorPrompt?.ctaLabel,
     })
 
     setIsOpen(false)
 
-    if (ctaHref) {
-      router.push(ctaHref)
+    if (normalizedCtaHref) {
+      router.push(normalizedCtaHref)
     }
   }
 
