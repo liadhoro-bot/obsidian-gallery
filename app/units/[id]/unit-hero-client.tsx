@@ -4,12 +4,13 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useOptimistic, useTransition } from 'react'
 import BackButton from '../../components/back-button'
-import { toggleUnitActive } from './actions'
+import { setFeaturedUnit } from './actions'
 
 type Unit = {
   id: string
   name: string
   is_active: boolean
+  is_featured: boolean
   project_id: string | null
 }
 
@@ -27,15 +28,19 @@ export default function UnitHeroClient({
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [optimisticActive, setOptimisticActive] = useOptimistic(
-    unit.is_active,
+  const [optimisticFeatured, setOptimisticFeatured] = useOptimistic(
+    unit.is_featured,
     (_current, nextValue: boolean) => nextValue
   )
 
-  const handleToggleActive = (nextValue: boolean) => {
+  const handleSetFeatured = () => {
+    if (optimisticFeatured) {
+      return
+    }
+
     startTransition(async () => {
-      setOptimisticActive(nextValue)
-      await toggleUnitActive(unit.id, nextValue)
+      setOptimisticFeatured(true)
+      await setFeaturedUnit(unit.id)
       router.refresh()
     })
   }
@@ -79,15 +84,15 @@ export default function UnitHeroClient({
 
           <button
             type="button"
-            onClick={() => handleToggleActive(!optimisticActive)}
-            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide ${
-              optimisticActive
+            onClick={handleSetFeatured}
+            className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+              optimisticFeatured
                 ? 'bg-cyan-400 text-black'
-                : 'bg-white/10 text-white'
+                : 'border border-white/10 bg-black/40 text-white backdrop-blur hover:bg-black/60'
             }`}
-            disabled={isPending}
+            disabled={isPending || optimisticFeatured}
           >
-            {optimisticActive ? 'Active' : 'Inactive'}
+            {optimisticFeatured ? 'Featured' : 'Make Featured'}
           </button>
         </div>
       </div>

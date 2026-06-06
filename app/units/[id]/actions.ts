@@ -40,6 +40,70 @@ export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   revalidatePath('/projects')
 }
 
+export async function setFeaturedUnit(unitId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { error } = await supabase.rpc('set_featured_unit', {
+    p_unit_id: unitId,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/projects')
+}
+
+export async function updateUnitStatus(
+  unitId: string,
+  status: 'complete' | 'active' | 'bench' | 'pile' | 'other'
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const allowedStatuses = new Set([
+    'complete',
+    'active',
+    'bench',
+    'pile',
+    'other',
+  ])
+
+  if (!unitId || !allowedStatuses.has(status)) {
+    throw new Error('Invalid unit status')
+  }
+
+  const { error } = await supabase
+    .from('units')
+    .update({ status })
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+}
+
 export async function startUnitSession(unitId: string) {
   const supabase = await createClient()
 
@@ -73,6 +137,7 @@ export async function startUnitSession(unitId: string) {
       unit_id: unitId,
       user_id: user.id,
       started_at: new Date().toISOString(),
+      entry_source: 'timer',
     })
     .select('id, started_at')
     .single()
@@ -155,6 +220,7 @@ export async function endUnitSession(unitId: string) {
     .update({
       ended_at: new Date().toISOString(),
       duration_seconds: durationSeconds,
+      entry_source: 'timer',
     })
     .eq('id', session.id)
 
@@ -201,6 +267,87 @@ export async function endUnitSession(unitId: string) {
   revalidatePath('/projects')
 
   return { durationSeconds }
+}
+
+export async function logManualUnitSession(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const unitId = String(formData.get('unitId') || '')
+  const startedAtRaw = String(formData.get('startedAt') || '')
+  const endedAtRaw = String(formData.get('endedAt') || '')
+  const notes = String(formData.get('notes') || '').trim()
+
+  if (!unitId || !startedAtRaw || !endedAtRaw) {
+    throw new Error('Missing manual session details')
+  }
+
+  const startedAt = new Date(startedAtRaw)
+  const endedAt = new Date(endedAtRaw)
+
+  if (
+    Number.isNaN(startedAt.getTime()) ||
+    Number.isNaN(endedAt.getTime()) ||
+    endedAt <= startedAt
+  ) {
+    throw new Error('End time must be after start time')
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id, name, project_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
+
+  const durationSeconds = Math.floor(
+    (endedAt.getTime() - startedAt.getTime()) / 1000
+  )
+
+  const { error } = await supabase.from('unit_sessions').insert({
+    unit_id: unitId,
+    user_id: user.id,
+    started_at: startedAt.toISOString(),
+    ended_at: endedAt.toISOString(),
+    duration_seconds: durationSeconds,
+    entry_source: 'manual',
+    notes: notes || null,
+  })
+
+  if (error) {
+    throw error
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_session_manual_logged',
+    properties: {
+      unit_id: unitId,
+      unit_name: unit.name || null,
+      project_id: unit.project_id || null,
+      duration_seconds: durationSeconds,
+      duration_minutes: Math.round(durationSeconds / 60),
+      has_notes: Boolean(notes),
+    },
+  })
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
 }
 
 export async function updateProgressStep(
@@ -399,6 +546,14 @@ export async function updateUnitDetails(formData: FormData) {
   const complexityRaw = String(formData.get('complexity') ?? '').trim()
   const unitSizeRaw = String(formData.get('unit_size') ?? '').trim()
   const deadlineRaw = String(formData.get('deadline') ?? '').trim()
+  const selectedProjectIds = Array.from(
+    new Set(
+      formData
+        .getAll('projectIds')
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+    )
+  )
 
   if (!unitId) {
     throw new Error('Missing unit ID')
@@ -416,12 +571,71 @@ export async function updateUnitDetails(formData: FormData) {
     throw new Error('Unit size must be a positive number')
   }
 
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id, project_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
+
+  if (selectedProjectIds.length > 0) {
+    const { data: allowedProjects, error: allowedProjectsError } =
+      await supabase
+        .from('projects')
+        .select('id')
+        .eq('user_id', user.id)
+        .in('id', selectedProjectIds)
+
+    if (allowedProjectsError) {
+      throw allowedProjectsError
+    }
+
+    const allowedProjectIds = new Set(
+      (allowedProjects ?? []).map((project) => project.id)
+    )
+
+    if (selectedProjectIds.some((projectId) => !allowedProjectIds.has(projectId))) {
+      throw new Error('Invalid parent project')
+    }
+  }
+
+  const { data: existingLinks, error: existingLinksError } = await supabase
+    .from('unit_projects')
+    .select('project_id')
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  if (existingLinksError) {
+    throw existingLinksError
+  }
+
+  const existingProjectIds = (existingLinks ?? []).map(
+    (link) => link.project_id
+  )
+  const selectedProjectIdSet = new Set(selectedProjectIds)
+  const existingProjectIdSet = new Set(existingProjectIds)
+  const projectIdsToInsert = selectedProjectIds.filter(
+    (projectId) => !existingProjectIdSet.has(projectId)
+  )
+  const projectIdsToDelete = existingProjectIds.filter(
+    (projectId) => !selectedProjectIdSet.has(projectId)
+  )
+
   const { error } = await supabase
     .from('units')
     .update({
       complexity,
       unit_size: unitSize,
       deadline,
+      project_id: selectedProjectIds[0] ?? null,
     })
     .eq('id', unitId)
     .eq('user_id', user.id)
@@ -430,10 +644,51 @@ export async function updateUnitDetails(formData: FormData) {
     throw error
   }
 
+  if (projectIdsToInsert.length > 0) {
+    const { error: insertLinksError } = await supabase
+      .from('unit_projects')
+      .insert(
+        projectIdsToInsert.map((projectId) => ({
+          unit_id: unitId,
+          project_id: projectId,
+          user_id: user.id,
+        }))
+      )
+
+    if (insertLinksError) {
+      throw insertLinksError
+    }
+  }
+
+  if (projectIdsToDelete.length > 0) {
+    const { error: deleteLinksError } = await supabase
+      .from('unit_projects')
+      .delete()
+      .eq('unit_id', unitId)
+      .eq('user_id', user.id)
+      .in('project_id', projectIdsToDelete)
+
+    if (deleteLinksError) {
+      throw deleteLinksError
+    }
+  }
+
+  const affectedProjectIds = new Set([
+    ...existingProjectIds,
+    ...selectedProjectIds,
+  ])
+
+  if (unit.project_id) {
+    affectedProjectIds.add(unit.project_id)
+  }
+
   revalidatePath(`/units/${unitId}`)
   revalidatePath('/dashboard')
   revalidatePath('/')
   revalidatePath('/projects')
+  affectedProjectIds.forEach((projectId) => {
+    revalidatePath(`/projects/${projectId}`)
+  })
 }
 
 export async function updateUnitHeader(formData: FormData) {

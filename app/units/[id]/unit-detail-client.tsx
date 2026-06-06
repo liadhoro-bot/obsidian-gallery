@@ -13,6 +13,7 @@ import {
   toggleStepDone,
   updateUnitDetails,
   updateUnitHeader,
+  updateUnitStatus,
   uploadUnitGalleryImages,
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
@@ -30,7 +31,16 @@ type Unit = {
   unit_size: number | null
   deadline: string | null
   is_active: boolean
+  is_featured: boolean
+  status: UnitStatus
   project_id: string | null
+}
+
+type UnitStatus = 'complete' | 'active' | 'bench' | 'pile' | 'other'
+
+type ParentProject = {
+  id: string
+  name: string | null
 }
 
 type UnitImage = {
@@ -59,6 +69,8 @@ type Session = {
   ended_at: string | null
   duration_seconds: number | null
   user_id?: string | null
+  entry_source?: string | null
+  notes?: string | null
 }
 type StagePaint = {
   id: string
@@ -119,7 +131,18 @@ type Props = {
   activeSession: Session | null
   sessions: Session[]
   stagePaints: StagePaint[]
+  parentProjects: ParentProject[]
+  availableProjects: ParentProject[]
+  selectedProjectIds: string[]
 }
+
+const UNIT_STATUS_OPTIONS: { value: UnitStatus; label: string }[] = [
+  { value: 'complete', label: 'Complete' },
+  { value: 'active', label: 'Active' },
+  { value: 'bench', label: 'Bench' },
+  { value: 'pile', label: 'The Pile' },
+  { value: 'other', label: 'Other' },
+]
 
 function BrushIcon() {
   return (
@@ -283,6 +306,9 @@ export default function UnitDetailClient({
   activeSession,
   sessions,
   stagePaints,
+  parentProjects,
+  availableProjects,
+  selectedProjectIds,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -309,6 +335,7 @@ export default function UnitDetailClient({
     unit.unit_size ? String(unit.unit_size) : ''
   )
   const [deadlineInput, setDeadlineInput] = useState(unit.deadline || '')
+  const [statusValue, setStatusValue] = useState<UnitStatus>(unit.status)
 
   useEffect(() => {
     if (!activeSession) {
@@ -339,6 +366,10 @@ export default function UnitDetailClient({
   useEffect(() => {
     setOptimisticSteps(steps)
   }, [steps])
+
+  useEffect(() => {
+    setStatusValue(unit.status)
+  }, [unit.status])
 
   useEffect(() => {
     const previews = selectedGalleryFiles.map((file) => ({
@@ -452,6 +483,15 @@ export default function UnitDetailClient({
     startTransition(async () => {
       await updateUnitHeader(formData)
       setIsEditingHeader(false)
+      router.refresh()
+    })
+  }
+
+  const handleUpdateStatus = (nextStatus: UnitStatus) => {
+    setStatusValue(nextStatus)
+
+    startTransition(async () => {
+      await updateUnitStatus(unit.id, nextStatus)
       router.refresh()
     })
   }
@@ -617,13 +657,14 @@ const handleRemoveStagePhoto = (imageId: string) => {
   return (
     <div className="w-full">
 
+      {unit.notes?.trim() || isEditingHeader ? (
       <section
         id="unit-header-editor"
         className="mt-4 scroll-mt-4 rounded-2xl border border-white/10 bg-white/5 p-4"
       >
         {!isEditingHeader ? (
           <p className="text-sm leading-6 text-white/65">
-            {unit.notes || 'No description yet.'}
+            {unit.notes}
           </p>
         ) : (
           <form action={handleUpdateHeader} className="space-y-3">
@@ -676,6 +717,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
           </form>
         )}
       </section>
+      ) : null}
 
       <div className="mt-4 grid gap-5">
   <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
@@ -744,33 +786,89 @@ const handleRemoveStagePhoto = (imageId: string) => {
             </div>
 
             {!isEditingDetails ? (
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <div className="text-[11px] text-white/50">
-                    Complexity
-                  </div>
+              <div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] text-white/50">
+                      Complexity
+                    </span>
                   <div className="text-lg font-bold">
                     {unit.complexity ? `${unit.complexity}/5` : '—'}
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-[11px] text-white/50">
-                    Unit Size
-                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] text-white/50">
+                      Model Count
+                    </span>
                   <div className="text-lg font-bold">
                     {unit.unit_size || '—'}
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-[11px] text-white/50">
-                    Deadline
-                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[11px] text-white/50">
+                      Deadline
+                    </span>
                   <div className="text-lg font-bold">
                     {unit.deadline
                       ? new Date(unit.deadline).toLocaleDateString()
                       : '—'}
+                  </div>
+                </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 sm:grid-cols-3">
+                  <div className="flex flex-col gap-1 sm:col-span-2">
+                    <span className="text-[11px] text-white/50">
+                      Parent Project
+                    </span>
+                    <div className="flex min-h-[32px] flex-wrap items-center gap-2">
+                      {parentProjects.length > 0 ? (
+                        parentProjects.map((project) => (
+                          <button
+                            key={project.id}
+                            type="button"
+                            onClick={() => router.push(`/projects/${project.id}`)}
+                            className="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-200 transition hover:border-cyan-300/60 hover:bg-cyan-400/20"
+                          >
+                            {project.name || 'Untitled project'}
+                          </button>
+                        ))
+                      ) : (
+                        <span className="text-lg font-bold">-</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label
+                      htmlFor="unit-status"
+                      className="text-[11px] text-white/50"
+                    >
+                      Status
+                    </label>
+                    <div className="flex min-h-[32px] items-center">
+                      <select
+                        id="unit-status"
+                        value={statusValue}
+                        onChange={(event) =>
+                          handleUpdateStatus(event.target.value as UnitStatus)
+                        }
+                        disabled={isPending}
+                        className="h-[26px] w-auto max-w-full rounded-full border border-cyan-500/30 bg-slate-900 px-3 py-0 text-xs font-medium text-slate-100 outline-none transition hover:bg-cyan-500/15 hover:text-white focus:border-cyan-300/60 focus:bg-slate-900 focus:text-white disabled:opacity-60"
+                      >
+                        {UNIT_STATUS_OPTIONS.map((option) => (
+                          <option
+                            key={option.value}
+                            value={option.value}
+                            className="bg-slate-900 text-slate-100 checked:bg-cyan-500/20 checked:text-white"
+                          >
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -795,7 +893,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
                 <div>
                   <label className="text-xs text-white/50">
-                    Unit Size
+                    Model Count
                   </label>
                   <input
                     name="unit_size"
@@ -807,7 +905,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
                   />
                 </div>
 
-                <div>
+                <div className="flex flex-col gap-1">
                   <label className="text-xs text-white/50">
                     Deadline
                   </label>
@@ -818,6 +916,37 @@ const handleRemoveStagePhoto = (imageId: string) => {
                     onChange={(e) => setDeadlineInput(e.target.value)}
                     className="mt-1 w-full rounded-lg bg-black/40 px-3 py-2 text-sm text-white"
                   />
+                </div>
+
+                  <div className="flex flex-col gap-1">
+                  <div className="text-xs text-white/50">
+                    Parent Projects
+                  </div>
+                  <div className="mt-2 grid gap-2 rounded-xl border border-white/10 bg-black/25 p-2">
+                    {availableProjects.length > 0 ? (
+                      availableProjects.map((project) => (
+                        <label
+                          key={project.id}
+                          className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/5"
+                        >
+                          <input
+                            type="checkbox"
+                            name="projectIds"
+                            value={project.id}
+                            defaultChecked={selectedProjectIds.includes(
+                              project.id
+                            )}
+                            className="h-4 w-4 rounded border-white/20 bg-black/40 accent-cyan-400"
+                          />
+                          <span>{project.name || 'Untitled project'}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <div className="px-2 py-2 text-sm text-white/35">
+                        No projects yet.
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <button
@@ -850,7 +979,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
           <section className="mt-10">
             <div className="mb-2 flex items-center justify-between">
-              <div>
+                <div className="flex flex-col gap-1">
                 <h2 className="text-2xl font-bold">
                   Inspiration & Art Gallery
                 </h2>

@@ -18,7 +18,19 @@ type UnitDetailUnit = {
   unit_size: number | null
   deadline: string | null
   is_active: boolean
+  is_featured: boolean
+  status: 'complete' | 'active' | 'bench' | 'pile' | 'other'
   project_id: string | null
+}
+
+type ParentProject = {
+  id: string
+  name: string | null
+}
+
+type UnitProjectRaw = {
+  project_id: string
+  project?: ParentProject[] | ParentProject | null
 }
 
 type ProjectThemePaintRaw = {
@@ -99,7 +111,9 @@ async function UnitDetailBody({
       started_at,
       ended_at,
       duration_seconds,
-      user_id
+      user_id,
+      entry_source,
+      notes
     `)
     .eq('unit_id', id)
     .eq('user_id', userId)
@@ -139,6 +153,8 @@ async function UnitDetailBody({
     ? supabase
         .from('projects')
         .select(`
+          id,
+          name,
           theme:themes (
             id,
             name,
@@ -168,18 +184,40 @@ async function UnitDetailBody({
         .maybeSingle()
     : Promise.resolve({ data: null, error: null })
 
+  const linkedProjectsPromise = supabase
+    .from('unit_projects')
+    .select(`
+      project_id,
+      project:projects (
+        id,
+        name
+      )
+    `)
+    .eq('unit_id', id)
+    .eq('user_id', userId)
+
+  const allProjectsPromise = supabase
+    .from('projects')
+    .select('id, name')
+    .eq('user_id', userId)
+    .order('name', { ascending: true })
+
   const [
     { data: images, error: imagesError },
     initialStepsResult,
     initialSessionsResult,
     { data: stagePaintRows, error: stagePaintsError },
     { data: project, error: projectError },
+    { data: linkedProjectRows, error: linkedProjectsError },
+    { data: allProjects, error: allProjectsError },
   ] = await Promise.all([
     imagesPromise,
     stepsPromise,
     sessionsPromise,
     stagePaintsPromise,
     projectPromise,
+    linkedProjectsPromise,
+    allProjectsPromise,
   ])
   perf.mark('secondary Supabase queries')
 
@@ -280,7 +318,9 @@ async function UnitDetailBody({
           started_at,
           ended_at,
           duration_seconds,
-          user_id
+          user_id,
+          entry_source,
+          notes
         `)
         .eq('unit_id', id)
         .eq('user_id', userId)
@@ -314,6 +354,14 @@ async function UnitDetailBody({
     throw new Error(projectError.message)
   }
 
+  if (linkedProjectsError) {
+    throw new Error(linkedProjectsError.message)
+  }
+
+  if (allProjectsError) {
+    throw new Error(allProjectsError.message)
+  }
+
   const stagePaints =
     stagePaintRows?.map((paint) => ({
       ...paint,
@@ -326,6 +374,32 @@ async function UnitDetailBody({
     })) ?? []
 
   const projectThemeRaw = (project?.theme?.[0] ?? null) as ProjectThemeRaw | null
+  const linkedProjectIds = ((linkedProjectRows ?? []) as UnitProjectRaw[])
+    .map((row) => row.project_id)
+    .filter(Boolean)
+  const parentProjects =
+    ((linkedProjectRows ?? []) as UnitProjectRaw[])
+      .map((row) =>
+        Array.isArray(row.project) ? row.project[0] ?? null : row.project ?? null
+      )
+      .filter((linkedProject): linkedProject is ParentProject =>
+        Boolean(linkedProject?.id)
+      )
+
+  if (parentProjects.length === 0 && project?.id) {
+    parentProjects.push({
+      id: project.id,
+      name: project.name ?? null,
+    })
+  }
+
+  const selectedProjectIds =
+    linkedProjectIds.length > 0
+      ? linkedProjectIds
+      : unit.project_id
+        ? [unit.project_id]
+        : []
+
   perf.total()
   const projectTheme = projectThemeRaw
     ? {
@@ -349,6 +423,9 @@ async function UnitDetailBody({
       activeSession={currentActiveSession}
       sessions={sessions ?? []}
       stagePaints={stagePaints}
+      parentProjects={parentProjects}
+      availableProjects={allProjects ?? []}
+      selectedProjectIds={selectedProjectIds}
     />
   )
 }
@@ -398,6 +475,8 @@ export default async function UnitDetailPage({ params }: PageProps) {
       unit_size,
       deadline,
       is_active,
+      is_featured,
+      status,
       project_id
     `)
     .eq('id', id)

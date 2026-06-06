@@ -2,6 +2,27 @@ import Image from 'next/image'
 import PrefetchLink from '../components/prefetch-link'
 import { createClient } from '../../utils/supabase/server'
 
+type DashboardHeroUnit = {
+  id: string
+  name: string
+  updated_at: string
+  deadline: string | null
+  is_featured: boolean
+  status: string | null
+  project_id: string | null
+}
+
+type UnitProjectRow = {
+  unit_id: string
+  project?: {
+    id: string
+    name: string | null
+  }[] | {
+    id: string
+    name: string | null
+  } | null
+}
+
 export default async function DashboardUnitInProgress({
   userId,
 }: {
@@ -21,14 +42,36 @@ export default async function DashboardUnitInProgress({
     resolvedUserId = user.id
   }
 
-  const { data: units, error } = await supabase
+  const { data: featuredUnit, error: featuredError } = await supabase
     .from('units')
-    .select('id, name, updated_at')
+    .select('id, name, updated_at, deadline, is_featured, status, project_id')
+    .eq('user_id', resolvedUserId)
+    .eq('is_featured', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (featuredError) {
+    return (
+      <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+          Unit in Progress
+        </p>
+        <p className="mt-4 text-sm text-red-300">Could not load unit.</p>
+      </section>
+    )
+  }
+
+  const { data: units, error } = featuredUnit
+    ? { data: null, error: null }
+    : await supabase
+    .from('units')
+    .select('id, name, updated_at, deadline, is_featured, status, project_id')
     .eq('user_id', resolvedUserId)
     .order('updated_at', { ascending: false })
     .limit(4)
 
-  if (error || !units?.length) {
+  if (!featuredUnit && (error || !units?.length)) {
     return (
       <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
@@ -39,9 +82,16 @@ export default async function DashboardUnitInProgress({
     )
   }
 
-  const unitIds = units.map((unit) => unit.id)
+  const fallbackUnits = (units ?? []) as DashboardHeroUnit[]
+  const unitIds = featuredUnit
+    ? [featuredUnit.id]
+    : fallbackUnits.map((unit) => unit.id)
 
-  const [{ data: doneRows }, { data: featuredImages }] = await Promise.all([
+  const [
+    { data: doneRows },
+    { data: featuredImages },
+    { data: unitProjectRows },
+  ] = await Promise.all([
     supabase
       .from('unit_stage_progress')
       .select('unit_id, is_done')
@@ -54,13 +104,28 @@ export default async function DashboardUnitInProgress({
       .eq('entity_type', 'unit')
       .in('entity_id', unitIds)
       .eq('is_featured', true),
+
+    supabase
+      .from('unit_projects')
+      .select(`
+        unit_id,
+        project:projects (
+          id,
+          name
+        )
+      `)
+      .eq('user_id', resolvedUserId)
+      .in('unit_id', unitIds),
   ])
 
   const doneSet = new Set(
     (doneRows || []).filter((row) => row.is_done).map((row) => row.unit_id)
   )
 
-  const inProgressUnit = units.find((unit) => !doneSet.has(unit.id)) || null
+  const inProgressUnit =
+    (featuredUnit as DashboardHeroUnit | null) ||
+    fallbackUnits.find((unit) => !doneSet.has(unit.id)) ||
+    null
 
   if (!inProgressUnit) {
     return (
@@ -78,6 +143,15 @@ export default async function DashboardUnitInProgress({
   const featuredImage = featuredImages?.find(
     (image) => image.entity_id === inProgressUnit.id
   )
+  const parentProjects =
+    ((unitProjectRows ?? []) as UnitProjectRow[])
+      .filter((row) => row.unit_id === inProgressUnit.id)
+      .map((row) =>
+        Array.isArray(row.project) ? row.project[0] ?? null : row.project ?? null
+      )
+      .filter((project): project is { id: string; name: string | null } =>
+        Boolean(project?.id)
+      )
 
   return (
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
@@ -100,7 +174,7 @@ export default async function DashboardUnitInProgress({
 
         <div className="relative z-10 flex min-h-[260px] flex-col justify-end p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">
-            In Progress
+            {inProgressUnit.is_featured ? 'Featured Unit' : 'In Progress'}
           </p>
 
           <div className="mt-3 space-y-2">
@@ -111,6 +185,11 @@ export default async function DashboardUnitInProgress({
               Last updated{' '}
               {new Date(inProgressUnit.updated_at).toLocaleDateString()}
             </p>
+            {inProgressUnit.is_featured && parentProjects.length > 0 ? (
+              <p className="text-xs font-semibold text-cyan-200/80">
+                {parentProjects.map((project) => project.name || 'Untitled project').join(' / ')}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-5">
