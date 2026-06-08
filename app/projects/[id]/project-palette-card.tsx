@@ -3,6 +3,8 @@ import Link from 'next/link'
 import SubmitButton from '../../components/SubmitButton'
 import ProjectPaletteStarter from './project-palette-starter'
 import { calculateProjectPaletteAction } from './actions'
+import { calculateUnitPaletteAction } from '../../units/[id]/actions'
+import ThemeUnassignButton from './theme-unassign-button'
 
 type ThemePaint = {
   id: string
@@ -29,9 +31,15 @@ type Theme = {
 type Props = {
   theme: Theme
   projectId: string
+  unitId?: string
 }
 
-export default function ProjectPaletteCard({ theme, projectId }: Props) {
+function displayDescription(description: string | null | undefined) {
+  return description?.replace(/\n\n\[unit:[^\]]+\]/g, '').trim()
+}
+
+export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) {
+  const paletteLabel = unitId ? 'Unit Palette' : 'Project Palette'
   const swatches =
     theme?.theme_paints
       ?.slice()
@@ -42,29 +50,35 @@ export default function ProjectPaletteCard({ theme, projectId }: Props) {
     return (
       <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
         <p className="text-sm uppercase tracking-wider text-cyan-400">
-          Project Palette
+          {paletteLabel}
         </p>
 
         <h2 className="mt-1 text-xl font-semibold">No theme selected</h2>
 
         <p className="mt-2 text-sm text-neutral-400">
-          Define the visual identity of this project.
+          Define the visual identity of this {unitId ? 'unit' : 'project'}.
         </p>
 
         <div className="mt-4">
-          <ProjectPaletteStarter projectId={projectId} />
+          <ProjectPaletteStarter projectId={projectId} unitId={unitId} />
         </div>
 
         <div className="mt-4 flex gap-2">
-  <Link
-    href={`/themes?tab=mine&selectForProject=${projectId}`}
-    className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-neutral-950 transition active:scale-95"
-  >
-    Choose Theme
-  </Link>
+  {projectId ? (
+    <Link
+      href={`/themes?tab=mine&selectForProject=${projectId}`}
+      className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-neutral-950 transition active:scale-95"
+    >
+      Choose Theme
+    </Link>
+  ) : null}
 
-  <form action={calculateProjectPaletteAction}>
-    <input type="hidden" name="projectId" value={projectId} />
+  <form action={unitId ? calculateUnitPaletteAction : calculateProjectPaletteAction}>
+    {unitId ? (
+      <input type="hidden" name="unitId" value={unitId} />
+    ) : (
+      <input type="hidden" name="projectId" value={projectId} />
+    )}
 
     <SubmitButton
       idleText="Magic Palette"
@@ -79,16 +93,24 @@ export default function ProjectPaletteCard({ theme, projectId }: Props) {
 
   return (
     <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
-      <p className="text-sm uppercase tracking-wider text-cyan-400">
-        Project Palette
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm uppercase tracking-wider text-cyan-400">
+          {paletteLabel}
+        </p>
+
+        <ThemeUnassignButton
+          projectId={projectId}
+          unitId={unitId}
+          themeId={theme.id}
+        />
+      </div>
 
       <h2 className="mt-1 text-xl font-semibold">
         {theme.name || 'Untitled Theme'}
       </h2>
 
       <p className="mt-2 text-sm text-neutral-400">
-        {theme.description || 'No description'}
+        {displayDescription(theme.description) || 'No description'}
       </p>
 
       <div className="mt-4 grid grid-cols-5 gap-2">
@@ -100,6 +122,7 @@ export default function ProjectPaletteCard({ theme, projectId }: Props) {
               <ProjectPaletteStarter
                 key={`empty-${index}`}
                 projectId={projectId}
+                unitId={unitId}
                 slotIndex={index}
               />
             )

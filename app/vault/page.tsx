@@ -22,6 +22,7 @@ type PageProps = {
     line?: string
     ownership?: string
     limit?: string
+    matchHex?: string
   }>
 }
 
@@ -52,6 +53,8 @@ export default async function VaultPage({ searchParams }: PageProps) {
   const q = resolvedSearchParams.q?.trim() || ''
   const brand = resolvedSearchParams.brand || ''
   const line = resolvedSearchParams.line || ''
+  const matchHex =
+    activeTab === 'find' ? resolvedSearchParams.matchHex?.trim() || '' : ''
   const ownership =
     activeTab === 'collection'
       ? 'owned'
@@ -81,7 +84,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
           </p>
           <p className="mt-2 text-base leading-7 text-neutral-400">
             Keep track of every paint you own or want, and the custom mixes
-            you've created. Manage your collection, avoid buying duplicates,
+            you&apos;ve created. Manage your collection, avoid buying duplicates,
             export with ease, and seamlessly connect to your recipes and themes.
           </p>
         </section>
@@ -101,6 +104,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
               brand={brand}
               line={line}
               ownership={ownership}
+              matchHex={matchHex}
               tab={activeTab === 'collection' ? 'collection' : 'find'}
             />
           </Suspense>
@@ -110,7 +114,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
           <CustomPaintForm mode="create" />
         ) : (
           <Suspense
-            key={`${activeTab}-${q}-${brand}-${line}-${ownership}-${limit}`}
+            key={`${activeTab}-${q}-${brand}-${line}-${ownership}-${matchHex}-${limit}`}
             fallback={<VaultGridSkeleton />}
           >
             <VaultGrid
@@ -118,6 +122,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
               brand={brand}
               line={line}
               ownership={ownership}
+              matchHex={matchHex}
               limit={limit}
               tab={activeTab === 'collection' ? 'collection' : 'find'}
             />

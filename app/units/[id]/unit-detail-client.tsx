@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   deleteUnitImage,
@@ -52,6 +53,12 @@ type UnitImage = {
   alt_text: string | null
   storage_bucket: string | null
   storage_path: string | null
+}
+
+type ExpandedStagePhoto = {
+  src: string
+  alt: string
+  label: string
 }
 
 type ProgressStep = {
@@ -297,6 +304,15 @@ function StageIcon({
   )
 }
 
+function getStagePaintHref(paint: StagePaint) {
+  const paintId =
+    paint.paint_source === 'custom'
+      ? paint.custom_paint_id || paint.custom_paint?.id
+      : paint.paint_catalog_id || paint.catalog_paint?.id
+
+  return paintId ? `/vault/${paint.paint_source}/${paintId}` : null
+}
+
 export default function UnitDetailClient({
   unit,
   projectTheme,
@@ -318,6 +334,9 @@ export default function UnitDetailClient({
     'overview'
   )
   const [openStageId, setOpenStageId] = useState<string | null>(null)
+  const [uploadingStageId, setUploadingStageId] = useState<string | null>(null)
+  const [expandedStagePhoto, setExpandedStagePhoto] =
+    useState<ExpandedStagePhoto | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedGalleryFiles, setSelectedGalleryFiles] = useState<File[]>([])
   const [galleryUploadError, setGalleryUploadError] = useState<string | null>(
@@ -587,7 +606,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
     if (!user) {
       alert('You must be logged in.')
-      return
+      return false
     }
 
     const fileExt = file.name.split('.').pop() || 'jpg'
@@ -599,7 +618,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
     if (uploadError) {
       alert(uploadError.message)
-      return
+      return false
     }
 
     const { data } = supabase.storage
@@ -622,10 +641,11 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
     if (insertError) {
       alert(insertError.message)
-      return
+      return false
     }
 
     router.refresh()
+    return true
   }
 
   const handleFileChange = async (
@@ -645,13 +665,18 @@ const handleRemoveStagePhoto = (imageId: string) => {
       return
     }
 
-    await uploadUnitImage({
-      file,
-      altText: `stage:${step.step_key}`,
-      makeFeaturedIfEmpty: true,
-    })
+    setUploadingStageId(step.id)
 
-    event.target.value = ''
+    try {
+      await uploadUnitImage({
+        file,
+        altText: `stage:${step.step_key}`,
+        makeFeaturedIfEmpty: true,
+      })
+    } finally {
+      setUploadingStageId(null)
+      event.target.value = ''
+    }
   }
 
   return (
@@ -974,6 +999,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
             <ProjectPaletteCard
               theme={projectTheme}
               projectId={unit.project_id || ''}
+              unitId={unit.id}
             />
           </section>
 
@@ -1128,6 +1154,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
               const stagePhoto = images.find(
                 (image) => image.alt_text === `stage:${step.step_key}`
               )
+              const isStageUploading = uploadingStageId === step.id
 const paintsForStage = stagePaints
   .filter((paint) => paint.progress_step_id === step.id)
   .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -1165,48 +1192,83 @@ const paintsForStage = stagePaints
   </div>
 
   {paintsForStage.length > 0 ? (
-    <div className="mt-2 flex -space-x-1.5">
-      {paintsForStage.slice(0, 5).map((paint) => {
+    <div className="mt-2 grid w-28 grid-cols-3 gap-1.5">
+      {paintsForStage.slice(0, 6).map((paint) => {
         const displayHex =
           paint.paint_source === 'custom'
             ? paint.custom_paint?.color_hex
             : paint.catalog_paint?.hex_approx
 
+        const displayName =
+          paint.paint_source === 'custom'
+            ? paint.custom_paint?.name
+            : paint.catalog_paint?.name
+
         const imageUrl =
           paint.paint_source === 'custom'
             ? null
             : paint.catalog_paint?.swatch_image_url
+        const paintHref = getStagePaintHref(paint)
 
-        return imageUrl ? (
+        const swatch = imageUrl ? (
           <Image
-            key={paint.id}
             src={imageUrl}
-            alt="Paint"
-            width={24}
-            height={24}
-            sizes="24px"
-            className="h-6 w-6 rounded-full border border-[#07111b] object-cover"
+            alt={displayName || 'Paint swatch'}
+            width={32}
+            height={32}
+            sizes="32px"
+            className="h-8 w-8 rounded-lg border border-[#07111b] object-cover"
           />
         ) : (
-          <div
-            key={paint.id}
-            className="h-6 w-6 rounded-full border border-[#07111b]"
+          <span
+            className="block h-8 w-8 rounded-lg border border-[#07111b]"
             style={{ backgroundColor: displayHex || '#262626' }}
           />
         )
+
+        return paintHref ? (
+          <Link
+            key={paint.id}
+            href={paintHref}
+            className="rounded-lg transition hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+            aria-label={`Open ${displayName || 'paint'} details`}
+          >
+            {swatch}
+          </Link>
+        ) : (
+          <span key={paint.id}>{swatch}</span>
+        )
       })}
 
-      {paintsForStage.length > 5 ? (
-        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-[#07111b] bg-white/10 text-[10px] font-black text-white/70">
-          +{paintsForStage.length - 5}
+      {paintsForStage.length > 6 ? (
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#07111b] bg-white/10 text-[10px] font-black text-white/70">
+          +{paintsForStage.length - 6}
         </div>
       ) : null}
     </div>
   ) : null}
 </div>
 
-                    {stagePhoto ? (
-                      <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                    {isStageUploading ? (
+                      <div
+                        className="stage-photo-loading-pattern relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-black/30"
+                        aria-label="Uploading stage photo"
+                      >
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-200 border-t-transparent" />
+                      </div>
+                    ) : stagePhoto ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedStagePhoto({
+                            src: stagePhoto.image_url,
+                            alt: stagePhoto.alt_text || step.step_label,
+                            label: step.step_label,
+                          })
+                        }
+                        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30 transition hover:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+                        aria-label={`Expand ${step.step_label} photo`}
+                      >
                         <Image
                           src={stagePhoto.image_url}
                           alt={stagePhoto.alt_text || step.step_label}
@@ -1214,7 +1276,7 @@ const paintsForStage = stagePaints
                           sizes="48px"
                           className="object-cover"
                         />
-                      </div>
+                      </button>
                     ) : null}
 
                     <button
@@ -1238,7 +1300,7 @@ const paintsForStage = stagePaints
   </label>
 
   {stagePaints.filter((paint) => paint.progress_step_id === step.id).length > 0 ? (
-    <div className="mt-2 grid grid-cols-5 gap-2">
+    <div className="mt-2 grid grid-cols-3 gap-2">
       {stagePaints
         .filter((paint) => paint.progress_step_id === step.id)
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -1266,11 +1328,28 @@ const paintsForStage = stagePaints
             paint.paint_source === 'custom'
               ? null
               : paint.catalog_paint?.swatch_image_url
+          const paintHref = getStagePaintHref(paint)
+
+          const swatch = imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={displayName || 'Paint swatch'}
+              width={160}
+              height={160}
+              sizes="(max-width: 430px) 30vw, 128px"
+              className="aspect-square w-full rounded-lg border border-white/10 object-cover"
+            />
+          ) : (
+            <div
+              className="aspect-square w-full rounded-lg border border-white/10"
+              style={{ backgroundColor: displayHex || '#262626' }}
+            />
+          )
 
           return (
             <div
               key={paint.id}
-              className="relative min-w-0 rounded-xl border border-white/10 bg-black/25 p-1.5"
+              className="relative min-w-0 rounded-xl border border-white/10 bg-black/25 p-2"
             >
               <button
                 type="button"
@@ -1282,27 +1361,23 @@ const paintsForStage = stagePaints
                 ×
               </button>
 
-              {imageUrl ? (
-                <Image
-                  src={imageUrl}
-                  alt={displayName || 'Paint swatch'}
-                  width={96}
-                  height={96}
-                  sizes="64px"
-                  className="aspect-square w-full rounded-lg border border-white/10 object-cover"
-                />
+              {paintHref ? (
+                <Link
+                  href={paintHref}
+                  className="block rounded-lg transition hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+                  aria-label={`Open ${displayName || 'paint'} details`}
+                >
+                  {swatch}
+                </Link>
               ) : (
-                <div
-                  className="aspect-square w-full rounded-lg border border-white/10"
-                  style={{ backgroundColor: displayHex || '#262626' }}
-                />
+                swatch
               )}
 
-              <div className="mt-1 truncate text-[10px] font-black leading-tight text-white">
+              <div className="mt-1.5 truncate text-[11px] font-black leading-tight text-white">
                 {displayName || 'Unnamed paint'}
               </div>
 
-              <div className="mt-0.5 truncate text-[9px] leading-tight text-white/35">
+              <div className="mt-0.5 truncate text-[10px] leading-tight text-white/35">
                 {displayMeta || paint.paint_source}
               </div>
             </div>
@@ -1327,6 +1402,7 @@ const paintsForStage = stagePaints
                             id={`stage-photo-${step.id}`}
                             type="file"
                             accept="image/*"
+                            disabled={isStageUploading}
                             className="hidden"
                             onChange={(event) =>
                               handleStageFileChange(event, step)
@@ -1335,21 +1411,60 @@ const paintsForStage = stagePaints
 
                           <label
                             htmlFor={`stage-photo-${step.id}`}
-                            className="mt-2 flex w-full cursor-pointer items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.03] px-3 py-5 text-sm font-semibold text-white/50"
+                            className={`mt-2 flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed px-3 py-5 text-sm font-semibold transition ${
+                              isStageUploading
+                                ? 'stage-photo-loading-pattern cursor-wait border-cyan-300/35 bg-cyan-300/[0.08] text-cyan-100'
+                                : 'border-white/15 bg-white/[0.03] text-white/50 hover:border-cyan-300/30 hover:text-white/70'
+                            }`}
                           >
-                            Upload Stage Photo +
+                            {isStageUploading ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : null}
+                            {isStageUploading
+                              ? 'Uploading stage photo...'
+                              : 'Upload Stage Photo +'}
                           </label>
 
-                          {stagePhoto ? (
+                          {isStageUploading ? (
+  <div className="mt-3 flex items-center gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-2 text-cyan-100">
+    <div
+      className="stage-photo-loading-pattern relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-black"
+      aria-hidden="true"
+    >
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+    </div>
+
+    <div className="min-w-0 flex-1">
+      <div className="text-sm font-bold">
+        Uploading photo
+      </div>
+      <div className="text-xs text-cyan-100/60">
+        This will appear in the stage card and unit gallery.
+      </div>
+    </div>
+  </div>
+) : stagePhoto ? (
   <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-2">
-    <div className="relative h-14 w-14 overflow-hidden rounded-lg bg-black">
+    <button
+      type="button"
+      onClick={() =>
+        setExpandedStagePhoto({
+          src: stagePhoto.image_url,
+          alt: stagePhoto.alt_text || step.step_label,
+          label: step.step_label,
+        })
+      }
+      className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-black transition hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+      aria-label={`Expand ${step.step_label} photo`}
+    >
       <Image
         src={stagePhoto.image_url}
         alt={stagePhoto.alt_text || step.step_label}
         fill
+        sizes="56px"
         className="object-cover"
       />
-    </div>
+    </button>
 
     <div className="min-w-0 flex-1">
       <div className="text-sm font-bold text-white">
@@ -1381,6 +1496,39 @@ const paintsForStage = stagePaints
           </div>
         </section>
       )}
+
+      {expandedStagePhoto ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${expandedStagePhoto.label} photo`}
+          onClick={() => setExpandedStagePhoto(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setExpandedStagePhoto(null)}
+            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-xl font-bold text-white/80 transition hover:border-white/35 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+            aria-label="Close expanded photo"
+          >
+            x
+          </button>
+
+          <div
+            className="relative h-full max-h-[88vh] w-full max-w-5xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Image
+              src={expandedStagePhoto.src}
+              alt={expandedStagePhoto.alt}
+              fill
+              sizes="100vw"
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-5">
         <DeleteConfirmationCard

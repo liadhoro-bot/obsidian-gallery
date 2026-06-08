@@ -6,7 +6,7 @@ import DashboardTopBar from '../../../dashboard/dashboard-top-bar'
 import PaintHero from './paint-hero'
 import PaintTechnicalSpecs from './paint-technical-specs'
 import PaintOwnershipCard from './paint-ownership-card'
-import PaintRecipesUsed from './paint-recipes-used'
+import PaintUsedIn from './paint-recipes-used'
 import CustomPaintForm from '../../custom-paint-form'
 import { deleteCustomPaintAction } from '../../custom-paint-actions'
 import DeleteConfirmationCard from '../../../components/delete-confirmation-card'
@@ -128,7 +128,7 @@ export default async function PaintPage({ params }: PageProps) {
         )}
 
         <Suspense fallback={<PaintRecipesSkeleton />}>
-          <PaintRecipesUsed paintRef={paintRef} />
+          <PaintUsedIn paintRef={paintRef} />
         </Suspense>
 
         {source === 'custom' ? (

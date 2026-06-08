@@ -21,6 +21,7 @@ type UnitDetailUnit = {
   is_featured: boolean
   status: 'complete' | 'active' | 'bench' | 'pile' | 'other'
   project_id: string | null
+  theme_id: string | null
 }
 
 type ParentProject = {
@@ -59,6 +60,12 @@ type ProjectThemeRaw = {
   description: string | null
   theme_paints?: ProjectThemePaintRaw[] | null
   [key: string]: unknown
+}
+
+const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
+
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
 
 async function UnitDetailBody({
@@ -154,35 +161,52 @@ async function UnitDetailBody({
         .from('projects')
         .select(`
           id,
-          name,
-          theme:themes (
-            id,
-            name,
-            description,
-            theme_paints (
-              id,
-              sort_order,
-              paint_source,
-              paint_catalog_id,
-              custom_paint_id,
-              catalog_paint:paint_catalog (
-                id,
-                name,
-                hex_approx,
-                swatch_image_url
-              ),
-              custom_paint:paints (
-                id,
-                name,
-                color_hex
-              )
-            )
-          )
+          name
         `)
         .eq('id', unit.project_id)
         .eq('user_id', userId)
         .maybeSingle()
     : Promise.resolve({ data: null, error: null })
+
+  const unitThemeSelect = `
+    id,
+    name,
+    description,
+    theme_paints (
+      id,
+      sort_order,
+      paint_source,
+      paint_catalog_id,
+      custom_paint_id,
+      catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+        id,
+        name,
+        hex_approx,
+        swatch_image_url
+      ),
+      custom_paint:paints!theme_paints_custom_paint_id_fkey (
+        id,
+        name,
+        color_hex
+      )
+    )
+  `
+
+  const unitThemePromise = unit.theme_id
+    ? supabase
+        .from('themes')
+        .select(unitThemeSelect)
+        .eq('id', unit.theme_id)
+        .eq('user_id', userId)
+        .maybeSingle()
+    : supabase
+        .from('themes')
+        .select(unitThemeSelect)
+        .eq('user_id', userId)
+        .ilike('description', `%${unitThemeMarker(id)}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
   const linkedProjectsPromise = supabase
     .from('unit_projects')
@@ -208,6 +232,7 @@ async function UnitDetailBody({
     initialSessionsResult,
     { data: stagePaintRows, error: stagePaintsError },
     { data: project, error: projectError },
+    { data: unitThemeRaw, error: unitThemeError },
     { data: linkedProjectRows, error: linkedProjectsError },
     { data: allProjects, error: allProjectsError },
   ] = await Promise.all([
@@ -216,6 +241,7 @@ async function UnitDetailBody({
     sessionsPromise,
     stagePaintsPromise,
     projectPromise,
+    unitThemePromise,
     linkedProjectsPromise,
     allProjectsPromise,
   ])
@@ -354,6 +380,10 @@ async function UnitDetailBody({
     throw new Error(projectError.message)
   }
 
+  if (unitThemeError) {
+    throw new Error(unitThemeError.message)
+  }
+
   if (linkedProjectsError) {
     throw new Error(linkedProjectsError.message)
   }
@@ -373,7 +403,7 @@ async function UnitDetailBody({
         : paint.custom_paint ?? null,
     })) ?? []
 
-  const projectThemeRaw = (project?.theme?.[0] ?? null) as ProjectThemeRaw | null
+  const projectThemeRaw = unitThemeRaw as ProjectThemeRaw | null
   const linkedProjectIds = ((linkedProjectRows ?? []) as UnitProjectRaw[])
     .map((row) => row.project_id)
     .filter(Boolean)
@@ -407,8 +437,8 @@ async function UnitDetailBody({
         theme_paints:
           projectThemeRaw.theme_paints?.map((paint) => ({
             ...paint,
-            catalog_paint: paint.catalog_paint?.[0] ?? null,
-            custom_paint: paint.custom_paint?.[0] ?? null,
+            catalog_paint: firstRelation(paint.catalog_paint),
+            custom_paint: firstRelation(paint.custom_paint),
           })) ?? [],
       }
     : null
@@ -486,6 +516,21 @@ export default async function UnitDetailPage({ params }: PageProps) {
   if (unitError || !unit) {
     notFound()
   }
+
+  const { data: unitThemeIdRow } = await supabase
+    .from('units')
+    .select('theme_id')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const unitWithTheme = {
+    ...unit,
+    theme_id:
+      typeof unitThemeIdRow?.theme_id === 'string'
+        ? unitThemeIdRow.theme_id
+        : null,
+  }
   perf.mark('main Supabase query')
 
   const { data: featuredImage } = await supabase
@@ -510,13 +555,13 @@ export default async function UnitDetailPage({ params }: PageProps) {
         </Suspense>
 
         <div>
-          <UnitHeroClient unit={unit} featuredImage={featuredImage ?? null} />
+          <UnitHeroClient unit={unitWithTheme} featuredImage={featuredImage ?? null} />
 
           <Suspense fallback={<UnitDetailBodySkeleton />}>
             <UnitDetailBody
               id={id}
               userId={user.id}
-              unit={unit}
+              unit={unitWithTheme}
             />
           </Suspense>
         </div>

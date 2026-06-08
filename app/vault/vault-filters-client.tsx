@@ -3,12 +3,29 @@
 import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import BarcodeScannerModal from './barcode-scanner-modal'
+import ColorMatchModal from './color-match-modal'
+
+const COLOR_GROUP_OPTIONS = [
+  'Blacks & Greys',
+  'Whites',
+  'Browns',
+  'Reds',
+  'Oranges',
+  'Yellows',
+  'Greens',
+  'Blues',
+  'Purples',
+  'Flesh Tones',
+  'Metallics',
+  'Auxiliary',
+]
 
 type VaultFiltersClientProps = {
   q: string
   brand: string
   line: string
   ownership: string
+  matchHex: string
   tab: 'find' | 'collection'
   brands: string[]
   lines: string[]
@@ -19,6 +36,7 @@ export default function VaultFiltersClient({
   brand,
   line,
   ownership,
+  matchHex,
   tab,
   brands,
   lines,
@@ -33,12 +51,14 @@ export default function VaultFiltersClient({
   const [localOwnership, setLocalOwnership] = useState(
     tab === 'collection' ? 'owned' : ownership || 'all'
   )
+  const [colorGroup, setColorGroup] = useState('')
 
   const pushVaultParams = useCallback((nextValues?: {
     q?: string
     brand?: string
     line?: string
     ownership?: string
+    matchHex?: string
   }) => {
     const params = new URLSearchParams()
 
@@ -48,10 +68,13 @@ export default function VaultFiltersClient({
     const nextBrand = nextValues?.brand ?? localBrand
     const nextLine = nextValues?.line ?? localLine
     const nextOwnership = nextValues?.ownership ?? localOwnership
+    const nextMatchHex =
+      nextValues && 'matchHex' in nextValues ? nextValues.matchHex : matchHex
 
     if (nextQ) params.set('q', nextQ)
     if (nextBrand) params.set('brand', nextBrand)
     if (nextLine) params.set('line', nextLine)
+    if (tab === 'find' && nextMatchHex) params.set('matchHex', nextMatchHex)
 
     if (tab === 'find' && nextOwnership && nextOwnership !== 'all') {
       params.set('ownership', nextOwnership)
@@ -60,7 +83,7 @@ export default function VaultFiltersClient({
     startTransition(() => {
       router.replace(`/vault?${params.toString()}`)
     })
-  }, [localBrand, localLine, localOwnership, router, searchValue, startTransition, tab])
+  }, [localBrand, localLine, localOwnership, matchHex, router, searchValue, startTransition, tab])
 
   const updateParam = useCallback((key: string, value: string) => {
     const nextQ = key === 'q' ? value : searchValue
@@ -68,14 +91,16 @@ export default function VaultFiltersClient({
     const nextLine = key === 'brand' ? '' : key === 'line' ? value : localLine
     const nextOwnership =
       key === 'ownership' ? value : localOwnership
+    const nextMatchHex = key === 'q' ? '' : matchHex
 
     pushVaultParams({
       q: nextQ,
       brand: nextBrand,
       line: nextLine,
       ownership: nextOwnership,
+      matchHex: nextMatchHex,
     })
-  }, [localBrand, localLine, localOwnership, pushVaultParams, searchValue])
+  }, [localBrand, localLine, localOwnership, matchHex, pushVaultParams, searchValue])
 
   function handleBarcodeDetected(barcode: string) {
     const cleanedBarcode = barcode.replace(/\D/g, '')
@@ -83,7 +108,19 @@ export default function VaultFiltersClient({
     if (!cleanedBarcode) return
 
     setSearchValue(cleanedBarcode)
-    pushVaultParams({ q: cleanedBarcode })
+    pushVaultParams({ q: cleanedBarcode, matchHex: '' })
+  }
+
+  function clearAllFilters() {
+    setSearchValue('')
+    setLocalBrand('')
+    setLocalLine('')
+    setLocalOwnership('all')
+    setColorGroup('')
+
+    startTransition(() => {
+      router.replace('/vault?tab=find')
+    })
   }
 
   useEffect(() => {
@@ -214,6 +251,42 @@ export default function VaultFiltersClient({
           )}
         </select>
       </div>
+
+      {tab === 'find' ? (
+        <div className="grid grid-cols-[1fr_auto] gap-3">
+          <select
+            value={colorGroup}
+            onChange={(event) => setColorGroup(event.target.value)}
+            className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none"
+          >
+            <option value="" className="bg-slate-950 text-white">
+              Color group
+            </option>
+            {COLOR_GROUP_OPTIONS.map((option) => (
+              <option key={option} value={option} className="bg-slate-950 text-white">
+                {option}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ColorMatchModal
+              selectedHex={matchHex}
+              brand={localBrand}
+              line={localLine}
+              ownership={localOwnership}
+            />
+
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="inline-flex h-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm font-semibold text-white/65 outline-none transition hover:border-white/20 hover:bg-slate-900 hover:text-white active:scale-95"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <BarcodeScannerModal
         open={scannerOpen}

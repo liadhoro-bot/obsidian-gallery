@@ -18,6 +18,13 @@ type SessionRow = {
   started_at: string
 }
 
+type ActiveUnitRow = {
+  id: string
+  name: string
+  deadline: string | null
+  created_at: string
+}
+
 function formatDate(value: string | null | undefined) {
   if (!value) return '—'
 
@@ -49,21 +56,20 @@ export default async function DashboardActiveBench({
 
   const { data: units, error } = await supabase
     .from('units')
-    .select('id, name, deadline')
+    .select('id, name, deadline, created_at')
     .eq('user_id', resolvedUserId)
-    .eq('is_active', true)
-    .order('deadline', { ascending: true, nullsFirst: false })
-    .limit(8)
+    .eq('status', 'active')
 
   if (error || !units?.length) {
     return (
       <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-        <p className="text-sm text-white/60">No active bench units yet.</p>
+        <p className="text-sm text-white/60">No active units yet.</p>
       </section>
     )
   }
 
-  const unitIds = units.map((unit) => unit.id)
+  const activeUnits = units as ActiveUnitRow[]
+  const unitIds = activeUnits.map((unit) => unit.id)
 
   const [progressResult, imageResult, sessionResult] = await Promise.all([
     supabase
@@ -83,8 +89,7 @@ export default async function DashboardActiveBench({
       .from('unit_sessions')
       .select('unit_id, started_at')
       .in('unit_id', unitIds)
-      .order('started_at', { ascending: false })
-      .limit(8),
+      .order('started_at', { ascending: false }),
   ])
 
   const progressRows = (progressResult.data ?? []) as StageProgressRow[]
@@ -93,7 +98,7 @@ export default async function DashboardActiveBench({
 
   const progressMap = new Map<string, number>()
 
-  for (const unit of units) {
+  for (const unit of activeUnits) {
     progressMap.set(unit.id, 0)
   }
 
@@ -120,20 +125,53 @@ export default async function DashboardActiveBench({
     }
   }
 
+  const displayUnits = [...activeUnits]
+    .sort((a, b) => {
+      const createdAtSort =
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+
+      if (a.deadline && b.deadline) {
+        const deadlineSort =
+          new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+
+        return deadlineSort || createdAtSort
+      }
+
+      if (a.deadline) return -1
+      if (b.deadline) return 1
+
+      const aLastSession = lastSessionMap.get(a.id)
+      const bLastSession = lastSessionMap.get(b.id)
+
+      if (aLastSession && bLastSession) {
+        const sessionSort =
+          new Date(bLastSession).getTime() -
+          new Date(aLastSession).getTime()
+
+        return sessionSort || createdAtSort
+      }
+
+      if (aLastSession) return -1
+      if (bLastSession) return 1
+
+      return createdAtSort
+    })
+    .slice(0, 8)
+
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between">
         <h2 className="text-xl font-semibold text-white">
-          Active Bench Units
+          Active Units
         </h2>
 
         <p className="text-sm text-white/60">
-          {units.length} in progress
+          {activeUnits.length} active
         </p>
       </div>
 
       <div className="space-y-3">
-        {units.map((unit) => {
+        {displayUnits.map((unit) => {
           const imageUrl = imageMap.get(unit.id)
           const lastSession = lastSessionMap.get(unit.id)
           const progress = progressMap.get(unit.id) || 0

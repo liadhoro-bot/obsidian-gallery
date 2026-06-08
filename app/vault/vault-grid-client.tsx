@@ -38,12 +38,14 @@ export default function VaultGridClient({
   brand,
   line,
   ownership,
+  hasMore,
 }: {
   initialPaints: VaultPaint[]
   q: string
   brand: string
   line: string
   ownership: string
+  hasMore: boolean
 }) {
   const [paints, setPaints] = useState(initialPaints)
   const [loading, setLoading] = useState(false)
@@ -217,6 +219,7 @@ export default function VaultGridClient({
         })}
       </div>
 
+      {hasMore ? (
       <div className="flex justify-center pt-2">
         <button
           type="button"
@@ -230,6 +233,7 @@ export default function VaultGridClient({
           <span>{loading ? 'Loading...' : 'Load more'}</span>
         </button>
       </div>
+      ) : null}
     </section>
   )
 }

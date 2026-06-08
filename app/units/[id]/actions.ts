@@ -15,6 +15,20 @@ import {
   type GalleryUploadResult,
   validateGalleryImageFile,
 } from '../../../utils/images/gallery-upload'
+import {
+  extractPaletteFromImage,
+  findNearestUniquePaints,
+} from '../../../utils/color-matching'
+
+const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
+const unitThemeDescription = (unitId: string, source: string) =>
+  `${source}\n\n${unitThemeMarker(unitId)}`
+const removeUnitThemeMarker = (description: string | null, unitId: string) =>
+  (description || '')
+    .replace(new RegExp(`\\n\\n\\[unit:${unitId}\\]\\s*$`), '')
+    .replace(new RegExp(`\\[unit:${unitId}\\]\\s*$`), '')
+    .trim()
+
 export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   const supabase = await createClient()
 
@@ -403,6 +417,358 @@ export async function setFeaturedUnitImage(unitId: string, imageId: string) {
   revalidatePath(`/units/${unitId}`)
   revalidatePath('/dashboard')
   revalidatePath('/projects')
+}
+
+export async function calculateUnitPaletteAction(formData: FormData) {
+  const supabase = await createClient()
+
+  const unitId = String(formData.get('unitId') || '')
+
+  if (!unitId) return
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id, name, project_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
+
+  const { error: themeColumnError } = await supabase
+    .from('units')
+    .select('theme_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const canUseUnitThemeColumn = !themeColumnError
+
+  const { data: featuredImage } = await supabase
+    .from('image_assets')
+    .select('image_url')
+    .eq('entity_type', 'unit')
+    .eq('entity_id', unitId)
+    .eq('user_id', user.id)
+    .eq('is_featured', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!featuredImage?.image_url) {
+    throw new Error('Add a featured unit image before creating a magic palette')
+  }
+
+  const extractedHexes = await extractPaletteFromImage(featuredImage.image_url)
+
+  const { data: catalogColors, error: catalogError } = await supabase
+    .from('paint_catalog')
+    .select('id, hex_approx, color_match_enabled')
+    .eq('is_active', true)
+    .eq('color_match_enabled', true)
+    .not('hex_approx', 'is', null)
+    .filter('hex_approx', 'match', '^#[0-9A-Fa-f]{6}$')
+    .limit(5000)
+
+  if (catalogError) {
+    throw catalogError
+  }
+
+  if (!catalogColors?.length) {
+    throw new Error('No paint catalog colors found')
+  }
+
+  const matchedPaints = findNearestUniquePaints(extractedHexes, catalogColors)
+    .map((nearestPaint, index) => ({
+        paint_source: 'catalog',
+        paint_catalog_id: nearestPaint.id,
+        custom_paint_id: null,
+        sort_order: index,
+      }))
+
+  if (matchedPaints.length === 0) {
+    throw new Error('Could not match palette colors to paints')
+  }
+
+  const { data: newTheme, error: themeError } = await supabase
+    .from('themes')
+    .insert({
+      user_id: user.id,
+      name: unit.name || 'Unit Palette',
+      description: unitThemeDescription(
+        unitId,
+        'Unit palette created from the unit image.'
+      ),
+      image_url: featuredImage.image_url,
+      is_public: false,
+    })
+    .select('id')
+    .single()
+
+  if (themeError || !newTheme) {
+    throw themeError || new Error('Failed to create unit palette')
+  }
+
+  const themeId = newTheme.id
+
+  if (canUseUnitThemeColumn) {
+    const { error: updateUnitError } = await supabase
+      .from('units')
+      .update({ theme_id: themeId })
+      .eq('id', unitId)
+      .eq('user_id', user.id)
+
+    if (updateUnitError) {
+      throw updateUnitError
+    }
+  }
+
+  const paintRows = matchedPaints.map((paint) => ({
+    ...paint,
+    theme_id: themeId,
+  }))
+
+  const { error: insertPaintsError } = await supabase
+    .from('theme_paints')
+    .insert(paintRows)
+
+  if (insertPaintsError) {
+    throw insertPaintsError
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'palette_calculator_used',
+    properties: {
+      source_type: 'unit',
+      source_id: unitId,
+      unit_id: unitId,
+      project_id: unit.project_id || null,
+      theme_id: themeId,
+      extracted_colors_count: extractedHexes.length,
+      matched_paints_count: matchedPaints.length,
+    },
+  })
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/themes')
+  revalidatePath(`/themes/${themeId}`)
+}
+
+export async function unassignUnitTheme(formData: FormData) {
+  const supabase = await createClient()
+
+  const unitId = String(formData.get('unitId') || '')
+  const themeId = String(formData.get('themeId') || '')
+
+  if (!unitId || !themeId) return
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) return
+
+  const { error: themeColumnError } = await supabase
+    .from('units')
+    .select('theme_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!themeColumnError) {
+    const { error: updateUnitError } = await supabase
+      .from('units')
+      .update({ theme_id: null })
+      .eq('id', unitId)
+      .eq('user_id', user.id)
+
+    if (updateUnitError) {
+      throw updateUnitError
+    }
+  }
+
+  const { data: theme, error: themeError } = await supabase
+    .from('themes')
+    .select('id, description')
+    .eq('id', themeId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (themeError) {
+    throw themeError
+  }
+
+  if (theme?.description?.includes(unitThemeMarker(unitId))) {
+    const { error: updateThemeError } = await supabase
+      .from('themes')
+      .update({ description: removeUnitThemeMarker(theme.description, unitId) })
+      .eq('id', themeId)
+      .eq('user_id', user.id)
+
+    if (updateThemeError) {
+      throw updateThemeError
+    }
+  }
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
+  revalidatePath('/themes')
+  revalidatePath(`/themes/${themeId}`)
+}
+
+export async function setUnitPaletteSlot(
+  unitId: string,
+  slotIndex: number,
+  paintSource: 'catalog' | 'custom',
+  paintId: string
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id, name')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw unitError
+  }
+
+  if (!unit) return
+
+  const { data: unitThemeRow, error: themeColumnError } = await supabase
+    .from('units')
+    .select('theme_id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const canUseUnitThemeColumn = !themeColumnError
+  let themeId =
+    typeof unitThemeRow?.theme_id === 'string' ? unitThemeRow.theme_id : null
+
+  if (!themeId) {
+    const { data: existingMarkedTheme } = await supabase
+      .from('themes')
+      .select('id')
+      .eq('user_id', user.id)
+      .ilike('description', `%${unitThemeMarker(unitId)}%`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    themeId = existingMarkedTheme?.id ?? null
+  }
+
+  if (!themeId) {
+    const { data: featuredImage } = await supabase
+      .from('image_assets')
+      .select('image_url')
+      .eq('entity_type', 'unit')
+      .eq('entity_id', unitId)
+      .eq('user_id', user.id)
+      .eq('is_featured', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const { data: newTheme, error: themeError } = await supabase
+      .from('themes')
+      .insert({
+        user_id: user.id,
+        name: unit.name || 'Unit Palette',
+        description: unitThemeDescription(
+          unitId,
+          'Unit palette created from the unit page.'
+        ),
+        image_url: featuredImage?.image_url || null,
+        is_public: false,
+      })
+      .select('id')
+      .single()
+
+    if (themeError || !newTheme) {
+      throw themeError || new Error('Failed to create unit palette')
+    }
+
+    themeId = newTheme.id
+
+    if (canUseUnitThemeColumn) {
+      const { error: updateUnitError } = await supabase
+        .from('units')
+        .update({ theme_id: themeId })
+        .eq('id', unitId)
+        .eq('user_id', user.id)
+
+      if (updateUnitError) {
+        throw updateUnitError
+      }
+    }
+  }
+
+  const sortOrder = slotIndex + 1
+
+  const { error: deleteError } = await supabase
+    .from('theme_paints')
+    .delete()
+    .eq('theme_id', themeId)
+    .eq('sort_order', sortOrder)
+
+  if (deleteError) {
+    throw deleteError
+  }
+
+  const { error: insertError } = await supabase.from('theme_paints').insert({
+    theme_id: themeId,
+    paint_source: paintSource,
+    paint_catalog_id: paintSource === 'catalog' ? paintId : null,
+    custom_paint_id: paintSource === 'custom' ? paintId : null,
+    sort_order: sortOrder,
+  })
+
+  if (insertError) {
+    throw insertError
+  }
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath(`/themes/${themeId}`)
 }
 
 export async function uploadUnitGalleryImages(

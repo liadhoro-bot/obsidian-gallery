@@ -1,12 +1,18 @@
   import { createClient } from '../../utils/supabase/server'
   import VaultGridClient from './vault-grid-client'
   import VaultExportButton from './vault-export-button'
+  import { captureServerEvent } from '../../utils/analytics/server'
+  import {
+    findClosestPaints,
+    isUsableColorHex,
+  } from '../../utils/color-matching'
 
   type VaultGridProps = {
     q: string
     brand: string
     line: string
     ownership: string
+    matchHex: string
     limit: number
     tab: 'find' | 'collection'
   }
@@ -21,6 +27,7 @@
     swatch_image_url: string | null
     hex_approx: string | null
     paint_type: string | null
+    color_match_enabled?: boolean | null
     is_owned: boolean
     is_wishlist: boolean
   }
@@ -30,6 +37,7 @@
     brand,
     line,
     ownership,
+    matchHex,
     limit,
     tab,
   }: VaultGridProps) {
@@ -62,6 +70,159 @@
     )
 
     const ownedIds = Array.from(ownedSet)
+    const wishlistIds = Array.from(wishlistSet)
+
+    if (tab === 'find' && matchHex) {
+      if (!isUsableColorHex(matchHex)) {
+        return (
+          <div className="rounded-3xl border border-dashed border-red-400/30 bg-red-500/10 p-8 text-center">
+            <p className="text-lg font-semibold text-white">
+              Invalid selected color
+            </p>
+            <p className="mt-2 text-sm text-red-100/80">
+              Open Match a Color and choose a valid swatch.
+            </p>
+          </div>
+        )
+      }
+
+      let matchCatalogQuery = supabase
+        .from('paint_catalog')
+        .select(
+          `
+          id,
+          brand,
+          line,
+          name,
+          sku,
+          swatch_image_url,
+          hex_approx,
+          paint_type,
+          color_match_enabled
+        `
+        )
+        .eq('is_active', true)
+        .eq('color_match_enabled', true)
+        .not('hex_approx', 'is', null)
+        .filter('hex_approx', 'match', '^#[0-9A-Fa-f]{6}$')
+
+      if (brand) {
+        matchCatalogQuery = matchCatalogQuery.eq('brand', brand)
+      }
+
+      if (line) {
+        matchCatalogQuery = matchCatalogQuery.eq('line', line)
+      }
+
+      const { data: matchCatalogRows, error: matchCatalogError } =
+        await matchCatalogQuery.limit(5000)
+
+      if (matchCatalogError) {
+        return (
+          <div className="rounded-3xl border border-dashed border-red-400/30 bg-red-500/10 p-8 text-center">
+            <p className="text-lg font-semibold text-white">
+              Color matching failed
+            </p>
+            <p className="mt-2 text-sm text-red-100/80">
+              Try again in a moment.
+            </p>
+          </div>
+        )
+      }
+
+      const ownershipFilteredRows = (matchCatalogRows ?? []).filter((paint) => {
+        if (ownership === 'owned') return ownedSet.has(paint.id)
+        if (ownership === 'unowned') return !ownedSet.has(paint.id)
+        if (ownership === 'wishlist') return wishlistSet.has(paint.id)
+        if (ownership === 'custom') return false
+        return true
+      })
+
+      if (!ownershipFilteredRows.length) {
+        return (
+          <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 p-8 text-center">
+            <p className="text-lg font-semibold text-white">
+              No matchable catalog paints found
+            </p>
+            <p className="mt-2 text-sm text-neutral-400">
+              Try changing the filters or clearing ownership filters.
+            </p>
+          </div>
+        )
+      }
+
+      const matchedPaints = findClosestPaints(matchHex, ownershipFilteredRows, {
+        limit: 24,
+      }).map(({ paint }) => ({
+        id: paint.id,
+        source: 'catalog' as const,
+        brand: paint.brand,
+        line: paint.line,
+        name: paint.name,
+        sku: paint.sku,
+        swatch_image_url: paint.swatch_image_url,
+        hex_approx: paint.hex_approx,
+        paint_type: paint.paint_type,
+        is_owned: ownedSet.has(paint.id),
+        is_wishlist: wishlistSet.has(paint.id),
+      }))
+
+      if (matchedPaints.length === 0) {
+        return (
+          <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 p-8 text-center">
+            <p className="text-lg font-semibold text-white">No results</p>
+            <p className="mt-2 text-sm text-neutral-400">
+              No eligible paints had a usable swatch color.
+            </p>
+          </div>
+        )
+      }
+
+      const closestPaint = matchedPaints[0]
+
+      await captureServerEvent({
+        distinctId: user.id,
+        event: 'paint_color_match_used',
+        properties: {
+          selected_hex: matchHex.toUpperCase(),
+          result_count: matchedPaints.length,
+          closest_paint_id: closestPaint?.id ?? null,
+          closest_brand: closestPaint?.brand ?? null,
+          closest_line: closestPaint?.line ?? null,
+          source: 'vault_find_color',
+        },
+      })
+
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-white/75">
+                Closest matches to {matchHex.toUpperCase()}
+              </p>
+              <p className="mt-1 text-xs text-white/40">
+                Showing {matchedPaints.length} eligible catalog paints
+              </p>
+            </div>
+            <div
+              className="h-11 w-11 shrink-0 rounded-2xl border border-white/15"
+              style={{ backgroundColor: matchHex }}
+              aria-hidden="true"
+            />
+          </div>
+
+          <VaultGridClient
+            initialPaints={matchedPaints}
+            q={q}
+            brand={brand}
+            line={line}
+            ownership={ownership}
+            hasMore={false}
+          />
+        </div>
+      )
+    }
+
     let catalogQuery = supabase
       .from('paint_catalog')
       .select(
@@ -135,8 +296,6 @@
   }
 
   if (ownership === 'wishlist') {
-    const wishlistIds = Array.from(wishlistSet)
-
     if (wishlistIds.length === 0) {
       catalogQuery = catalogQuery.in('id', [
         '00000000-0000-0000-0000-000000000000',
@@ -312,6 +471,7 @@
         brand={brand}
         line={line}
         ownership={ownership}
+        hasMore={visiblePaints.length < totalCount}
       />
     </div>
   )

@@ -6,14 +6,68 @@ import { createClient } from '../../../utils/supabase/server'
 import { captureServerEvent } from '../../../utils/analytics/server'
 import {
   extractPaletteFromImage,
-  findNearestPaint,
-} from './palette-utils'
+  findNearestUniquePaints,
+} from '../../../utils/color-matching'
 
 function revalidateThemeCaches(themeId: string) {
   revalidatePath('/themes')
   revalidatePath(`/themes/${themeId}`)
   revalidateTag('public-themes', 'max')
   revalidateTag(`theme:${themeId}`, 'max')
+}
+
+const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
+
+function appendUnitThemeMarkers(description: string | null, unitIds: string[]) {
+  const current = description?.trim() ?? ''
+  const missingMarkers = unitIds
+    .map((unitId) => unitThemeMarker(unitId))
+    .filter((marker) => !current.includes(marker))
+
+  if (missingMarkers.length === 0) return current
+
+  return [current, ...missingMarkers].filter(Boolean).join('\n\n')
+}
+
+function removeUnitThemeMarkers(description: string | null, unitIds: string[]) {
+  return unitIds
+    .reduce(
+      (current, unitId) =>
+        current
+          .replace(new RegExp(`\\n\\n\\[unit:${unitId}\\]`, 'g'), '')
+          .replace(new RegExp(`\\[unit:${unitId}\\]`, 'g'), ''),
+      description || ''
+    )
+    .trim()
+}
+
+async function canAssignTheme(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  themeId: string,
+  userId: string
+) {
+  const { data: theme, error: themeError } = await supabase
+    .from('themes')
+    .select('id, user_id, is_public')
+    .eq('id', themeId)
+    .maybeSingle()
+
+  if (themeError) throw themeError
+
+  if (!theme) return false
+
+  if (theme.user_id === userId || theme.is_public) return true
+
+  const { data: savedTheme, error: savedThemeError } = await supabase
+    .from('saved_themes')
+    .select('theme_id')
+    .eq('theme_id', themeId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (savedThemeError) throw savedThemeError
+
+  return Boolean(savedTheme)
 }
 
 export async function toggleThemeVisibility(themeId: string, nextValue: boolean) {
@@ -36,6 +90,171 @@ export async function toggleThemeVisibility(themeId: string, nextValue: boolean)
 
   if (error) throw error
 
+  revalidateThemeCaches(themeId)
+}
+
+export async function assignThemeToProjects(formData: FormData) {
+  const supabase = await createClient()
+
+  const themeId = String(formData.get('themeId') || '')
+  const projectIds = formData
+    .getAll('projectIds')
+    .map((value) => String(value))
+    .filter(Boolean)
+
+  if (!themeId || projectIds.length === 0) return
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const canAssign = await canAssignTheme(supabase, themeId, user.id)
+
+  if (!canAssign) return
+
+  const { data: projects, error: projectsError } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('id', projectIds)
+
+  if (projectsError) throw projectsError
+
+  const allowedProjectIds = (projects ?? []).map((project) => project.id)
+
+  if (allowedProjectIds.length === 0) return
+
+  const { error: updateError } = await supabase
+    .from('projects')
+    .update({ theme_id: themeId })
+    .eq('user_id', user.id)
+    .in('id', allowedProjectIds)
+
+  if (updateError) throw updateError
+
+  for (const projectId of allowedProjectIds) {
+    revalidatePath(`/projects/${projectId}`)
+  }
+
+  revalidatePath('/projects')
+  revalidatePath('/dashboard')
+  revalidateThemeCaches(themeId)
+}
+
+export async function assignThemeToUnits(formData: FormData) {
+  const supabase = await createClient()
+
+  const themeId = String(formData.get('themeId') || '')
+  const unitIds = formData
+    .getAll('unitIds')
+    .map((value) => String(value))
+    .filter(Boolean)
+
+  if (!themeId || unitIds.length === 0) return
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const canAssign = await canAssignTheme(supabase, themeId, user.id)
+
+  if (!canAssign) return
+
+  const { data: theme, error: themeError } = await supabase
+    .from('themes')
+    .select('id, user_id, description')
+    .eq('id', themeId)
+    .maybeSingle()
+
+  if (themeError) throw themeError
+  if (!theme) return
+
+  const { data: units, error: unitsError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('id', unitIds)
+
+  if (unitsError) throw unitsError
+
+  const allowedUnitIds = (units ?? []).map((unit) => unit.id)
+
+  if (allowedUnitIds.length === 0) return
+
+  const { error: themeColumnError } = await supabase
+    .from('units')
+    .select('theme_id')
+    .eq('user_id', user.id)
+    .limit(1)
+
+  if (!themeColumnError) {
+    const { error: updateUnitsError } = await supabase
+      .from('units')
+      .update({ theme_id: themeId })
+      .eq('user_id', user.id)
+      .in('id', allowedUnitIds)
+
+    if (updateUnitsError) throw updateUnitsError
+  } else {
+    if (theme.user_id !== user.id) {
+      throw new Error('Apply the unit palette migration before assigning this theme to a unit')
+    }
+
+    const { data: markedThemes, error: markedThemesError } = await supabase
+      .from('themes')
+      .select('id, description')
+      .eq('user_id', user.id)
+
+    if (markedThemesError) throw markedThemesError
+
+    for (const markedTheme of markedThemes ?? []) {
+      if (
+        !markedTheme.description ||
+        !allowedUnitIds.some((unitId) =>
+          markedTheme.description?.includes(unitThemeMarker(unitId))
+        )
+      ) {
+        continue
+      }
+
+      const { error: clearMarkerError } = await supabase
+        .from('themes')
+        .update({
+          description: removeUnitThemeMarkers(
+            markedTheme.description,
+            allowedUnitIds
+          ),
+        })
+        .eq('id', markedTheme.id)
+        .eq('user_id', user.id)
+
+      if (clearMarkerError) throw clearMarkerError
+    }
+
+    const { error: updateThemeError } = await supabase
+      .from('themes')
+      .update({
+        description: appendUnitThemeMarkers(theme.description, allowedUnitIds),
+      })
+      .eq('id', themeId)
+      .eq('user_id', user.id)
+
+    if (updateThemeError) throw updateThemeError
+  }
+
+  for (const unitId of allowedUnitIds) {
+    revalidatePath(`/units/${unitId}`)
+  }
+
+  revalidatePath('/dashboard')
   revalidateThemeCaches(themeId)
 }
 
@@ -357,14 +576,13 @@ export async function calculateThemePaletteAction(formData: FormData) {
 
   const { data: catalogColors } = await supabase
     .from('paint_catalog')
-    .select('id, hex_approx')
+    .select('id, hex_approx, color_match_enabled')
     .eq('is_active', true)
+    .eq('color_match_enabled', true)
     .not('hex_approx', 'is', null)
+    .filter('hex_approx', 'match', '^#[0-9A-Fa-f]{6}$')
 
-  const matchedPaints = extractedHexes
-    .map((hex) => findNearestPaint(hex, catalogColors || []))
-    .filter(Boolean)
-    .slice(0, 5)
+  const matchedPaints = findNearestUniquePaints(extractedHexes, catalogColors || [])
 
   await supabase
     .from('theme_paints')

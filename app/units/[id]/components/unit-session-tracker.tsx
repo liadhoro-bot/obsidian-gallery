@@ -4,9 +4,11 @@ import { FormEvent, useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import posthog from 'posthog-js'
 import {
+  deleteUnitSession,
   endUnitSession,
   logManualUnitSession,
   startUnitSession,
+  updateUnitSession,
 } from '../actions'
 
 type Session = {
@@ -101,12 +103,52 @@ function getTodayInputValue() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function toDateTimeLocal(value: string) {
+  const date = new Date(value)
+  const offset = date.getTimezoneOffset()
+  const local = new Date(date.getTime() - offset * 60 * 1000)
+
+  return local.toISOString().slice(0, 16)
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+      <path
+        d="M5 19H19M6 15L15.5 5.5C16.3 4.7 17.7 4.7 18.5 5.5C19.3 6.3 19.3 7.7 18.5 8.5L9 18H6V15Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function SessionRow({
   session,
   title,
+  isEditing,
+  isPending,
+  isDeleting,
+  confirmDelete,
+  onCancelEdit,
+  onDelete,
+  onEdit,
+  onRequestDelete,
+  onSubmitEdit,
 }: {
   session: Session
   title?: string
+  isEditing: boolean
+  isPending: boolean
+  isDeleting: boolean
+  confirmDelete: boolean
+  onCancelEdit: () => void
+  onDelete: () => void
+  onEdit: () => void
+  onRequestDelete: () => void
+  onSubmitEdit: (formData: FormData) => void
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-[#07111b]/90 p-4 shadow-[0_0_24px_rgba(0,0,0,0.2)]">
@@ -116,25 +158,115 @@ function SessionRow({
         </div>
       ) : null}
 
-      <div className="grid gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-white/75">
-          <span className="text-cyan-300">
-            <CalendarIcon />
-          </span>
-          <span>{formatDate(session.started_at)}</span>
-        </div>
+      {isEditing ? (
+        <form action={onSubmitEdit} className="space-y-3">
+          <input type="hidden" name="sessionId" value={session.id} />
 
-        <div className="flex items-center gap-2 text-sm font-black text-white">
-          <span className="text-cyan-300">
-            <ClockIcon />
-          </span>
-          <span>{formatSessionDuration(session.duration_seconds)}</span>
-        </div>
+          <div>
+            <label className="text-xs text-white/40">Started</label>
+            <input
+              name="startedAt"
+              type="datetime-local"
+              defaultValue={toDateTimeLocal(session.started_at)}
+              className="mt-1 w-full rounded-lg bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </div>
 
-        {session.notes ? (
-          <p className="text-sm leading-5 text-white/45">{session.notes}</p>
-        ) : null}
-      </div>
+          <div>
+            <label className="text-xs text-white/40">Ended</label>
+            <input
+              name="endedAt"
+              type="datetime-local"
+              defaultValue={toDateTimeLocal(session.ended_at!)}
+              className="mt-1 w-full rounded-lg bg-black/40 px-3 py-2 text-sm text-white"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={isPending}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
+            >
+              {isPending ? <LoadingDot /> : null}
+              Save
+            </button>
+
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="flex-1 rounded-xl bg-white/10 px-3 py-2 text-xs font-bold text-white"
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div className="flex justify-end">
+            {confirmDelete ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={isPending || isDeleting}
+                  className="flex items-center gap-2 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                >
+                  {isDeleting ? <LoadingDot /> : null}
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onRequestDelete}
+                className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-bold text-red-300"
+              >
+                Delete Session
+              </button>
+            )}
+          </div>
+        </form>
+      ) : (
+        <div>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="flex items-center gap-1.5 font-semibold text-white/75">
+              <span className="text-cyan-300">
+                <CalendarIcon />
+              </span>
+              <span>{formatDate(session.started_at)}</span>
+            </span>
+
+            <span className="flex items-center gap-1.5 font-black text-white">
+              <span className="text-cyan-300">
+                <ClockIcon />
+              </span>
+              <span>{formatSessionDuration(session.duration_seconds)}</span>
+            </span>
+
+            <button
+              type="button"
+              onClick={onEdit}
+              className="ml-auto flex h-8 w-8 items-center justify-center rounded-full border border-cyan-400/25 bg-cyan-400/10 text-cyan-200 transition hover:border-cyan-300/60 hover:bg-cyan-400/20 hover:text-white"
+              aria-label="Edit session"
+            >
+              <EditIcon />
+            </button>
+          </div>
+
+          {session.notes ? (
+            <p className="mt-3 text-sm leading-5 text-white/45">
+              {session.notes}
+            </p>
+          ) : null}
+        </div>
+      )}
     </div>
   )
 }
@@ -155,6 +287,9 @@ export default function UnitSessionTracker({
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [isManualOpen, setIsManualOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [manualError, setManualError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -246,6 +381,39 @@ export default function UnitSessionTracker({
     })
   }
 
+  const handleUpdate = (formData: FormData) => {
+    startTransition(async () => {
+      const actionData = new FormData()
+
+      actionData.set('unitId', unitId)
+      actionData.set('sessionId', String(formData.get('sessionId') || ''))
+      actionData.set('startedAt', String(formData.get('startedAt') || ''))
+      actionData.set('endedAt', String(formData.get('endedAt') || ''))
+
+      await updateUnitSession(actionData)
+      setEditingId(null)
+      setConfirmDeleteId(null)
+      router.refresh()
+    })
+  }
+
+  const handleDelete = (sessionId: string) => {
+    setDeletingId(sessionId)
+
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.set('unitId', unitId)
+      formData.set('sessionId', sessionId)
+
+      await deleteUnitSession(formData)
+
+      setEditingId(null)
+      setConfirmDeleteId(null)
+      setDeletingId(null)
+      router.refresh()
+    })
+  }
+
   return (
     <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 shadow-[0_0_28px_rgba(34,211,238,0.08)]">
       <div className="flex items-start justify-between gap-3">
@@ -333,7 +501,25 @@ export default function UnitSessionTracker({
           <div className="grid gap-3">
             {historySessions.length > 0 ? (
               historySessions.map((session) => (
-                <SessionRow key={session.id} session={session} />
+                <SessionRow
+                  key={session.id}
+                  session={session}
+                  isEditing={editingId === session.id}
+                  isPending={isPending}
+                  isDeleting={deletingId === session.id}
+                  confirmDelete={confirmDeleteId === session.id}
+                  onCancelEdit={() => {
+                    setEditingId(null)
+                    setConfirmDeleteId(null)
+                  }}
+                  onDelete={() => handleDelete(session.id)}
+                  onEdit={() => {
+                    setEditingId(session.id)
+                    setConfirmDeleteId(null)
+                  }}
+                  onRequestDelete={() => setConfirmDeleteId(session.id)}
+                  onSubmitEdit={handleUpdate}
+                />
               ))
             ) : (
               <div className="rounded-2xl border border-white/10 bg-[#07111b]/90 p-4 text-sm text-white/45">
@@ -345,6 +531,21 @@ export default function UnitSessionTracker({
           <SessionRow
             session={mostRecentSession}
             title="Most Recent Session"
+            isEditing={editingId === mostRecentSession.id}
+            isPending={isPending}
+            isDeleting={deletingId === mostRecentSession.id}
+            confirmDelete={confirmDeleteId === mostRecentSession.id}
+            onCancelEdit={() => {
+              setEditingId(null)
+              setConfirmDeleteId(null)
+            }}
+            onDelete={() => handleDelete(mostRecentSession.id)}
+            onEdit={() => {
+              setEditingId(mostRecentSession.id)
+              setConfirmDeleteId(null)
+            }}
+            onRequestDelete={() => setConfirmDeleteId(mostRecentSession.id)}
+            onSubmitEdit={handleUpdate}
           />
         ) : (
           <div className="rounded-2xl border border-white/10 bg-[#07111b]/90 p-4 text-sm text-white/45">

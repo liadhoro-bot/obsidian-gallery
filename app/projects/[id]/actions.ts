@@ -6,8 +6,8 @@ import { redirect } from 'next/navigation'
 import { captureServerEvent } from '../../../utils/analytics/server'
 import {
   extractPaletteFromImage,
-  findNearestPaint,
-} from '../../themes/[id]/palette-utils'
+  findNearestUniquePaints,
+} from '../../../utils/color-matching'
 
 export async function setFeaturedUnit(formData: FormData) {
   const supabase = await createClient()
@@ -102,6 +102,40 @@ export async function deleteProject(formData: FormData) {
 
   redirect('/projects')
 }
+
+export async function unassignProjectTheme(formData: FormData) {
+  const supabase = await createClient()
+
+  const projectId = String(formData.get('projectId') || '')
+  const themeId = String(formData.get('themeId') || '')
+
+  if (!projectId) return
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return
+
+  const { error } = await supabase
+    .from('projects')
+    .update({ theme_id: null })
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/projects/${projectId}`)
+  revalidatePath('/projects')
+  revalidatePath('/dashboard')
+
+  if (themeId) {
+    revalidatePath(`/themes/${themeId}`)
+  }
+}
+
 export async function setProjectPaletteSlot(
   projectId: string,
   slotIndex: number,
@@ -234,45 +268,23 @@ export async function calculateProjectPaletteAction(formData: FormData) {
 
   const { data: catalogColors } = await supabase
     .from('paint_catalog')
-    .select('id, hex_approx')
+    .select('id, hex_approx, color_match_enabled')
+    .eq('is_active', true)
+    .eq('color_match_enabled', true)
     .not('hex_approx', 'is', null)
+    .filter('hex_approx', 'match', '^#[0-9A-Fa-f]{6}$')
     .limit(5000)
 
   if (!catalogColors?.length) return
 
-  const usedPaintIds = new Set<string>()
-
-  const paintRows = extractedHexes
-  .map((hex, index) => {
-    const nearestPaint = findNearestPaint(
-      hex,
-      catalogColors.filter((paint) => !usedPaintIds.has(paint.id))
-    )
-
-    if (!nearestPaint?.id) return null
-
-    usedPaintIds.add(nearestPaint.id)
-
-    return {
+  const paintRows = findNearestUniquePaints(extractedHexes, catalogColors)
+    .map((nearestPaint, index) => ({
       theme_id: themeId,
       paint_source: 'catalog',
       paint_catalog_id: nearestPaint.id,
       custom_paint_id: null,
       sort_order: index,
-    }
-  })
-  .filter(
-    (
-      row
-    ): row is {
-      theme_id: string
-      paint_source: string
-      paint_catalog_id: string
-      custom_paint_id: null
-      sort_order: number
-    } => row !== null
-  )
-    .filter(Boolean)
+    }))
 
   await supabase.from('theme_paints').delete().eq('theme_id', themeId)
 

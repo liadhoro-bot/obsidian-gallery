@@ -1,9 +1,12 @@
+import Image from 'next/image'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import SubmitButton from '../../components/SubmitButton'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import ThemeDetailHero from './theme-detail-hero'
 import ThemePaletteEditor from './theme-palette-editor'
+import ThemeAssignmentPanel from './theme-assignment-panel'
 import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 import { calculateThemePaletteAction, deleteTheme } from './actions'
 import { getCachedPublicTheme } from '../../../lib/public-cache'
@@ -64,6 +67,30 @@ type ThemePaint = {
     | null
 }
 
+type ThemeUsageItem = {
+  id: string
+  type: 'project' | 'unit'
+  name: string
+  href: string
+  imageUrl: string | null
+}
+
+type AssignableProject = {
+  id: string
+  name: string
+  themeId: string | null
+}
+
+type ProjectUnitGroup = {
+  projectId: string
+  projectName: string
+  units: {
+    id: string
+    name: string
+    currentThemeId: string | null
+  }[]
+}
+
 function safeImageUrl(value: string | null | undefined) {
   if (!value) return null
 
@@ -78,8 +105,67 @@ function safeImageUrl(value: string | null | undefined) {
   return null
 }
 
+function unitThemeIdsFromDescription(description: string | null | undefined) {
+  return [...(description?.matchAll(/\[unit:([^\]]+)\]/g) ?? [])].map(
+    (match) => match[1]
+  )
+}
+
+function displayThemeDescription(description: string | null | undefined) {
+  return description?.replace(/\n\n\[unit:[^\]]+\]/g, '').trim() || null
+}
+
 function firstRelation<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+function ThemeUsageCard({ items }: { items: ThemeUsageItem[] }) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/45">
+        Projects/Units Using This
+      </h2>
+
+      <div className="mt-4 space-y-2">
+        {items.length > 0 ? (
+          items.map((item) => (
+            <Link
+              key={`${item.type}-${item.id}`}
+              href={item.href}
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-2 transition hover:border-cyan-400/35 hover:bg-white/[0.07]"
+            >
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.05]">
+                {item.imageUrl ? (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    fill
+                    sizes="48px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-neutral-800" />
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">
+                  {item.name}
+                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">
+                  {item.type}
+                </p>
+              </div>
+            </Link>
+          ))
+        ) : (
+          <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-4 text-sm text-white/45">
+            This theme is not assigned yet.
+          </p>
+        )}
+      </div>
+    </section>
+  )
 }
 
 function hasThemePaintSwatchData(themePaints: ThemePaint[]) {
@@ -207,16 +293,254 @@ export default async function ThemeDetailPage({ params }: Props) {
 
   const isOwner = Boolean(user && user.id === theme.user_id)
   const heroUrl = safeImageUrl(theme.image_url)
+  const markedUnitIds = unitThemeIdsFromDescription(theme.description)
 
-  const [hydratedThemePaintRows, socialState] = await Promise.all([
+  const projectsUsingThemePromise = user
+    ? supabase
+        .from('projects')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .eq('theme_id', theme.id)
+        .order('name', { ascending: true })
+    : Promise.resolve({ data: [], error: null })
+
+  const unitsUsingThemePromise = user
+    ? supabase
+        .from('units')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .eq('theme_id', theme.id)
+        .order('name', { ascending: true })
+    : Promise.resolve({ data: [], error: null })
+
+  const markedUnitsPromise =
+    user && markedUnitIds.length > 0
+      ? supabase
+          .from('units')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .in('id', markedUnitIds)
+      : Promise.resolve({ data: [], error: null })
+
+  const [
+    hydratedThemePaintRows,
+    socialState,
+    projectsUsingThemeResult,
+    unitsUsingThemeResult,
+    markedUnitsResult,
+  ] = await Promise.all([
     getHydratedThemePaints(
       supabase,
       theme.id,
       (theme.theme_paints || []) as unknown as ThemePaint[]
     ),
     getThemeSocialState(supabase, theme.id, user?.id),
+    projectsUsingThemePromise,
+    unitsUsingThemePromise,
+    markedUnitsPromise,
   ])
   perf.mark('secondary Supabase queries')
+
+  if (projectsUsingThemeResult.error) {
+    throw new Error(projectsUsingThemeResult.error.message)
+  }
+
+  const unitsUsingTheme = unitsUsingThemeResult.error
+    ? []
+    : unitsUsingThemeResult.data ?? []
+
+  const unitsById = new Map<string, { id: string; name: string | null }>()
+
+  for (const unit of unitsUsingTheme) {
+    unitsById.set(unit.id, unit)
+  }
+
+  for (const unit of markedUnitsResult.data ?? []) {
+    unitsById.set(unit.id, unit)
+  }
+
+  const projectsUsingTheme = projectsUsingThemeResult.data ?? []
+  const projectIds = projectsUsingTheme.map((project) => project.id)
+  const unitIds = Array.from(unitsById.keys())
+  const usageEntityIds = [...projectIds, ...unitIds]
+
+  const { data: usageImages, error: usageImagesError } =
+    usageEntityIds.length > 0
+      ? await supabase
+          .from('image_assets')
+          .select('entity_type, entity_id, image_url, is_featured, sort_order, created_at')
+          .in('entity_id', usageEntityIds)
+          .in('entity_type', ['project', 'unit'])
+          .eq('user_id', user?.id ?? '')
+          .order('is_featured', { ascending: false })
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: false })
+      : { data: [], error: null }
+
+  if (usageImagesError) {
+    throw new Error(usageImagesError.message)
+  }
+
+  const featuredImageByEntity = new Map<string, string>()
+
+  for (const image of usageImages ?? []) {
+    const key = `${image.entity_type}:${image.entity_id}`
+
+    if (!featuredImageByEntity.has(key)) {
+      featuredImageByEntity.set(key, image.image_url)
+    }
+  }
+
+  const usageItems: ThemeUsageItem[] = [
+    ...projectsUsingTheme.map((project) => ({
+      id: project.id,
+      type: 'project' as const,
+      name: project.name || 'Untitled Project',
+      href: `/projects/${project.id}`,
+      imageUrl: safeImageUrl(featuredImageByEntity.get(`project:${project.id}`)),
+    })),
+    ...unitIds.map((unitId) => {
+      const unit = unitsById.get(unitId)
+
+      return {
+        id: unitId,
+        type: 'unit' as const,
+        name: unit?.name || 'Untitled Unit',
+        href: `/units/${unitId}`,
+        imageUrl: safeImageUrl(featuredImageByEntity.get(`unit:${unitId}`)),
+      }
+    }),
+  ]
+
+  const [
+    { data: assignableProjectRows, error: assignableProjectsError },
+    { data: unitRows, error: unitRowsError },
+    { data: unitProjectRows, error: unitProjectRowsError },
+    { data: userThemeRows, error: userThemesError },
+    unitThemeRowsResult,
+  ] = user
+    ? await Promise.all([
+        supabase
+          .from('projects')
+          .select('id, name, theme_id')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true }),
+        supabase
+          .from('units')
+          .select('id, name, project_id')
+          .eq('user_id', user.id)
+          .order('name', { ascending: true }),
+        supabase
+          .from('unit_projects')
+          .select('unit_id, project_id')
+          .eq('user_id', user.id),
+        supabase
+          .from('themes')
+          .select('id, description')
+          .eq('user_id', user.id),
+        supabase
+          .from('units')
+          .select('id, theme_id')
+          .eq('user_id', user.id),
+      ])
+    : [
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
+      ]
+
+  if (assignableProjectsError) {
+    throw new Error(assignableProjectsError.message)
+  }
+
+  if (unitRowsError) {
+    throw new Error(unitRowsError.message)
+  }
+
+  if (unitProjectRowsError) {
+    throw new Error(unitProjectRowsError.message)
+  }
+
+  if (userThemesError) {
+    throw new Error(userThemesError.message)
+  }
+
+  const assignableProjects: AssignableProject[] = (
+    assignableProjectRows ?? []
+  ).map((project) => ({
+    id: project.id,
+    name: project.name || 'Untitled Project',
+    themeId: project.theme_id ?? null,
+  }))
+
+  const unitThemeById = new Map<string, string>()
+
+  if (!unitThemeRowsResult.error) {
+    for (const unitThemeRow of unitThemeRowsResult.data ?? []) {
+      if (unitThemeRow.theme_id) {
+        unitThemeById.set(unitThemeRow.id, unitThemeRow.theme_id)
+      }
+    }
+  }
+
+  for (const userTheme of userThemeRows ?? []) {
+    for (const unitId of unitThemeIdsFromDescription(userTheme.description)) {
+      if (!unitThemeById.has(unitId)) {
+        unitThemeById.set(unitId, userTheme.id)
+      }
+    }
+  }
+
+  const unitsByProjectId = new Map<
+    string,
+    Map<string, { id: string; name: string; currentThemeId: string | null }>
+  >()
+  const unitRowsById = new Map(
+    (unitRows ?? []).map((unit) => [unit.id, unit])
+  )
+
+  for (const project of assignableProjects) {
+    unitsByProjectId.set(project.id, new Map())
+  }
+
+  for (const link of unitProjectRows ?? []) {
+    const unit = unitRowsById.get(link.unit_id)
+    const projectUnits = unitsByProjectId.get(link.project_id)
+
+    if (!unit || !projectUnits) continue
+
+    projectUnits.set(unit.id, {
+      id: unit.id,
+      name: unit.name || 'Untitled Unit',
+      currentThemeId: unitThemeById.get(unit.id) ?? null,
+    })
+  }
+
+  for (const unit of unitRows ?? []) {
+    if (!unit.project_id) continue
+
+    const projectUnits = unitsByProjectId.get(unit.project_id)
+
+    if (!projectUnits || projectUnits.has(unit.id)) continue
+
+    projectUnits.set(unit.id, {
+      id: unit.id,
+      name: unit.name || 'Untitled Unit',
+      currentThemeId: unitThemeById.get(unit.id) ?? null,
+    })
+  }
+
+  const projectUnitGroups: ProjectUnitGroup[] = assignableProjects.map(
+    (project) => ({
+      projectId: project.id,
+      projectName: project.name,
+      units: Array.from(unitsByProjectId.get(project.id)?.values() ?? []).sort(
+        (a, b) => a.name.localeCompare(b.name)
+      ),
+    })
+  )
 
   const themePaints = hydratedThemePaintRows
     .map((paint) => {
@@ -282,7 +606,7 @@ export default async function ThemeDetailPage({ params }: Props) {
         <ThemeDetailHero
           themeId={theme.id}
           name={theme.name}
-          description={theme.description}
+          description={displayThemeDescription(theme.description)}
           tags={theme.tags || []}
           heroUrl={heroUrl}
           isOwner={isOwner}
@@ -329,12 +653,17 @@ export default async function ThemeDetailPage({ params }: Props) {
         </section>
 
         <section className="px-4 pt-6">
-          <button
-            type="button"
-            className="w-full rounded-2xl bg-cyan-500 px-4 py-4 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400"
-          >
-            Add to Project / Unit
-          </button>
+          <ThemeAssignmentPanel
+            themeId={theme.id}
+            projects={assignableProjects}
+            projectUnitGroups={projectUnitGroups}
+          />
+
+          {isOwner ? (
+            <div className="mt-4">
+              <ThemeUsageCard items={usageItems} />
+            </div>
+          ) : null}
         </section>
 
         {isOwner && (

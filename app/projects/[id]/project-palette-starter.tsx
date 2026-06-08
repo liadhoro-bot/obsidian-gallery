@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { setProjectPaletteSlot } from './actions'
+import { setUnitPaletteSlot } from '../../units/[id]/actions'
 
 type PaintOption = {
   id: string
@@ -17,12 +18,14 @@ type PaintOption = {
 }
 
 type Props = {
-  projectId: string
+  projectId?: string
+  unitId?: string
   slotIndex?: number
 }
 
 export default function ProjectPaletteStarter({
   projectId,
+  unitId,
   slotIndex,
 }: Props) {
   const router = useRouter()
@@ -88,7 +91,12 @@ export default function ProjectPaletteStarter({
     if (activeSlot === null) return
 
     startTransition(async () => {
-      await setProjectPaletteSlot(projectId, activeSlot, paint.source, paint.id)
+      if (unitId) {
+        await setUnitPaletteSlot(unitId, activeSlot, paint.source, paint.id)
+      } else if (projectId) {
+        await setProjectPaletteSlot(projectId, activeSlot, paint.source, paint.id)
+      }
+
       closePicker()
       router.refresh()
     })

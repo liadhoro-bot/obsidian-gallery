@@ -6,6 +6,7 @@ type VaultFiltersProps = {
   brand: string
   line: string
   ownership: string
+  matchHex: string
   tab: 'find' | 'collection'
 }
 
@@ -69,6 +70,7 @@ export default async function VaultFilters({
   brand,
   line,
   ownership,
+  matchHex,
   tab,
 }: VaultFiltersProps) {
   const supabase = await createClient()
@@ -111,6 +113,7 @@ export default async function VaultFilters({
       brand={brand}
       line={line}
       ownership={ownership}
+      matchHex={matchHex}
       tab={tab}
       brands={brands}
       lines={lines}
