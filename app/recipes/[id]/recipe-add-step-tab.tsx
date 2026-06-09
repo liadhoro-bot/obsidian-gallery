@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import PaintPicker from './components/paint-picker'
+import StepPaintFields from './components/step-paint-fields'
 import { Paint, Recipe } from './components/types'
 import SubmitButton from '../../components/SubmitButton'
 
@@ -257,29 +257,7 @@ export default function RecipeAddStepTab({
             </div>
           ) : null}
 
-          {[1, 2, 3].map((num) => (
-            <div
-              key={num}
-              className="rounded-xl border border-neutral-800 bg-black p-4"
-            >
-              <p className="text-sm font-medium text-white">Paint {num}</p>
-
-              <div className="mt-3 space-y-3">
-                <PaintPicker
-                  key={`add-step-paint-${num}`}
-                  name={`paintId${num}`}
-                  paints={filteredPaints}
-                />
-
-                <input
-                  name={`ratio${num}`}
-                  type="text"
-                  placeholder="Optional ratio"
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-                />
-              </div>
-            </div>
-          ))}
+          <StepPaintFields paints={filteredPaints} keyPrefix="add-step" />
 
           <SubmitButton
             idleText="Add Step"

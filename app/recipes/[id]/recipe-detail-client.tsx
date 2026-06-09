@@ -14,7 +14,6 @@ import RecipeDetailTabs, { RecipeDetailTab } from './recipe-detail-tabs'
 import RecipeDetailsTab from './recipe-details-tab'
 import RecipeStepsTab from './recipe-steps-tab'
 import RecipeAddStepTab from './recipe-add-step-tab'
-import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
@@ -117,6 +116,7 @@ export default function RecipeDetailClient({
   isEditingHeader={isOwner && isEditingHeader}
   setIsEditingHeader={setIsEditingHeader}
   updateRecipeHeaderAction={updateRecipeHeaderAction}
+  deleteRecipeAction={deleteRecipeAction}
 />
 
       {actionRow}
@@ -178,20 +178,6 @@ export default function RecipeDetailClient({
           createCustomPaintAction={createCustomPaintAction}
           addRecipeStepAction={addRecipeStepAction}
         />
-      ) : null}
-
-      {isOwner ? (
-        <div className="mt-5">
-          <DeleteConfirmationCard
-            itemId={recipe.id}
-            itemIdFieldName="recipeId"
-            title="Delete Recipe"
-            buttonLabel="Delete This Recipe"
-            initialDescription="Permanently delete this recipe from your gallery."
-            confirmDescription="If you delete this recipe, it will be removed along with all the steps, paints, gallery images, and saved copies attached to it. This action cannot be undone."
-            deleteAction={deleteRecipeAction}
-          />
-        </div>
       ) : null}
     </div>
   )

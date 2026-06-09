@@ -1,21 +1,9 @@
 'use client'
 
 import Image from 'next/image'
-import PaintPicker from './paint-picker'
+import StepPaintFields from './step-paint-fields'
 import { Paint, Recipe, RecipeStep, StepPaintLink } from './types'
 import SubmitButton from '../../../components/SubmitButton'
-
-function getPaintSelectValue(
-  paint: StepPaintLink['paint'] | null,
-  paints: Paint[]
-) {
-  if (!paint) return ''
-
-  const matchedPaint = paints.find((p) => p.id === paint.id)
-  if (!matchedPaint) return ''
-
-  return `${matchedPaint.source}:${matchedPaint.id}`
-}
 
 function getContrastTextColor(hex?: string | null) {
   if (!hex) return '#fff'
@@ -38,67 +26,78 @@ function PaintSwatch({
 }: {
   link: StepPaintLink
   large?: boolean
-  showName?: boolean
 }) {
   const paint = link.paint
   if (!paint) return null
 
   const ratio = parseInt(link.ratio_text || '1', 10) || 1
+  const paintMeta = [paint.brand, paint.line].filter(Boolean).join(' * ')
 
   return (
-    <div key={link.id} className="relative shrink-0">
-      <div
-        className={
-          large
-            ? 'aspect-square w-full overflow-hidden rounded-xl border border-neutral-700 bg-neutral-800 shadow-inner'
-            : 'h-20 w-20 overflow-hidden rounded-xl border border-neutral-700 bg-neutral-800 shadow-inner'
-        }
-      >
-        {paint.swatch_image_url ? (
-          <Image
-            src={paint.swatch_image_url}
-            alt={paint.name || 'Paint'}
-            width={large ? 320 : 80}
-            height={large ? 320 : 80}
-            sizes={large ? '(max-width: 768px) 100vw, 320px' : '80px'}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div
-            className="h-full w-full"
-            style={{
-              backgroundColor: paint.hex_approx || '#888888',
-            }}
-          />
-        )}
-      </div>
-
-      <div className="absolute bottom-1 right-1 flex flex-col items-end gap-1">
-        <div className="flex items-center justify-end gap-1">
-          {Array.from({ length: ratio }).map((_, i) => (
-            <span
-              key={i}
-              className="block h-4 w-4 rotate-[225deg] rounded-full rounded-br-none border border-white/30"
+    <div
+      key={link.id}
+      className={
+        large
+          ? 'relative min-w-0 rounded-xl border border-white/10 bg-black/25 p-2'
+          : 'relative w-24 shrink-0 rounded-xl border border-white/10 bg-black/25 p-2'
+      }
+    >
+      <div className="relative">
+        <div className="aspect-square w-full overflow-hidden rounded-lg border border-white/10 bg-neutral-800 shadow-inner">
+          {paint.swatch_image_url ? (
+            <Image
+              src={paint.swatch_image_url}
+              alt={paint.name || 'Paint'}
+              width={large ? 320 : 96}
+              height={large ? 320 : 96}
+              sizes={large ? '(max-width: 768px) 30vw, 320px' : '96px'}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              className="h-full w-full"
               style={{
                 backgroundColor: paint.hex_approx || '#888888',
-                boxShadow:
-                  '0 0 0 1px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.5)',
               }}
             />
-          ))}
+          )}
         </div>
 
-        <span
-          className="rounded-full border border-white/20 px-2 py-1 text-[10px] font-black shadow"
-          style={{
-            backgroundColor: paint.hex_approx || '#888888',
-            color: getContrastTextColor(paint.hex_approx),
-            boxShadow:
-              '0 0 0 2px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.55)',
-          }}
-        >
-          {ratio} part{ratio === 1 ? '' : 's'}
-        </span>
+        <div className="absolute bottom-1 right-1 flex flex-col items-end gap-1">
+          <div className="flex items-center justify-end gap-1">
+            {Array.from({ length: ratio }).map((_, i) => (
+              <span
+                key={i}
+                className="block h-4 w-4 rotate-[225deg] rounded-full rounded-br-none border border-white/30"
+                style={{
+                  backgroundColor: paint.hex_approx || '#888888',
+                  boxShadow:
+                    '0 0 0 1px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.5)',
+                }}
+              />
+            ))}
+          </div>
+
+          <span
+            className="rounded-full border border-white/20 px-2 py-1 text-[10px] font-black shadow"
+            style={{
+              backgroundColor: paint.hex_approx || '#888888',
+              color: getContrastTextColor(paint.hex_approx),
+              boxShadow:
+                '0 0 0 2px rgba(0,0,0,0.5), 0 4px 10px rgba(0,0,0,0.55)',
+            }}
+          >
+            {ratio} part{ratio === 1 ? '' : 's'}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-1.5 truncate text-[11px] font-black leading-tight text-white">
+        {paint.name || 'Unnamed paint'}
+      </div>
+
+      <div className="mt-0.5 truncate text-[10px] leading-tight text-white/35">
+        {paintMeta || 'Paint'}
       </div>
     </div>
   )
@@ -134,10 +133,6 @@ export default function RecipeStepCard({
   updateRecipeStepAction: (formData: FormData) => Promise<void>
   deleteRecipeStepAction: (formData: FormData) => Promise<void>
 }) {
-  const paint1 = paintsForStep[0]?.paint || null
-  const paint2 = paintsForStep[1]?.paint || null
-  const paint3 = paintsForStep[2]?.paint || null
-
   const stepImageUrl =
     typeof step.image_url === 'string' ? step.image_url.trim() : ''
 
@@ -145,8 +140,8 @@ export default function RecipeStepCard({
     stepImageUrl.startsWith('http://') || stepImageUrl.startsWith('https://')
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-[#081116] shadow-2xl shadow-black/40">
-      <div className={hasStepImage ? '' : 'p-5'}>
+    <div className="relative h-full overflow-hidden rounded-[2rem] border border-white/5 bg-[#081116] shadow-2xl shadow-black/40">
+      <div className={hasStepImage ? 'h-full' : 'h-full p-5'}>
         {isOwner && deleteConfirmStepId === step.id ? (
           <div className="mb-4 rounded-2xl border border-red-500/40 bg-red-500/10 p-4">
             <p className="text-sm font-semibold text-red-100">
@@ -181,7 +176,7 @@ export default function RecipeStepCard({
         ) : null}
 
         {isOwner && isEditingThisStep ? (
-          <div className="space-y-4 rounded-2xl border border-neutral-800 bg-black p-4">
+          <div className="h-full space-y-4 overflow-y-auto rounded-2xl border border-neutral-800 bg-black p-4">
             <form
               action={async (formData) => {
                 await updateRecipeStepAction(formData)
@@ -270,77 +265,11 @@ export default function RecipeStepCard({
                 />
               </div>
 
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                <p className="text-sm font-medium text-white">Paint 1</p>
-
-                <div className="mt-3 space-y-3">
-                  <PaintPicker
-                    key={`${step.id}-paint1-${getPaintSelectValue(
-                      paint1,
-                      filteredPaints
-                    )}`}
-                    name="paintId1"
-                    paints={filteredPaints}
-                    defaultValue={getPaintSelectValue(paint1, filteredPaints)}
-                  />
-
-                  <input
-                    name="ratio1"
-                    type="text"
-                    defaultValue={paintsForStep[0]?.ratio_text || ''}
-                    placeholder="Optional ratio"
-                    className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                <p className="text-sm font-medium text-white">Paint 2</p>
-
-                <div className="mt-3 space-y-3">
-                  <PaintPicker
-                    key={`${step.id}-paint2-${getPaintSelectValue(
-                      paint2,
-                      filteredPaints
-                    )}`}
-                    name="paintId2"
-                    paints={filteredPaints}
-                    defaultValue={getPaintSelectValue(paint2, filteredPaints)}
-                  />
-
-                  <input
-                    name="ratio2"
-                    type="text"
-                    defaultValue={paintsForStep[1]?.ratio_text || ''}
-                    placeholder="Optional ratio"
-                    className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-4">
-                <p className="text-sm font-medium text-white">Paint 3</p>
-
-                <div className="mt-3 space-y-3">
-                  <PaintPicker
-                    key={`${step.id}-paint3-${getPaintSelectValue(
-                      paint3,
-                      filteredPaints
-                    )}`}
-                    name="paintId3"
-                    paints={filteredPaints}
-                    defaultValue={getPaintSelectValue(paint3, filteredPaints)}
-                  />
-
-                  <input
-                    name="ratio3"
-                    type="text"
-                    defaultValue={paintsForStep[2]?.ratio_text || ''}
-                    placeholder="Optional ratio"
-                    className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-white"
-                  />
-                </div>
-              </div>
+              <StepPaintFields
+                paints={filteredPaints}
+                existingPaints={paintsForStep}
+                keyPrefix={step.id}
+              />
 
               <div className="flex gap-2">
                 <SubmitButton
@@ -451,58 +380,36 @@ export default function RecipeStepCard({
                 </div>
               </>
             ) : (
-              <>
+              <div className="flex h-full flex-col">
                 {paintsForStep.length > 0 ? (
-                  <div className="mb-8 grid grid-cols-3 gap-3">
+                  <div className="mb-8 grid shrink-0 grid-cols-3 gap-3">
                     {paintsForStep.slice(0, 3).map((link) => (
-                      <PaintSwatch
-                        key={link.id}
-                        link={link}
-                        large
-                        showName
-                      />
+                      <PaintSwatch key={link.id} link={link} large />
                     ))}
                   </div>
                 ) : null}
 
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+                <p className="shrink-0 text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
                   Step {String(step.step_number).padStart(2, '0')} /{' '}
                   {String(stepsLength).padStart(2, '0')}
                 </p>
 
-                <h2 className="mt-3 text-4xl font-black leading-none tracking-tight text-white">
+                <h2 className="mt-3 shrink-0 text-4xl font-black leading-none tracking-tight text-white">
                   {step.title}
                 </h2>
 
                 {step.instructions?.trim() ? (
-                  <div className="mt-8 rounded-3xl border border-white/5 bg-white/[0.03] p-6 backdrop-blur-sm">
-                    <div className="text-lg leading-9 text-neutral-300">
+                  <div className="mt-8 min-h-0 flex-1 overflow-y-auto pr-1">
+                    <div className="rounded-3xl border border-white/5 bg-white/[0.03] p-6 text-lg leading-9 text-neutral-300 backdrop-blur-sm">
                       {step.instructions}
                     </div>
-
-                    {paintsForStep.length > 0 ? (
-                      <div className="mt-8 flex flex-wrap gap-3">
-                        {paintsForStep.slice(0, 3).map((link) => {
-                          const paint = link.paint
-                          if (!paint) return null
-
-                          return (
-                            <div
-                              key={link.id}
-                              className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold uppercase text-neutral-200"
-                            >
-                              {link.ratio_text ? `${link.ratio_text} · ` : ''}
-                              {paint.name}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : null}
                   </div>
-                ) : null}
+                ) : (
+                  <div className="min-h-0 flex-1" />
+                )}
 
                 {isOwner ? (
-                  <div className="mt-6 flex justify-end">
+                  <div className="mt-6 flex shrink-0 justify-end">
                     <button
                       type="button"
                       onClick={() => setEditingStepId(step.id)}
@@ -513,7 +420,7 @@ export default function RecipeStepCard({
                     </button>
                   </div>
                 ) : null}
-              </>
+              </div>
             )}
           </>
         )}

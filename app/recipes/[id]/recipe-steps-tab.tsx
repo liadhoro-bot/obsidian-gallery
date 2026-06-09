@@ -71,16 +71,16 @@ export default function RecipeStepsTab({
   }
 
   return (
-    <section className="mt-5">
+    <section className="mt-5 h-[100dvh]">
       {(steps || []).length > 0 ? (
-        <div>
+        <div className="flex h-full flex-col">
           <div
-            className="overflow-hidden"
+            className="min-h-0 flex-1 overflow-hidden"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
             <div
-              className="flex transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
               style={{
                 transform: `translateX(-${activeStepIndex * 100}%)`,
               }}
@@ -88,7 +88,7 @@ export default function RecipeStepsTab({
               {steps.map((step, index) => (
                 <div
                   key={step.id}
-                  className={`min-w-full max-w-full shrink-0 px-0.5 transition-all duration-500 ease-out ${
+                  className={`h-full min-w-full max-w-full shrink-0 px-0.5 transition-all duration-500 ease-out ${
                     index === activeStepIndex
                       ? 'scale-100 opacity-100 blur-0'
                       : 'scale-[0.96] opacity-40 blur-[1px]'
@@ -115,25 +115,25 @@ export default function RecipeStepsTab({
             </div>
           </div>
 
-         <div className="mt-5 flex gap-3">
-  <button
-    type="button"
-    onClick={goPrevious}
-    disabled={activeStepIndex === 0}
-    className="flex h-14 w-[28%] items-center justify-center rounded-xl border border-white/10 bg-white/5 text-xs font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-black/30 transition hover:bg-white/10 active:scale-[0.98] active:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
-  >
-    Previous
-  </button>
+          <div className="mt-5 flex shrink-0 gap-3">
+            <button
+              type="button"
+              onClick={goPrevious}
+              disabled={activeStepIndex === 0}
+              className="flex h-14 w-[28%] items-center justify-center rounded-xl border border-white/10 bg-white/5 text-xs font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-black/30 transition hover:bg-white/10 active:scale-[0.98] active:opacity-70 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Previous
+            </button>
 
-  <button
-    type="button"
-    onClick={goNext}
-    disabled={activeStepIndex === steps.length - 1}
-    className="flex h-14 w-[72%] items-center justify-center rounded-xl bg-cyan-400 text-xs font-black uppercase tracking-[0.22em] text-black shadow-xl shadow-cyan-950/40 transition hover:bg-cyan-300 active:scale-[0.98] active:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
-  >
-    Next
-  </button>
-</div>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={activeStepIndex === steps.length - 1}
+              className="flex h-14 w-[72%] items-center justify-center rounded-xl border border-cyan-400/40 bg-black text-xs font-black uppercase tracking-[0.22em] text-cyan-200 shadow-lg shadow-black/30 transition hover:border-cyan-300/70 hover:bg-cyan-400/10 active:scale-[0.98] active:opacity-80 disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Next Step
+            </button>
+          </div>
         </div>
       ) : (
         <p className="mt-4 text-neutral-400">No steps yet.</p>

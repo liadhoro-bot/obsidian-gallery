@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 import { Recipe, RecipeImage } from './types'
 import BackButton from '../../../components/back-button'
+import DeleteConfirmationCard from '../../../components/delete-confirmation-card'
 import RecipeVisibilityPill from './recipe-visibility-pill'
 import { updateRecipeVisibility } from '../recipe-actions'
 
@@ -14,6 +15,7 @@ export default function RecipeHero({
   isEditingHeader,
   setIsEditingHeader,
   updateRecipeHeaderAction,
+  deleteRecipeAction,
 }: {
   recipe: Recipe
   isOwner: boolean
@@ -21,6 +23,7 @@ export default function RecipeHero({
   isEditingHeader: boolean
   setIsEditingHeader: (value: boolean) => void
   updateRecipeHeaderAction: (formData: FormData) => Promise<void>
+  deleteRecipeAction: (formData: FormData) => Promise<void>
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -83,7 +86,7 @@ export default function RecipeHero({
       </div>
 
       {isOwner && isEditingHeader ? (
-        <div className="px-5 pb-5">
+        <div className="space-y-4 px-5 pb-5">
           <form
             action={handleUpdateHeader}
             className="rounded-2xl border border-neutral-700 bg-black/85 p-4"
@@ -146,6 +149,16 @@ export default function RecipeHero({
               </div>
             </div>
           </form>
+
+          <DeleteConfirmationCard
+            itemId={recipe.id}
+            itemIdFieldName="recipeId"
+            title="Delete Recipe"
+            buttonLabel="Delete This Recipe"
+            initialDescription="Permanently delete this recipe from your gallery."
+            confirmDescription="If you delete this recipe, it will be removed along with all the steps, paints, gallery images, and saved copies attached to it. This action cannot be undone."
+            deleteAction={deleteRecipeAction}
+          />
         </div>
       ) : null}
     </section>
