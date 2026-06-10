@@ -141,13 +141,14 @@ type Props = {
   parentProjects: ParentProject[]
   availableProjects: ParentProject[]
   selectedProjectIds: string[]
+  showSessionStartedNotice?: boolean
 }
 
 const UNIT_STATUS_OPTIONS: { value: UnitStatus; label: string }[] = [
   { value: 'complete', label: 'Complete' },
   { value: 'active', label: 'Active' },
   { value: 'bench', label: 'Bench' },
-  { value: 'pile', label: 'The Pile' },
+  { value: 'pile', label: 'Pile of Shame' },
   { value: 'other', label: 'Other' },
 ]
 
@@ -325,9 +326,13 @@ export default function UnitDetailClient({
   parentProjects,
   availableProjects,
   selectedProjectIds,
+  showSessionStartedNotice = false,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [isSessionNoticeVisible, setIsSessionNoticeVisible] = useState(
+    showSessionStartedNotice
+  )
   const [liveNow, setLiveNow] = useState(() => Date.now())
   const [optimisticSteps, setOptimisticSteps] = useState(steps)
   const [activeTab, setActiveTab] = useState<'overview' | 'progress'>(
@@ -355,6 +360,13 @@ export default function UnitDetailClient({
   )
   const [deadlineInput, setDeadlineInput] = useState(unit.deadline || '')
   const [statusValue, setStatusValue] = useState<UnitStatus>(unit.status)
+
+  useEffect(() => {
+    if (!showSessionStartedNotice) return
+
+    setIsSessionNoticeVisible(true)
+    router.replace(`/units/${unit.id}`, { scroll: false })
+  }, [showSessionStartedNotice, router, unit.id])
 
   useEffect(() => {
     if (!activeSession) {
@@ -681,6 +693,34 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
   return (
     <div className="w-full">
+      {isSessionNoticeVisible ? (
+        <div
+          className="fixed inset-x-4 top-4 z-[70] mx-auto max-w-md rounded-2xl border border-cyan-300/35 bg-slate-950/95 p-4 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.22)] backdrop-blur-xl"
+          role="status"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(34,211,238,0.8)]" />
+            <div className="min-w-0">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-cyan-300">
+                Session Tracking
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-6 text-white/85">
+                Your session is now being tracked. Every minute of brush work,
+                hesitation, and suspicious staring at grey bits is recorded for
+                posterity. Proceed, your model will not paint itself.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsSessionNoticeVisible(false)}
+              className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-300/25 bg-black/35 text-lg leading-none text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-400/15"
+              aria-label="Dismiss session tracking notice"
+            >
+              x
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {unit.notes?.trim() || isEditingHeader ? (
       <section

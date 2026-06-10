@@ -1,11 +1,15 @@
-import Image from 'next/image'
-import PrefetchLink from '../components/prefetch-link'
 import { createClient } from '../../utils/supabase/server'
+import DashboardUnitStatusList, {
+  type DashboardStatusUnit,
+  type UnitStatus,
+} from './dashboard-unit-status-list'
 
 type StageProgressRow = {
   unit_id: string
-  stage_key: string
-  is_done: boolean
+  stage_key?: string | null
+  step_key?: string | null
+  is_done?: boolean | null
+  status?: string | null
 }
 
 type UnitImageRow = {
@@ -18,21 +22,55 @@ type SessionRow = {
   started_at: string
 }
 
-type ActiveUnitRow = {
+type UnitRow = {
   id: string
   name: string
   deadline: string | null
   created_at: string
+  status: UnitStatus
 }
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—'
+const UNIT_STATUSES: UnitStatus[] = [
+  'complete',
+  'active',
+  'bench',
+  'pile',
+  'other',
+]
 
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value))
+function getUnitProgress(unit: UnitRow, stages: StageProgressRow[]) {
+  if (unit.status === 'complete') return 100
+
+  const stageDoneMap = new Map<string, boolean>()
+
+  for (const stage of stages) {
+    const key = stage.stage_key ?? stage.step_key
+    if (!key) continue
+
+    const isDone = stage.is_done === true || stage.status === 'done'
+
+    if (isDone) {
+      stageDoneMap.set(key, true)
+    } else if (!stageDoneMap.has(key)) {
+      stageDoneMap.set(key, false)
+    }
+  }
+
+  if (stageDoneMap.get('done') === true) return 100
+
+  const progressStageKeys = [
+    'assembled',
+    'primed',
+    'initial_paints',
+    'fine_details',
+    'base_rim',
+  ]
+
+  const completed = progressStageKeys.filter(
+    (key) => stageDoneMap.get(key) === true
+  ).length
+
+  return completed * 20
 }
 
 export default async function DashboardActiveBench({
@@ -56,27 +94,32 @@ export default async function DashboardActiveBench({
 
   const { data: units, error } = await supabase
     .from('units')
-    .select('id, name, deadline, created_at')
+    .select('id, name, deadline, created_at, status')
     .eq('user_id', resolvedUserId)
-    .eq('status', 'active')
+    .in('status', UNIT_STATUSES)
 
   if (error || !units?.length) {
-    return (
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-        <p className="text-sm text-white/60">No active units yet.</p>
-      </section>
-    )
+    return <DashboardUnitStatusList units={[]} />
   }
 
-  const activeUnits = units as ActiveUnitRow[]
-  const unitIds = activeUnits.map((unit) => unit.id)
+  const dashboardUnits = units as UnitRow[]
+  const unitIds = dashboardUnits.map((unit) => unit.id)
 
-  const [progressResult, imageResult, sessionResult] = await Promise.all([
+  const [
+    stageProgressResult,
+    progressStepsResult,
+    imageResult,
+    sessionResult,
+  ] = await Promise.all([
     supabase
       .from('unit_stage_progress')
       .select('unit_id, stage_key, is_done')
-      .in('unit_id', unitIds)
-      .eq('is_done', true),
+      .in('unit_id', unitIds),
+
+    supabase
+      .from('unit_progress_steps')
+      .select('unit_id, step_key, status')
+      .in('unit_id', unitIds),
 
     supabase
       .from('image_assets')
@@ -92,40 +135,36 @@ export default async function DashboardActiveBench({
       .order('started_at', { ascending: false }),
   ])
 
-  const progressRows = (progressResult.data ?? []) as StageProgressRow[]
-  const imageRows = (imageResult.data ?? []) as UnitImageRow[]
-  const sessionRows = (sessionResult.data ?? []) as SessionRow[]
-
-  const progressMap = new Map<string, number>()
-
-  for (const unit of activeUnits) {
-    progressMap.set(unit.id, 0)
-  }
-
-  for (const row of progressRows) {
-    if (row.stage_key === 'done') {
-      progressMap.set(row.unit_id, 100)
-      continue
+  const progressRows = [
+    ...((stageProgressResult.data ?? []) as StageProgressRow[]),
+    ...((progressStepsResult.data ?? []) as StageProgressRow[]),
+  ]
+  const progressRowsByUnitId = progressRows.reduce<
+    Record<string, StageProgressRow[]>
+  >((rowsByUnitId, row) => {
+    if (!rowsByUnitId[row.unit_id]) {
+      rowsByUnitId[row.unit_id] = []
     }
 
-    progressMap.set(row.unit_id, (progressMap.get(row.unit_id) || 0) + 20)
-  }
+    rowsByUnitId[row.unit_id].push(row)
+    return rowsByUnitId
+  }, {})
 
   const imageMap = new Map<string, string>()
 
-  for (const row of imageRows) {
+  for (const row of (imageResult.data ?? []) as UnitImageRow[]) {
     imageMap.set(row.entity_id, row.image_url)
   }
 
   const lastSessionMap = new Map<string, string>()
 
-  for (const row of sessionRows) {
+  for (const row of (sessionResult.data ?? []) as SessionRow[]) {
     if (!lastSessionMap.has(row.unit_id)) {
       lastSessionMap.set(row.unit_id, row.started_at)
     }
   }
 
-  const displayUnits = [...activeUnits]
+  const displayUnits: DashboardStatusUnit[] = [...dashboardUnits]
     .sort((a, b) => {
       const createdAtSort =
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -156,81 +195,12 @@ export default async function DashboardActiveBench({
 
       return createdAtSort
     })
-    .slice(0, 8)
+    .map((unit) => ({
+      ...unit,
+      progress: getUnitProgress(unit, progressRowsByUnitId[unit.id] ?? []),
+      imageUrl: imageMap.get(unit.id) || null,
+      lastSession: lastSessionMap.get(unit.id) || null,
+    }))
 
-  return (
-    <section className="space-y-3">
-      <div className="flex items-end justify-between">
-        <h2 className="text-xl font-semibold text-white">
-          Active Units
-        </h2>
-
-        <p className="text-sm text-white/60">
-          {activeUnits.length} active
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        {displayUnits.map((unit) => {
-          const imageUrl = imageMap.get(unit.id)
-          const lastSession = lastSessionMap.get(unit.id)
-          const progress = progressMap.get(unit.id) || 0
-
-          return (
-            <PrefetchLink
-              key={unit.id}
-              href={`/units/${unit.id}`}
-              viewportPrefetch
-              className="flex overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:bg-white/[0.08]"
-            >
-              <div className="relative w-[30%] min-h-[110px]">
-                {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={unit.name}
-                    fill
-                    className="object-cover"
-                    sizes="120px"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-white/5 text-xs text-white/40">
-                    No image
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-1 flex-col justify-between p-4">
-                <div>
-                  <p className="text-lg font-semibold leading-tight text-white">
-                    {unit.name}
-                  </p>
-
-                  <p className="mt-2 text-xs text-white/60">
-                    LAST SESSION: {formatDate(lastSession)}
-                  </p>
-
-                  <p className="text-xs font-semibold text-orange-400">
-                    DEADLINE: {formatDate(unit.deadline)}
-                  </p>
-                </div>
-
-                <div className="mt-3">
-                  <p className="text-[11px] font-semibold text-cyan-300">
-                    PROGRESS: {progress}%
-                  </p>
-
-                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-white/10">
-                    <div
-                      className="h-1.5 rounded-full bg-cyan-400"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </PrefetchLink>
-          )
-        })}
-      </div>
-    </section>
-  )
+  return <DashboardUnitStatusList units={displayUnits} />
 }

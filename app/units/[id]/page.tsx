@@ -8,6 +8,9 @@ import { createPerfTimer } from '../../../utils/perf/server'
 
 type PageProps = {
   params: Promise<{ id: string }>
+  searchParams: Promise<{
+    session?: string
+  }>
 }
 
 type UnitDetailUnit = {
@@ -72,10 +75,12 @@ async function UnitDetailBody({
   id,
   userId,
   unit,
+  showSessionStartedNotice,
 }: {
   id: string
   userId: string
   unit: UnitDetailUnit
+  showSessionStartedNotice: boolean
 }) {
   const perf = createPerfTimer('/units/[id]:details')
   const supabase = await createClient()
@@ -456,6 +461,7 @@ async function UnitDetailBody({
       parentProjects={parentProjects}
       availableProjects={allProjects ?? []}
       selectedProjectIds={selectedProjectIds}
+      showSessionStartedNotice={showSessionStartedNotice}
     />
   )
 }
@@ -480,9 +486,11 @@ function UnitDetailBodySkeleton() {
   )
 }
 
-export default async function UnitDetailPage({ params }: PageProps) {
+export default async function UnitDetailPage({ params, searchParams }: PageProps) {
   const perf = createPerfTimer('/units/[id]')
   const { id } = await params
+  const resolvedSearchParams = await searchParams
+  const showSessionStartedNotice = resolvedSearchParams.session === 'started'
 
   const supabase = await createClient()
 
@@ -562,6 +570,7 @@ export default async function UnitDetailPage({ params }: PageProps) {
               id={id}
               userId={user.id}
               unit={unitWithTheme}
+              showSessionStartedNotice={showSessionStartedNotice}
             />
           </Suspense>
         </div>

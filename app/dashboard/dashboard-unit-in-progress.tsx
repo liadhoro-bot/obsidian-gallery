@@ -1,6 +1,15 @@
 import Image from 'next/image'
-import PrefetchLink from '../components/prefetch-link'
+import ProgressWheel from '../components/progress-wheel'
 import { createClient } from '../../utils/supabase/server'
+import { startDashboardUnitSession } from './actions'
+
+type StageProgressRow = {
+  unit_id: string
+  stage_key?: string | null
+  step_key?: string | null
+  is_done?: boolean | null
+  status?: string | null
+}
 
 type DashboardHeroUnit = {
   id: string
@@ -8,7 +17,7 @@ type DashboardHeroUnit = {
   updated_at: string
   deadline: string | null
   is_featured: boolean
-  status: string | null
+  status: 'complete' | 'active' | 'bench' | 'pile' | 'other' | null
   project_id: string | null
 }
 
@@ -21,6 +30,54 @@ type UnitProjectRow = {
     id: string
     name: string | null
   } | null
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return 'No deadline set'
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value))
+}
+
+function getUnitProgress(
+  unit: DashboardHeroUnit,
+  stages: StageProgressRow[]
+) {
+  if (unit.status === 'complete') return 100
+
+  const stageDoneMap = new Map<string, boolean>()
+
+  for (const stage of stages) {
+    const key = stage.stage_key ?? stage.step_key
+    if (!key) continue
+
+    const isDone = stage.is_done === true || stage.status === 'done'
+
+    if (isDone) {
+      stageDoneMap.set(key, true)
+    } else if (!stageDoneMap.has(key)) {
+      stageDoneMap.set(key, false)
+    }
+  }
+
+  if (stageDoneMap.get('done') === true) return 100
+
+  const progressStageKeys = [
+    'assembled',
+    'primed',
+    'initial_paints',
+    'fine_details',
+    'base_rim',
+  ]
+
+  const completed = progressStageKeys.filter(
+    (key) => stageDoneMap.get(key) === true
+  ).length
+
+  return completed * 20
 }
 
 export default async function DashboardUnitInProgress({
@@ -88,15 +145,20 @@ export default async function DashboardUnitInProgress({
     : fallbackUnits.map((unit) => unit.id)
 
   const [
-    { data: doneRows },
+    { data: stageProgressRows },
+    { data: progressStepRows },
     { data: featuredImages },
     { data: unitProjectRows },
   ] = await Promise.all([
     supabase
       .from('unit_stage_progress')
-      .select('unit_id, is_done')
-      .in('unit_id', unitIds)
-      .eq('stage_key', 'done'),
+      .select('unit_id, stage_key, is_done')
+      .in('unit_id', unitIds),
+
+    supabase
+      .from('unit_progress_steps')
+      .select('unit_id, step_key, status')
+      .in('unit_id', unitIds),
 
     supabase
       .from('image_assets')
@@ -118,13 +180,30 @@ export default async function DashboardUnitInProgress({
       .in('unit_id', unitIds),
   ])
 
-  const doneSet = new Set(
-    (doneRows || []).filter((row) => row.is_done).map((row) => row.unit_id)
+  const progressRows = [
+    ...((stageProgressRows ?? []) as StageProgressRow[]),
+    ...((progressStepRows ?? []) as StageProgressRow[]),
+  ]
+  const progressRowsByUnitId = progressRows.reduce<Record<string, StageProgressRow[]>>(
+    (rowsByUnitId, row) => {
+      if (!rowsByUnitId[row.unit_id]) {
+        rowsByUnitId[row.unit_id] = []
+      }
+
+      rowsByUnitId[row.unit_id].push(row)
+      return rowsByUnitId
+    },
+    {}
   )
+  const progressMap = new Map<string, number>()
+
+  for (const unit of [featuredUnit, ...fallbackUnits].filter(Boolean) as DashboardHeroUnit[]) {
+    progressMap.set(unit.id, getUnitProgress(unit, progressRowsByUnitId[unit.id] ?? []))
+  }
 
   const inProgressUnit =
     (featuredUnit as DashboardHeroUnit | null) ||
-    fallbackUnits.find((unit) => !doneSet.has(unit.id)) ||
+    fallbackUnits.find((unit) => (progressMap.get(unit.id) ?? 0) < 100) ||
     null
 
   if (!inProgressUnit) {
@@ -153,6 +232,8 @@ export default async function DashboardUnitInProgress({
         Boolean(project?.id)
       )
 
+  const progress = progressMap.get(inProgressUnit.id) ?? 0
+
   return (
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
       <div className="relative min-h-[260px]">
@@ -172,33 +253,42 @@ export default async function DashboardUnitInProgress({
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-950/40 to-slate-900" />
         )}
 
-        <div className="relative z-10 flex min-h-[260px] flex-col justify-end p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">
-            {inProgressUnit.is_featured ? 'Featured Unit' : 'In Progress'}
-          </p>
-
-          <div className="mt-3 space-y-2">
-            <h2 className="text-3xl font-semibold leading-tight text-white">
-              {inProgressUnit.name}
-            </h2>
-            <p className="text-sm text-white/75">
-              Last updated{' '}
-              {new Date(inProgressUnit.updated_at).toLocaleDateString()}
-            </p>
-            {inProgressUnit.is_featured && parentProjects.length > 0 ? (
-              <p className="text-xs font-semibold text-cyan-200/80">
-                {parentProjects.map((project) => project.name || 'Untitled project').join(' / ')}
+        <div className="relative z-10 flex min-h-[260px] flex-col justify-end p-5 sm:p-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">
+                {inProgressUnit.is_featured ? 'Featured Unit' : 'In Progress'}
               </p>
-            ) : null}
-          </div>
 
-          <div className="mt-5">
-            <PrefetchLink
-              href={`/units/${inProgressUnit.id}`}
-              className="inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-300"
-            >
-              Resume Painting
-            </PrefetchLink>
+              <div className="mt-3 space-y-2">
+                <h2 className="max-w-xl text-3xl font-semibold leading-tight text-white sm:text-4xl">
+                  {inProgressUnit.name}
+                </h2>
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-200/85">
+                  Deadline: {formatDate(inProgressUnit.deadline)}
+                </p>
+                {inProgressUnit.is_featured && parentProjects.length > 0 ? (
+                  <p className="text-xs font-semibold text-cyan-200/80">
+                    {parentProjects.map((project) => project.name || 'Untitled project').join(' / ')}
+                  </p>
+                ) : null}
+              </div>
+
+              <form action={startDashboardUnitSession} className="mt-5">
+                <input type="hidden" name="unitId" value={inProgressUnit.id} />
+                <button
+                  type="submit"
+                  className="inline-flex rounded-2xl border border-cyan-300/55 bg-black/45 px-5 py-3 text-sm font-black uppercase text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950"
+                >
+                  Resume Painting
+                </button>
+              </form>
+            </div>
+
+            <ProgressWheel
+              value={progress}
+              className="shrink-0 self-start sm:self-end"
+            />
           </div>
         </div>
       </div>
