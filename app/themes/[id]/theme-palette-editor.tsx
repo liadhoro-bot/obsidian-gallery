@@ -2,11 +2,13 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useTransition } from 'react'
 import { setThemePaintSlot } from './actions'
+import PaintPickerDialog, {
+  PaintPickerPaint,
+} from '../../../components/paints/paint-picker-dialog'
 
-type PaintOption = {
+type PaintOption = PaintPickerPaint & {
   id: string
   source: 'catalog' | 'custom'
   name: string
@@ -39,84 +41,56 @@ export default function ThemePaletteEditor({
   paintOptions: PaintOption[]
   mode?: 'display' | 'edit'
 }) {
-  const router = useRouter()
-
   const [activeSlot, setActiveSlot] = useState<number | null>(null)
-  const [query, setQuery] = useState('')
-  const [remotePaints, setRemotePaints] = useState<PaintOption[]>(paintOptions)
-  const [isSearching, setIsSearching] = useState(false)
+  const [localSlots, setLocalSlots] = useState(slots)
+  const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
-    if (activeSlot === null) return
-
-    const controller = new AbortController()
-
-    async function loadPaints() {
-      setIsSearching(true)
-
-      try {
-        const params = new URLSearchParams()
-        params.set('limit', '80')
-
-        if (query.trim()) {
-          params.set('q', query.trim())
-        }
-
-        const response = await fetch(
-          `/api/theme-paint-search?${params.toString()}`,
-          { signal: controller.signal }
-        )
-
-        if (!response.ok) {
-          throw new Error('Paint search failed')
-        }
-
-        const result = await response.json()
-        setRemotePaints(result.paints || [])
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error(error)
-          setRemotePaints([])
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsSearching(false)
-        }
-      }
-    }
-
-    const timeout = window.setTimeout(loadPaints, 250)
-
-    return () => {
-      controller.abort()
-      window.clearTimeout(timeout)
-    }
-  }, [activeSlot, query])
-
-  const filteredPaints = useMemo(() => {
-    return [...remotePaints].sort((a, b) => a.name.localeCompare(b.name))
-  }, [remotePaints])
+    setLocalSlots(slots)
+  }, [slots])
 
   function openPicker(index: number) {
     if (!isOwner) return
 
     setActiveSlot(index)
-    setQuery('')
   }
 
   function closePicker() {
     setActiveSlot(null)
-    setQuery('')
   }
 
-  function choosePaint(paint: PaintOption) {
+  function choosePaint(paint: PaintPickerPaint) {
     if (activeSlot === null) return
 
+    const slotIndex = activeSlot
+    const previousSlots = localSlots
+    const optimisticSlot: NonNullable<PaletteSlot> = {
+      id: localSlots[slotIndex]?.id || `optimistic-${slotIndex}`,
+      paintId: paint.id,
+      paintSource: paint.source,
+      name: paint.name || 'Unnamed paint',
+      imageUrl: paint.swatch_image_url,
+      hex: paint.hex || paint.hex_approx || null,
+    }
+
+    setError('')
+    setLocalSlots((current) =>
+      current.map((slot, index) => (index === slotIndex ? optimisticSlot : slot))
+    )
+    closePicker()
+
     startTransition(async () => {
-      await setThemePaintSlot(themeId, activeSlot, paint.source, paint.id)
-      closePicker()
-      router.refresh()
+      try {
+        await setThemePaintSlot(themeId, slotIndex, paint.source, paint.id)
+      } catch (slotError) {
+        setLocalSlots(previousSlots)
+        setError(
+          slotError instanceof Error
+            ? slotError.message
+            : 'Could not update palette.'
+        )
+      }
     })
   }
 
@@ -154,7 +128,7 @@ export default function ThemePaletteEditor({
   return (
     <>
       <div className="grid grid-cols-5 gap-2">
-        {slots.map((slot, index) => {
+        {localSlots.map((slot, index) => {
           if (!slot || mode === 'edit') {
             return (
               <button
@@ -182,90 +156,27 @@ export default function ThemePaletteEditor({
         })}
       </div>
 
-      {activeSlot !== null && (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/70 px-4 pb-4 sm:items-center">
-          <div className="mx-auto max-h-[80vh] w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#10131a] p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">
-                Choose Color {activeSlot + 1}
-              </h3>
-
-              <button
-                type="button"
-                onClick={closePicker}
-                className="text-sm text-white/50"
-              >
-                Close
-              </button>
-            </div>
-
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name, brand, line, or SKU..."
-              className="mb-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none"
-            />
-
-            <p className="mb-3 text-xs text-white/35">
-              {isSearching
-                ? 'Searching paints...'
-                : `Showing ${filteredPaints.length} matching paints`}
-            </p>
-
-            <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
-              {filteredPaints.map((paint) => (
-                <button
-                  key={`${paint.source}-${paint.id}`}
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => choosePaint(paint)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-left hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:bg-neutral-700/70 disabled:text-white/60 disabled:opacity-70"
-                >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
-                    {paint.swatch_image_url ? (
-                      <Image
-                        src={paint.swatch_image_url}
-                        alt={paint.name}
-                        fill
-                        sizes="40px"
-                        className="object-cover"
-                      />
-                    ) : paint.hex ? (
-                      <div
-                        className="h-full w-full"
-                        style={{ backgroundColor: paint.hex }}
-                      />
-                    ) : null}
-                  </div>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">
-                      {paint.name}
-                    </p>
-
-                    <p className="truncate text-xs text-white/45">
-                      {[paint.brand, paint.line, paint.sku]
-                        .filter(Boolean)
-                        .join(' / ')}
-                    </p>
-                  </div>
-
-                  {isPending ? (
-                    <span className="ml-auto h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent text-white/70" />
-                  ) : null}
-                </button>
-              ))}
-
-              {!isSearching && filteredPaints.length === 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/50">
-                  No paints found.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <PaintPickerDialog
+        open={activeSlot !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) closePicker()
+        }}
+        title={
+          activeSlot === null ? 'Choose Paint' : `Choose Color ${activeSlot + 1}`
+        }
+        selectedPaintId={
+          activeSlot === null
+            ? null
+            : localSlots[activeSlot]
+              ? `${localSlots[activeSlot]?.paintSource}:${localSlots[activeSlot]?.paintId}`
+              : null
+        }
+        onSelectPaint={choosePaint}
+        source="theme_picker"
+        initialPaints={paintOptions}
+        disabled={isPending}
+      />
+      {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
     </>
   )
 }

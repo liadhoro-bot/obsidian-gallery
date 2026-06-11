@@ -19,6 +19,7 @@ import {
   extractPaletteFromImage,
   findNearestUniquePaints,
 } from '../../../utils/color-matching'
+import { createPerfTimer } from '../../../utils/perf/server'
 
 const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
 const unitThemeDescription = (unitId: string, source: string) =>
@@ -50,11 +51,10 @@ export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
 }
 
 export async function setFeaturedUnit(unitId: string) {
+  const perf = createPerfTimer('action:setFeaturedUnit')
   const supabase = await createClient()
 
   const {
@@ -74,8 +74,8 @@ export async function setFeaturedUnit(unitId: string) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
+  perf.mark('revalidation duration')
+  perf.total()
 }
 
 export async function updateUnitStatus(
@@ -115,10 +115,10 @@ export async function updateUnitStatus(
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
 }
 
 export async function startUnitSession(unitId: string) {
+  const perf = createPerfTimer('action:startUnitSession')
   const supabase = await createClient()
 
   const {
@@ -140,8 +140,10 @@ export async function startUnitSession(unitId: string) {
   if (existingError) {
     throw existingError
   }
+  perf.mark('active session query')
 
   if (existing) {
+    perf.total()
     return existing
   }
 
@@ -191,12 +193,16 @@ export async function startUnitSession(unitId: string) {
       complexity: unit?.complexity || null,
     },
   })
+  perf.mark('analytics event')
 
   revalidatePath(`/units/${unitId}`)
+  perf.mark('revalidation duration')
+  perf.total()
   return data
 }
 
 export async function endUnitSession(unitId: string) {
+  const perf = createPerfTimer('action:endUnitSession')
   const supabase = await createClient()
 
   const {
@@ -220,8 +226,10 @@ export async function endUnitSession(unitId: string) {
   if (sessionError) {
     throw sessionError
   }
+  perf.mark('active session query')
 
   if (!session) {
+    perf.total()
     return null
   }
 
@@ -229,14 +237,18 @@ export async function endUnitSession(unitId: string) {
   const ended = Date.now()
   const durationSeconds = Math.max(0, Math.floor((ended - started) / 1000))
 
-  const { error } = await supabase
+  const endedAt = new Date().toISOString()
+
+  const { data: updatedSession, error } = await supabase
     .from('unit_sessions')
     .update({
-      ended_at: new Date().toISOString(),
+      ended_at: endedAt,
       duration_seconds: durationSeconds,
       entry_source: 'timer',
     })
     .eq('id', session.id)
+    .select('id, started_at, ended_at, duration_seconds, entry_source, notes')
+    .single()
 
   if (error) {
     throw error
@@ -275,12 +287,13 @@ export async function endUnitSession(unitId: string) {
       duration_minutes: Math.round(durationSeconds / 60),
     },
   })
+  perf.mark('analytics event')
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
+  perf.mark('revalidation duration')
+  perf.total()
 
-  return { durationSeconds }
+  return { durationSeconds, session: updatedSession }
 }
 
 export async function logManualUnitSession(formData: FormData) {
@@ -333,15 +346,19 @@ export async function logManualUnitSession(formData: FormData) {
     (endedAt.getTime() - startedAt.getTime()) / 1000
   )
 
-  const { error } = await supabase.from('unit_sessions').insert({
-    unit_id: unitId,
-    user_id: user.id,
-    started_at: startedAt.toISOString(),
-    ended_at: endedAt.toISOString(),
-    duration_seconds: durationSeconds,
-    entry_source: 'manual',
-    notes: notes || null,
-  })
+  const { data: session, error } = await supabase
+    .from('unit_sessions')
+    .insert({
+      unit_id: unitId,
+      user_id: user.id,
+      started_at: startedAt.toISOString(),
+      ended_at: endedAt.toISOString(),
+      duration_seconds: durationSeconds,
+      entry_source: 'manual',
+      notes: notes || null,
+    })
+    .select('id, started_at, ended_at, duration_seconds, entry_source, notes')
+    .single()
 
   if (error) {
     throw error
@@ -361,7 +378,8 @@ export async function logManualUnitSession(formData: FormData) {
   })
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
+
+  return session
 }
 
 export async function updateProgressStep(
@@ -415,8 +433,6 @@ export async function setFeaturedUnitImage(unitId: string, imageId: string) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
 }
 
 export async function calculateUnitPaletteAction(formData: FormData) {
@@ -785,6 +801,8 @@ export async function uploadUnitGalleryImages(
   }
 
   const unitId = String(formData.get('unitId') || '')
+  const uploadSource =
+    formData.get('uploadSource') === 'camera' ? 'camera' : 'gallery_picker'
   const files = formData
     .getAll('image')
     .filter((value): value is File => value instanceof File && value.size > 0)
@@ -817,6 +835,7 @@ export async function uploadUnitGalleryImages(
   const result: GalleryUploadResult = {
     uploadedCount: 0,
     failed: [],
+    uploadedImages: [],
   }
   const hasFeaturedImage = Boolean(
     existingFeatured && existingFeatured.length > 0
@@ -851,17 +870,23 @@ export async function uploadUnitGalleryImages(
 
     const shouldBeFeatured = !hasFeaturedImage && result.uploadedCount === 0
 
-    const { error: insertError } = await supabase.from('image_assets').insert({
-      entity_type: 'unit',
-      entity_id: unitId,
-      image_url: data.publicUrl,
-      user_id: user.id,
-      storage_bucket: 'obsidian-images',
-      storage_path: filePath,
-      is_featured: shouldBeFeatured,
-      sort_order: 0,
-      alt_text: null,
-    })
+    const { data: imageAsset, error: insertError } = await supabase
+      .from('image_assets')
+      .insert({
+        entity_type: 'unit',
+        entity_id: unitId,
+        image_url: data.publicUrl,
+        user_id: user.id,
+        storage_bucket: 'obsidian-images',
+        storage_path: filePath,
+        is_featured: shouldBeFeatured,
+        sort_order: 0,
+        alt_text: null,
+      })
+      .select(
+        'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path'
+      )
+      .single()
 
     if (insertError) {
       await supabase.storage.from('obsidian-images').remove([filePath])
@@ -870,6 +895,9 @@ export async function uploadUnitGalleryImages(
     }
 
     result.uploadedCount += 1
+    if (imageAsset) {
+      result.uploadedImages?.push(imageAsset)
+    }
 
     await captureServerEvent({
       distinctId: user.id,
@@ -881,14 +909,13 @@ export async function uploadUnitGalleryImages(
         project_id: unit.project_id,
         image_count: 1,
         is_featured: shouldBeFeatured,
+        upload_source: uploadSource,
       },
     })
   }
 
   if (result.uploadedCount > 0) {
     revalidatePath(`/units/${unitId}`)
-    revalidatePath('/dashboard')
-    revalidatePath('/projects')
     if (unit.project_id) {
       revalidatePath(`/projects/${unit.project_id}`)
     }
@@ -1049,9 +1076,6 @@ export async function updateUnitDetails(formData: FormData) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/')
-  revalidatePath('/projects')
   affectedProjectIds.forEach((projectId) => {
     revalidatePath(`/projects/${projectId}`)
   })
@@ -1094,8 +1118,6 @@ export async function updateUnitHeader(formData: FormData) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
 }
 
 export async function deleteUnit(formData: FormData) {
@@ -1227,9 +1249,6 @@ export async function expireUnitSessionAtTwoHours(unitId: string) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/')
-  revalidatePath('/projects')
 
   return { durationSeconds: 7200 }
 }
@@ -1354,8 +1373,6 @@ export async function toggleStepDone(formData: FormData) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
 }
 
 export async function updateUnitSession(formData: FormData) {
@@ -1387,7 +1404,7 @@ export async function updateUnitSession(formData: FormData) {
     (ended.getTime() - started.getTime()) / 1000
   )
 
-  const { error } = await supabase
+  const { data: session, error } = await supabase
     .from('unit_sessions')
     .update({
       started_at: started.toISOString(),
@@ -1397,12 +1414,14 @@ export async function updateUnitSession(formData: FormData) {
     .eq('id', sessionId)
     .eq('unit_id', unitId)
     .eq('user_id', user.id)
+    .select('id, started_at, ended_at, duration_seconds, entry_source, notes')
+    .single()
 
   if (error) throw error
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
+
+  return session
 }
 
 export async function deleteUnitSession(formData: FormData) {
@@ -1431,8 +1450,8 @@ export async function deleteUnitSession(formData: FormData) {
   if (error) throw error
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/projects')
+
+  return { sessionId }
 }
 export async function assignRecipeToStage(formData: FormData) {
   const supabase = await createClient()
@@ -1532,7 +1551,6 @@ export async function assignRecipeToStage(formData: FormData) {
   }
 
   revalidatePath(`/units/${unitId}`)
-  revalidatePath('/recipes')
 }
 
 export async function removeRecipeFromStage(formData: FormData) {
@@ -1651,8 +1669,7 @@ export async function addPaintToStage(formData: FormData) {
     }
 
     if (existingPaint) {
-      revalidatePath(`/units/${unitId}`)
-      return
+      return null
     }
   }
 
@@ -1685,8 +1702,7 @@ export async function addPaintToStage(formData: FormData) {
     }
 
     if (existingPaint) {
-      revalidatePath(`/units/${unitId}`)
-      return
+      return null
     }
   }
 
@@ -1700,21 +1716,51 @@ export async function addPaintToStage(formData: FormData) {
     throw countError
   }
 
-  const { error } = await supabase.from('unit_stage_paints').insert({
-    unit_id: unitId,
-    progress_step_id: progressStepId,
-    paint_source: paintSource,
-    paint_catalog_id: paintSource === 'catalog' ? paintId : null,
-    custom_paint_id: paintSource === 'custom' ? paintId : null,
-    user_id: user.id,
-    sort_order: count ?? 0,
-  })
+  const { data: stagePaint, error } = await supabase
+    .from('unit_stage_paints')
+    .insert({
+      unit_id: unitId,
+      progress_step_id: progressStepId,
+      paint_source: paintSource,
+      paint_catalog_id: paintSource === 'catalog' ? paintId : null,
+      custom_paint_id: paintSource === 'custom' ? paintId : null,
+      user_id: user.id,
+      sort_order: count ?? 0,
+    })
+    .select(
+      `
+      id,
+      unit_id,
+      progress_step_id,
+      paint_source,
+      paint_catalog_id,
+      custom_paint_id,
+      sort_order,
+      catalog_paint:paint_catalog (
+        id,
+        name,
+        brand,
+        line,
+        hex_approx,
+        swatch_image_url
+      ),
+      custom_paint:paints (
+        id,
+        name,
+        manufacturer,
+        series,
+        color_hex
+      )
+    `
+    )
+    .single()
 
   if (error) {
     throw error
   }
 
   revalidatePath(`/units/${unitId}`)
+  return stagePaint
 }
 
 export async function removePaintFromStage(formData: FormData) {

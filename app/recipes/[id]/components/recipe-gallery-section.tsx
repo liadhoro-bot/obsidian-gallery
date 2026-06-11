@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
 import SubmitButton from '../../../components/SubmitButton'
 import { Recipe, RecipeImage } from './types'
@@ -31,27 +31,42 @@ export default function RecipeGallerySection({
   deleteRecipeImageAction: (formData: FormData) => Promise<void>
 }) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadSource, setUploadSource] = useState<
+    'gallery_picker' | 'camera'
+  >('gallery_picker')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [localImages, setLocalImages] = useState(recipeImages)
+  const [isPending, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [filePreviews, setFilePreviews] = useState<
-    { file: File; previewUrl: string }[]
-  >([])
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const filePreviews = useMemo(
+    () =>
+      selectedFiles.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    [selectedFiles]
+  )
 
   useEffect(() => {
-    const previews = selectedFiles.map((file) => ({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }))
+    setLocalImages(recipeImages)
+  }, [recipeImages])
 
-    setFilePreviews(previews)
-
+  useEffect(() => {
     return () => {
-      previews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
+      filePreviews.forEach((preview) =>
+        URL.revokeObjectURL(preview.previewUrl)
+      )
     }
-  }, [selectedFiles])
+  }, [filePreviews])
 
-  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+  function handleFileSelection(
+    event: ChangeEvent<HTMLInputElement>,
+    source: 'gallery_picker' | 'camera'
+  ) {
     setUploadError(null)
+    setUploadSource(source)
     setSelectedFiles(Array.from(event.target.files ?? []))
   }
 
@@ -70,6 +85,7 @@ export default function RecipeGallerySection({
     const uploadFormData = new FormData()
     uploadFormData.set('recipeId', recipe.id)
     uploadFormData.set('altText', formData.get('altText')?.toString() || '')
+    uploadFormData.set('uploadSource', uploadSource)
     selectedFiles.forEach((file) => uploadFormData.append('image', file))
 
     setUploadError(null)
@@ -83,11 +99,73 @@ export default function RecipeGallerySection({
           .join('; ')}`
       )
     } else {
+      if (result?.uploadedImages?.length) {
+        setLocalImages((current) => [
+          ...result.uploadedImages!,
+          ...current.map((image) =>
+            result.uploadedImages!.some((uploaded) => uploaded.is_featured)
+              ? { ...image, is_featured: false }
+              : image
+          ),
+        ])
+      }
       setSelectedFiles([])
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = ''
+      }
     }
+  }
+
+  function handleSetFeatured(imageId: string) {
+    const previousImages = localImages
+    const formData = new FormData()
+    formData.set('recipeId', recipe.id)
+    formData.set('imageId', imageId)
+
+    setActionError(null)
+    setLocalImages((current) =>
+      current.map((image) => ({
+        ...image,
+        is_featured: image.id === imageId,
+      }))
+    )
+
+    startTransition(async () => {
+      try {
+        await setFeaturedRecipeImageAction(formData)
+      } catch (error) {
+        setLocalImages(previousImages)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not update image.'
+        )
+      }
+    })
+  }
+
+  function handleDeleteImage(imageId: string) {
+    const previousImages = localImages
+    const formData = new FormData()
+    formData.set('recipeId', recipe.id)
+    formData.set('imageId', imageId)
+
+    setActionError(null)
+    setDeleteConfirmImageId(null)
+    setLocalImages((current) => current.filter((image) => image.id !== imageId))
+
+    startTransition(async () => {
+      try {
+        await deleteRecipeImageAction(formData)
+      } catch (error) {
+        setLocalImages(previousImages)
+        setDeleteConfirmImageId(imageId)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not delete image.'
+        )
+      }
+    })
   }
 
   return (
@@ -113,19 +191,44 @@ export default function RecipeGallerySection({
             <input type="hidden" name="recipeId" value={recipe.id} />
 
             <div>
-              <label className="mb-1 block text-sm text-neutral-300">
+              <span className="mb-2 block text-sm text-neutral-300">
                 Upload Image
-              </label>
+              </span>
               <input
                 name="image"
                 type="file"
                 accept="image/*"
                 multiple
-                required
                 ref={fileInputRef}
-                onChange={handleFileSelection}
-                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-500 file:px-3 file:py-2 file:font-medium file:text-black"
+                onChange={(event) =>
+                  handleFileSelection(event, 'gallery_picker')
+                }
+                className="hidden"
               />
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={cameraInputRef}
+                onChange={(event) => handleFileSelection(event, 'camera')}
+                className="hidden"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:border-cyan-400/50 hover:text-cyan-100"
+                >
+                  Upload from Gallery
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-cyan-400"
+                >
+                  Take Photo
+                </button>
+              </div>
             </div>
 
             {filePreviews.length > 0 ? (
@@ -202,9 +305,15 @@ export default function RecipeGallerySection({
         </div>
       ) : null}
 
-      {recipeImages.length > 0 ? (
+      {actionError ? (
+        <p className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+          {actionError}
+        </p>
+      ) : null}
+
+      {localImages.length > 0 ? (
         <div className="mt-6 grid grid-cols-2 gap-4">
-          {recipeImages.map((image) => (
+          {localImages.map((image) => (
             <div
               key={image.id}
               className="overflow-hidden rounded-2xl border border-neutral-800 bg-black"
@@ -225,17 +334,15 @@ export default function RecipeGallerySection({
                       Featured
                     </span>
                   ) : isOwner ? (
-                    <form action={setFeaturedRecipeImageAction}>
-                      <input type="hidden" name="recipeId" value={recipe.id} />
-                      <input type="hidden" name="imageId" value={image.id} />
-                      <button
-                        type="submit"
-                        className="rounded-full border border-neutral-700 bg-black px-2 py-1 text-xs text-white"
-                        title="Set as featured"
-                      >
+                    <button
+                      type="button"
+                      onClick={() => handleSetFeatured(image.id)}
+                      disabled={isPending}
+                      className="rounded-full border border-neutral-700 bg-black px-2 py-1 text-xs text-white disabled:opacity-60"
+                      title="Set as featured"
+                    >
                         ★
                       </button>
-                    </form>
                   ) : null}
 
                   {isOwner ? (
@@ -259,15 +366,14 @@ export default function RecipeGallerySection({
                     <p className="text-sm text-white">Delete this image?</p>
 
                     <div className="mt-3 flex gap-2">
-                      <form action={deleteRecipeImageAction}>
-                        <input type="hidden" name="recipeId" value={recipe.id} />
-                        <input type="hidden" name="imageId" value={image.id} />
-                        <SubmitButton
-                          idleText="Delete"
-                          pendingText="Deleting..."
-                          className="rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm font-medium text-black"
-                        />
-                      </form>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteImage(image.id)}
+                        disabled={isPending}
+                        className="rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60"
+                      >
+                        {isPending ? 'Deleting...' : 'Delete'}
+                      </button>
 
                       <button
                         type="button"

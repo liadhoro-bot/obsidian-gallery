@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { unassignProjectTheme } from './actions'
 import { unassignUnitTheme } from '../../units/[id]/actions'
@@ -16,8 +15,9 @@ export default function ThemeUnassignButton({
   unitId,
   themeId,
 }: Props) {
-  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [isUnassigned, setIsUnassigned] = useState(false)
+  const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
   function confirmUnassign() {
@@ -30,16 +30,34 @@ export default function ThemeUnassignButton({
       formData.set('projectId', projectId)
     }
 
-    startTransition(async () => {
-      if (unitId) {
-        await unassignUnitTheme(formData)
-      } else {
-        await unassignProjectTheme(formData)
-      }
+    setError('')
+    setIsOpen(false)
+    setIsUnassigned(true)
 
-      setIsOpen(false)
-      router.refresh()
+    startTransition(async () => {
+      try {
+        if (unitId) {
+          await unassignUnitTheme(formData)
+        } else {
+          await unassignProjectTheme(formData)
+        }
+      } catch (unassignError) {
+        setIsUnassigned(false)
+        setError(
+          unassignError instanceof Error
+            ? unassignError.message
+            : 'Could not unassign theme.'
+        )
+      }
     })
+  }
+
+  if (isUnassigned) {
+    return (
+      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
+        Unassigned
+      </span>
+    )
   }
 
   return (
@@ -51,6 +69,7 @@ export default function ThemeUnassignButton({
       >
         Unassign
       </button>
+      {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
 
       {isOpen ? (
         <div

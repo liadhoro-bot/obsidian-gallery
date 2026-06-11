@@ -1,7 +1,6 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import posthog from 'posthog-js'
 import {
   deleteUnitSession,
@@ -282,7 +281,6 @@ export default function UnitSessionTracker({
   sessions: Session[]
   totalLoggedSeconds: number
 }) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [nowTick, setNowTick] = useState(() => Date.now())
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
@@ -291,41 +289,115 @@ export default function UnitSessionTracker({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [manualError, setManualError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [localActiveSession, setLocalActiveSession] = useState(activeSession)
+  const [localSessions, setLocalSessions] = useState(sessions)
+  const [localTotalLoggedSeconds, setLocalTotalLoggedSeconds] =
+    useState(totalLoggedSeconds)
 
   useEffect(() => {
-    if (!activeSession) return
+    setLocalActiveSession(activeSession)
+  }, [activeSession])
+
+  useEffect(() => {
+    setLocalSessions(sessions)
+  }, [sessions])
+
+  useEffect(() => {
+    setLocalTotalLoggedSeconds(totalLoggedSeconds)
+  }, [totalLoggedSeconds])
+
+  useEffect(() => {
+    if (!localActiveSession) return
 
     const interval = setInterval(() => {
       setNowTick(Date.now())
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [activeSession])
+  }, [localActiveSession])
 
   const completedSessions = useMemo(
     () =>
-      sessions
+      localSessions
         .filter((session) => session.ended_at)
         .sort(
           (a, b) =>
             new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
         ),
-    [sessions]
+    [localSessions]
   )
   const mostRecentSession = completedSessions[0] ?? null
   const historySessions = completedSessions.slice(0, 10)
 
   const handleStart = () => {
+    const startedAt = new Date().toISOString()
+    const optimisticSession: Session = {
+      id: `optimistic-${startedAt}`,
+      started_at: startedAt,
+      ended_at: null,
+      duration_seconds: null,
+      entry_source: 'timer',
+      notes: null,
+    }
+    const previousActiveSession = localActiveSession
+
+    setLocalActiveSession(optimisticSession)
+    setActionError(null)
+
     startTransition(async () => {
-      await startUnitSession(unitId)
-      router.refresh()
+      try {
+        const session = await startUnitSession(unitId)
+        setLocalActiveSession({
+          ...optimisticSession,
+          ...session,
+          ended_at: null,
+          duration_seconds: null,
+        })
+      } catch (error) {
+        setLocalActiveSession(previousActiveSession)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not start session.'
+        )
+        throw error
+      }
     })
   }
 
   const handleStop = () => {
+    const previousActiveSession = localActiveSession
+    const previousTotal = localTotalLoggedSeconds
+    const optimisticDuration = previousActiveSession
+      ? Math.max(
+          0,
+          Math.floor(
+            (Date.now() - new Date(previousActiveSession.started_at).getTime()) /
+              1000
+          )
+        )
+      : 0
+
+    setLocalActiveSession(null)
+    setLocalTotalLoggedSeconds((current) => current + optimisticDuration)
+    setActionError(null)
+
     startTransition(async () => {
-      await endUnitSession(unitId)
-      router.refresh()
+      try {
+        const result = await endUnitSession(unitId)
+        if (result?.durationSeconds !== undefined) {
+          setLocalTotalLoggedSeconds(previousTotal + result.durationSeconds)
+        }
+        if (result?.session) {
+          setLocalSessions((current) => [result.session!, ...current])
+        }
+      } catch (error) {
+        setLocalActiveSession(previousActiveSession)
+        setLocalTotalLoggedSeconds(previousTotal)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not stop session.'
+        )
+        throw error
+      }
     })
   }
 
@@ -335,8 +407,8 @@ export default function UnitSessionTracker({
 
       if (nextValue) {
         posthog.capture('unit_session_history_opened', {
-          unit_id: unitId,
-          session_count: completedSessions.length,
+        unit_id: unitId,
+        session_count: completedSessions.length,
         })
       }
 
@@ -372,45 +444,149 @@ export default function UnitSessionTracker({
     actionData.set('notes', String(formData.get('notes') || ''))
 
     setManualError(null)
+    setActionError(null)
+
+    const optimisticSession: Session = {
+      id: `optimistic-manual-${Date.now()}`,
+      started_at: startedAt.toISOString(),
+      ended_at: endedAt.toISOString(),
+      duration_seconds: Math.floor(
+        (endedAt.getTime() - startedAt.getTime()) / 1000
+      ),
+      entry_source: 'manual',
+      notes: String(formData.get('notes') || '').trim() || null,
+    }
+    const previousSessions = localSessions
+    const previousTotal = localTotalLoggedSeconds
+
+    setLocalSessions((current) => [optimisticSession, ...current])
+    setLocalTotalLoggedSeconds(
+      (current) => current + (optimisticSession.duration_seconds ?? 0)
+    )
+    form.reset()
+    setIsManualOpen(false)
 
     startTransition(async () => {
-      await logManualUnitSession(actionData)
-      form.reset()
-      setIsManualOpen(false)
-      router.refresh()
+      try {
+        const session = await logManualUnitSession(actionData)
+        if (session) {
+          setLocalSessions((current) =>
+            current.map((item) =>
+              item.id === optimisticSession.id ? session : item
+            )
+          )
+        }
+      } catch (error) {
+        setLocalSessions(previousSessions)
+        setLocalTotalLoggedSeconds(previousTotal)
+        setIsManualOpen(true)
+        setManualError(
+          error instanceof Error ? error.message : 'Could not log session.'
+        )
+      }
     })
   }
 
   const handleUpdate = (formData: FormData) => {
+    const sessionId = String(formData.get('sessionId') || '')
+    const startedAt = String(formData.get('startedAt') || '')
+    const endedAt = String(formData.get('endedAt') || '')
+    const started = new Date(startedAt)
+    const ended = new Date(endedAt)
+
+    if (Number.isNaN(started.getTime()) || Number.isNaN(ended.getTime())) {
+      setActionError('Enter valid session dates.')
+      return
+    }
+
+    if (ended <= started) {
+      setActionError('End time must be after start time.')
+      return
+    }
+
+    const previousSessions = localSessions
+    const previousTotal = localTotalLoggedSeconds
+    const nextDuration = Math.floor((ended.getTime() - started.getTime()) / 1000)
+
+    setActionError(null)
+    setLocalSessions((current) =>
+      current.map((session) =>
+        session.id === sessionId
+          ? {
+              ...session,
+              started_at: started.toISOString(),
+              ended_at: ended.toISOString(),
+              duration_seconds: nextDuration,
+            }
+          : session
+      )
+    )
+    setLocalTotalLoggedSeconds(
+      localSessions.reduce((total, session) => {
+        if (session.id === sessionId) return total + nextDuration
+        return total + (session.duration_seconds ?? 0)
+      }, 0)
+    )
+
     startTransition(async () => {
       const actionData = new FormData()
 
       actionData.set('unitId', unitId)
-      actionData.set('sessionId', String(formData.get('sessionId') || ''))
-      actionData.set('startedAt', String(formData.get('startedAt') || ''))
-      actionData.set('endedAt', String(formData.get('endedAt') || ''))
+      actionData.set('sessionId', sessionId)
+      actionData.set('startedAt', startedAt)
+      actionData.set('endedAt', endedAt)
 
-      await updateUnitSession(actionData)
-      setEditingId(null)
-      setConfirmDeleteId(null)
-      router.refresh()
+      try {
+        const session = await updateUnitSession(actionData)
+        if (session) {
+          setLocalSessions((current) =>
+            current.map((item) => (item.id === session.id ? session : item))
+          )
+        }
+        setEditingId(null)
+        setConfirmDeleteId(null)
+      } catch (error) {
+        setLocalSessions(previousSessions)
+        setLocalTotalLoggedSeconds(previousTotal)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not update session.'
+        )
+      }
     })
   }
 
   const handleDelete = (sessionId: string) => {
+    const previousSessions = localSessions
+    const previousTotal = localTotalLoggedSeconds
+    const removedSession = localSessions.find((session) => session.id === sessionId)
+
     setDeletingId(sessionId)
+    setActionError(null)
+    setLocalSessions((current) =>
+      current.filter((session) => session.id !== sessionId)
+    )
+    setLocalTotalLoggedSeconds(
+      (current) => current - (removedSession?.duration_seconds ?? 0)
+    )
 
     startTransition(async () => {
       const formData = new FormData()
       formData.set('unitId', unitId)
       formData.set('sessionId', sessionId)
 
-      await deleteUnitSession(formData)
-
-      setEditingId(null)
-      setConfirmDeleteId(null)
-      setDeletingId(null)
-      router.refresh()
+      try {
+        await deleteUnitSession(formData)
+        setEditingId(null)
+        setConfirmDeleteId(null)
+        setDeletingId(null)
+      } catch (error) {
+        setLocalSessions(previousSessions)
+        setLocalTotalLoggedSeconds(previousTotal)
+        setDeletingId(null)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not delete session.'
+        )
+      }
     })
   }
 
@@ -435,14 +611,14 @@ export default function UnitSessionTracker({
 
       <div className="mt-5 flex items-end gap-3">
         <div className="text-4xl font-black leading-none text-white">
-          {formatSessionDuration(totalLoggedSeconds)}
+          {formatSessionDuration(localTotalLoggedSeconds)}
         </div>
         <div className="pb-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/35">
           Total Logged
         </div>
       </div>
 
-      {activeSession ? (
+      {localActiveSession ? (
         <div className="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/[0.07] p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -450,18 +626,18 @@ export default function UnitSessionTracker({
                 Session Running
               </div>
               <div className="mt-1 text-sm text-white/55">
-                Started {formatDate(activeSession.started_at)}
+                Started {formatDate(localActiveSession.started_at)}
               </div>
             </div>
             <div className="text-right text-lg font-black text-white">
-              {nowTick ? formatRunningDuration(activeSession.started_at) : '0h 00m 00s'}
+              {nowTick ? formatRunningDuration(localActiveSession.started_at) : '0h 00m 00s'}
             </div>
           </div>
         </div>
       ) : null}
 
       <div className="mt-4 flex gap-3">
-        {activeSession ? (
+        {localActiveSession ? (
           <button
             type="button"
             onClick={handleStop}
@@ -497,6 +673,12 @@ export default function UnitSessionTracker({
       </div>
 
       <div className="mt-4">
+        {actionError ? (
+          <p className="mb-3 rounded-xl border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">
+            {actionError}
+          </p>
+        ) : null}
+
         {isHistoryOpen ? (
           <div className="grid gap-3">
             {historySessions.length > 0 ? (

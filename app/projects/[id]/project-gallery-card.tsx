@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
 import SubmitButton from '../../components/SubmitButton'
 import type { ProjectImage, ProjectRow, SerializableError } from './types'
@@ -30,27 +30,42 @@ export default function ProjectGalleryCard({
   const [selectedImage, setSelectedImage] = useState<ProjectImage | null>(null)
   const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadSource, setUploadSource] = useState<
+    'gallery_picker' | 'camera'
+  >('gallery_picker')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [localImages, setLocalImages] = useState(projectImages)
+  const [isPending, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [filePreviews, setFilePreviews] = useState<
-    { file: File; previewUrl: string }[]
-  >([])
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const filePreviews = useMemo(
+    () =>
+      selectedFiles.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    [selectedFiles]
+  )
 
   useEffect(() => {
-    const previews = selectedFiles.map((file) => ({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }))
+    setLocalImages(projectImages)
+  }, [projectImages])
 
-    setFilePreviews(previews)
-
+  useEffect(() => {
     return () => {
-      previews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
+      filePreviews.forEach((preview) =>
+        URL.revokeObjectURL(preview.previewUrl)
+      )
     }
-  }, [selectedFiles])
+  }, [filePreviews])
 
-  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+  function handleFileSelection(
+    event: ChangeEvent<HTMLInputElement>,
+    source: 'gallery_picker' | 'camera'
+  ) {
     setUploadError(null)
+    setUploadSource(source)
     setSelectedFiles(Array.from(event.target.files ?? []))
   }
 
@@ -69,6 +84,7 @@ export default function ProjectGalleryCard({
     const uploadFormData = new FormData()
     uploadFormData.set('projectId', projectId)
     uploadFormData.set('altText', formData.get('altText')?.toString() || '')
+    uploadFormData.set('uploadSource', uploadSource)
     selectedFiles.forEach((file) => uploadFormData.append('image', file))
 
     setUploadError(null)
@@ -82,11 +98,73 @@ export default function ProjectGalleryCard({
           .join('; ')}`
       )
     } else {
+      if (result?.uploadedImages?.length) {
+        setLocalImages((current) => [
+          ...result.uploadedImages!,
+          ...current.map((image) =>
+            result.uploadedImages!.some((uploaded) => uploaded.is_featured)
+              ? { ...image, is_featured: false }
+              : image
+          ),
+        ])
+      }
       setSelectedFiles([])
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = ''
+      }
     }
+  }
+
+  function handleSetFeatured(imageId: string) {
+    const previousImages = localImages
+    const formData = new FormData()
+    formData.set('assetId', imageId)
+    formData.set('projectId', projectId)
+
+    setActionError(null)
+    setLocalImages((current) =>
+      current.map((image) => ({
+        ...image,
+        is_featured: image.id === imageId,
+      }))
+    )
+
+    startTransition(async () => {
+      try {
+        await setFeaturedProjectImageAction(formData)
+      } catch (error) {
+        setLocalImages(previousImages)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not update image.'
+        )
+      }
+    })
+  }
+
+  function handleDeleteImage(imageId: string) {
+    const previousImages = localImages
+    const formData = new FormData()
+    formData.set('assetId', imageId)
+    formData.set('projectId', projectId)
+
+    setActionError(null)
+    setDeleteConfirmImageId(null)
+    setLocalImages((current) => current.filter((image) => image.id !== imageId))
+
+    startTransition(async () => {
+      try {
+        await deleteProjectImageAction(formData)
+      } catch (error) {
+        setLocalImages(previousImages)
+        setDeleteConfirmImageId(imageId)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not delete image.'
+        )
+      }
+    })
   }
 
   return (
@@ -123,19 +201,44 @@ export default function ProjectGalleryCard({
 
           <div className="grid gap-3">
             <div>
-              <label className="mb-1 block text-sm text-neutral-300">
+              <span className="mb-2 block text-sm text-neutral-300">
                 Image
-              </label>
+              </span>
               <input
                 type="file"
                 name="image"
                 accept="image/*"
                 multiple
-                required
                 ref={fileInputRef}
-                onChange={handleFileSelection}
-                className="w-full text-sm text-neutral-300 file:mr-4 file:rounded-xl file:border-0 file:bg-cyan-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-black"
+                onChange={(event) =>
+                  handleFileSelection(event, 'gallery_picker')
+                }
+                className="hidden"
               />
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={cameraInputRef}
+                onChange={(event) => handleFileSelection(event, 'camera')}
+                className="hidden"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-semibold text-white transition hover:border-cyan-400/50 hover:text-cyan-100"
+                >
+                  Upload from Gallery
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-cyan-400"
+                >
+                  Take Photo
+                </button>
+              </div>
             </div>
 
             {filePreviews.length > 0 ? (
@@ -202,13 +305,19 @@ export default function ProjectGalleryCard({
         </form>
       ) : null}
 
+      {actionError ? (
+        <p className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+          {actionError}
+        </p>
+      ) : null}
+
       {projectImagesError ? (
         <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
           {JSON.stringify(projectImagesError, null, 2)}
         </pre>
-      ) : projectImages.length > 0 ? (
+      ) : localImages.length > 0 ? (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {projectImages.map((image) => (
+          {localImages.map((image) => (
             <div
               key={image.id}
               className="rounded-2xl border border-neutral-800 bg-neutral-950 p-2"
@@ -235,15 +344,14 @@ export default function ProjectGalleryCard({
                       Featured
                     </span>
                   ) : (
-                    <form action={setFeaturedProjectImageAction}>
-                      <input type="hidden" name="assetId" value={image.id} />
-                      <input type="hidden" name="projectId" value={projectId} />
-                      <SubmitButton
-                        idleText="★"
-                        pendingText="..."
-                        className="rounded-full bg-black/70 px-2 py-1 text-xs text-white"
-                      />
-                    </form>
+                    <button
+                      type="button"
+                      onClick={() => handleSetFeatured(image.id)}
+                      disabled={isPending}
+                      className="rounded-full bg-black/70 px-2 py-1 text-xs text-white disabled:opacity-60"
+                    >
+                      *
+                    </button>
                   )}
 
                   <button
@@ -266,15 +374,14 @@ export default function ProjectGalleryCard({
                   <p className="text-xs text-red-200">Delete this image?</p>
 
                   <div className="mt-2 flex items-center gap-2">
-                    <form action={deleteProjectImageAction}>
-                      <input type="hidden" name="assetId" value={image.id} />
-                      <input type="hidden" name="projectId" value={projectId} />
-                      <SubmitButton
-                        idleText="Delete"
-                        pendingText="Deleting..."
-                        className="rounded-lg bg-red-500 px-3 py-1 text-xs font-medium text-white"
-                      />
-                    </form>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(image.id)}
+                      disabled={isPending}
+                      className="rounded-lg bg-red-500 px-3 py-1 text-xs font-medium text-white disabled:opacity-60"
+                    >
+                      {isPending ? 'Deleting...' : 'Delete'}
+                    </button>
 
                     <button
                       type="button"

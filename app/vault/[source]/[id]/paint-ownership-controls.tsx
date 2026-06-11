@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimistic, useTransition } from 'react'
+import { useOptimistic, useState, useTransition } from 'react'
 import { updatePaintOwnership } from './paint-actions'
 
 type OwnershipState = {
@@ -20,6 +20,7 @@ export default function PaintOwnershipControls({
   initialIsWishlist: boolean
   initialUnitsOwned: number
 }) {
+  const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
   const [optimistic, setOptimistic] = useOptimistic<
@@ -59,6 +60,7 @@ export default function PaintOwnershipControls({
       nextState.isOwned = nextUnits > 0
     }
 
+    setError('')
     setOptimistic(nextState)
 
     startTransition(async () => {
@@ -71,7 +73,15 @@ export default function PaintOwnershipControls({
       )
       formData.set('currentUnits', String(optimistic.unitsOwned))
 
-      await updatePaintOwnership(formData)
+      try {
+        await updatePaintOwnership(formData)
+      } catch (updateError) {
+        setError(
+          updateError instanceof Error
+            ? updateError.message
+            : 'Could not update ownership.'
+        )
+      }
     })
   }
 
@@ -140,6 +150,8 @@ export default function PaintOwnershipControls({
           </button>
         </div>
       </div>
+
+      {error ? <p className="text-sm text-red-300">{error}</p> : null}
     </div>
   )
 }

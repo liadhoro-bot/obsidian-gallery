@@ -28,15 +28,14 @@ export default function ReportDialog({
     viewerHasReported ? 'Reported' : ''
   )
   const [error, setError] = useState('')
-  const [, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition()
   const reportInFlight = useRef(false)
 
   function submitReport() {
     if (reportInFlight.current) return
 
     setError('')
-    setMessage('Thank you, report received.')
-    setIsOpen(false)
+    setMessage('Submitting report...')
     onReported(true)
     reportInFlight.current = true
 
@@ -44,6 +43,7 @@ export default function ReportDialog({
       try {
         const result = await reportAction(contentId, reason)
         setMessage(result.message)
+        setIsOpen(false)
       } catch (submitError) {
         setMessage('')
         setIsOpen(true)
@@ -131,9 +131,13 @@ export default function ReportDialog({
               <button
                 type="button"
                 onClick={submitReport}
+                disabled={isPending}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-neutral-950 transition disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60"
               >
-                Submit report
+                {isPending ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : null}
+                {isPending ? 'Submitting...' : 'Submit report'}
               </button>
 
               <button

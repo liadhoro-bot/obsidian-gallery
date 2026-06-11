@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { useEffect, useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { setProjectPaletteSlot } from './actions'
 import { setUnitPaletteSlot } from '../../units/[id]/actions'
 
@@ -28,10 +27,11 @@ export default function ProjectPaletteStarter({
   unitId,
   slotIndex,
 }: Props) {
-  const router = useRouter()
   const [activeSlot, setActiveSlot] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const [paints, setPaints] = useState<PaintOption[]>([])
+  const [selectedPaints, setSelectedPaints] = useState<Record<number, PaintOption>>({})
+  const [error, setError] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -90,15 +90,28 @@ export default function ProjectPaletteStarter({
   function choosePaint(paint: PaintOption) {
     if (activeSlot === null) return
 
-    startTransition(async () => {
-      if (unitId) {
-        await setUnitPaletteSlot(unitId, activeSlot, paint.source, paint.id)
-      } else if (projectId) {
-        await setProjectPaletteSlot(projectId, activeSlot, paint.source, paint.id)
-      }
+    const slot = activeSlot
+    const previousPaints = selectedPaints
 
-      closePicker()
-      router.refresh()
+    setError('')
+    setSelectedPaints((current) => ({ ...current, [slot]: paint }))
+    closePicker()
+
+    startTransition(async () => {
+      try {
+        if (unitId) {
+          await setUnitPaletteSlot(unitId, slot, paint.source, paint.id)
+        } else if (projectId) {
+          await setProjectPaletteSlot(projectId, slot, paint.source, paint.id)
+        }
+      } catch (slotError) {
+        setSelectedPaints(previousPaints)
+        setError(
+          slotError instanceof Error
+            ? slotError.message
+            : 'Could not update palette.'
+        )
+      }
     })
   }
 
@@ -108,6 +121,7 @@ export default function ProjectPaletteStarter({
         {Array.from({ length: slotIndex === undefined ? 5 : 1 }).map(
           (_, localIndex) => {
             const index = slotIndex ?? localIndex
+            const selectedPaint = selectedPaints[index]
 
             return (
               <button
@@ -119,12 +133,31 @@ export default function ProjectPaletteStarter({
                 }}
                 className="flex aspect-square w-full min-w-0 items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/[0.03] text-lg font-semibold text-white/30 transition hover:border-cyan-400/50 hover:text-cyan-300 active:scale-95"
               >
-                +
+                {selectedPaint ? (
+                  selectedPaint.swatch_image_url ? (
+                    <Image
+                      src={selectedPaint.swatch_image_url}
+                      alt={selectedPaint.name}
+                      width={96}
+                      height={96}
+                      sizes="64px"
+                      className="h-full w-full rounded-xl object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="h-full w-full rounded-xl"
+                      style={{ backgroundColor: selectedPaint.hex || '#262626' }}
+                    />
+                  )
+                ) : (
+                  '+'
+                )}
               </button>
             )
           }
         )}
       </div>
+      {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
 
       {activeSlot !== null ? (
         <div className="fixed inset-0 z-50 flex items-end bg-black/70 px-4 pb-4 sm:items-center">

@@ -1,7 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { assignThemeToProjects, assignThemeToUnits } from './actions'
 
 type AssignableProject = {
@@ -38,20 +37,31 @@ export default function ThemeAssignmentPanel({
   projects,
   projectUnitGroups,
 }: Props) {
-  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [mode, setMode] = useState<'project' | 'unit' | null>(null)
+  const [localProjects, setLocalProjects] = useState(projects)
+  const [localProjectUnitGroups, setLocalProjectUnitGroups] =
+    useState(projectUnitGroups)
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
   const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([])
   const [conflict, setConflict] = useState<ConflictState>(null)
+  const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
+
+  useEffect(() => {
+    setLocalProjects(projects)
+  }, [projects])
+
+  useEffect(() => {
+    setLocalProjectUnitGroups(projectUnitGroups)
+  }, [projectUnitGroups])
 
   const activeProject = useMemo(
     () =>
-      projectUnitGroups.find((project) => project.projectId === activeProjectId) ??
+      localProjectUnitGroups.find((project) => project.projectId === activeProjectId) ??
       null,
-    [activeProjectId, projectUnitGroups]
+    [activeProjectId, localProjectUnitGroups]
   )
 
   function reset() {
@@ -81,10 +91,29 @@ export default function ThemeAssignmentPanel({
       formData.append('projectIds', projectId)
     }
 
+    const previousProjects = localProjects
+
+    setError('')
+    setLocalProjects((current) =>
+      current.map((project) =>
+        selectedProjectIds.includes(project.id)
+          ? { ...project, themeId }
+          : project
+      )
+    )
+    closePanel()
+
     startTransition(async () => {
-      await assignThemeToProjects(formData)
-      closePanel()
-      router.refresh()
+      try {
+        await assignThemeToProjects(formData)
+      } catch (assignError) {
+        setLocalProjects(previousProjects)
+        setError(
+          assignError instanceof Error
+            ? assignError.message
+            : 'Could not assign theme.'
+        )
+      }
     })
   }
 
@@ -96,15 +125,37 @@ export default function ThemeAssignmentPanel({
       formData.append('unitIds', unitId)
     }
 
+    const previousGroups = localProjectUnitGroups
+
+    setError('')
+    setLocalProjectUnitGroups((current) =>
+      current.map((project) => ({
+        ...project,
+        units: project.units.map((unit) =>
+          selectedUnitIds.includes(unit.id)
+            ? { ...unit, currentThemeId: themeId }
+            : unit
+        ),
+      }))
+    )
+    closePanel()
+
     startTransition(async () => {
-      await assignThemeToUnits(formData)
-      closePanel()
-      router.refresh()
+      try {
+        await assignThemeToUnits(formData)
+      } catch (assignError) {
+        setLocalProjectUnitGroups(previousGroups)
+        setError(
+          assignError instanceof Error
+            ? assignError.message
+            : 'Could not assign theme.'
+        )
+      }
     })
   }
 
   function requestProjectAssign() {
-    const conflicts = projects
+    const conflicts = localProjects
       .filter(
         (project) =>
           selectedProjectIds.includes(project.id) &&
@@ -122,7 +173,7 @@ export default function ThemeAssignmentPanel({
   }
 
   function requestUnitAssign() {
-    const units = projectUnitGroups.flatMap((project) => project.units)
+    const units = localProjectUnitGroups.flatMap((project) => project.units)
     const conflicts = units
       .filter(
         (unit) =>
@@ -199,8 +250,8 @@ export default function ThemeAssignmentPanel({
           {mode === 'project' ? (
             <div className="mt-3 rounded-2xl border border-white/10 bg-[#10131a] p-3">
               <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                {projects.length > 0 ? (
-                  projects.map((project) => (
+                {localProjects.length > 0 ? (
+                  localProjects.map((project) => (
                     <label
                       key={project.id}
                       className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-sm text-white/80"
@@ -256,8 +307,8 @@ export default function ThemeAssignmentPanel({
             <div className="mt-3 rounded-2xl border border-white/10 bg-[#10131a] p-3">
               {!activeProject ? (
                 <div className="space-y-2">
-                  {projectUnitGroups.length > 0 ? (
-                    projectUnitGroups.map((project) => (
+                  {localProjectUnitGroups.length > 0 ? (
+                    localProjectUnitGroups.map((project) => (
                       <button
                         key={project.projectId}
                         type="button"
@@ -349,6 +400,8 @@ export default function ThemeAssignmentPanel({
           ) : null}
         </div>
       ) : null}
+
+      {error ? <p className="mt-2 text-sm text-red-300">{error}</p> : null}
 
       {conflict ? (
         <div
