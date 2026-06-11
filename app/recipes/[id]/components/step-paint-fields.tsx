@@ -4,16 +4,34 @@ import { useState } from 'react'
 import PaintPicker from './paint-picker'
 import { Paint, StepPaintLink } from './types'
 
-function getPaintSelectValue(
-  paint: StepPaintLink['paint'] | null | undefined,
-  paints: Paint[]
-) {
-  if (!paint) return ''
+function getPaintSource(link: StepPaintLink | undefined, paints: Paint[]) {
+  if (!link?.paint) return null
+  if (link.paint_source === 'catalog' || link.paint_source === 'custom') {
+    return link.paint_source
+  }
 
-  const matchedPaint = paints.find((p) => p.id === paint.id)
-  if (!matchedPaint) return ''
+  return paints.find((paint) => paint.id === link.paint?.id)?.source || null
+}
 
-  return `${matchedPaint.source}:${matchedPaint.id}`
+function getPaintSelectValue(link: StepPaintLink | undefined, paints: Paint[]) {
+  if (!link?.paint) return ''
+
+  const source = getPaintSource(link, paints)
+  if (!source) return ''
+
+  return `${source}:${link.paint.id}`
+}
+
+function getDefaultPaint(link: StepPaintLink | undefined, paints: Paint[]) {
+  if (!link?.paint) return null
+
+  const source = getPaintSource(link, paints)
+  if (!source) return null
+
+  return {
+    ...link.paint,
+    source,
+  }
 }
 
 type Props = {
@@ -37,7 +55,7 @@ export default function StepPaintFields({
     <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
       {existingPaints.slice(visiblePaints, 3).map((existingPaint, index) => {
         const paintNumber = visiblePaints + index + 1
-        const defaultValue = getPaintSelectValue(existingPaint.paint, paints)
+        const defaultValue = getPaintSelectValue(existingPaint, paints)
 
         return defaultValue ? (
           <div key={`folded-${paintNumber}`}>
@@ -78,10 +96,7 @@ export default function StepPaintFields({
           {Array.from({ length: visiblePaints }).map((_, index) => {
             const paintNumber = index + 1
             const existingPaint = existingPaints[index]
-            const defaultValue = getPaintSelectValue(
-              existingPaint?.paint,
-              paints
-            )
+            const defaultValue = getPaintSelectValue(existingPaint, paints)
             const isLastVisiblePaint = paintNumber === visiblePaints
             const canAddAnotherPaint = visiblePaints < 3
 
@@ -98,6 +113,7 @@ export default function StepPaintFields({
                       name={`paintId${paintNumber}`}
                       paints={paints}
                       defaultValue={defaultValue}
+                      defaultPaint={getDefaultPaint(existingPaint, paints)}
                     />
 
                     <input

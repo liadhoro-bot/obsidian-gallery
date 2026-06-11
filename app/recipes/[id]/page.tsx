@@ -656,6 +656,8 @@ async function uploadRecipeImage(formData: FormData) {
 
   const recipeId = formData.get('recipeId')?.toString()
   const altText = formData.get('altText')?.toString().trim() || null
+  const uploadSource =
+    formData.get('uploadSource') === 'camera' ? 'camera' : 'gallery_picker'
   const files = formData
     .getAll('image')
     .filter((value): value is File => value instanceof File && value.size > 0)
@@ -742,6 +744,7 @@ async function uploadRecipeImage(formData: FormData) {
         entity_id: recipeId,
         image_count: 1,
         is_featured: shouldBeFeatured,
+        upload_source: uploadSource,
       },
     })
   }

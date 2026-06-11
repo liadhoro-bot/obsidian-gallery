@@ -1,4 +1,5 @@
   import { createClient } from '../../utils/supabase/server'
+  import { createPerfTimer } from '../../utils/perf/server'
   import VaultGridClient from './vault-grid-client'
   import VaultExportButton from './vault-export-button'
   import { captureServerEvent } from '../../utils/analytics/server'
@@ -41,11 +42,13 @@
     limit,
     tab,
   }: VaultGridProps) {
+    const perf = createPerfTimer('/vault:grid')
     const supabase = await createClient()
 
     const {
       data: { user },
     } = await supabase.auth.getUser()
+    perf.mark('auth/session fetch')
 
     if (!user) return null
 
@@ -56,6 +59,7 @@
       .from('user_paint_ownership')
       .select('paint_catalog_id, is_owned, is_wishlist')
       .eq('user_id', user.id)
+    perf.mark('ownership Supabase query')
 
     const ownedSet = new Set(
       (ownershipRows || [])
@@ -95,7 +99,6 @@
           line,
           name,
           sku,
-          swatch_image_url,
           hex_approx,
           paint_type,
           color_match_enabled
@@ -116,6 +119,7 @@
 
       const { data: matchCatalogRows, error: matchCatalogError } =
         await matchCatalogQuery.limit(5000)
+      perf.mark('color match Supabase query')
 
       if (matchCatalogError) {
         return (
@@ -151,7 +155,7 @@
         )
       }
 
-      const matchedPaints = findClosestPaints(matchHex, ownershipFilteredRows, {
+      const matchedPaintRows = findClosestPaints(matchHex, ownershipFilteredRows, {
         limit: 24,
       }).map(({ paint }) => ({
         id: paint.id,
@@ -160,12 +164,30 @@
         line: paint.line,
         name: paint.name,
         sku: paint.sku,
-        swatch_image_url: paint.swatch_image_url,
+        swatch_image_url: null as string | null,
         hex_approx: paint.hex_approx,
         paint_type: paint.paint_type,
         is_owned: ownedSet.has(paint.id),
         is_wishlist: wishlistSet.has(paint.id),
       }))
+      const matchedPaintIds = matchedPaintRows.map((paint) => paint.id)
+      const { data: matchedSwatches } = matchedPaintIds.length
+        ? await supabase
+            .from('paint_catalog')
+            .select('id, swatch_image_url')
+            .in('id', matchedPaintIds)
+        : { data: [] }
+      const swatchByPaintId = new Map(
+        (matchedSwatches ?? []).map((paint) => [
+          paint.id,
+          paint.swatch_image_url,
+        ])
+      )
+      const matchedPaints = matchedPaintRows.map((paint) => ({
+        ...paint,
+        swatch_image_url: swatchByPaintId.get(paint.id) ?? null,
+      }))
+      perf.mark('color match logic')
 
       if (matchedPaints.length === 0) {
         return (
@@ -193,6 +215,7 @@
         },
       })
 
+      perf.total()
       return (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
@@ -317,41 +340,89 @@
       .order('line', { ascending: true })
       .order('name', { ascending: true })
       .range(from, to)
+    perf.mark('catalog Supabase query')
 
-    let customQuery = supabase
-      .from('paints')
-      .select(
-        `
-        id,
-        name,
-        manufacturer,
-        series,
-        paint_type,
-        color_hex
-      `,
-        { count: 'exact' }
-      )
-      .eq('user_id', user.id)
+    const shouldLoadCustomPaints =
+      tab === 'collection' || ownership === 'all' || ownership === 'custom'
+    const visibleCatalogCount = catalogRows?.length ?? 0
+    const customRowsLimit =
+      shouldLoadCustomPaints && visibleCatalogCount < limit
+        ? limit - visibleCatalogCount
+        : 0
+    let customRows: {
+      id: string
+      name: string | null
+      manufacturer: string | null
+      series: string | null
+      paint_type: string | null
+      color_hex: string | null
+    }[] = []
+    let customCount = 0
 
-    if (q) {
-      customQuery = customQuery.or(`name.ilike.%${q}%,manufacturer.ilike.%${q}%`)
+    if (shouldLoadCustomPaints) {
+      let customQuery = supabase
+        .from('paints')
+        .select(
+          `
+          id,
+          name,
+          manufacturer,
+          series,
+          paint_type,
+          color_hex
+        `,
+          { count: 'exact' }
+        )
+        .eq('user_id', user.id)
+
+      if (q) {
+        customQuery = customQuery.or(`name.ilike.%${q}%,manufacturer.ilike.%${q}%`)
+      }
+
+      if (brand) {
+        customQuery = customQuery.eq('manufacturer', brand)
+      }
+
+      if (line) {
+        customQuery = customQuery.eq('series', line)
+      }
+
+      if (customRowsLimit > 0) {
+        const customResult = await customQuery
+          .order('manufacturer', { ascending: true })
+          .order('series', { ascending: true })
+          .order('name', { ascending: true })
+          .range(0, customRowsLimit - 1)
+
+        customRows = (customResult.data ?? []) as typeof customRows
+        customCount = customResult.count ?? 0
+      } else {
+        let customCountQuery = supabase
+          .from('paints')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+
+        if (q) {
+          customCountQuery = customCountQuery.or(
+            `name.ilike.%${q}%,manufacturer.ilike.%${q}%`
+          )
+        }
+
+        if (brand) {
+          customCountQuery = customCountQuery.eq('manufacturer', brand)
+        }
+
+        if (line) {
+          customCountQuery = customCountQuery.eq('series', line)
+        }
+
+        const customCountResult = await customCountQuery
+        customCount = customCountResult.count ?? 0
+      }
     }
-
-    if (brand) {
-      customQuery = customQuery.eq('manufacturer', brand)
-    }
-
-    if (line) {
-      customQuery = customQuery.eq('series', line)
-    }
-
-    const { data: customRows, count: customCount } = await customQuery
-      .order('manufacturer', { ascending: true })
-      .order('series', { ascending: true })
-      .order('name', { ascending: true })
-      .range(0, 999)
+    perf.mark('custom paints Supabase query')
   const customPaintIds =
-    customRows?.map((paint) => paint.id) || []
+    customRows.map((paint) => paint.id) || []
 
   const { data: customImageRows } =
     customPaintIds.length > 0
@@ -370,6 +441,7 @@
       row.image_url,
     ])
   )
+  perf.mark('image/gallery queries')
     const catalogPaints: VaultPaint[] =
       catalogRows?.map((paint) => ({
         id: paint.id,
@@ -450,6 +522,7 @@
       )
     }
 
+    perf.total()
     return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">

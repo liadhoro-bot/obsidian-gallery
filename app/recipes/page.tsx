@@ -136,6 +136,7 @@ async function RecipesContent({ userId }: { userId: string }) {
       ...recipe,
       image_url: recipe.image_url || imageByRecipeId.get(recipe.id) || null,
     }))
+  perf.total()
 
   return (
     <RecipesPageClient

@@ -1,9 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import BarcodeScannerModal from './barcode-scanner-modal'
-import ColorMatchModal from './color-match-modal'
+import dynamic from 'next/dynamic'
+
+const BarcodeScannerModal = dynamic(() => import('./barcode-scanner-modal'))
+const ColorMatchModal = dynamic(() => import('./color-match-modal'))
 
 const COLOR_GROUP_OPTIONS = [
   'Blacks & Greys',
@@ -45,6 +47,11 @@ export default function VaultFiltersClient({
   const [, startTransition] = useTransition()
 
   const [searchValue, setSearchValue] = useState(q)
+  const searchValueRef = useRef(q)
+  const searchRevisionRef = useRef(0)
+  const pendingSearchRef = useRef<{ value: string; revision: number } | null>(
+    null
+  )
   const [scannerOpen, setScannerOpen] = useState(false)
   const [localBrand, setLocalBrand] = useState(brand)
   const [localLine, setLocalLine] = useState(line)
@@ -53,12 +60,17 @@ export default function VaultFiltersClient({
   )
   const [colorGroup, setColorGroup] = useState('')
 
+  useEffect(() => {
+    searchValueRef.current = searchValue
+  }, [searchValue])
+
   const pushVaultParams = useCallback((nextValues?: {
     q?: string
     brand?: string
     line?: string
     ownership?: string
     matchHex?: string
+    searchRevision?: number
   }) => {
     const params = new URLSearchParams()
 
@@ -80,38 +92,77 @@ export default function VaultFiltersClient({
       params.set('ownership', nextOwnership)
     }
 
+    if (nextValues && 'q' in nextValues) {
+      pendingSearchRef.current = {
+        value: nextQ,
+        revision: nextValues.searchRevision ?? searchRevisionRef.current,
+      }
+    }
+
     startTransition(() => {
       router.replace(`/vault?${params.toString()}`)
     })
-  }, [localBrand, localLine, localOwnership, matchHex, router, searchValue, startTransition, tab])
+  }, [
+    localBrand,
+    localLine,
+    localOwnership,
+    matchHex,
+    router,
+    searchValue,
+    startTransition,
+    tab,
+  ])
 
-  const updateParam = useCallback((key: string, value: string) => {
-    const nextQ = key === 'q' ? value : searchValue
-    const nextBrand = key === 'brand' ? value : localBrand
-    const nextLine = key === 'brand' ? '' : key === 'line' ? value : localLine
-    const nextOwnership =
-      key === 'ownership' ? value : localOwnership
-    const nextMatchHex = key === 'q' ? '' : matchHex
+  const updateParam = useCallback(
+    (key: string, value: string, searchRevision?: number) => {
+      const nextQ = key === 'q' ? value : searchValue
+      const nextBrand = key === 'brand' ? value : localBrand
+      const nextLine =
+        key === 'brand' ? '' : key === 'line' ? value : localLine
+      const nextOwnership = key === 'ownership' ? value : localOwnership
+      const nextMatchHex = key === 'q' ? '' : matchHex
 
-    pushVaultParams({
-      q: nextQ,
-      brand: nextBrand,
-      line: nextLine,
-      ownership: nextOwnership,
-      matchHex: nextMatchHex,
-    })
-  }, [localBrand, localLine, localOwnership, matchHex, pushVaultParams, searchValue])
+      pushVaultParams({
+        q: nextQ,
+        brand: nextBrand,
+        line: nextLine,
+        ownership: nextOwnership,
+        matchHex: nextMatchHex,
+        searchRevision,
+      })
+    },
+    [
+      localBrand,
+      localLine,
+      localOwnership,
+      matchHex,
+      pushVaultParams,
+      searchValue,
+    ]
+  )
+
+  function updateSearchDraft(value: string) {
+    searchRevisionRef.current += 1
+    setSearchValue(value)
+  }
 
   function handleBarcodeDetected(barcode: string) {
     const cleanedBarcode = barcode.replace(/\D/g, '')
 
     if (!cleanedBarcode) return
 
+    searchRevisionRef.current += 1
     setSearchValue(cleanedBarcode)
-    pushVaultParams({ q: cleanedBarcode, matchHex: '' })
+    pushVaultParams({
+      q: cleanedBarcode,
+      matchHex: '',
+      searchRevision: searchRevisionRef.current,
+    })
   }
 
   function clearAllFilters() {
+    searchRevisionRef.current += 1
+    pendingSearchRef.current = null
     setSearchValue('')
     setLocalBrand('')
     setLocalLine('')
@@ -124,7 +175,22 @@ export default function VaultFiltersClient({
   }
 
   useEffect(() => {
-    setSearchValue(q)
+    const pendingSearch = pendingSearchRef.current
+
+    if (
+      pendingSearch &&
+      pendingSearch.value === q &&
+      pendingSearch.revision === searchRevisionRef.current
+    ) {
+      pendingSearchRef.current = null
+      setSearchValue(q)
+      return
+    }
+
+    if (!pendingSearch && q !== searchValueRef.current) {
+      searchRevisionRef.current += 1
+      setSearchValue(q)
+    }
   }, [q])
 
   useEffect(() => {
@@ -140,9 +206,12 @@ export default function VaultFiltersClient({
   }, [ownership, tab])
 
   useEffect(() => {
+    const scheduledSearchValue = searchValue
+    const scheduledRevision = searchRevisionRef.current
+
     const timeout = setTimeout(() => {
-      if (searchValue !== q) {
-        updateParam('q', searchValue)
+      if (scheduledSearchValue !== q) {
+        updateParam('q', scheduledSearchValue, scheduledRevision)
       }
     }, 500)
 
@@ -155,7 +224,7 @@ export default function VaultFiltersClient({
         <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
           <input
             value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
+            onChange={(event) => updateSearchDraft(event.target.value)}
             placeholder="Search by name, brand, line, or barcode"
             className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
           />
@@ -263,7 +332,11 @@ export default function VaultFiltersClient({
               Color group
             </option>
             {COLOR_GROUP_OPTIONS.map((option) => (
-              <option key={option} value={option} className="bg-slate-950 text-white">
+              <option
+                key={option}
+                value={option}
+                className="bg-slate-950 text-white"
+              >
                 {option}
               </option>
             ))}

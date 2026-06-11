@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "import-curator-templates": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/import-curator-templates.ts"
+    "import-curator-templates": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/import-curator-templates.ts",
+    "audit:paint-swatches": "tsx scripts/audit-paint-swatches.ts",
+    "fix:paint-swatches": "tsx scripts/audit-paint-swatches.ts --apply"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -15,6 +17,8 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@zxing/browser": "^0.2.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "next": "^16.2.4",
     "node-vibrant": "^4.0.4",
     "posthog-js": "^1.372.5",
@@ -32,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

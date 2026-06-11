@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
+import { createPerfTimer } from '../../utils/perf/server'
 
 export async function createTheme(formData: FormData) {
   const supabase = await createClient()
@@ -137,11 +138,13 @@ await captureServerEvent({
 }
 
 export async function saveTheme(formData: FormData) {
+  const perf = createPerfTimer('action:saveTheme')
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   if (!user) throw new Error('Not authenticated')
 
@@ -156,6 +159,7 @@ export async function saveTheme(formData: FormData) {
     .maybeSingle()
 
   if (themeError) throw themeError
+  perf.mark('theme fetch')
 
   if (!theme || !theme.is_public) {
     throw new Error('Theme is not available to save.')
@@ -163,6 +167,8 @@ export async function saveTheme(formData: FormData) {
 
   if (theme.user_id === user.id) {
     revalidatePath('/themes')
+    perf.mark('revalidation duration')
+    perf.total()
     return
   }
 
@@ -172,6 +178,7 @@ export async function saveTheme(formData: FormData) {
   })
 
   if (error) throw error
+  perf.mark('Supabase mutation')
 
   await captureServerEvent({
     distinctId: user.id,
@@ -182,16 +189,21 @@ export async function saveTheme(formData: FormData) {
       creator_id: theme.user_id || null,
     },
   })
+  perf.mark('analytics event')
 
   revalidatePath('/themes')
+  perf.mark('revalidation duration')
+  perf.total()
 }
 
 export async function unsaveTheme(formData: FormData) {
+  const perf = createPerfTimer('action:unsaveTheme')
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   if (!user) throw new Error('Not authenticated')
 
@@ -206,6 +218,9 @@ export async function unsaveTheme(formData: FormData) {
     .eq('theme_id', themeId)
 
   if (error) throw error
+  perf.mark('Supabase mutation')
 
   revalidatePath('/themes')
+  perf.mark('revalidation duration')
+  perf.total()
 }

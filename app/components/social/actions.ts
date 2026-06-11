@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '../../../utils/supabase/server'
 import { captureServerEvent } from '../../../utils/analytics/server'
 import { sendReportNotification } from './report-email'
+import { createPerfTimer } from '../../../utils/perf/server'
 
 type ToggleResult = {
   active: boolean
@@ -162,7 +163,9 @@ export async function toggleThemeLike(themeId: string): Promise<ToggleResult> {
 }
 
 export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> {
+  const perf = createPerfTimer('action:toggleRecipeSave')
   const { supabase, user } = await requireUser()
+  perf.mark('auth/session fetch')
 
   const { data: existing } = await supabase
     .from('saved_recipes')
@@ -176,6 +179,7 @@ export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> 
     .select('id, name, user_id')
     .eq('id', recipeId)
     .maybeSingle()
+  perf.mark('existing save and recipe fetch')
 
   if (existing) {
     const { error } = await supabase
@@ -185,6 +189,7 @@ export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> 
       .eq('user_id', user.id)
 
     if (error) throw error
+    perf.mark('Supabase mutation')
 
     await captureServerEvent({
       distinctId: user.id,
@@ -195,9 +200,12 @@ export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> 
         creator_id: recipe?.user_id || null,
       },
     })
+    perf.mark('analytics event')
 
     revalidatePath('/recipes')
     revalidatePath(`/recipes/${recipeId}`)
+    perf.mark('revalidation duration')
+    perf.total()
     return { active: false }
   }
 
@@ -207,6 +215,7 @@ export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> 
   })
 
   if (error && !isDuplicateError(error)) throw error
+  perf.mark('Supabase mutation')
 
   await captureServerEvent({
     distinctId: user.id,
@@ -217,14 +226,19 @@ export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> 
       creator_id: recipe?.user_id || null,
     },
   })
+  perf.mark('analytics event')
 
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${recipeId}`)
+  perf.mark('revalidation duration')
+  perf.total()
   return { active: true }
 }
 
 export async function toggleThemeSave(themeId: string): Promise<ToggleResult> {
+  const perf = createPerfTimer('action:toggleThemeSave')
   const { supabase, user } = await requireUser()
+  perf.mark('auth/session fetch')
 
   const { data: existing } = await supabase
     .from('saved_themes')
@@ -238,6 +252,7 @@ export async function toggleThemeSave(themeId: string): Promise<ToggleResult> {
     .select('id, name, user_id')
     .eq('id', themeId)
     .maybeSingle()
+  perf.mark('existing save and theme fetch')
 
   if (existing) {
     const { error } = await supabase
@@ -247,6 +262,7 @@ export async function toggleThemeSave(themeId: string): Promise<ToggleResult> {
       .eq('user_id', user.id)
 
     if (error) throw error
+    perf.mark('Supabase mutation')
 
     await captureServerEvent({
       distinctId: user.id,
@@ -257,9 +273,12 @@ export async function toggleThemeSave(themeId: string): Promise<ToggleResult> {
         creator_id: theme?.user_id || null,
       },
     })
+    perf.mark('analytics event')
 
     revalidatePath('/themes')
     revalidatePath(`/themes/${themeId}`)
+    perf.mark('revalidation duration')
+    perf.total()
     return { active: false }
   }
 
@@ -269,6 +288,7 @@ export async function toggleThemeSave(themeId: string): Promise<ToggleResult> {
   })
 
   if (error && !isDuplicateError(error)) throw error
+  perf.mark('Supabase mutation')
 
   await captureServerEvent({
     distinctId: user.id,
@@ -279,9 +299,12 @@ export async function toggleThemeSave(themeId: string): Promise<ToggleResult> {
       creator_id: theme?.user_id || null,
     },
   })
+  perf.mark('analytics event')
 
   revalidatePath('/themes')
   revalidatePath(`/themes/${themeId}`)
+  perf.mark('revalidation duration')
+  perf.total()
   return { active: true }
 }
 

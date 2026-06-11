@@ -2,6 +2,7 @@
 
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
+import { createPerfTimer } from '../../utils/perf/server'
 
 const IMAGE_BUCKET = 'obsidian-images'
 
@@ -93,12 +94,14 @@ function getFileExtension(file: File) {
 export async function createFirstProjectUnitAction(
   formData: FormData
 ): Promise<CreateFirstProjectUnitResult> {
+  const perf = createPerfTimer('action:createFirstProjectUnit')
   const supabase = await createClient()
 
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   if (userError || !user) {
     return {
@@ -137,6 +140,7 @@ export async function createFirstProjectUnitAction(
       error: projectError?.message || 'Could not create your project.',
     }
   }
+  perf.mark('project Supabase mutation')
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
@@ -158,6 +162,7 @@ export async function createFirstProjectUnitAction(
       error: unitError?.message || 'Could not create your unit.',
     }
   }
+  perf.mark('unit Supabase mutation')
 
 await captureServerEvent({
   distinctId: user.id,
@@ -170,6 +175,7 @@ await captureServerEvent({
     source: 'onboarding',
   },
 })
+  perf.mark('analytics event')
 
   if (image instanceof File && image.size > 0) {
     const isAllowedImage =
@@ -203,6 +209,7 @@ await captureServerEvent({
       if (uploadError) {
         console.error('Onboarding image upload failed:', uploadError)
       } else {
+        perf.mark('image upload flow')
         const {
           data: { publicUrl },
         } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(storagePath)
@@ -226,10 +233,12 @@ await captureServerEvent({
             imageAssetError
           )
         }
+        perf.mark('image/gallery queries')
       }
     }
   }
 
+  perf.total()
   return {
     ok: true,
     projectId: project.id,

@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
+import PrefetchLink from '../components/prefetch-link'
 
 export default async function DashboardTopStats() {
   const supabase = await createClient()
@@ -51,13 +51,14 @@ export default async function DashboardTopStats() {
           <p className="mt-2 text-2xl font-semibold">{recipeCount}</p>
         </div>
 
-        <Link
+        <PrefetchLink
           href="/projects"
+          viewportPrefetch
           className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
         >
           <p className="text-sm text-white/60">Go to</p>
           <p className="mt-2 text-lg font-semibold">Projects →</p>
-        </Link>
+        </PrefetchLink>
       </div>
     </section>
   )

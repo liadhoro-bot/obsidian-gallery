@@ -6,6 +6,16 @@ export type GalleryUploadFailure = {
 export type GalleryUploadResult = {
   uploadedCount: number
   failed: GalleryUploadFailure[]
+  uploadedImages?: {
+    id: string
+    image_url: string
+    is_featured: boolean
+    created_at: string
+    sort_order: number | null
+    alt_text: string | null
+    storage_bucket: string | null
+    storage_path: string | null
+  }[]
 }
 
 export function validateGalleryImageFile(file: File) {

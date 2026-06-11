@@ -8,6 +8,7 @@ import {
   extractPaletteFromImage,
   findNearestUniquePaints,
 } from '../../../utils/color-matching'
+import { createPerfTimer } from '../../../utils/perf/server'
 
 function revalidateThemeCaches(themeId: string) {
   revalidatePath('/themes')
@@ -71,13 +72,18 @@ async function canAssignTheme(
 }
 
 export async function toggleThemeVisibility(themeId: string, nextValue: boolean) {
+  const perf = createPerfTimer('action:toggleThemeVisibility')
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
-  if (!user) return
+  if (!user) {
+    perf.total()
+    return
+  }
 
   const { error } = await supabase
     .from('themes')
@@ -89,8 +95,11 @@ export async function toggleThemeVisibility(themeId: string, nextValue: boolean)
     .eq('user_id', user.id)
 
   if (error) throw error
+  perf.mark('Supabase mutation')
 
   revalidateThemeCaches(themeId)
+  perf.mark('revalidation duration')
+  perf.total()
 }
 
 export async function assignThemeToProjects(formData: FormData) {
@@ -323,7 +332,9 @@ export async function deleteTheme(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) return
+  if (!user) {
+    return
+  }
 
   const themeId = String(formData.get('themeId') || '')
 

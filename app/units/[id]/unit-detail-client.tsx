@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import {
   deleteUnitImage,
@@ -21,8 +22,9 @@ import { createClient } from '../../../utils/supabase/client'
 import UnitSessionTracker from './components/unit-session-tracker'
 import ProjectPaletteCard from '../../projects/[id]/project-palette-card'
 import GalleryImageCard from '@/app/components/gallery/gallery-image-card'
-import StagePaintPicker from './components/stage-paint-picker'
 import DeleteConfirmationCard from '../../components/delete-confirmation-card'
+
+const StagePaintPicker = dynamic(() => import('./components/stage-paint-picker'))
 
 type Unit = {
   id: string
@@ -143,6 +145,13 @@ type Props = {
   selectedProjectIds: string[]
   showSessionStartedNotice?: boolean
 }
+
+type StagePaintActionResult =
+  | (Omit<StagePaint, 'catalog_paint' | 'custom_paint'> & {
+      catalog_paint?: StagePaint['catalog_paint'] | StagePaint['catalog_paint'][]
+      custom_paint?: StagePaint['custom_paint'] | StagePaint['custom_paint'][]
+    })
+  | null
 
 const UNIT_STATUS_OPTIONS: { value: UnitStatus; label: string }[] = [
   { value: 'complete', label: 'Complete' },
@@ -315,7 +324,7 @@ function getStagePaintHref(paint: StagePaint) {
 }
 
 export default function UnitDetailClient({
-  unit,
+  unit: initialUnit,
   projectTheme,
   images,
   steps,
@@ -334,6 +343,12 @@ export default function UnitDetailClient({
     showSessionStartedNotice
   )
   const [liveNow, setLiveNow] = useState(() => Date.now())
+  const [unit, setLocalUnit] = useState(initialUnit)
+  const [localImages, setLocalImages] = useState(images)
+  const [localStagePaints, setLocalStagePaints] = useState(stagePaints)
+  const [localParentProjects, setLocalParentProjects] = useState(parentProjects)
+  const [localSelectedProjectIds, setLocalSelectedProjectIds] =
+    useState(selectedProjectIds)
   const [optimisticSteps, setOptimisticSteps] = useState(steps)
   const [activeTab, setActiveTab] = useState<'overview' | 'progress'>(
     'overview'
@@ -343,13 +358,22 @@ export default function UnitDetailClient({
   const [expandedStagePhoto, setExpandedStagePhoto] =
     useState<ExpandedStagePhoto | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedGalleryFiles, setSelectedGalleryFiles] = useState<File[]>([])
+  const [galleryUploadSource, setGalleryUploadSource] = useState<
+    'gallery_picker' | 'camera'
+  >('gallery_picker')
   const [galleryUploadError, setGalleryUploadError] = useState<string | null>(
     null
   )
-  const [galleryFilePreviews, setGalleryFilePreviews] = useState<
-    { file: File; previewUrl: string }[]
-  >([])
+  const galleryFilePreviews = useMemo(
+    () =>
+      selectedGalleryFiles.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    [selectedGalleryFiles]
+  )
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isEditingDetails, setIsEditingDetails] = useState(false)
   const [complexityInput, setComplexityInput] = useState(
@@ -360,6 +384,26 @@ export default function UnitDetailClient({
   )
   const [deadlineInput, setDeadlineInput] = useState(unit.deadline || '')
   const [statusValue, setStatusValue] = useState<UnitStatus>(unit.status)
+
+  useEffect(() => {
+    setLocalUnit(initialUnit)
+  }, [initialUnit])
+
+  useEffect(() => {
+    setLocalImages(images)
+  }, [images])
+
+  useEffect(() => {
+    setLocalStagePaints(stagePaints)
+  }, [stagePaints])
+
+  useEffect(() => {
+    setLocalParentProjects(parentProjects)
+  }, [parentProjects])
+
+  useEffect(() => {
+    setLocalSelectedProjectIds(selectedProjectIds)
+  }, [selectedProjectIds])
 
   useEffect(() => {
     if (!showSessionStartedNotice) return
@@ -403,17 +447,12 @@ export default function UnitDetailClient({
   }, [unit.status])
 
   useEffect(() => {
-    const previews = selectedGalleryFiles.map((file) => ({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }))
-
-    setGalleryFilePreviews(previews)
-
     return () => {
-      previews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
+      galleryFilePreviews.forEach((preview) =>
+        URL.revokeObjectURL(preview.previewUrl)
+      )
     }
-  }, [selectedGalleryFiles])
+  }, [galleryFilePreviews])
 
   useEffect(() => {
     function openHeaderEditor() {
@@ -458,6 +497,7 @@ export default function UnitDetailClient({
 
     const nextStatus: ProgressStep['status'] =
       step.status === 'done' ? 'pending' : 'done'
+    const previousSteps = optimisticSteps
 
     setOptimisticSteps((currentSteps) => {
       const updatedSteps = currentSteps.map((currentStep) =>
@@ -496,71 +536,162 @@ export default function UnitDetailClient({
       formData.set('unitId', unit.id)
       formData.set('nextStatus', nextStatus)
 
-      await toggleStepDone(formData)
-
-      router.refresh()
+      try {
+        await toggleStepDone(formData)
+      } catch (error) {
+        setOptimisticSteps(previousSteps)
+        throw error
+      }
     })
   }
 
   const handleUpdateDetails = (formData: FormData) => {
+    const complexity = complexityInput.trim() ? Number(complexityInput) : null
+    const unitSize = unitSizeInput.trim() ? Number(unitSizeInput) : null
+    const deadline = deadlineInput || null
+    const nextProjectIds = Array.from(
+      new Set(
+        formData
+          .getAll('projectIds')
+          .map((value) => String(value))
+          .filter(Boolean)
+      )
+    )
+    const nextParentProjects = availableProjects.filter((project) =>
+      nextProjectIds.includes(project.id)
+    )
+    const previousUnit = unit
+    const previousParentProjects = localParentProjects
+    const previousSelectedProjectIds = localSelectedProjectIds
+
+    setLocalUnit((current) => ({
+      ...current,
+      complexity,
+      unit_size: unitSize,
+      deadline,
+      project_id: nextProjectIds[0] ?? null,
+    }))
+    setLocalParentProjects(nextParentProjects)
+    setLocalSelectedProjectIds(nextProjectIds)
+
     startTransition(async () => {
-      await updateUnitDetails(formData)
-      setIsEditingDetails(false)
-      router.refresh()
+      try {
+        await updateUnitDetails(formData)
+        setIsEditingDetails(false)
+      } catch (error) {
+        setLocalUnit(previousUnit)
+        setLocalParentProjects(previousParentProjects)
+        setLocalSelectedProjectIds(previousSelectedProjectIds)
+        throw error
+      }
     })
   }
 
   const handleUpdateHeader = (formData: FormData) => {
+    const previousUnit = unit
+    const name = String(formData.get('name') ?? '').trim()
+    const notes = String(formData.get('description') ?? '').trim() || null
+
+    setLocalUnit((current) => ({
+      ...current,
+      name,
+      notes,
+    }))
+
     startTransition(async () => {
-      await updateUnitHeader(formData)
-      setIsEditingHeader(false)
-      router.refresh()
+      try {
+        await updateUnitHeader(formData)
+        setIsEditingHeader(false)
+      } catch (error) {
+        setLocalUnit(previousUnit)
+        throw error
+      }
     })
   }
 
   const handleUpdateStatus = (nextStatus: UnitStatus) => {
+    const previousStatus = statusValue
+    const previousUnit = unit
+
     setStatusValue(nextStatus)
+    setLocalUnit((current) => ({ ...current, status: nextStatus }))
 
     startTransition(async () => {
-      await updateUnitStatus(unit.id, nextStatus)
-      router.refresh()
+      try {
+        await updateUnitStatus(unit.id, nextStatus)
+      } catch (error) {
+        setStatusValue(previousStatus)
+        setLocalUnit(previousUnit)
+        throw error
+      }
     })
   }
 
   const handleSetFeatured = (imageId: string) => {
+    const previousImages = localImages
+
+    setLocalImages((current) =>
+      current.map((image) => ({
+        ...image,
+        is_featured: image.id === imageId,
+      }))
+    )
+
     startTransition(async () => {
-      await setFeaturedUnitImage(unit.id, imageId)
-      router.refresh()
+      try {
+        await setFeaturedUnitImage(unit.id, imageId)
+      } catch (error) {
+        setLocalImages(previousImages)
+        throw error
+      }
     })
   }
 
 const handleRemoveStagePaint = (stagePaintId: string) => {
+  const previousStagePaints = localStagePaints
+  setLocalStagePaints((current) =>
+    current.filter((paint) => paint.id !== stagePaintId)
+  )
+
   startTransition(async () => {
     const formData = new FormData()
 
     formData.set('unitId', unit.id)
     formData.set('stagePaintId', stagePaintId)
 
-    await removePaintFromStage(formData)
-
-    router.refresh()
+    try {
+      await removePaintFromStage(formData)
+    } catch (error) {
+      setLocalStagePaints(previousStagePaints)
+      throw error
+    }
   })
 }
 const handleRemoveStagePhoto = (imageId: string) => {
+  const previousImages = localImages
+  setLocalImages((current) => current.filter((image) => image.id !== imageId))
+
   startTransition(async () => {
     const formData = new FormData()
 
     formData.set('unitId', unit.id)
     formData.set('imageId', imageId)
 
-    await deleteUnitImage(formData)
-
-    router.refresh()
+    try {
+      await deleteUnitImage(formData)
+    } catch (error) {
+      setLocalImages(previousImages)
+      throw error
+    }
   })
 }
 
   const handleUploadClick = () => {
     fileInputRef.current?.click()
+  }
+
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click()
   }
 
   const handleRemovePendingGalleryFile = (indexToRemove: number) => {
@@ -578,6 +709,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
     startTransition(async () => {
       const formData = new FormData()
       formData.set('unitId', unit.id)
+      formData.set('uploadSource', galleryUploadSource)
       selectedGalleryFiles.forEach((file) => formData.append('image', file))
 
       setGalleryUploadError(null)
@@ -591,13 +723,24 @@ const handleRemoveStagePhoto = (imageId: string) => {
             .join('; ')}`
         )
       } else {
+        if (result?.uploadedImages?.length) {
+          setLocalImages((current) => [
+            ...result.uploadedImages!,
+            ...current.map((image) =>
+              result.uploadedImages!.some((uploaded) => uploaded.is_featured)
+                ? { ...image, is_featured: false }
+                : image
+            ),
+          ])
+        }
         setSelectedGalleryFiles([])
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
         }
+        if (cameraInputRef.current) {
+          cameraInputRef.current.value = ''
+        }
       }
-
-      router.refresh()
     })
   }
 
@@ -637,7 +780,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
       .from('obsidian-images')
       .getPublicUrl(filePath)
 
-    const { error: insertError } = await supabase
+    const { data: imageAsset, error: insertError } = await supabase
       .from('image_assets')
       .insert({
         entity_type: 'unit',
@@ -646,24 +789,38 @@ const handleRemoveStagePhoto = (imageId: string) => {
         user_id: user.id,
         storage_bucket: 'obsidian-images',
         storage_path: filePath,
-        is_featured: makeFeaturedIfEmpty && images.length === 0,
+        is_featured: makeFeaturedIfEmpty && localImages.length === 0,
         sort_order: 0,
         alt_text: altText,
       })
+      .select(
+        'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path'
+      )
+      .single()
 
     if (insertError) {
       alert(insertError.message)
       return false
     }
 
-    router.refresh()
+    if (imageAsset) {
+      setLocalImages((current) => [
+        imageAsset,
+        ...current.map((image) =>
+          imageAsset.is_featured ? { ...image, is_featured: false } : image
+        ),
+      ])
+    }
+
     return true
   }
 
   const handleFileChange = async (
-    event: ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>,
+    source: 'gallery_picker' | 'camera'
   ) => {
     setGalleryUploadError(null)
+    setGalleryUploadSource(source)
     setSelectedGalleryFiles(Array.from(event.target.files ?? []))
   }
 
@@ -689,6 +846,26 @@ const handleRemoveStagePhoto = (imageId: string) => {
       setUploadingStageId(null)
       event.target.value = ''
     }
+  }
+
+  const handleStagePaintAdded = (
+    stagePaint: NonNullable<StagePaintActionResult> | null | undefined
+  ) => {
+    if (!stagePaint) return
+    const normalizedStagePaint = {
+      ...stagePaint,
+      catalog_paint: Array.isArray(stagePaint.catalog_paint)
+        ? stagePaint.catalog_paint[0] ?? null
+        : stagePaint.catalog_paint ?? null,
+      custom_paint: Array.isArray(stagePaint.custom_paint)
+        ? stagePaint.custom_paint[0] ?? null
+        : stagePaint.custom_paint ?? null,
+    } as StagePaint
+
+    setLocalStagePaints((current) => [
+      ...current.filter((paint) => paint.id !== normalizedStagePaint.id),
+      normalizedStagePaint,
+    ])
   }
 
   return (
@@ -732,54 +909,68 @@ const handleRemoveStagePhoto = (imageId: string) => {
             {unit.notes}
           </p>
         ) : (
-          <form action={handleUpdateHeader} className="space-y-3">
-            <input type="hidden" name="unitId" value={unit.id} />
+          <>
+            <form action={handleUpdateHeader} className="space-y-3">
+              <input type="hidden" name="unitId" value={unit.id} />
 
-            <div>
-              <label className="mb-1 block text-sm text-white/60">
-                Name
-              </label>
-              <input
-                name="name"
-                defaultValue={unit.name}
-                required
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white"
+              <div>
+                <label className="mb-1 block text-sm text-white/60">
+                  Name
+                </label>
+                <input
+                  name="name"
+                  defaultValue={unit.name}
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm text-white/60">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  defaultValue={unit.notes || ''}
+                  rows={3}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+                >
+                  {isPending ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : null}
+                  <span>{isPending ? 'Saving...' : 'Save'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsEditingHeader(false)}
+                  className="rounded-xl border border-white/10 px-4 py-2 text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-4">
+              <DeleteConfirmationCard
+                itemId={unit.id}
+                itemIdFieldName="unitId"
+                title="Delete Unit"
+                buttonLabel="Delete This Unit"
+                initialDescription="Permanently delete this unit from your gallery."
+                confirmDescription="If you delete this unit, it will be removed along with all the progress, sessions, paints, recipes, and images it contains. This action cannot be undone."
+                deleteAction={deleteUnit}
               />
             </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-white/60">
-                Description
-              </label>
-              <textarea
-                name="description"
-                defaultValue={unit.notes || ''}
-                rows={3}
-                className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
-              >
-                {isPending ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : null}
-                <span>{isPending ? 'Saving...' : 'Save'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsEditingHeader(false)}
-                className="rounded-xl border border-white/10 px-4 py-2 text-white"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+          </>
         )}
       </section>
       ) : null}
@@ -889,8 +1080,8 @@ const handleRemoveStagePhoto = (imageId: string) => {
                       Parent Project
                     </span>
                     <div className="flex min-h-[32px] flex-wrap items-center gap-2">
-                      {parentProjects.length > 0 ? (
-                        parentProjects.map((project) => (
+                      {localParentProjects.length > 0 ? (
+                        localParentProjects.map((project) => (
                           <button
                             key={project.id}
                             type="button"
@@ -998,7 +1189,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
                             type="checkbox"
                             name="projectIds"
                             value={project.id}
-                            defaultChecked={selectedProjectIds.includes(
+                            defaultChecked={localSelectedProjectIds.includes(
                               project.id
                             )}
                             className="h-4 w-4 rounded border-white/20 bg-black/40 accent-cyan-400"
@@ -1054,13 +1245,22 @@ const handleRemoveStagePhoto = (imageId: string) => {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleUploadClick}
-                className="text-sm font-semibold uppercase tracking-wide text-cyan-400"
-              >
-                Add Image +
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleUploadClick}
+                  className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/70 transition hover:border-cyan-300/35 hover:text-cyan-100"
+                >
+                  Upload from Gallery
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCameraClick}
+                  className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-bold text-black transition hover:bg-cyan-300"
+                >
+                  Take Photo
+                </button>
+              </div>
             </div>
 
             <input
@@ -1069,7 +1269,15 @@ const handleRemoveStagePhoto = (imageId: string) => {
               accept="image/*"
               multiple
               className="hidden"
-              onChange={handleFileChange}
+              onChange={(event) => handleFileChange(event, 'gallery_picker')}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(event) => handleFileChange(event, 'camera')}
             />
 
             {galleryFilePreviews.length > 0 ? (
@@ -1135,6 +1343,9 @@ const handleRemoveStagePhoto = (imageId: string) => {
                       if (fileInputRef.current) {
                         fileInputRef.current.value = ''
                       }
+                      if (cameraInputRef.current) {
+                        cameraInputRef.current.value = ''
+                      }
                     }}
                     className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/70"
                   >
@@ -1149,7 +1360,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
             ) : null}
 
             <div className="mt-4 grid grid-cols-2 gap-4">
-              {images.map((image) => (
+              {localImages.map((image) => (
                 <GalleryImageCard
                   key={image.id}
                   image={image}
@@ -1191,11 +1402,11 @@ const handleRemoveStagePhoto = (imageId: string) => {
             {sortedSteps.map((step) => {
               const isDone = step.status === 'done'
               const isOpen = openStageId === step.id
-              const stagePhoto = images.find(
+              const stagePhoto = localImages.find(
                 (image) => image.alt_text === `stage:${step.step_key}`
               )
               const isStageUploading = uploadingStageId === step.id
-const paintsForStage = stagePaints
+const paintsForStage = localStagePaints
   .filter((paint) => paint.progress_step_id === step.id)
   .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
               return (
@@ -1339,9 +1550,9 @@ const paintsForStage = stagePaints
     Paints Used
   </label>
 
-  {stagePaints.filter((paint) => paint.progress_step_id === step.id).length > 0 ? (
+  {localStagePaints.filter((paint) => paint.progress_step_id === step.id).length > 0 ? (
     <div className="mt-2 grid grid-cols-3 gap-2">
-      {stagePaints
+      {localStagePaints
         .filter((paint) => paint.progress_step_id === step.id)
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
         .map((paint) => {
@@ -1430,7 +1641,11 @@ const paintsForStage = stagePaints
     </p>
   )}
 
-  <StagePaintPicker unitId={unit.id} progressStepId={step.id} />
+  <StagePaintPicker
+    unitId={unit.id}
+    progressStepId={step.id}
+    onPaintAdded={handleStagePaintAdded}
+  />
 </div>
 
                         <div>
@@ -1448,22 +1663,46 @@ const paintsForStage = stagePaints
                               handleStageFileChange(event, step)
                             }
                           />
+                          <input
+                            id={`stage-photo-camera-${step.id}`}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            disabled={isStageUploading}
+                            className="hidden"
+                            onChange={(event) =>
+                              handleStageFileChange(event, step)
+                            }
+                          />
 
-                          <label
-                            htmlFor={`stage-photo-${step.id}`}
-                            className={`mt-2 flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border border-dashed px-3 py-5 text-sm font-semibold transition ${
-                              isStageUploading
-                                ? 'stage-photo-loading-pattern cursor-wait border-cyan-300/35 bg-cyan-300/[0.08] text-cyan-100'
-                                : 'border-white/15 bg-white/[0.03] text-white/50 hover:border-cyan-300/30 hover:text-white/70'
-                            }`}
-                          >
-                            {isStageUploading ? (
-                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            ) : null}
-                            {isStageUploading
-                              ? 'Uploading stage photo...'
-                              : 'Upload Stage Photo +'}
-                          </label>
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <label
+                              htmlFor={`stage-photo-${step.id}`}
+                              className={`flex min-h-12 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border px-3 py-3 text-center text-xs font-semibold transition ${
+                                isStageUploading
+                                  ? 'stage-photo-loading-pattern cursor-wait border-cyan-300/35 bg-cyan-300/[0.08] text-cyan-100'
+                                  : 'border-white/15 bg-white/[0.03] text-white/60 hover:border-cyan-300/30 hover:text-white/80'
+                              }`}
+                            >
+                              {isStageUploading ? (
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              ) : null}
+                              {isStageUploading
+                                ? 'Uploading...'
+                                : 'Upload from Gallery'}
+                            </label>
+
+                            <label
+                              htmlFor={`stage-photo-camera-${step.id}`}
+                              className={`flex min-h-12 cursor-pointer items-center justify-center rounded-xl px-3 py-3 text-center text-xs font-bold transition ${
+                                isStageUploading
+                                  ? 'stage-photo-loading-pattern cursor-wait bg-cyan-300/[0.08] text-cyan-100'
+                                  : 'bg-cyan-400 text-black hover:bg-cyan-300'
+                              }`}
+                            >
+                              {isStageUploading ? 'Uploading...' : 'Take Photo'}
+                            </label>
+                          </div>
 
                           {isStageUploading ? (
   <div className="mt-3 flex items-center gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-2 text-cyan-100">
@@ -1570,17 +1809,6 @@ const paintsForStage = stagePaints
         </div>
       ) : null}
 
-      <div className="mt-5">
-        <DeleteConfirmationCard
-          itemId={unit.id}
-          itemIdFieldName="unitId"
-          title="Delete Unit"
-          buttonLabel="Delete This Unit"
-          initialDescription="Permanently delete this unit from your gallery."
-          confirmDescription="If you delete this unit, it will be removed along with all the progress, sessions, paints, recipes, and images it contains. This action cannot be undone."
-          deleteAction={deleteUnit}
-        />
-      </div>
     </div>
   )
 }

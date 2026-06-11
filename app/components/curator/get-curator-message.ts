@@ -93,7 +93,9 @@ async function getTemplateByKey(
 ) {
   const { data, error } = await supabase
     .from('curator_message_templates')
-    .select('*')
+    .select(
+      'key, surface, category, variant, title, body_lines, question, primary_cta_label, primary_cta_href, secondary_cta_label, image_url'
+    )
     .eq('key', key)
     .eq('is_active', true)
     .maybeSingle()
@@ -193,7 +195,7 @@ export async function getCuratorMessage({
 
   const { data: rules, error: rulesError } = await supabase
     .from('curator_rules')
-    .select('*')
+    .select('key, category, conditions')
     .eq('surface', surface)
     .eq('is_active', true)
     .order('priority', { ascending: false })
@@ -221,7 +223,9 @@ export async function getCuratorMessage({
 
   const { data: templates, error: templatesError } = await supabase
     .from('curator_message_templates')
-    .select('*')
+    .select(
+      'key, surface, category, variant, title, body_lines, question, primary_cta_label, primary_cta_href, secondary_cta_label, image_url'
+    )
     .eq('surface', surface)
     .eq('category', matchedRule.category)
     .eq('is_active', true)

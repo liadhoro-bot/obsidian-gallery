@@ -1,4 +1,5 @@
 import { createClient } from '../../utils/supabase/server'
+import { createPerfTimer } from '../../utils/perf/server'
 import VaultFiltersClient from './vault-filters-client'
 
 type VaultFiltersProps = {
@@ -73,16 +74,19 @@ export default async function VaultFilters({
   matchHex,
   tab,
 }: VaultFiltersProps) {
+  const perf = createPerfTimer('/vault:filters')
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  perf.mark('auth/session fetch')
 
   const [catalogRows, customRows] = await Promise.all([
     getCatalogFilterRows(supabase),
     user ? getCustomFilterRows(supabase, user.id) : Promise.resolve([]),
   ])
+  perf.mark('filter Supabase queries')
 
   const customAsFilterRows: CatalogFilterRow[] = customRows.map((row) => ({
     brand: row.manufacturer || 'Custom',
@@ -106,6 +110,7 @@ export default async function VaultFilters({
         .filter(Boolean)
     )
   ).sort() as string[]
+  perf.total()
 
   return (
     <VaultFiltersClient

@@ -157,7 +157,9 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
 
   const { data: rules } = await supabase
     .from('curator_rules')
-    .select('*')
+    .select(
+      'key, surface, category, priority, conditions, cooldown_hours, auto_open, cta_label, cta_href, max_shows_per_week'
+    )
     .eq('surface', 'dashboard')
     .eq('is_active', true)
     .order('priority', { ascending: true })

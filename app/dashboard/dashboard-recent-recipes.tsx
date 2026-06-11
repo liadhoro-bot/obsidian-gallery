@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
+import PrefetchLink from '../components/prefetch-link'
 
 export default async function DashboardRecentRecipes() {
   const supabase = await createClient()
@@ -44,16 +45,17 @@ export default async function DashboardRecentRecipes() {
       <div className="mt-4 space-y-3">
         {recipes?.length ? (
           recipes.map((recipe) => (
-            <Link
+            <PrefetchLink
               key={recipe.id}
               href={`/recipes/${recipe.id}`}
+              viewportPrefetch
               className="block rounded-xl border border-white/10 bg-black/20 p-3 transition hover:bg-white/5"
             >
               <p className="font-medium">{recipe.title}</p>
               <p className="mt-1 text-xs text-white/50">
                 Created {new Date(recipe.created_at).toLocaleDateString()}
               </p>
-            </Link>
+            </PrefetchLink>
           ))
         ) : (
           <p className="text-sm text-white/60">No recipes yet.</p>

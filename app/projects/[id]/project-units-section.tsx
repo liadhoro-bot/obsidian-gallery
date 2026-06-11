@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import PrefetchLink from '../../components/prefetch-link'
 import SubmitButton from '../../components/SubmitButton'
 import { createClient } from '../../../utils/supabase/server'
 import { setFeaturedUnit } from './actions'
@@ -106,12 +106,13 @@ export default async function ProjectUnitsSection({ projectId, userId }: Props) 
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <Link
+                    <PrefetchLink
                       href={`/units/${unit.id}`}
+                      viewportPrefetch
                       className="text-lg font-semibold text-cyan-400"
                     >
                       {unit.name}
-                    </Link>
+                    </PrefetchLink>
 
                     {unit.is_featured && (
                       <span className="rounded-full bg-yellow-400 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black">
@@ -164,12 +165,12 @@ export default async function ProjectUnitsSection({ projectId, userId }: Props) 
               </div>
 
               <p className="mt-3">
-                <Link
+                <PrefetchLink
                   href={`/units/${unit.id}`}
                   className="text-sm text-cyan-400 hover:underline"
                 >
                   Open unit page →
-                </Link>
+                </PrefetchLink>
               </p>
             </div>
           )

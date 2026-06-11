@@ -7,6 +7,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { PHProvider } from './providers/posthog-provider'
 import PostHogUserIdentifier from './providers/posthog-user-identifier'
+import ServiceWorkerRegistrar from './providers/service-worker-registrar'
 
 import CuratorButton from './components/curator/curator-button'
 import MobileNav from './components/MobileNav'
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
   description: 'Miniature painting and hobby companion',
 
   applicationName: 'Obsidian Gallery',
+  generator: 'Next.js',
 
   manifest: '/manifest.webmanifest',
 
@@ -39,7 +41,8 @@ export const metadata: Metadata = {
     icon: [
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
 
     apple: [
@@ -49,11 +52,23 @@ export const metadata: Metadata = {
         type: 'image/png',
       },
     ],
+
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/bookmark.svg',
+        color: '#22d3ee',
+      },
+    ],
+  },
+
+  formatDetection: {
+    telephone: false,
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f0f10',
+  themeColor: '#081018',
 }
 
 export default function RootLayout({
@@ -68,6 +83,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <PHProvider>
+          <ServiceWorkerRegistrar />
           <PostHogUserIdentifier />
           {children}
         </PHProvider>

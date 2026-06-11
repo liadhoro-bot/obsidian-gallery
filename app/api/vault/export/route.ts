@@ -3,7 +3,8 @@ import { createClient } from '../../../../utils/supabase/server'
 import { captureServerEvent } from '../../../../utils/analytics/server'
 
 type VaultTab = 'find' | 'collection'
-type ExportFormat = 'csv' | 'txt' | 'json'
+type ExportFormat = 'csv' | 'txt' | 'json' | 'pdf'
+type AnalyticsExportFormat = 'csv' | 'text' | 'json' | 'pdf'
 
 type ExportRow = {
   brand: string
@@ -55,8 +56,12 @@ const PAGE_SIZE = 1000
 const EMPTY_UUID = '00000000-0000-0000-0000-000000000000'
 
 function cleanFormat(format?: string): ExportFormat {
-  if (format === 'txt' || format === 'json') return format
+  if (format === 'txt' || format === 'json' || format === 'pdf') return format
   return 'csv'
+}
+
+function getAnalyticsFormat(format: ExportFormat): AnalyticsExportFormat {
+  return format === 'txt' ? 'text' : format
 }
 
 function cleanTab(tab?: string): VaultTab {
@@ -353,7 +358,7 @@ export async function POST(req: Request) {
       distinctId: user.id,
       event: 'vault_list_exported',
       properties: {
-        format,
+        format: getAnalyticsFormat(format),
         tab,
         brand: brand || null,
         line: line || null,

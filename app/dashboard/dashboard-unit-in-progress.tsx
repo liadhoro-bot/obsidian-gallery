@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import ProgressWheel from '../components/progress-wheel'
+import PrefetchLink, { PrefetchButton } from '../components/prefetch-link'
 import { createClient } from '../../utils/supabase/server'
 import { startDashboardUnitSession } from './actions'
 
@@ -234,8 +235,19 @@ export default async function DashboardUnitInProgress({
 
   const progress = progressMap.get(inProgressUnit.id) ?? 0
 
+  const unitHref = `/units/${inProgressUnit.id}`
+
   return (
-    <section className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+    <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+      <PrefetchLink
+        href={unitHref}
+        viewportPrefetch
+        className="absolute inset-0 z-10"
+        aria-label={`Open ${inProgressUnit.name}`}
+      >
+        <span className="sr-only">Open {inProgressUnit.name}</span>
+      </PrefetchLink>
+
       <div className="relative min-h-[260px]">
         {featuredImage?.image_url ? (
           <>
@@ -274,14 +286,15 @@ export default async function DashboardUnitInProgress({
                 ) : null}
               </div>
 
-              <form action={startDashboardUnitSession} className="mt-5">
+              <form action={startDashboardUnitSession} className="relative z-20 mt-5">
                 <input type="hidden" name="unitId" value={inProgressUnit.id} />
-                <button
+                <PrefetchButton
                   type="submit"
+                  prefetchHref={unitHref}
                   className="inline-flex rounded-2xl border border-cyan-300/55 bg-black/45 px-5 py-3 text-sm font-black uppercase text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950"
                 >
                   Resume Painting
-                </button>
+                </PrefetchButton>
               </form>
             </div>
 

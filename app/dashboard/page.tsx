@@ -44,8 +44,8 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const profilePromise = Promise.resolve(
-    supabase
+  const profilePromise = perf.measure('profile fetch', async () =>
+    await supabase
       .from('profiles')
       .select('avatar_url, level, username')
       .eq('id', user.id)

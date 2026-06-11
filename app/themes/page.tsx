@@ -279,6 +279,7 @@ export default async function ThemesPage({ searchParams }: Props) {
     supabase,
     [...rawPublicThemeRows, ...rawMyThemeRows, ...rawSavedThemes]
   )
+  perf.mark('theme swatch hydration')
   const hydratedThemeById = new Map(
     hydratedThemes.map((theme) => [theme.id, theme])
   )

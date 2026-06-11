@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { prefetchRoute } from './prefetch-link'
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
@@ -12,6 +13,8 @@ const navItems = [
   { name: 'Themes', href: '/themes', icon: '/icons/nav/themes.svg' },
 ]
 
+const mainPrefetchHrefs = [...navItems.map((item) => item.href), '/settings']
+
 export default function MobileNav() {
   const pathname = usePathname()
   const router = useRouter()
@@ -20,6 +23,8 @@ export default function MobileNav() {
     pathname.startsWith('/login') ||
     pathname.startsWith('/onboarding') ||
     pathname.startsWith('/auth') ||
+    pathname.startsWith('/offline') ||
+    pathname.startsWith('/support') ||
     pathname.startsWith('/settings/terms')
 
   useEffect(() => {
@@ -36,9 +41,9 @@ export default function MobileNav() {
     }
 
     const prefetch = () => {
-      for (const item of navItems) {
-        if (item.href !== pathname) {
-          router.prefetch(item.href)
+      for (const href of mainPrefetchHrefs) {
+        if (href !== pathname) {
+          prefetchRoute(router, href)
         }
       }
     }
@@ -56,6 +61,12 @@ export default function MobileNav() {
     return null
   }
 
+  function prefetchNavHref(href: string) {
+    if (href !== pathname) {
+      prefetchRoute(router, href)
+    }
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#061018]/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-md items-center justify-around px-2">
@@ -67,6 +78,9 @@ export default function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
+              onMouseEnter={() => prefetchNavHref(item.href)}
+              onFocus={() => prefetchNavHref(item.href)}
+              onTouchStart={() => prefetchNavHref(item.href)}
               className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 ${
                 isActive ? 'text-cyan-400' : 'text-slate-500'
               }`}

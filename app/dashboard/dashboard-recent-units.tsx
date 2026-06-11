@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
+import PrefetchLink from '../components/prefetch-link'
 
 export default async function DashboardRecentUnits() {
   const supabase = await createClient()
@@ -44,9 +44,10 @@ export default async function DashboardRecentUnits() {
       <div className="mt-4 space-y-3">
         {units?.length ? (
           units.map((unit) => (
-            <Link
+            <PrefetchLink
               key={unit.id}
               href={`/units/${unit.id}`}
+              viewportPrefetch
               className="block rounded-xl border border-white/10 bg-black/20 p-3 transition hover:bg-white/5"
             >
               <div className="flex items-start justify-between gap-3">
@@ -67,7 +68,7 @@ export default async function DashboardRecentUnits() {
                   </span>
                 )}
               </div>
-            </Link>
+            </PrefetchLink>
           ))
         ) : (
           <p className="text-sm text-white/60">No units yet.</p>

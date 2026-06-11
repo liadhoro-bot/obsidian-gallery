@@ -6,12 +6,16 @@ import { Suspense } from 'react'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { deleteProject } from './actions'
 import { captureServerEvent } from '../../../utils/analytics/server'
-import type { ProjectImage, UnitImage, UnitStage } from './types'
+import type { ProjectImage, ProjectRow, UnitImage, UnitStage } from './types'
 import {
   getSafeImageExtension,
   type GalleryUploadResult,
   validateGalleryImageFile,
 } from '../../../utils/images/gallery-upload'
+
+function firstRelation<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
 
 async function addUnit(formData: FormData) {
   'use server'
@@ -225,6 +229,8 @@ async function uploadProjectImage(formData: FormData) {
 
   const projectId = formData.get('projectId')?.toString()
   const altText = formData.get('altText')?.toString().trim() || null
+  const uploadSource =
+    formData.get('uploadSource') === 'camera' ? 'camera' : 'gallery_picker'
   const files = formData
     .getAll('image')
     .filter((value): value is File => value instanceof File && value.size > 0)
@@ -318,6 +324,7 @@ async function uploadProjectImage(formData: FormData) {
         entity_id: projectId,
         image_count: 1,
         is_featured: isFirstImage,
+        upload_source: uploadSource,
       },
     })
   }
@@ -379,7 +386,7 @@ async function deleteProjectImage(formData: FormData) {
 
   const { data: imageToDelete, error: fetchError } = await supabase
     .from('image_assets')
-    .select('*')
+    .select('id, is_featured')
     .eq('id', assetId)
     .single()
 
@@ -448,7 +455,13 @@ export default async function ProjectDetailPage({
   const { data: project, error: projectError } = await supabase
   .from('projects')
   .select(`
-    *,
+    id,
+    name,
+    description,
+    created_at,
+    updated_at,
+    user_id,
+    theme_id,
     theme:themes (
       id,
       name,
@@ -479,7 +492,7 @@ export default async function ProjectDetailPage({
 
   const { data: units, error: unitsError } = await supabase
     .from('units')
-    .select('*')
+    .select('id, name, notes, created_at, updated_at, project_id, status, is_active')
     .eq('project_id', id)
     .eq('user_id', user.id)
     .eq('is_active', true)
@@ -493,12 +506,12 @@ export default async function ProjectDetailPage({
   ? await Promise.all([
       supabase
         .from('unit_stage_progress')
-        .select('*')
+        .select('id, unit_id, stage_key, stage_label, status, created_at')
         .in('unit_id', unitIds),
 
       supabase
         .from('unit_progress_steps')
-        .select('*')
+        .select('id, unit_id, step_key, step_label, step_order, status, progress')
         .in('unit_id', unitIds),
     ])
   : [
@@ -517,7 +530,7 @@ const allStagesError =
   const { data: allUnitImages, error: allUnitImagesError } = unitIds.length
     ? await supabase
         .from('image_assets')
-        .select('*')
+        .select('id, entity_id, image_url, alt_text, is_featured, created_at')
         .eq('entity_type', 'unit')
         .eq('user_id', user.id)
         .in('entity_id', unitIds)
@@ -526,7 +539,7 @@ const allStagesError =
 
   const { data: projectImages, error: projectImagesError } = await supabase
     .from('image_assets')
-    .select('*')
+    .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
     .eq('entity_type', 'project')
     .eq('entity_id', id)
     .eq('user_id', user.id)
@@ -563,6 +576,23 @@ const allStagesError =
     projectImageRows.find((image) => image.is_featured) ||
     projectImageRows[0] ||
     null
+  const projectTheme = firstRelation(project?.theme)
+  const normalizedProject = project
+    ? ({
+        ...project,
+        theme: projectTheme
+          ? {
+              ...projectTheme,
+              theme_paints:
+                projectTheme.theme_paints?.map((paint) => ({
+                  ...paint,
+                  catalog_paint: firstRelation(paint.catalog_paint),
+                  custom_paint: firstRelation(paint.custom_paint),
+                })) ?? [],
+            }
+          : null,
+      } as ProjectRow)
+    : null
 
   return (
   <main className="min-h-screen bg-[#081018] text-white">
@@ -572,8 +602,8 @@ const allStagesError =
       </Suspense>
 
       <ProjectDetailClient
-        project={project}
-        projectTheme={project?.theme ?? null}
+        project={normalizedProject}
+        projectTheme={normalizedProject?.theme ?? null}
         projectError={projectError}
         projectId={id}
         featuredProjectImage={featuredProjectImage}

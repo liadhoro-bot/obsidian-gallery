@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import ReportDialog from './report-dialog'
 
@@ -40,7 +39,6 @@ export default function ContentActionRow({
   toggleSaveAction,
   reportAction,
 }: Props) {
-  const router = useRouter()
   const [liked, setLiked] = useState(viewerHasLiked)
   const [saved, setSaved] = useState(viewerHasSaved)
   const [reported, setReported] = useState(viewerHasReported)
@@ -82,7 +80,7 @@ export default function ContentActionRow({
       try {
         const result = await toggleLikeAction(contentId)
         setLiked(result.active)
-        router.refresh()
+        setLikes(Math.max(0, previousLikes + (result.active ? 1 : -1)))
       } catch (toggleError) {
         setLiked(previousLiked)
         setLikes(previousLikes)
@@ -113,7 +111,7 @@ export default function ContentActionRow({
       try {
         const result = await toggleSaveAction(contentId)
         setSaved(result.active)
-        router.refresh()
+        setSaves(Math.max(0, previousSaves + (result.active ? 1 : -1)))
       } catch (toggleError) {
         setSaved(previousSaved)
         setSaves(previousSaves)
@@ -162,7 +160,6 @@ export default function ContentActionRow({
           reportAction={reportAction}
           onReported={(nextReported) => {
             setReported(nextReported)
-            router.refresh()
           }}
         />
       </div>

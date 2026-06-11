@@ -1,7 +1,6 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 import { useOptimistic, useTransition } from 'react'
 import BackButton from '../../components/back-button'
 import { setFeaturedUnit } from './actions'
@@ -26,7 +25,6 @@ export default function UnitHeroClient({
   unit: Unit
   featuredImage: UnitImage | null
 }) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [optimisticFeatured, setOptimisticFeatured] = useOptimistic(
     unit.is_featured,
@@ -40,8 +38,12 @@ export default function UnitHeroClient({
 
     startTransition(async () => {
       setOptimisticFeatured(true)
-      await setFeaturedUnit(unit.id)
-      router.refresh()
+      try {
+        await setFeaturedUnit(unit.id)
+      } catch (error) {
+        setOptimisticFeatured(unit.is_featured)
+        throw error
+      }
     })
   }
 

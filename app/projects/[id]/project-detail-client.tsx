@@ -64,7 +64,7 @@ export default function ProjectDetailClient({
   deleteProjectAction,
 }: Props) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<ProjectDetailTab>('details')
+  const [activeTab, setActiveTab] = useState<ProjectDetailTab>('units')
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isPending, startTransition] = useTransition()
   const projectName = project?.name || 'Untitled Project'

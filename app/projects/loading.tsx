@@ -42,7 +42,7 @@ export default function ProjectsLoading() {
           </p>
           <p className="mt-2 text-sm leading-6 text-neutral-400">
             Projects group related units into a single collection - whether
-            it's an army, warband, or display force. Use Projects to organize
+            it&apos;s an army, warband, or display force. Use Projects to organize
             your units, track deadlines, manage palettes, organize your units,
             and collect inspiration, reference images, and showcase photos.
           </p>

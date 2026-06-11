@@ -40,6 +40,7 @@ export default async function proxy(request: NextRequest) {
   const isPublicRoute =
     pathname === '/' ||
     pathname === '/login' ||
+    pathname === '/offline' ||
     pathname === '/onboarding' ||
     pathname === '/settings/terms' ||
     pathname.startsWith('/auth') ||

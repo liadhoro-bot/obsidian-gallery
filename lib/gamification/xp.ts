@@ -28,7 +28,7 @@ export async function getLevelFromXP(xp: number) {
 
   const { data: levels } = await supabase
     .from('levels')
-    .select('*')
+    .select('level, xp_required')
     .order('level', { ascending: true })
 
   if (!levels) return 0

@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { toggleThemeVisibility } from './actions'
 
@@ -13,15 +12,30 @@ export default function ThemeVisibilityPill({
   themeId,
   isPublic,
 }: Props) {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [optimisticPublic, setOptimisticPublic] = useState(isPublic)
+  const [error, setError] = useState('')
   const [isPending, startTransition] = useTransition()
 
   function confirmToggle() {
+    const previousPublic = optimisticPublic
+    const nextPublic = !optimisticPublic
+
+    setError('')
+    setOptimisticPublic(nextPublic)
+    setOpen(false)
+
     startTransition(async () => {
-      await toggleThemeVisibility(themeId, !isPublic)
-      setOpen(false)
-      router.refresh()
+      try {
+        await toggleThemeVisibility(themeId, nextPublic)
+      } catch (toggleError) {
+        setOptimisticPublic(previousPublic)
+        setError(
+          toggleError instanceof Error
+            ? toggleError.message
+            : 'Could not update visibility.'
+        )
+      }
     })
   }
 
@@ -31,23 +45,24 @@ export default function ThemeVisibilityPill({
         type="button"
         onClick={() => setOpen(true)}
         className={`rounded-full border px-3 py-1 text-xs transition ${
-          isPublic
+          optimisticPublic
             ? 'border-cyan-400/20 bg-cyan-400/10 text-cyan-200'
             : 'border-white/10 bg-white/[0.05] text-white/60'
         }`}
       >
-        {isPublic ? 'Public theme' : 'Private theme'}
+        {optimisticPublic ? 'Public theme' : 'Private theme'}
       </button>
+      {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
           <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#10131a] p-5 shadow-2xl">
             <h2 className="text-lg font-bold text-white">
-              {isPublic ? 'Make theme private?' : 'Make theme public?'}
+              {optimisticPublic ? 'Make theme private?' : 'Make theme public?'}
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-white/60">
-              {isPublic
+              {optimisticPublic
                 ? 'Making this theme private will hide it from other users. Only you will be able to view and edit it.'
                 : 'Making this theme public will allow other users to view it. They will not be able to edit it.'}
             </p>
@@ -73,7 +88,7 @@ export default function ThemeVisibilityPill({
                 <span>
                   {isPending
                     ? 'Updating...'
-                    : isPublic
+                    : optimisticPublic
                       ? 'Make Private'
                       : 'Make Public'}
                 </span>
