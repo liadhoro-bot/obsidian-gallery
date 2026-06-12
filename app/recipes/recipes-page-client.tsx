@@ -20,6 +20,7 @@ type Props = {
   myRecipes: Recipe[]
   savedRecipes: Recipe[]
   savedRecipeIds: string[]
+  defaultTab: Tab
 }
 
 type Tab = 'find' | 'mine' | 'custom'
@@ -29,8 +30,9 @@ export default function RecipesPageClient({
   myRecipes,
   savedRecipes,
   savedRecipeIds,
+  defaultTab,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('find')
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab)
   const [findSearch, setFindSearch] = useState('')
   const [mySearch, setMySearch] = useState('')
 

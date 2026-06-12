@@ -1,13 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState, useTransition } from 'react'
 import BackButton from '../../components/back-button'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
 import ProjectAddUnitTab from './project-add-unit-tab'
+import DeleteProjectCard from './delete-project-card'
 import type {
   ProjectImage,
   ProjectRow,
@@ -33,6 +34,7 @@ type Props = {
   projectImagesError: SerializableError | null
   stagesByUnitId: Record<string, UnitStage[]>
   imagesByUnitId: Record<string, UnitImage[]>
+  defaultTab: ProjectDetailTab
   addUnitAction: (formData: FormData) => Promise<void>
   updateProjectHeaderAction: (formData: FormData) => Promise<void>
   setFeaturedUnitAction: (formData: FormData) => Promise<void>
@@ -56,6 +58,7 @@ export default function ProjectDetailClient({
   projectImagesError,
   stagesByUnitId,
   imagesByUnitId,
+  defaultTab,
   addUnitAction,
   updateProjectHeaderAction,
   uploadProjectImageAction,
@@ -64,10 +67,20 @@ export default function ProjectDetailClient({
   deleteProjectAction,
 }: Props) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<ProjectDetailTab>('units')
+  const searchParams = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const initialTab: ProjectDetailTab =
+    requestedTab === 'add' || requestedTab === 'details' || requestedTab === 'units'
+      ? requestedTab
+      : defaultTab
+  const [activeTab, setActiveTab] = useState<ProjectDetailTab>(initialTab)
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isPending, startTransition] = useTransition()
   const projectName = project?.name || 'Untitled Project'
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
 
   function handleUpdateHeader(formData: FormData) {
     startTransition(async () => {
@@ -118,59 +131,65 @@ export default function ProjectDetailClient({
       </div>
 
       {isEditingHeader ? (
-        <form
-          action={handleUpdateHeader}
-          className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-4"
-        >
-          <input type="hidden" name="projectId" value={projectId} />
+        <section className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+          <form action={handleUpdateHeader}>
+            <input type="hidden" name="projectId" value={projectId} />
 
-          <div className="space-y-3">
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Name
-              </label>
-              <input
-                name="name"
-                defaultValue={projectName}
-                required
-                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-sm text-neutral-300">
+                  Name
+                </label>
+                <input
+                  name="name"
+                  defaultValue={projectName}
+                  required
+                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm text-neutral-300">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  defaultValue={project?.description || ''}
+                  rows={3}
+                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+                >
+                  {isPending ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : null}
+                  <span>{isPending ? 'Saving...' : 'Save'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsEditingHeader(false)}
+                  className="rounded-xl border border-neutral-700 px-4 py-2 text-white"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
+          </form>
 
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Description
-              </label>
-              <textarea
-                name="description"
-                defaultValue={project?.description || ''}
-                rows={3}
-                className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
-              >
-                {isPending ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : null}
-                <span>{isPending ? 'Saving...' : 'Save'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsEditingHeader(false)}
-                className="rounded-xl border border-neutral-700 px-4 py-2 text-white"
-              >
-                Cancel
-              </button>
-            </div>
+          <div className="mt-4 border-t border-neutral-800 pt-4">
+            <DeleteProjectCard
+              projectId={projectId}
+              deleteProjectAction={deleteProjectAction}
+            />
           </div>
-        </form>
+        </section>
       ) : null}
 
       <ProjectDetailTabs activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -191,8 +210,6 @@ export default function ProjectDetailClient({
           uploadProjectImageAction={uploadProjectImageAction}
           setFeaturedProjectImageAction={setFeaturedProjectImageAction}
           deleteProjectImageAction={deleteProjectImageAction}
-          deleteProjectAction={deleteProjectAction}
-          
         />
       ) : null}
 

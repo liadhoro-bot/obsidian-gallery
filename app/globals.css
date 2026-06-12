@@ -24,6 +24,328 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  max-width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+:where(a, button, label[for], summary, [role="button"]) {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+:where(a, button, label[for], summary, [role="button"], input[type="file"]::file-selector-button) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+:where(input, textarea, select, [contenteditable="true"]) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.tap-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.tap-press {
+  transform: translateZ(0);
+  transition:
+    transform 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    opacity 120ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+  will-change: transform;
+}
+
+.tap-press:active {
+  transform: scale(0.97);
+  opacity: 0.84;
+}
+
+.tap-press:disabled,
+.tap-press[aria-disabled="true"] {
+  transform: none;
+  opacity: 0.6;
+  will-change: auto;
+}
+
+.tap-card {
+  transform: translateZ(0);
+  transition:
+    transform 160ms cubic-bezier(0.2, 0, 0.2, 1),
+    opacity 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+  will-change: transform;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tap-card:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.tap-card:active {
+  transform: translateY(0) scale(0.985);
+  opacity: 0.86;
+}
+
+.tap-card[aria-disabled="true"] {
+  transform: none;
+  will-change: auto;
+}
+
+.micro-button {
+  transition:
+    transform 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    opacity 120ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.micro-button:active {
+  transform: scale(0.97);
+}
+
+.micro-toggle {
+  transform: translateZ(0);
+  transition:
+    transform 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.micro-toggle:active {
+  transform: scale(0.94);
+}
+
+.nav-pill {
+  position: relative;
+  overflow: hidden;
+  transition:
+    color 140ms ease,
+    transform 120ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.nav-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0.35rem 0.2rem;
+  z-index: -1;
+  border-radius: 1rem;
+  background: rgba(34, 211, 238, 0.1);
+  opacity: 0;
+  transform: scale(0.86);
+  transition:
+    opacity 150ms ease,
+    transform 150ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.nav-pill[data-active="true"]::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.nav-pill-icon {
+  transition: transform 150ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.nav-pill[data-active="true"] .nav-pill-icon {
+  transform: translateY(-1px);
+}
+
+.progress-wheel-fill {
+  transition:
+    stroke-dasharray 180ms cubic-bezier(0.2, 0, 0.2, 1),
+    filter 160ms ease;
+}
+
+.progress-wheel-shell {
+  transition: transform 160ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .progress-wheel-shell:hover {
+    transform: scale(1.015);
+  }
+}
+
+.mobile-safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.mobile-fixed-bottom {
+  bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.mobile-sheet-overlay {
+  align-items: flex-end;
+  padding:
+    max(0.75rem, env(safe-area-inset-top))
+    0.75rem
+    max(0.75rem, env(safe-area-inset-bottom));
+  animation: overlayFadeIn 140ms ease-out both;
+}
+
+.mobile-sheet {
+  display: flex;
+  width: 100%;
+  max-height: min(88dvh, 760px);
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+  animation: sheetRiseIn 160ms cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+.mobile-close-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.mobile-upload-action {
+  min-height: 48px;
+  touch-action: manipulation;
+}
+
+@media (min-width: 640px) {
+  .mobile-sheet-overlay {
+    align-items: center;
+    padding: 1.25rem;
+  }
+
+  .mobile-sheet {
+    max-height: min(88dvh, 760px);
+    border-radius: 1.5rem;
+    animation-name: dialogScaleIn;
+  }
+}
+
+.curator-overlay {
+  animation: overlayFadeIn 140ms ease-out both;
+}
+
+.curator-panel {
+  animation: curatorPanelIn 170ms cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+.curator-character {
+  animation: curatorCharacterIn 180ms cubic-bezier(0.2, 0, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .tap-press:active,
+  .tap-card:active,
+  .micro-button:active,
+  .micro-toggle:active {
+    transform: none;
+  }
+
+  .tap-press,
+  .tap-card,
+  .micro-button,
+  .micro-toggle {
+    will-change: auto;
+  }
+}
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheetRiseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialogScaleIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes curatorPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes curatorCharacterIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 @keyframes stepNumberIn {
   0% {
     opacity: 0;

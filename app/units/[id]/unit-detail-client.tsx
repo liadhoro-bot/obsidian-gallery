@@ -1249,14 +1249,14 @@ const handleRemoveStagePhoto = (imageId: string) => {
                 <button
                   type="button"
                   onClick={handleUploadClick}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/70 transition hover:border-cyan-300/35 hover:text-cyan-100"
+                  className="tap-press mobile-upload-action rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/70 hover:border-cyan-300/35 hover:text-cyan-100"
                 >
                   Upload from Gallery
                 </button>
                 <button
                   type="button"
                   onClick={handleCameraClick}
-                  className="rounded-xl bg-cyan-400 px-3 py-2 text-xs font-bold text-black transition hover:bg-cyan-300"
+                  className="tap-press mobile-upload-action rounded-xl bg-cyan-400 px-3 py-2 text-xs font-bold text-black hover:bg-cyan-300"
                 >
                   Take Photo
                 </button>
@@ -1299,7 +1299,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
                       <button
                         type="button"
                         onClick={() => handleRemovePendingGalleryFile(index)}
-                        className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-0.5 text-xs font-black text-white"
+                        className="tap-press absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-xs font-black text-white"
                         aria-label={`Remove ${preview.file.name}`}
                       >
                         X
@@ -1319,7 +1319,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
                     type="button"
                     onClick={handleUploadSelectedGalleryFiles}
                     disabled={isPending || selectedGalleryFiles.length === 0}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+                    className="tap-press tap-target inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
                   >
                     {isPending ? (
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -1347,7 +1347,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
                         cameraInputRef.current.value = ''
                       }
                     }}
-                    className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/70"
+                    className="tap-press tap-target rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/70"
                   >
                     Cancel
                   </button>
@@ -1374,7 +1374,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
               <button
                 type="button"
                 onClick={handleUploadClick}
-                className="flex aspect-square items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-sm font-medium text-white/60"
+                className="tap-card flex aspect-square min-h-24 items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-sm font-medium text-white/60"
               >
                 Upload Reference
               </button>
@@ -1423,7 +1423,7 @@ const paintsForStage = localStagePaints
                       type="button"
                       onClick={() => handleToggleStep(step)}
                       disabled={isPending || step.step_key === 'done'}
-                      className="shrink-0 disabled:opacity-80"
+                      className="tap-press tap-target shrink-0 disabled:opacity-80"
                       aria-label={`Toggle ${step.step_label}`}
                     >
                       <StageIcon stepKey={step.step_key} isDone={isDone} />
@@ -1481,7 +1481,7 @@ const paintsForStage = localStagePaints
           <Link
             key={paint.id}
             href={paintHref}
-            className="rounded-lg transition hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+            className="tap-press rounded-lg hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
             aria-label={`Open ${displayName || 'paint'} details`}
           >
             {swatch}
@@ -1517,7 +1517,7 @@ const paintsForStage = localStagePaints
                             label: step.step_label,
                           })
                         }
-                        className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30 transition hover:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+                        className="tap-press relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30 hover:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
                         aria-label={`Expand ${step.step_label} photo`}
                       >
                         <Image
@@ -1535,7 +1535,7 @@ const paintsForStage = localStagePaints
                       onClick={() =>
                         setOpenStageId(isOpen ? null : step.id)
                       }
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-2xl font-light leading-none text-cyan-300"
+                      className="tap-press tap-target flex items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-2xl font-light leading-none text-cyan-300"
                       aria-label="Add stage details"
                     >
                       +
@@ -1606,7 +1606,7 @@ const paintsForStage = localStagePaints
                 type="button"
                 onClick={() => handleRemoveStagePaint(paint.id)}
                 disabled={isPending}
-                className="absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/75 text-[10px] font-black text-white/70"
+                className="tap-press absolute right-1 top-1 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-[10px] font-black text-white/70"
                 aria-label="Remove paint"
               >
                 ×
@@ -1615,7 +1615,7 @@ const paintsForStage = localStagePaints
               {paintHref ? (
                 <Link
                   href={paintHref}
-                  className="block rounded-lg transition hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+                  className="tap-card block rounded-lg hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
                   aria-label={`Open ${displayName || 'paint'} details`}
                 >
                   {swatch}
@@ -1678,7 +1678,7 @@ const paintsForStage = localStagePaints
                           <div className="mt-2 grid grid-cols-2 gap-2">
                             <label
                               htmlFor={`stage-photo-${step.id}`}
-                              className={`flex min-h-12 cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border px-3 py-3 text-center text-xs font-semibold transition ${
+                              className={`tap-press mobile-upload-action flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border px-3 py-3 text-center text-xs font-semibold ${
                                 isStageUploading
                                   ? 'stage-photo-loading-pattern cursor-wait border-cyan-300/35 bg-cyan-300/[0.08] text-cyan-100'
                                   : 'border-white/15 bg-white/[0.03] text-white/60 hover:border-cyan-300/30 hover:text-white/80'
@@ -1694,7 +1694,7 @@ const paintsForStage = localStagePaints
 
                             <label
                               htmlFor={`stage-photo-camera-${step.id}`}
-                              className={`flex min-h-12 cursor-pointer items-center justify-center rounded-xl px-3 py-3 text-center text-xs font-bold transition ${
+                              className={`tap-press mobile-upload-action flex cursor-pointer items-center justify-center rounded-xl px-3 py-3 text-center text-xs font-bold ${
                                 isStageUploading
                                   ? 'stage-photo-loading-pattern cursor-wait bg-cyan-300/[0.08] text-cyan-100'
                                   : 'bg-cyan-400 text-black hover:bg-cyan-300'

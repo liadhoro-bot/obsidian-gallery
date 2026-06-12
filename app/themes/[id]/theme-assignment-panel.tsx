@@ -405,12 +405,12 @@ export default function ThemeAssignmentPanel({
 
       {conflict ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm"
+          className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/75 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="assign-theme-conflict-title"
         >
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#10131a] p-4 shadow-2xl">
+          <div className="mobile-sheet max-w-sm rounded-2xl border border-white/10 bg-[#10131a] p-4 shadow-2xl">
             <h2 id="assign-theme-conflict-title" className="text-base font-bold">
               Theme already assigned
             </h2>
@@ -419,7 +419,7 @@ export default function ThemeAssignmentPanel({
                 ? 'One or more selected projects already has a theme assigned.'
                 : 'One or more selected units already has a theme assigned.'}
             </p>
-            <div className="mt-3 max-h-28 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
+            <div className="mobile-scroll mt-3 max-h-28 space-y-1 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
               {conflict.names.map((name) => (
                 <p key={name} className="truncate text-xs text-white/70">
                   {name}
@@ -432,7 +432,7 @@ export default function ThemeAssignmentPanel({
                 type="button"
                 onClick={() => setConflict(null)}
                 disabled={isPending}
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/70 transition hover:bg-white/[0.07] disabled:opacity-50"
+                className="tap-press tap-target rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/70 hover:bg-white/[0.07] disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -440,7 +440,7 @@ export default function ThemeAssignmentPanel({
                 type="button"
                 onClick={confirmOverwrite}
                 disabled={isPending}
-                className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 disabled:opacity-50"
+                className="tap-press tap-target rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:opacity-50"
               >
                 {isPending ? 'Assigning...' : 'Assign'}
               </button>

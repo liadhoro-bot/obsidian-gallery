@@ -68,8 +68,8 @@ export default function MobileNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#061018]/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-md items-center justify-around px-2">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#061018]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+      <div className="mx-auto flex min-h-16 max-w-md items-center justify-around px-2">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -81,12 +81,13 @@ export default function MobileNav() {
               onMouseEnter={() => prefetchNavHref(item.href)}
               onFocus={() => prefetchNavHref(item.href)}
               onTouchStart={() => prefetchNavHref(item.href)}
-              className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 ${
+              data-active={isActive}
+              className={`nav-pill tap-press tap-target flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl ${
                 isActive ? 'text-cyan-400' : 'text-slate-500'
               }`}
             >
               <span
-                className="h-6 w-6 bg-current"
+                className="nav-pill-icon h-6 w-6 bg-current"
                 style={{
                   maskImage: `url(${item.icon})`,
                   WebkitMaskImage: `url(${item.icon})`,

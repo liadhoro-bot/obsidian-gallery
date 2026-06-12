@@ -149,8 +149,8 @@ export default function VaultGridClient({
   key={`${paint.source}-${paint.id}`}
   className="min-w-0 space-y-2"
 >
-              <PrefetchLink href={href} viewportPrefetch className="group block w-full text-left">
-                <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-[0_0_18px_rgba(0,0,0,0.6)] transition group-hover:border-cyan-400/60">
+              <PrefetchLink href={href} viewportPrefetch className="tap-card group block w-full text-left">
+                <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-[0_0_18px_rgba(0,0,0,0.6)] transition duration-150 group-hover:border-cyan-400/60">
                 {paint.source === 'custom' && (
   <span className="absolute left-2 top-2 z-10 rounded-md bg-cyan-500/15 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-300">
     Custom
@@ -161,7 +161,7 @@ export default function VaultGridClient({
                       src={paint.swatch_image_url}
                       alt={`${paint.name || 'Paint'} swatch`}
                       fill
-                      className="object-cover"
+                      className="object-cover transition duration-[180ms] group-hover:scale-[1.025]"
                       sizes="(max-width: 768px) 33vw, 220px"
                     />
                   ) : paint.hex_approx ? (
@@ -192,7 +192,7 @@ export default function VaultGridClient({
                   type="button"
                   disabled={isBusy}
                   onClick={() => toggleOwnership(paint.id, 'owned')}
-                  className={`flex h-5 w-full items-center justify-center rounded-full border px-1 text-[7px] font-black uppercase leading-none tracking-tight transition-all duration-150 active:scale-95 disabled:opacity-60 ${
+                  className={`micro-toggle flex h-5 w-full items-center justify-center rounded-full border px-1 text-[7px] font-black uppercase leading-none tracking-tight disabled:opacity-60 ${
                     paint.is_owned
   ? 'border-cyan-400/40 bg-cyan-400/15 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.25)]'
   : 'border-white/10 bg-white/5 text-white/35'
@@ -205,7 +205,7 @@ export default function VaultGridClient({
                   type="button"
                   disabled={isBusy}
                   onClick={() => toggleOwnership(paint.id, 'wishlist')}
-                  className={`flex h-5 w-full items-center justify-center rounded-full border px-1 text-[7px] font-black uppercase leading-none tracking-tight transition-all duration-150 active:scale-95 disabled:opacity-60 ${
+                  className={`micro-toggle flex h-5 w-full items-center justify-center rounded-full border px-1 text-[7px] font-black uppercase leading-none tracking-tight disabled:opacity-60 ${
                     paint.is_wishlist
   ? 'border-orange-400/30 bg-orange-400/10 text-orange-300'
   : 'border-white/10 bg-white/5 text-white/35'
@@ -225,7 +225,7 @@ export default function VaultGridClient({
           type="button"
           onClick={loadMore}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 transition active:scale-95 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+          className="tap-press tap-target inline-flex items-center justify-center gap-2 rounded-full bg-cyan-400 px-5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-950 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
         >
           {loading ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

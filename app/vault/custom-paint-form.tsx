@@ -290,7 +290,7 @@ export default function CustomPaintForm({
       </div>
 
       {toast ? (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-2xl border border-cyan-400/20 bg-slate-950/95 px-5 py-3 text-sm font-semibold text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur">
+        <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-50 -translate-x-1/2 rounded-2xl border border-cyan-400/20 bg-slate-950/95 px-5 py-3 text-sm font-semibold text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.18)] backdrop-blur">
           {toast}
         </div>
       ) : null}

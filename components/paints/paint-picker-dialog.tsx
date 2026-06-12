@@ -12,6 +12,7 @@ export type PaintPickerPaint = {
   brand: string | null
   line: string | null
   sku?: string | null
+  paint_type?: string | null
   swatch_image_url: string | null
   hex?: string | null
   hex_approx?: string | null
@@ -21,17 +22,92 @@ export type PaintPickerPaint = {
 
 type OwnershipFilter = 'all' | 'owned' | 'wishlist' | 'unowned'
 
+const COLOR_GROUP_OPTIONS = [
+  'Blacks & Greys',
+  'Whites',
+  'Browns',
+  'Reds',
+  'Oranges',
+  'Yellows',
+  'Greens',
+  'Blues',
+  'Purples',
+  'Flesh Tones',
+  'Metallics',
+  'Auxiliary',
+]
+
+function getPaintColorGroup(paint: PaintPickerPaint) {
+  const text = [
+    paint.name,
+    paint.brand,
+    paint.line,
+    paint.sku,
+    paint.paint_type,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (/metal|steel|silver|gold|brass|bronze|copper|iron|gunmetal/.test(text)) {
+    return 'Metallics'
+  }
+
+  if (/skin|flesh|fair|tan|khaki|bone|ivory/.test(text)) {
+    return 'Flesh Tones'
+  }
+
+  if (/black|grey|gray|charcoal|slate|ash|smoke/.test(text)) {
+    return 'Blacks & Greys'
+  }
+
+  if (/white|cream|offwhite|off-white|pale sand/.test(text)) {
+    return 'Whites'
+  }
+
+  if (/brown|umber|sienna|leather|wood|earth|sepia|chestnut/.test(text)) {
+    return 'Browns'
+  }
+
+  if (/red|scarlet|crimson|burgundy|magenta|pink|rose/.test(text)) {
+    return 'Reds'
+  }
+
+  if (/orange|amber|ochre|rust/.test(text)) {
+    return 'Oranges'
+  }
+
+  if (/yellow|sun|lemon|dorn|yriel/.test(text)) {
+    return 'Yellows'
+  }
+
+  if (/green|olive|emerald|moot|caliban|warpstone/.test(text)) {
+    return 'Greens'
+  }
+
+  if (/blue|cyan|turquoise|teal|navy|azure|sotek/.test(text)) {
+    return 'Blues'
+  }
+
+  if (/purple|violet|lavender|lilac|plum/.test(text)) {
+    return 'Purples'
+  }
+
+  return 'Auxiliary'
+}
+
 type PaintPickerDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   title?: string
   selectedPaintId?: string | null
   selectedPaint?: PaintPickerPaint | null
-  onSelectPaint: (paint: PaintPickerPaint) => void
+  onSelectPaint?: (paint: PaintPickerPaint) => void
   userId?: string
   source?: string
   initialPaints?: PaintPickerPaint[]
   disabled?: boolean
+  mode?: 'select' | 'collection'
 }
 
 function getPaintKey(paint: Pick<PaintPickerPaint, 'source' | 'id'>) {
@@ -59,6 +135,7 @@ function filterInitialPaints(
   query: string,
   brand: string,
   line: string,
+  colorGroup: string,
   ownership: OwnershipFilter
 ) {
   const q = query.trim().toLowerCase()
@@ -79,13 +156,21 @@ function filterInitialPaints(
       const matchesSearch = !q || haystack.includes(q)
       const matchesBrand = !brand || paint.brand === brand
       const matchesLine = !line || paint.line === line
+      const matchesColorGroup =
+        !colorGroup || getPaintColorGroup(paint) === colorGroup
       const matchesOwnership =
         ownership === 'all' ||
         (ownership === 'owned' && paint.is_owned) ||
         (ownership === 'wishlist' && paint.is_wishlist) ||
         (ownership === 'unowned' && !paint.is_owned)
 
-      return matchesSearch && matchesBrand && matchesLine && matchesOwnership
+      return (
+        matchesSearch &&
+        matchesBrand &&
+        matchesLine &&
+        matchesColorGroup &&
+        matchesOwnership
+      )
     })
     .sort((a, b) => {
       return (
@@ -106,10 +191,12 @@ export default function PaintPickerDialog({
   source = 'paint_picker',
   initialPaints = [],
   disabled = false,
+  mode = 'select',
 }: PaintPickerDialogProps) {
   const [query, setQuery] = useState('')
   const [brand, setBrand] = useState('')
   const [line, setLine] = useState('')
+  const [colorGroup, setColorGroup] = useState('')
   const [ownership, setOwnership] = useState<OwnershipFilter>('all')
   const [paints, setPaints] = useState<PaintPickerPaint[]>(
     initialPaints.map(normalizePaint)
@@ -148,20 +235,27 @@ export default function PaintPickerDialog({
   const visiblePaints = useMemo(() => {
     const sourcePaints = error && paints.length === 0 ? initialPaints : paints
 
-    return filterInitialPaints(sourcePaints, query, brand, line, ownership)
-  }, [brand, error, initialPaints, line, ownership, paints, query])
+    return filterInitialPaints(
+      sourcePaints,
+      query,
+      brand,
+      line,
+      colorGroup,
+      ownership
+    )
+  }, [brand, colorGroup, error, initialPaints, line, ownership, paints, query])
 
   const activeBrands = brands.length > 0 ? brands : fallbackBrands
   const visibleResultLines = useMemo(
     () =>
       Array.from(
         new Set(
-          filterInitialPaints(paints, query, brand, '', ownership)
+          filterInitialPaints(paints, query, brand, '', colorGroup, ownership)
             .map((paint) => paint.line)
             .filter((value): value is string => Boolean(value))
         )
       ),
-    [brand, ownership, paints, query]
+    [brand, colorGroup, ownership, paints, query]
   )
   const activeLines = useMemo(
     () =>
@@ -179,6 +273,7 @@ export default function PaintPickerDialog({
     selectedPaint?.id && selectedPaint.source
       ? getPaintKey(selectedPaint)
       : selectedPaintId || ''
+  const isCollectionMode = mode === 'collection'
 
   const capture = useCallback(
     (event: string, properties: Record<string, unknown> = {}) => {
@@ -187,11 +282,12 @@ export default function PaintPickerDialog({
         source,
         brand: brand || null,
         line: line || null,
+        color_group: colorGroup || null,
         ownership_filter: ownership,
         ...properties,
       })
     },
-    [brand, line, ownership, source]
+    [brand, colorGroup, line, ownership, source]
   )
 
   useEffect(() => {
@@ -218,6 +314,7 @@ export default function PaintPickerDialog({
         if (query.trim()) params.set('q', query.trim())
         if (brand) params.set('brand', brand)
         if (line) params.set('line', line)
+        if (colorGroup) params.set('colorGroup', colorGroup)
 
         const response = await fetch(`/api/theme-paint-search?${params}`, {
           signal: controller.signal,
@@ -237,7 +334,16 @@ export default function PaintPickerDialog({
 
         console.error(fetchError)
         setError('Could not load paints. Try again in a moment.')
-        setPaints(filterInitialPaints(initialPaints, query, brand, line, ownership))
+        setPaints(
+          filterInitialPaints(
+            initialPaints,
+            query,
+            brand,
+            line,
+            colorGroup,
+            ownership
+          )
+        )
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false)
@@ -251,14 +357,14 @@ export default function PaintPickerDialog({
       controller.abort()
       window.clearTimeout(timeout)
     }
-  }, [brand, initialPaints, line, open, ownership, query])
+  }, [brand, colorGroup, initialPaints, line, open, ownership, query])
 
   function closeDialog() {
     onOpenChange(false)
   }
 
   function updateFilter(
-    key: 'query' | 'brand' | 'line' | 'ownership',
+    key: 'query' | 'brand' | 'line' | 'colorGroup' | 'ownership',
     value: string
   ) {
     if (key === 'query') setQuery(value)
@@ -267,6 +373,7 @@ export default function PaintPickerDialog({
       setLine('')
     }
     if (key === 'line') setLine(value)
+    if (key === 'colorGroup') setColorGroup(value)
     if (key === 'ownership') setOwnership(value as OwnershipFilter)
 
     capture('paint_picker_filter_changed', {
@@ -341,7 +448,7 @@ export default function PaintPickerDialog({
   }
 
   function selectPaint(paint: PaintPickerPaint) {
-    if (disabled) return
+    if (disabled || isCollectionMode || !onSelectPaint) return
 
     capture('paint_picker_paint_selected', {
       paint_id: paint.id,
@@ -369,14 +476,14 @@ export default function PaintPickerDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 px-3 pb-3 pt-12 backdrop-blur-sm sm:items-center sm:p-5"
+      className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/75 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={title}
       onClick={closeDialog}
     >
       <div
-        className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#07111b] shadow-[0_0_42px_rgba(34,211,238,0.18)]"
+        className="mobile-sheet max-w-lg rounded-3xl border border-white/10 bg-[#07111b] shadow-[0_0_42px_rgba(34,211,238,0.18)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="border-b border-white/10 p-4">
@@ -386,7 +493,7 @@ export default function PaintPickerDialog({
             <button
               type="button"
               onClick={closeDialog}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg font-bold text-white/60 transition hover:border-cyan-300/40 hover:text-white"
+              className="tap-press mobile-close-button flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg font-bold text-white/60 hover:border-cyan-300/40 hover:text-white"
               aria-label="Close paint picker"
             >
               x
@@ -401,7 +508,12 @@ export default function PaintPickerDialog({
             autoFocus
           />
 
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div
+            className={[
+              'mt-3 grid grid-cols-1 gap-2',
+              isCollectionMode ? 'sm:grid-cols-3' : 'sm:grid-cols-4',
+            ].join(' ')}
+          >
             <select
               value={brand}
               onChange={(event) => updateFilter('brand', event.target.value)}
@@ -441,25 +553,48 @@ export default function PaintPickerDialog({
             </select>
 
             <select
-              value={ownership}
+              value={colorGroup}
               onChange={(event) =>
-                updateFilter('ownership', event.target.value)
+                updateFilter('colorGroup', event.target.value)
               }
               className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
             >
-              <option value="all" className="bg-slate-950 text-white">
-                All
+              <option value="" className="bg-slate-950 text-white">
+                Color group
               </option>
-              <option value="owned" className="bg-slate-950 text-white">
-                Owned
-              </option>
-              <option value="wishlist" className="bg-slate-950 text-white">
-                Wishlist
-              </option>
-              <option value="unowned" className="bg-slate-950 text-white">
-                Unowned
-              </option>
+              {COLOR_GROUP_OPTIONS.map((option) => (
+                <option
+                  key={option}
+                  value={option}
+                  className="bg-slate-950 text-white"
+                >
+                  {option}
+                </option>
+              ))}
             </select>
+
+            {!isCollectionMode ? (
+              <select
+                value={ownership}
+                onChange={(event) =>
+                  updateFilter('ownership', event.target.value)
+                }
+                className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
+              >
+                <option value="all" className="bg-slate-950 text-white">
+                  All
+                </option>
+                <option value="owned" className="bg-slate-950 text-white">
+                  Owned
+                </option>
+                <option value="wishlist" className="bg-slate-950 text-white">
+                  Wishlist
+                </option>
+                <option value="unowned" className="bg-slate-950 text-white">
+                  Unowned
+                </option>
+              </select>
+            ) : null}
           </div>
 
           <p className="mt-3 text-xs text-white/40">
@@ -469,7 +604,7 @@ export default function PaintPickerDialog({
           </p>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="mobile-scroll min-h-0 flex-1 overflow-y-auto p-3">
           {error ? (
             <div className="mb-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100/80">
               {error}
@@ -495,13 +630,14 @@ export default function PaintPickerDialog({
                 return (
                   <div
                     key={paintKey}
-                    role="button"
-                    tabIndex={disabled ? -1 : 0}
+                    role={isCollectionMode ? undefined : 'button'}
+                    tabIndex={disabled || isCollectionMode ? -1 : 0}
                     aria-disabled={disabled}
                     onClick={() => selectPaint(paint)}
                     onKeyDown={(event) => selectPaintFromKeyboard(event, paint)}
                     className={[
-                      'flex w-full cursor-pointer items-center gap-3 rounded-2xl border p-3 text-left outline-none transition active:scale-[0.99] focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-300/15 aria-disabled:cursor-not-allowed aria-disabled:opacity-60',
+                      'tap-card flex min-h-16 w-full items-center gap-3 rounded-2xl border p-3 text-left outline-none focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-300/15 aria-disabled:cursor-not-allowed aria-disabled:opacity-60',
+                      isCollectionMode ? 'cursor-default' : 'cursor-pointer',
                       isSelected
                         ? 'border-cyan-300/60 bg-cyan-300/[0.12] shadow-[0_0_18px_rgba(34,211,238,0.12)]'
                         : 'border-white/10 bg-white/[0.035] hover:border-cyan-400/40 hover:bg-cyan-400/[0.08]',
@@ -543,7 +679,7 @@ export default function PaintPickerDialog({
                       disabled={paint.source !== 'catalog' || isBusy}
                       onClick={(event) => toggleOwned(event, paint)}
                       className={[
-                        'shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wide transition active:scale-95 disabled:cursor-default disabled:opacity-70',
+                        'tap-press tap-target shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wide disabled:cursor-default disabled:opacity-70',
                         owned
                           ? 'border-cyan-400/40 bg-cyan-400/15 text-cyan-200 shadow-[0_0_12px_rgba(34,211,238,0.18)]'
                           : 'border-white/10 bg-white/5 text-white/45 hover:border-cyan-400/30 hover:text-cyan-200',

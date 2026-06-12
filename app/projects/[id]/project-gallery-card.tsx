@@ -183,7 +183,7 @@ export default function ProjectGalleryCard({
         <button
           type="button"
           onClick={() => setIsAddingImage((current) => !current)}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-800 text-lg text-white transition active:scale-[0.98] active:opacity-70 hover:bg-neutral-700"
+          className="tap-press tap-target flex items-center justify-center rounded-full bg-neutral-800 text-lg text-white hover:bg-neutral-700"
           aria-label={isAddingImage ? 'Close add image form' : 'Add image'}
           title={isAddingImage ? 'Close' : 'Add image'}
         >
@@ -227,14 +227,14 @@ export default function ProjectGalleryCard({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-semibold text-white transition hover:border-cyan-400/50 hover:text-cyan-100"
+                  className="tap-press mobile-upload-action rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-semibold text-white hover:border-cyan-400/50 hover:text-cyan-100"
                 >
                   Upload from Gallery
                 </button>
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-cyan-400"
+                  className="tap-press mobile-upload-action rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-black hover:bg-cyan-400"
                 >
                   Take Photo
                 </button>
@@ -259,7 +259,7 @@ export default function ProjectGalleryCard({
                     <button
                       type="button"
                       onClick={() => removePendingFile(index)}
-                      className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-0.5 text-xs font-bold text-white"
+                      className="tap-press absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-xs font-bold text-white"
                       aria-label={`Remove ${preview.file.name}`}
                     >
                       X
@@ -326,7 +326,7 @@ export default function ProjectGalleryCard({
                 <button
   type="button"
   onClick={() => setSelectedImage(image)}
-  className="block w-full"
+  className="tap-card block w-full rounded-xl"
 >
   <Image
     src={image.image_url}
@@ -348,7 +348,7 @@ export default function ProjectGalleryCard({
                       type="button"
                       onClick={() => handleSetFeatured(image.id)}
                       disabled={isPending}
-                      className="rounded-full bg-black/70 px-2 py-1 text-xs text-white disabled:opacity-60"
+                      className="tap-press flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white disabled:opacity-60"
                     >
                       *
                     </button>
@@ -361,7 +361,7 @@ export default function ProjectGalleryCard({
                         deleteConfirmImageId === image.id ? null : image.id
                       )
                     }
-                    className="rounded-full bg-black/70 px-2 py-1 text-xs text-white transition active:scale-[0.98] active:opacity-70"
+                    className="tap-press flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white"
                     title="Delete image"
                   >
                     X
@@ -378,7 +378,7 @@ export default function ProjectGalleryCard({
                       type="button"
                       onClick={() => handleDeleteImage(image.id)}
                       disabled={isPending}
-                      className="rounded-lg bg-red-500 px-3 py-1 text-xs font-medium text-white disabled:opacity-60"
+                      className="tap-press tap-target rounded-lg bg-red-500 px-3 py-1 text-xs font-medium text-white disabled:opacity-60"
                     >
                       {isPending ? 'Deleting...' : 'Delete'}
                     </button>
@@ -386,7 +386,7 @@ export default function ProjectGalleryCard({
                     <button
                       type="button"
                       onClick={() => setDeleteConfirmImageId(null)}
-                      className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1 text-xs text-white transition active:scale-[0.98] active:opacity-70"
+                      className="tap-press tap-target rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1 text-xs text-white"
                     >
                       Cancel
                     </button>
@@ -403,19 +403,19 @@ export default function ProjectGalleryCard({
       )}
       {selectedImage && (
   <div
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
     onClick={() => setSelectedImage(null)}
   >
     <button
       type="button"
       onClick={() => setSelectedImage(null)}
-      className="absolute right-4 top-4 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur"
+      className="tap-press mobile-close-button absolute right-4 top-4 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur"
     >
       Close
     </button>
 
     <div
-      className="max-h-[92vh] max-w-6xl overflow-auto"
+      className="mobile-scroll max-h-[88dvh] max-w-6xl overflow-auto"
       onClick={(e) => e.stopPropagation()}
     >
       <Image
@@ -428,7 +428,7 @@ export default function ProjectGalleryCard({
         width={1400}
         height={1400}
         sizes="100vw"
-        className="max-h-[92vh] rounded-2xl object-contain"
+        className="max-h-[88dvh] rounded-2xl object-contain"
       />
     </div>
   </div>

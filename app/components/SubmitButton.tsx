@@ -28,7 +28,7 @@ export default function SubmitButton({
       disabled={disabled || pending}
       onClick={onClick}
       className={[
-        'inline-flex items-center justify-center gap-2 transition active:scale-[0.98] active:opacity-70 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70 disabled:shadow-none',
+        'tap-press tap-target inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70 disabled:shadow-none',
         className,
       ].join(' ')}
     >

@@ -336,6 +336,25 @@ function buildRepairCandidates(currentUrl: string) {
       parsed.pathname = allFolderParts.join("/")
       addCandidate(candidates, currentUrl, parsed)
     }
+
+    const extensionMatch = parsed.pathname.match(/\.(png|jpe?g|webp)$/i)
+
+    if (extensionMatch) {
+      const duplicateExtensionUrl = new URL(currentUrl)
+      duplicateExtensionUrl.pathname = `${duplicateExtensionUrl.pathname}${extensionMatch[0]}`
+      addCandidate(candidates, currentUrl, duplicateExtensionUrl)
+    }
+
+    const duplicateExtensionMatch = parsed.pathname.match(/(\.(png|jpe?g|webp))\1$/i)
+
+    if (duplicateExtensionMatch) {
+      const singleExtensionUrl = new URL(currentUrl)
+      singleExtensionUrl.pathname = singleExtensionUrl.pathname.slice(
+        0,
+        -duplicateExtensionMatch[1].length
+      )
+      addCandidate(candidates, currentUrl, singleExtensionUrl)
+    }
   } catch {
     return candidates
   }
@@ -387,7 +406,7 @@ function csvValue(value: string | number | null) {
   return `"${normalized.replaceAll('"', '""')}"`
 }
 
-function writeCsvReport(results: AuditResult[], urlColumn: string) {
+async function writeCsvReport(results: AuditResult[], urlColumn: string) {
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true })
 
   const headers = [
@@ -429,7 +448,34 @@ function writeCsvReport(results: AuditResult[], urlColumn: string) {
     ...rows.map((row) => row.map(csvValue).join(",")),
   ].join("\n")
 
-  fs.writeFileSync(OUTPUT_PATH, `${csv}\n`, "utf8")
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    try {
+      fs.writeFileSync(OUTPUT_PATH, `${csv}\n`, "utf8")
+      return OUTPUT_PATH
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code === "EBUSY" &&
+        attempt < 5
+      ) {
+        await sleep(500)
+        continue
+      }
+
+      const fallbackPath = path.join(
+        path.dirname(OUTPUT_PATH),
+        `broken-swatch-report-${Date.now()}.csv`
+      )
+
+      fs.writeFileSync(fallbackPath, `${csv}\n`, "utf8")
+      console.warn(`Could not write ${OUTPUT_PATH}: ${getErrorMessage(error)}`)
+      console.warn(`CSV report written to fallback path ${fallbackPath}`)
+      return fallbackPath
+    }
+  }
+
+  return OUTPUT_PATH
 }
 
 async function confirmApply(changeCount: number) {
@@ -613,8 +659,8 @@ async function main() {
     }
   }
 
-  writeCsvReport(results, urlColumn)
-  console.log(`CSV report written to ${OUTPUT_PATH}`)
+  const reportPath = await writeCsvReport(results, urlColumn)
+  console.log(`CSV report written to ${reportPath}`)
 }
 
 main().catch((error: unknown) => {

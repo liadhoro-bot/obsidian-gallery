@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-neutral-950 p-6 text-white">
+    <main className="min-h-screen overflow-x-hidden bg-neutral-950 p-6 text-white">
       <div className="mx-auto max-w-md rounded-2xl border border-neutral-800 bg-neutral-900 p-6 shadow-sm">
         <p className="text-xs uppercase tracking-[0.2em] text-cyan-400">
           Obsidian Gallery
@@ -57,7 +57,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+              className="min-h-11 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
               placeholder="you@example.com"
             />
           </div>
@@ -73,7 +73,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+            className="tap-press tap-target inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
           >
             {loading ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

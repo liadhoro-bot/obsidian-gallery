@@ -9,7 +9,6 @@ import { PHProvider } from './providers/posthog-provider'
 import PostHogUserIdentifier from './providers/posthog-user-identifier'
 import ServiceWorkerRegistrar from './providers/service-worker-registrar'
 
-import CuratorButton from './components/curator/curator-button'
 import MobileNav from './components/MobileNav'
 
 const geistSans = Geist({
@@ -69,6 +68,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#081018',
+  colorScheme: 'dark',
 }
 
 export default function RootLayout({
@@ -88,7 +88,6 @@ export default function RootLayout({
           {children}
         </PHProvider>
 
-        <CuratorButton hideOnDashboard />
         <MobileNav />
 
         <Analytics />

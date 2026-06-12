@@ -97,7 +97,7 @@ export default function PaintOwnershipControls({
             type="button"
             onClick={() => runAction('owned')}
             disabled={isPending}
-            className={`rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider transition disabled:opacity-50 ${
+            className={`micro-toggle rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider disabled:opacity-50 ${
               optimistic.isOwned
                 ? 'bg-cyan-400 text-slate-950'
                 : 'bg-slate-800 text-slate-400'
@@ -110,7 +110,7 @@ export default function PaintOwnershipControls({
             type="button"
             onClick={() => runAction('wishlist')}
             disabled={isPending}
-            className={`rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider transition disabled:opacity-50 ${
+            className={`micro-toggle rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wider disabled:opacity-50 ${
               optimistic.isWishlist
                 ? 'bg-orange-400 text-slate-950'
                 : 'bg-slate-800 text-slate-400'
@@ -131,7 +131,7 @@ export default function PaintOwnershipControls({
             type="button"
             onClick={() => runAction('decrement')}
             disabled={isPending}
-            className="flex h-14 w-full items-center justify-center text-2xl font-black text-cyan-300 transition disabled:opacity-50"
+            className="tap-press flex h-14 w-full items-center justify-center text-2xl font-black text-cyan-300 disabled:opacity-50"
           >
             −
           </button>
@@ -144,7 +144,7 @@ export default function PaintOwnershipControls({
             type="button"
             onClick={() => runAction('increment')}
             disabled={isPending}
-            className="flex h-14 w-full items-center justify-center text-2xl font-black text-cyan-300 transition disabled:opacity-50"
+            className="tap-press flex h-14 w-full items-center justify-center text-2xl font-black text-cyan-300 disabled:opacity-50"
           >
             +
           </button>

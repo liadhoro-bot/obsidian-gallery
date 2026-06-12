@@ -172,7 +172,6 @@ async function attachThemeToProject(formData: FormData) {
 export default async function ThemesPage({ searchParams }: Props) {
   const perf = createPerfTimer('/themes')
   const params = await searchParams
-  const tab = params.tab || 'find'
   const selectForProject = params.selectForProject || null
   const supabase = await createClient()
 
@@ -302,6 +301,11 @@ export default async function ThemesPage({ searchParams }: Props) {
       (savedTheme) => !myThemeRows.some((theme) => theme.id === savedTheme.id)
     ),
   ]
+  const defaultTab = myAndSavedThemes.length > 0 ? 'mine' : 'find'
+  const tab =
+    params.tab === 'mine' || params.tab === 'create' || params.tab === 'find'
+      ? params.tab
+      : defaultTab
 
   const paintOptions = [
     ...(catalogPaints || []).map((paint) => ({
@@ -347,7 +351,7 @@ export default async function ThemesPage({ searchParams }: Props) {
           </p>
         </div>
 
-        <ThemeTabsClient />
+        <ThemeTabsClient activeTab={tab} />
 
         {tab === 'find' && (
           <div className="grid grid-cols-2 gap-3">

@@ -67,7 +67,7 @@ export default function ReportDialog({
           if (!viewerHasReported) setIsOpen(true)
         }}
         className={[
-          'inline-flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] transition active:scale-[0.98]',
+          'tap-press tap-target inline-flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em]',
           viewerHasReported
             ? 'text-amber-200'
             : 'text-white/40 hover:text-white/70',
@@ -85,12 +85,12 @@ export default function ReportDialog({
       ) : null}
 
       {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+        <div className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/70 backdrop-blur-sm">
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="report-dialog-title"
-            className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#101820] p-4 text-white shadow-2xl"
+            className="mobile-sheet max-w-sm rounded-2xl border border-white/10 bg-[#101820] p-4 text-white shadow-2xl"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -105,7 +105,7 @@ export default function ReportDialog({
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-white/70"
+                className="tap-press mobile-close-button rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-white/70"
               >
                 Close
               </button>
@@ -132,7 +132,7 @@ export default function ReportDialog({
                 type="button"
                 onClick={submitReport}
                 disabled={isPending}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-neutral-950 transition disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60"
+                className="tap-press tap-target inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-neutral-950 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60"
               >
                 {isPending ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -143,7 +143,7 @@ export default function ReportDialog({
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/70"
+                className="tap-press tap-target rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-white/70"
               >
                 Cancel
               </button>

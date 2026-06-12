@@ -70,12 +70,34 @@ function weightedPick<T extends { weight: number | null }>(items: T[]) {
   return items[0]
 }
 
-function getFallbackCtaHref(rule: CuratorRule, template: CuratorTemplate) {
+function getRuleContextualCtaHref(rule: CuratorRule, state: DashboardCuratorState) {
+  const keyAndCategory = `${rule.key} ${rule.category}`.toLowerCase()
+  const conditionFields = Object.keys(rule.conditions || {})
+  const isUnitPrompt =
+    keyAndCategory.includes('unit') ||
+    keyAndCategory.includes('deadline') ||
+    conditionFields.some((field) =>
+      ['deadlineWithinDays', 'unitProgress'].includes(field),
+    )
+
+  if (isUnitPrompt && state.focusUnitId) {
+    return `/units/${state.focusUnitId}`
+  }
+
+  return null
+}
+
+function getFallbackCtaHref(
+  rule: CuratorRule,
+  template: CuratorTemplate,
+  state: DashboardCuratorState,
+) {
+  const contextualHref = getRuleContextualCtaHref(rule, state)
+  if (contextualHref) return contextualHref
   if (template.primary_cta_href?.trim()) return template.primary_cta_href.trim()
   if (rule.cta_href?.trim()) return rule.cta_href.trim()
 
   const keyAndCategory = `${rule.key} ${rule.category}`.toLowerCase()
-
   if (keyAndCategory.includes('project')) return '/projects'
   if (keyAndCategory.includes('unit')) return '/projects'
   if (keyAndCategory.includes('recipe')) return '/recipes'
@@ -152,6 +174,7 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
     sessionsThisWeek: sessionsThisWeek ?? 0,
     daysSinceLastSession,
     deadlineWithinDays,
+    focusUnitId: deadlineUnit?.id ?? null,
     unitProgress,
   }
 
@@ -221,7 +244,7 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
       bodyLines: selectedTemplate.body_lines ?? undefined,
       question: selectedTemplate.question,
       ctaLabel: selectedTemplate.primary_cta_label ?? rule.cta_label ?? 'Continue',
-      ctaHref: getFallbackCtaHref(rule, selectedTemplate),
+      ctaHref: getFallbackCtaHref(rule, selectedTemplate, state),
       secondaryCtaLabel: selectedTemplate.secondary_cta_label,
       autoOpen: rule.auto_open,
       state,

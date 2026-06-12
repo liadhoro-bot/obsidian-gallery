@@ -144,6 +144,11 @@ async function RecipesContent({ userId }: { userId: string }) {
       myRecipes={withRecipeImages(myRecipes ?? [])}
       savedRecipes={withRecipeImages(savedRecipes)}
       savedRecipeIds={typedSavedRows.map((row) => row.recipe_id)}
+      defaultTab={
+        (myRecipes?.length ?? 0) > 0 || savedRecipes.length > 0
+          ? 'mine'
+          : 'find'
+      }
     />
   )
 }

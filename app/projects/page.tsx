@@ -7,7 +7,19 @@ import { addProject } from './actions'
 import { ProjectWithImage } from './project-library'
 import { createPerfTimer } from '../../utils/perf/server'
 
-async function ProjectsTabsContent({ userId }: { userId: string }) {
+type ProjectsPageProps = {
+  searchParams: Promise<{
+    tab?: string
+  }>
+}
+
+async function ProjectsTabsContent({
+  userId,
+  initialTab,
+}: {
+  userId: string
+  initialTab: 'mine' | 'create'
+}) {
   const perf = createPerfTimer('/projects:content')
   const supabase = await createClient()
   const { data: projects, error: projectsError } = await supabase
@@ -87,6 +99,7 @@ async function ProjectsTabsContent({ userId }: { userId: string }) {
     <ProjectsTabs
       projects={projectsWithImages}
       addProjectAction={addProject}
+      initialTab={initialTab}
     />
   )
 }
@@ -122,9 +135,11 @@ function ProjectsTabsSkeleton() {
   )
 }
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
   const perf = createPerfTimer('/projects')
   const supabase = await createClient()
+  const resolvedSearchParams = await searchParams
+  const initialTab = resolvedSearchParams.tab === 'create' ? 'create' : 'mine'
 
   const {
     data: { user },
@@ -157,7 +172,7 @@ export default async function ProjectsPage() {
         </header>
 
         <Suspense fallback={<ProjectsTabsSkeleton />}>
-          <ProjectsTabsContent userId={user.id} />
+          <ProjectsTabsContent userId={user.id} initialTab={initialTab} />
         </Suspense>
       </div>
     </main>

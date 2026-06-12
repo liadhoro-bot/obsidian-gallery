@@ -106,7 +106,7 @@ export default function ThemeCard({
           alt={theme.name || 'Theme image'}
           fill
           sizes="(max-width: 768px) 50vw, 240px"
-          className="object-cover"
+          className="object-cover transition duration-[180ms] group-hover:scale-[1.025]"
         />
       ) : null}
 
@@ -149,7 +149,7 @@ export default function ThemeCard({
   )
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] shadow-lg">
+    <div className="tap-card group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] shadow-lg hover:border-cyan-400/40 hover:bg-white/[0.055]">
       {isSelectingForProject ? (
         imageBlock
       ) : (
@@ -185,7 +185,7 @@ export default function ThemeCard({
             <SubmitButton
               idleText="Use For Project"
               pendingText="Applying..."
-              className="w-full rounded-xl bg-cyan-400 px-3 py-2 text-xs font-semibold text-neutral-950 transition active:scale-95"
+              className="w-full rounded-xl bg-cyan-400 px-3 py-2 text-xs font-semibold text-neutral-950"
             />
           </form>
         ) : !isOwner ? (
@@ -195,13 +195,13 @@ export default function ThemeCard({
             <SubmitButton
               idleText={isSaved ? 'Saved' : 'Save'}
               pendingText={isSaved ? 'Removing...' : 'Saving...'}
-              className="w-full rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-400/20"
+              className="w-full rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-400/20"
             />
           </form>
         ) : (
           <button
             type="button"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/65"
+            className="tap-press w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/65"
           >
             Your Theme
           </button>

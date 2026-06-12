@@ -230,9 +230,6 @@ export default function ProjectUnitsTab({
               id: unit.id,
               name: unit.name,
               imageUrl: primaryImage?.image_url ?? null,
-              progress: unit.percent,
-              deadline: unit.deadline,
-              status: unit.is_featured ? 'featured' : null,
             }
           })}
           cards={cardUnits}

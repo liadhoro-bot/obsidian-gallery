@@ -32,6 +32,27 @@ function resolveVaultTab(tab?: string): VaultTab {
   return 'find'
 }
 
+async function userHasOwnedPaints(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) {
+  const [{ count: ownedCatalogCount }, { count: customPaintCount }] =
+    await Promise.all([
+      supabase
+        .from('user_paint_ownership')
+        .select('paint_catalog_id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_owned', true),
+
+      supabase
+        .from('paints')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId),
+    ])
+
+  return (ownedCatalogCount ?? 0) > 0 || (customPaintCount ?? 0) > 0
+}
+
 export default async function VaultPage({ searchParams }: PageProps) {
   const perf = createPerfTimer('/vault')
   const supabase = await createClient()
@@ -48,7 +69,12 @@ export default async function VaultPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams
   perf.mark('search params')
 
-  const activeTab = resolveVaultTab(resolvedSearchParams.tab)
+  const defaultTab = (await userHasOwnedPaints(supabase, user.id))
+    ? 'collection'
+    : 'find'
+  const activeTab = resolvedSearchParams.tab
+    ? resolveVaultTab(resolvedSearchParams.tab)
+    : defaultTab
 
   const q = resolvedSearchParams.q?.trim() || ''
   const brand = resolvedSearchParams.brand || ''

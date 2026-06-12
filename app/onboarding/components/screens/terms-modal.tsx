@@ -6,8 +6,8 @@ type Props = {
 
 export default function TermsModal({ onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[88vh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-[#081018] shadow-2xl shadow-cyan-950/40">
+    <div className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm">
+      <div className="mobile-sheet max-w-lg rounded-[2rem] border border-cyan-300/20 bg-[#081018] shadow-2xl shadow-cyan-950/40">
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
@@ -21,13 +21,13 @@ export default function TermsModal({ onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm font-bold text-white/60 transition hover:bg-white/[0.08] hover:text-white"
+            className="tap-press mobile-close-button rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm font-bold text-white/60 hover:bg-white/[0.08] hover:text-white"
           >
             Close
           </button>
         </div>
 
-        <div className="terms-scroll overflow-y-auto px-5 py-5 pr-6 text-sm leading-7 text-white/85">
+        <div className="mobile-scroll terms-scroll min-h-0 overflow-y-auto px-5 py-5 pr-6 text-sm leading-7 text-white/85">
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
               Legal
@@ -42,7 +42,7 @@ export default function TermsModal({ onClose }: Props) {
   href="/legal/obsidian-gallery-terms-and-conditions.pdf"
   target="_blank"
   rel="noopener noreferrer"
-  className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-black shadow-[0_0_24px_rgba(34,211,238,0.24)]"
+  className="tap-press tap-target mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-black shadow-[0_0_24px_rgba(34,211,238,0.24)]"
 >
   Download PDF
 </a>

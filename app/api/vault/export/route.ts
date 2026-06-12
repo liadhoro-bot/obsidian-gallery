@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '../../../../utils/supabase/server'
 import { captureServerEvent } from '../../../../utils/analytics/server'
+import {
+  findClosestPaints,
+  isUsableColorHex,
+} from '../../../../utils/color-matching'
 
 type VaultTab = 'find' | 'collection'
 type ExportFormat = 'csv' | 'txt' | 'json' | 'pdf'
@@ -33,6 +37,8 @@ type CatalogPaintRow = {
   sku: string | null
   barcode_primary: string | null
   hex_approx: string | null
+  paint_type?: string | null
+  color_match_enabled?: boolean | null
 }
 
 type CustomPaintRow = {
@@ -50,6 +56,7 @@ type RequestBody = {
   brand?: string
   line?: string
   ownership?: string
+  matchHex?: string
 }
 
 const PAGE_SIZE = 1000
@@ -92,6 +99,7 @@ function buildFilename({
   brand,
   line,
   ownership,
+  matchHex,
 }: {
   format: ExportFormat
   tab: VaultTab
@@ -99,10 +107,13 @@ function buildFilename({
   brand: string
   line: string
   ownership: string
+  matchHex: string
 }) {
   const parts = ['obsidian-gallery']
 
-  if (tab === 'collection') {
+  if (matchHex) {
+    parts.push('color-match', slugPart(matchHex))
+  } else if (tab === 'collection') {
     parts.push('my-paints')
   } else if (ownership === 'wishlist') {
     parts.push('wishlist')
@@ -118,6 +129,27 @@ function buildFilename({
   }
 
   return `${parts.filter(Boolean).join('-')}.${format}`
+}
+
+function toExportRows(
+  catalogRows: CatalogPaintRow[],
+  ownershipByPaintId: Map<string, OwnershipRow>
+): ExportRow[] {
+  return catalogRows.map((paint) => {
+    const ownership = ownershipByPaintId.get(paint.id)
+
+    return {
+      brand: paint.brand || '',
+      line: paint.line || '',
+      name: paint.name || '',
+      status: getStatus(ownership),
+      quantity: ownership?.units_owned || 0,
+      barcode: paint.barcode_primary || '',
+      hex: paint.hex_approx || '',
+      sku: paint.sku || '',
+      product_code: paint.sku || '',
+    }
+  })
 }
 
 function buildCatalogSearchFilter(q: string) {
@@ -208,6 +240,63 @@ async function fetchAllCatalogRows({
   return rows
 }
 
+async function fetchMatchedCatalogRows({
+  supabase,
+  matchHex,
+  brand,
+  line,
+  ownership,
+  ownedIds,
+  wishlistIds,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>
+  matchHex: string
+  brand: string
+  line: string
+  ownership: string
+  ownedIds: string[]
+  wishlistIds: string[]
+}) {
+  let query = supabase
+    .from('paint_catalog')
+    .select(
+      `
+        id,
+        brand,
+        line,
+        name,
+        sku,
+        barcode_primary,
+        hex_approx,
+        paint_type,
+        color_match_enabled
+      `
+    )
+    .eq('is_active', true)
+    .eq('color_match_enabled', true)
+    .not('hex_approx', 'is', null)
+    .filter('hex_approx', 'match', '^#[0-9A-Fa-f]{6}$')
+
+  if (brand) query = query.eq('brand', brand)
+  if (line) query = query.eq('line', line)
+
+  const { data, error } = await query.limit(5000)
+
+  if (error) throw new Error(error.message)
+
+  const filteredRows = ((data || []) as CatalogPaintRow[]).filter((paint) => {
+    if (ownership === 'owned') return ownedIds.includes(paint.id)
+    if (ownership === 'unowned') return !ownedIds.includes(paint.id)
+    if (ownership === 'wishlist') return wishlistIds.includes(paint.id)
+    if (ownership === 'custom') return false
+    return true
+  })
+
+  return findClosestPaints(matchHex, filteredRows, { limit: 24 }).map(
+    ({ paint }) => paint
+  )
+}
+
 async function fetchAllCustomRows({
   supabase,
   userId,
@@ -259,6 +348,10 @@ export async function POST(req: Request) {
   const brand = cleanText(body.brand)
   const line = cleanText(body.line)
   const ownership = tab === 'collection' ? 'owned' : cleanText(body.ownership) || 'all'
+  const matchHex =
+    tab === 'find' && isUsableColorHex(cleanText(body.matchHex))
+      ? cleanText(body.matchHex).toUpperCase()
+      : ''
 
   const supabase = await createClient()
 
@@ -293,19 +386,30 @@ export async function POST(req: Request) {
       .filter((row) => row.is_wishlist)
       .map((row) => row.paint_catalog_id)
 
-    const catalogRows = await fetchAllCatalogRows({
-      supabase,
-      q,
-      brand,
-      line,
-      tab,
-      ownership,
-      ownedIds,
-      wishlistIds,
-    })
+    const catalogRows = matchHex
+      ? await fetchMatchedCatalogRows({
+          supabase,
+          matchHex,
+          brand,
+          line,
+          ownership,
+          ownedIds,
+          wishlistIds,
+        })
+      : await fetchAllCatalogRows({
+          supabase,
+          q,
+          brand,
+          line,
+          tab,
+          ownership,
+          ownedIds,
+          wishlistIds,
+        })
 
     const includeCustom =
-      tab === 'collection' || ownership === 'all' || ownership === 'custom'
+      !matchHex &&
+      (tab === 'collection' || ownership === 'all' || ownership === 'custom')
     const customRows = includeCustom
       ? await fetchAllCustomRows({
           supabase,
@@ -316,21 +420,7 @@ export async function POST(req: Request) {
         })
       : []
 
-    const catalogExportRows: ExportRow[] = catalogRows.map((paint) => {
-      const ownership = ownershipByPaintId.get(paint.id)
-
-      return {
-        brand: paint.brand || '',
-        line: paint.line || '',
-        name: paint.name || '',
-        status: getStatus(ownership),
-        quantity: ownership?.units_owned || 0,
-        barcode: paint.barcode_primary || '',
-        hex: paint.hex_approx || '',
-        sku: paint.sku || '',
-        product_code: paint.sku || '',
-      }
-    })
+    const catalogExportRows = toExportRows(catalogRows, ownershipByPaintId)
 
     const customExportRows: ExportRow[] = customRows.map((paint) => ({
       brand: paint.manufacturer || '',
@@ -352,6 +442,7 @@ export async function POST(req: Request) {
       brand,
       line,
       ownership,
+      matchHex,
     })
 
     await captureServerEvent({
@@ -363,6 +454,7 @@ export async function POST(req: Request) {
         brand: brand || null,
         line: line || null,
         ownership,
+        color_match_hex: matchHex || null,
         search_present: Boolean(q),
         exported_count: rows.length,
       },

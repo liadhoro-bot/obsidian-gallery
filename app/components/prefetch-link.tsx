@@ -79,6 +79,7 @@ export default function PrefetchLink({
   onMouseEnter,
   onFocus,
   onTouchStart,
+  className,
   ...props
 }: PrefetchLinkProps) {
   const router = useRouter()
@@ -139,6 +140,7 @@ export default function PrefetchLink({
         prefetch(false)
         onTouchStart?.(event)
       }}
+      className={['tap-card', className].filter(Boolean).join(' ')}
       {...props}
     >
       {children}
@@ -151,6 +153,7 @@ export function PrefetchButton({
   onMouseEnter,
   onFocus,
   onTouchStart,
+  className,
   ...props
 }: PrefetchButtonProps) {
   const prefetch = useRoutePrefetch(prefetchHref)
@@ -170,6 +173,7 @@ export function PrefetchButton({
         prefetch()
         onTouchStart?.(event)
       }}
+      className={['tap-press tap-target', className].filter(Boolean).join(' ')}
     />
   )
 }

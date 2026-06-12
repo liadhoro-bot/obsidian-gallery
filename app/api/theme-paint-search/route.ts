@@ -4,11 +4,16 @@ import { createClient } from '../../../utils/supabase/server'
 type CatalogFilterRow = {
   brand: string | null
   line: string | null
+  paint_type?: string | null
+  name?: string | null
+  sku?: string | null
 }
 
 type CustomFilterRow = {
   manufacturer: string | null
   series: string | null
+  paint_type?: string | null
+  name?: string | null
 }
 
 const EMPTY_ID = '00000000-0000-0000-0000-000000000000'
@@ -23,6 +28,41 @@ function escapeFilterValue(value: string) {
   return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')
 }
 
+function getPaintColorGroup(input: {
+  name?: string | null
+  brand?: string | null
+  line?: string | null
+  sku?: string | null
+  paint_type?: string | null
+}) {
+  const text = [
+    input.name,
+    input.brand,
+    input.line,
+    input.sku,
+    input.paint_type,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (/metal|steel|silver|gold|brass|bronze|copper|iron|gunmetal/.test(text)) {
+    return 'Metallics'
+  }
+  if (/skin|flesh|fair|tan|khaki|bone|ivory/.test(text)) return 'Flesh Tones'
+  if (/black|grey|gray|charcoal|slate|ash|smoke/.test(text)) return 'Blacks & Greys'
+  if (/white|cream|offwhite|off-white|pale sand/.test(text)) return 'Whites'
+  if (/brown|umber|sienna|leather|wood|earth|sepia|chestnut/.test(text)) return 'Browns'
+  if (/red|scarlet|crimson|burgundy|magenta|pink|rose/.test(text)) return 'Reds'
+  if (/orange|amber|ochre|rust/.test(text)) return 'Oranges'
+  if (/yellow|sun|lemon|dorn|yriel/.test(text)) return 'Yellows'
+  if (/green|olive|emerald|moot|caliban|warpstone/.test(text)) return 'Greens'
+  if (/blue|cyan|turquoise|teal|navy|azure|sotek/.test(text)) return 'Blues'
+  if (/purple|violet|lavender|lilac|plum/.test(text)) return 'Purples'
+
+  return 'Auxiliary'
+}
+
 export async function GET(request: Request) {
   const supabase = await createClient()
   const { searchParams } = new URL(request.url)
@@ -30,6 +70,7 @@ export async function GET(request: Request) {
   const q = searchParams.get('q')?.trim() || ''
   const brand = searchParams.get('brand')?.trim() || ''
   const line = searchParams.get('line')?.trim() || ''
+  const colorGroup = searchParams.get('colorGroup')?.trim() || ''
   const ownership = searchParams.get('ownership') || 'all'
   const limit = Math.min(Number(searchParams.get('limit') || 80), 120)
   const includeFilters = searchParams.get('includeFilters') === 'true'
@@ -72,7 +113,7 @@ export async function GET(request: Request) {
     while (true) {
       let filterQuery = supabase
         .from('paint_catalog')
-        .select('brand,line')
+        .select('brand,line,name,sku,paint_type')
         .eq('is_active', true)
 
       if (q) {
@@ -122,7 +163,7 @@ export async function GET(request: Request) {
 
     let filterQuery = supabase
       .from('paints')
-      .select('manufacturer,series')
+      .select('manufacturer,series,name,paint_type')
       .eq('user_id', user.id)
 
     if (q) {
@@ -148,7 +189,7 @@ export async function GET(request: Request) {
 
   let catalogQuery = supabase
     .from('paint_catalog')
-    .select('id, name, brand, line, sku, swatch_image_url, hex_approx')
+    .select('id, name, brand, line, sku, swatch_image_url, hex_approx, paint_type')
     .eq('is_active', true)
 
   if (q) {
@@ -200,6 +241,7 @@ export async function GET(request: Request) {
     swatch_image_url: null
     hex: string | null
     hex_approx: string | null
+    paint_type: string | null
     is_owned: boolean
     is_wishlist: boolean
   }[] = []
@@ -207,7 +249,7 @@ export async function GET(request: Request) {
   if (user && (ownership === 'all' || ownership === 'owned')) {
     let customQuery = supabase
       .from('paints')
-      .select('id, name, manufacturer, series, color_hex')
+      .select('id, name, manufacturer, series, color_hex, paint_type')
       .eq('user_id', user.id)
 
     if (q) {
@@ -245,6 +287,7 @@ export async function GET(request: Request) {
         swatch_image_url: null,
         hex: paint.color_hex,
         hex_approx: paint.color_hex,
+        paint_type: paint.paint_type,
         is_owned: true,
         is_wishlist: false,
       })) || []
@@ -261,11 +304,13 @@ export async function GET(request: Request) {
       swatch_image_url: paint.swatch_image_url,
       hex: paint.hex_approx,
       hex_approx: paint.hex_approx,
+      paint_type: paint.paint_type,
       is_owned: ownedSet.has(paint.id),
       is_wishlist: wishlistSet.has(paint.id),
     })),
     ...customPaints,
   ]
+    .filter((paint) => !colorGroup || getPaintColorGroup(paint) === colorGroup)
     .sort((a, b) => {
       return (
         (a.brand || '').localeCompare(b.brand || '') ||
@@ -297,6 +342,8 @@ export async function GET(request: Request) {
       ...customBrandRows.map((row) => ({
         brand: row.manufacturer || 'Custom',
         line: row.series || 'Custom Color',
+        name: row.name,
+        paint_type: row.paint_type,
       })),
     ]
 
@@ -305,6 +352,8 @@ export async function GET(request: Request) {
       ...customLineRows.map((row) => ({
       brand: row.manufacturer || 'Custom',
       line: row.series || 'Custom Color',
+      name: row.name,
+      paint_type: row.paint_type,
       })),
     ]
 

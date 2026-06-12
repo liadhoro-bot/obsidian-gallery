@@ -72,8 +72,8 @@ export default function BarcodeScannerModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 px-4 pb-6 pt-12 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#07111a] shadow-2xl">
+    <div className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm">
+      <div className="mobile-sheet max-w-md rounded-3xl border border-white/10 bg-[#07111a] shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
             <h2 className="text-sm font-bold text-white">Scan barcode</h2>
@@ -85,7 +85,7 @@ export default function BarcodeScannerModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300"
+            className="tap-press mobile-close-button rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-slate-300"
           >
             Close
           </button>

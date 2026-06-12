@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
+import type { PointerEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
 const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/
@@ -97,6 +98,16 @@ function hslToHex({ h, s, l }: HslColor) {
     .toUpperCase()}`
 }
 
+function getWheelPointerPosition({ h, s }: HslColor) {
+  const angle = ((h - 90) * Math.PI) / 180
+  const radius = s / 100
+
+  return {
+    left: `${50 + Math.cos(angle) * radius * 50}%`,
+    top: `${50 + Math.sin(angle) * radius * 50}%`,
+  }
+}
+
 export default function ColorMatchModal({
   selectedHex,
   brand,
@@ -109,6 +120,7 @@ export default function ColorMatchModal({
   const [isOpen, setIsOpen] = useState(false)
   const [hex, setHex] = useState(initialHex)
   const [hsl, setHsl] = useState<HslColor>(() => hexToHsl(initialHex))
+  const wheelRef = useRef<HTMLDivElement>(null)
   const selectedColor = normalizeHex(hex)
 
   useEffect(() => {
@@ -117,7 +129,11 @@ export default function ColorMatchModal({
   }, [initialHex])
 
   function updateFromHex(nextHex: string) {
-    const normalized = normalizeHex(nextHex)
+    const normalized =
+      normalizeHex(nextHex) ??
+      normalizeHex(nextHex.startsWith('#') ? nextHex : `#${nextHex}`)
+
+    setHex(nextHex.toUpperCase())
 
     if (!normalized) return
 
@@ -134,6 +150,28 @@ export default function ColorMatchModal({
 
     setHsl(normalizedHsl)
     setHex(hslToHex(normalizedHsl))
+  }
+
+  function updateFromWheel(event: PointerEvent<HTMLDivElement>) {
+    const wheel = wheelRef.current
+
+    if (!wheel) return
+
+    const rect = wheel.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const dx = event.clientX - centerX
+    const dy = event.clientY - centerY
+    const radius = rect.width / 2
+    const distance = Math.min(Math.sqrt(dx * dx + dy * dy), radius)
+    const hue = Math.round((Math.atan2(dy, dx) * 180) / Math.PI + 450) % 360
+    const saturation = Math.round((distance / radius) * 100)
+
+    updateHsl({
+      ...hsl,
+      h: hue,
+      s: saturation,
+    })
   }
 
   function closeModal() {
@@ -165,7 +203,7 @@ export default function ColorMatchModal({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm font-semibold text-white outline-none transition hover:border-white/20 hover:bg-slate-900 active:scale-95"
+        className="tap-press tap-target inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-slate-950/80 px-3 text-sm font-semibold text-white outline-none hover:border-white/20 hover:bg-slate-900"
       >
         <span
           className="relative h-4 w-4 rounded-full border border-white/25"
@@ -185,12 +223,12 @@ export default function ColorMatchModal({
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end bg-black/75 px-4 py-5 backdrop-blur-sm sm:items-center sm:justify-center"
+          className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/75 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-labelledby="vault-color-match-title"
         >
-          <div className="w-full max-w-2xl rounded-3xl border border-cyan-300/20 bg-[#081018] p-5 shadow-[0_0_44px_rgba(34,211,238,0.18)]">
+          <div className="mobile-sheet max-w-2xl rounded-3xl border border-cyan-300/20 bg-[#081018] p-5 shadow-[0_0_44px_rgba(34,211,238,0.18)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
@@ -207,35 +245,65 @@ export default function ColorMatchModal({
               <button
                 type="button"
                 onClick={closeModal}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-bold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                className="tap-press mobile-close-button flex items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-bold text-white/70 hover:bg-white/[0.08] hover:text-white"
                 aria-label="Close color matcher"
               >
                 x
               </button>
             </div>
 
-            <div className="mt-6 grid gap-5 md:grid-cols-[220px_1fr]">
+            <div className="mobile-scroll mt-6 grid min-h-0 gap-5 overflow-y-auto pr-1 md:grid-cols-[220px_1fr]">
               <div className="grid place-items-center rounded-3xl border border-white/10 bg-slate-950/70 p-5">
-                <label
-                  className="relative grid h-44 w-44 cursor-pointer place-items-center rounded-full border border-white/15 shadow-[0_0_30px_rgba(0,0,0,0.45)]"
+                <div
+                  ref={wheelRef}
+                  role="slider"
+                  tabIndex={0}
+                  aria-label="Color wheel"
+                  aria-valuemin={0}
+                  aria-valuemax={359}
+                  aria-valuenow={hsl.h}
+                  aria-valuetext={`${hsl.h} degrees, ${hsl.s}% saturation`}
+                  onPointerDown={(event) => {
+                    event.currentTarget.setPointerCapture(event.pointerId)
+                    updateFromWheel(event)
+                  }}
+                  onPointerMove={(event) => {
+                    if (event.buttons !== 1) return
+                    updateFromWheel(event)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowLeft') {
+                      event.preventDefault()
+                      updateHsl({ ...hsl, h: hsl.h - 1 })
+                    }
+                    if (event.key === 'ArrowRight') {
+                      event.preventDefault()
+                      updateHsl({ ...hsl, h: hsl.h + 1 })
+                    }
+                    if (event.key === 'ArrowDown') {
+                      event.preventDefault()
+                      updateHsl({ ...hsl, s: hsl.s - 1 })
+                    }
+                    if (event.key === 'ArrowUp') {
+                      event.preventDefault()
+                      updateHsl({ ...hsl, s: hsl.s + 1 })
+                    }
+                  }}
+                  className="relative h-44 w-44 touch-none cursor-crosshair rounded-full border border-white/15 shadow-[0_0_30px_rgba(0,0,0,0.45)] outline-none ring-cyan-300/40 transition focus-visible:ring-2"
                   style={{
                     background:
-                      'radial-gradient(circle at center, white 0 8%, transparent 9%), conic-gradient(from 90deg, #ef4444, #f97316, #facc15, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ef4444)',
+                      'radial-gradient(circle, white 0 2%, transparent 62%), conic-gradient(from 90deg, #ef4444, #f97316, #facc15, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ef4444)',
                   }}
                 >
-                  <span className="sr-only">Selected color</span>
                   <span
-                    className="h-14 w-14 rounded-full border-4 border-slate-950 shadow-[0_0_0_1px_rgba(255,255,255,0.24)]"
-                    style={{ backgroundColor: selectedColor ?? '#22D3EE' }}
+                    className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.55),0_0_16px_rgba(0,0,0,0.35)]"
+                    style={{
+                      ...getWheelPointerPosition(hsl),
+                      backgroundColor: selectedColor ?? '#22D3EE',
+                    }}
                     aria-hidden="true"
                   />
-                  <input
-                    type="color"
-                    value={selectedColor ?? '#22D3EE'}
-                    onChange={(event) => updateFromHex(event.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
-                </label>
+                </div>
               </div>
 
               <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/70 p-4">
@@ -278,9 +346,17 @@ export default function ColorMatchModal({
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/40">
                     Selected HEX
                   </p>
-                  <p className="mt-1 text-lg font-black text-white">
-                    {selectedColor ?? 'Invalid color'}
-                  </p>
+                  <input
+                    value={hex}
+                    onChange={(event) => updateFromHex(event.target.value)}
+                    onBlur={() => {
+                      if (selectedColor) setHex(selectedColor)
+                    }}
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-lg font-black uppercase text-white outline-none transition focus:border-cyan-300/60 focus:shadow-[0_0_18px_rgba(34,211,238,0.16)]"
+                    placeholder="#22D3EE"
+                    spellCheck={false}
+                    aria-label="Selected HEX"
+                  />
                 </div>
               </div>
 
@@ -288,7 +364,7 @@ export default function ColorMatchModal({
                 type="button"
                 onClick={findClosestPaints}
                 disabled={!selectedColor}
-                className="rounded-2xl bg-cyan-400 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.28)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/35 disabled:shadow-none"
+                className="tap-press tap-target rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.18)] transition hover:border-cyan-200/60 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/35 disabled:shadow-none"
               >
                 Find closest paints
               </button>

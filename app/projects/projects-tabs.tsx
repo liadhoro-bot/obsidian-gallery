@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import ProjectCreateForm from './project-create-form'
 import ProjectLibrary, { ProjectWithImage } from './project-library'
 
 type ProjectsTabsProps = {
   projects: ProjectWithImage[]
   addProjectAction: (formData: FormData) => Promise<void>
+  initialTab?: ActiveTab
 }
 
 type ActiveTab = 'mine' | 'create'
@@ -14,8 +16,16 @@ type ActiveTab = 'mine' | 'create'
 export default function ProjectsTabs({
   projects,
   addProjectAction,
+  initialTab = 'mine',
 }: ProjectsTabsProps) {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('mine')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const currentTab = searchParams.get('tab') === 'create' ? 'create' : 'mine'
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab)
+
+  useEffect(() => {
+    setActiveTab(currentTab)
+  }, [currentTab])
 
   const tabs: {
     key: ActiveTab
@@ -35,7 +45,17 @@ export default function ProjectsTabs({
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => {
+                setActiveTab(tab.key)
+                const params = new URLSearchParams(searchParams.toString())
+                if (tab.key === 'mine') {
+                  params.delete('tab')
+                } else {
+                  params.set('tab', tab.key)
+                }
+                const query = params.toString()
+                router.push(query ? `/projects?${query}` : '/projects')
+              }}
               className={[
                 'rounded-xl px-2 py-3 text-center text-xs font-black transition active:scale-[0.98] active:opacity-70',
                 isActive

@@ -27,7 +27,7 @@ export default function BackButton({
       type="button"
       onClick={handleBack}
       className={[
-        'inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-2 text-sm font-medium lowercase text-white backdrop-blur transition hover:bg-black/60',
+        'tap-press tap-target inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-2 text-sm font-medium lowercase text-white backdrop-blur hover:bg-black/60',
         className,
       ]
         .filter(Boolean)

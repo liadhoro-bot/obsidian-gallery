@@ -223,14 +223,24 @@
               <p className="text-sm font-black uppercase tracking-[0.22em] text-white/75">
                 Closest matches to {matchHex.toUpperCase()}
               </p>
-              <p className="mt-1 text-xs text-white/40">
-                Showing {matchedPaints.length} eligible catalog paints
-              </p>
+              <div className="mt-2 flex min-w-0 items-center gap-2">
+                <div
+                  className="h-7 w-7 shrink-0 rounded-xl border border-white/15"
+                  style={{ backgroundColor: matchHex }}
+                  aria-hidden="true"
+                />
+                <p className="min-w-0 text-xs text-white/40">
+                  Showing {matchedPaints.length} eligible catalog paints
+                </p>
+              </div>
             </div>
-            <div
-              className="h-11 w-11 shrink-0 rounded-2xl border border-white/15"
-              style={{ backgroundColor: matchHex }}
-              aria-hidden="true"
+            <VaultExportButton
+              tab={tab}
+              q={q}
+              brand={brand}
+              line={line}
+              ownership={ownership}
+              matchHex={matchHex}
             />
           </div>
 

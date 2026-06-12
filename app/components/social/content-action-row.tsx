@@ -171,7 +171,7 @@ export default function ContentActionRow({
 
 function actionClassName(active: boolean) {
   return [
-    'inline-flex items-center justify-center gap-2 text-xs font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70',
+    'micro-toggle inline-flex items-center justify-center gap-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-70',
     active
       ? 'text-cyan-300 hover:text-cyan-200'
       : 'text-white/55 hover:text-white/80',

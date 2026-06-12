@@ -217,14 +217,14 @@ export default function RecipeGallerySection({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:border-cyan-400/50 hover:text-cyan-100"
+                  className="tap-press mobile-upload-action rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm font-semibold text-white hover:border-cyan-400/50 hover:text-cyan-100"
                 >
                   Upload from Gallery
                 </button>
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-black transition hover:bg-cyan-400"
+                  className="tap-press mobile-upload-action rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-black hover:bg-cyan-400"
                 >
                   Take Photo
                 </button>
@@ -249,7 +249,7 @@ export default function RecipeGallerySection({
                     <button
                       type="button"
                       onClick={() => removePendingFile(index)}
-                      className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-0.5 text-xs font-bold text-white"
+                      className="tap-press absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-xs font-bold text-white"
                       aria-label={`Remove ${preview.file.name}`}
                     >
                       X
@@ -290,13 +290,13 @@ export default function RecipeGallerySection({
                     : 'Uploading image...'
                 }
                 disabled={selectedFiles.length === 0}
-                className="rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black"
+                className="rounded-xl bg-cyan-500 px-4 py-3 font-medium text-black"
               />
 
               <button
                 type="button"
                 onClick={() => setIsAddingImage(false)}
-                className="rounded-xl border border-neutral-700 bg-black px-4 py-2 text-white"
+                className="tap-press tap-target rounded-xl border border-neutral-700 bg-black px-4 py-2 text-white"
               >
                 Cancel
               </button>
@@ -338,7 +338,7 @@ export default function RecipeGallerySection({
                       type="button"
                       onClick={() => handleSetFeatured(image.id)}
                       disabled={isPending}
-                      className="rounded-full border border-neutral-700 bg-black px-2 py-1 text-xs text-white disabled:opacity-60"
+                      className="tap-press flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-black text-xs text-white disabled:opacity-60"
                       title="Set as featured"
                     >
                         ★
@@ -353,7 +353,7 @@ export default function RecipeGallerySection({
                           deleteConfirmImageId === image.id ? null : image.id
                         )
                       }
-                      className="rounded-full border border-neutral-700 bg-black px-2 py-1 text-xs text-white"
+                      className="tap-press flex h-8 w-8 items-center justify-center rounded-full border border-neutral-700 bg-black text-xs text-white"
                       title="Delete image"
                     >
                       X
@@ -370,7 +370,7 @@ export default function RecipeGallerySection({
                         type="button"
                         onClick={() => handleDeleteImage(image.id)}
                         disabled={isPending}
-                        className="rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60"
+                        className="tap-press tap-target rounded-xl border border-neutral-700 bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-60"
                       >
                         {isPending ? 'Deleting...' : 'Delete'}
                       </button>
@@ -378,7 +378,7 @@ export default function RecipeGallerySection({
                       <button
                         type="button"
                         onClick={() => setDeleteConfirmImageId(null)}
-                        className="rounded-xl border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
+                        className="tap-press tap-target rounded-xl border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
                       >
                         Cancel
                       </button>

@@ -114,7 +114,7 @@ export default function RecipeInventoryCard({
             return (
               <div
                 key={paint.uniqueKey}
-                className="rounded-2xl border border-neutral-800 bg-black/40 p-3 transition hover:border-cyan-500/50 hover:bg-black/60"
+                className="tap-card rounded-2xl border border-neutral-800 bg-black/40 p-3 hover:border-cyan-500/50 hover:bg-black/60"
               >
                 <div className="flex items-center justify-between gap-3">
                   <Link
@@ -164,7 +164,7 @@ export default function RecipeInventoryCard({
 
                         <button
                           type="submit"
-                          className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                          className={`micro-toggle rounded-full px-2.5 py-1 text-[10px] font-bold ${
                             paint.is_owned
                               ? 'bg-cyan-400 text-black'
                               : 'bg-neutral-700 text-neutral-300'
@@ -199,7 +199,7 @@ export default function RecipeInventoryCard({
 
                         <button
                           type="submit"
-                          className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                          className={`micro-toggle rounded-full px-2.5 py-1 text-[10px] font-bold ${
                             paint.is_wishlist
                               ? 'bg-orange-400 text-black'
                               : 'bg-neutral-700 text-neutral-300'

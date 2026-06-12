@@ -52,6 +52,7 @@ export default async function DashboardPage() {
       .single()
   )
   perf.total()
+
   return (
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">

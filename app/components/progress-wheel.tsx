@@ -24,7 +24,7 @@ export default function ProgressWheel({
 
   return (
     <div
-      className={`flex w-fit flex-col items-center gap-2 text-center ${className}`}
+      className={`progress-wheel-shell flex w-fit flex-col items-center gap-2 text-center ${className}`}
       aria-label={`${label}: ${safeValue}%`}
     >
       <svg
@@ -33,6 +33,7 @@ export default function ProgressWheel({
         role="img"
       >
         <circle
+          className="progress-wheel-fill"
           cx={center}
           cy={center}
           r={radius}

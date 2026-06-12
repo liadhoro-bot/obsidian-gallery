@@ -393,12 +393,14 @@ export default function VaultExportButton({
   brand,
   line,
   ownership,
+  matchHex = '',
 }: {
   tab: VaultTab
   q: string
   brand: string
   line: string
   ownership: string
+  matchHex?: string
 }) {
   const [open, setOpen] = useState(false)
   const [format, setFormat] = useState<ExportFormat>('csv')
@@ -420,6 +422,7 @@ export default function VaultExportButton({
           brand,
           line,
           ownership,
+          matchHex,
         }),
       })
 

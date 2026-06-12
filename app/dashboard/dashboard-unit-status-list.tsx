@@ -149,9 +149,6 @@ export default function DashboardUnitStatusList({
           id: unit.id,
           name: unit.name,
           imageUrl: unit.imageUrl,
-          status: unit.status,
-          progress: unit.progress,
-          deadline: unit.deadline,
         }))}
         cards={cardUnits}
         surface="dashboard_active_bench"

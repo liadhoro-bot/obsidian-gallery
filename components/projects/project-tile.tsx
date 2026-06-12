@@ -26,7 +26,7 @@ export default function ProjectTile({ project }: { project: ProjectTileData }) {
     <PrefetchLink
       href={`/projects/${project.id}`}
       viewportPrefetch
-      className="group block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] transition active:scale-[0.98] active:opacity-70 hover:border-cyan-400/70 hover:bg-white/[0.08]"
+      className="tap-card group block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] hover:border-cyan-400/70 hover:bg-white/[0.08]"
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-950">
         {project.imageUrl ? (
@@ -35,7 +35,7 @@ export default function ProjectTile({ project }: { project: ProjectTileData }) {
             alt={project.imageAlt || project.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 180px"
-            className="object-cover transition duration-300 group-hover:scale-105"
+            className="object-cover transition duration-[180ms] group-hover:scale-[1.025]"
           />
         ) : (
           <div className="h-full w-full bg-[radial-gradient(circle_at_25%_20%,rgba(34,211,238,0.22),transparent_34%),radial-gradient(circle_at_78%_75%,rgba(249,115,22,0.16),transparent_32%),linear-gradient(135deg,#111827,#020617)]" />

@@ -9,12 +9,16 @@ const tabs = [
   { key: 'create', label: 'Create Theme' },
 ]
 
-export default function ThemeTabsClient() {
+type Props = {
+  activeTab: string
+}
+
+export default function ThemeTabsClient({ activeTab }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
-  const currentTab = searchParams.get('tab') || 'find'
+  const currentTab = searchParams.get('tab') || activeTab
   const [optimisticTab, setOptimisticTab] = useState(currentTab)
 
   useEffect(() => {

@@ -33,7 +33,9 @@ async function addUnit(formData: FormData) {
   const projectId = formData.get('projectId')?.toString()
   const name = formData.get('name')?.toString().trim()
   const modelCountValue = formData.get('modelCount')?.toString().trim()
+  const deadline = formData.get('deadline')?.toString().trim() || null
   const notes = formData.get('notes')?.toString().trim() || null
+  const imageFile = formData.get('image')
 
   if (!projectId || !name) return
 
@@ -47,6 +49,7 @@ async function addUnit(formData: FormData) {
         project_id: projectId,
         name,
         model_count: Number.isNaN(modelCount) ? 1 : modelCount,
+        deadline,
         notes,
         is_active: true,
       },
@@ -67,6 +70,7 @@ await captureServerEvent({
     unit_name: name,
     project_id: projectId,
     model_count: Number.isNaN(modelCount) ? 1 : modelCount,
+    has_deadline: Boolean(deadline),
     has_notes: Boolean(notes),
     source: 'project_page',
   },
@@ -145,6 +149,52 @@ await captureServerEvent({
 
   if (legacyStageError) {
     console.error('Error creating legacy unit stages:', legacyStageError)
+  }
+
+  if (imageFile instanceof File && imageFile.size > 0) {
+    const validationError = validateGalleryImageFile(imageFile)
+
+    if (validationError) {
+      throw new Error(validationError)
+    }
+
+    const fileExt = getSafeImageExtension(imageFile.name)
+    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+    const filePath = `units/${insertedUnit.id}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('obsidian-images')
+      .upload(filePath, imageFile, {
+        contentType: imageFile.type,
+        upsert: false,
+      })
+
+    if (uploadError) {
+      throw new Error(uploadError.message)
+    }
+
+    const { data } = supabase.storage
+      .from('obsidian-images')
+      .getPublicUrl(filePath)
+
+    const publicUrl = data.publicUrl
+
+    const { error: imageError } = await supabase.from('image_assets').insert({
+      user_id: user.id,
+      entity_type: 'unit',
+      entity_id: insertedUnit.id,
+      image_url: publicUrl,
+      alt_text: name,
+      is_featured: true,
+      is_primary: true,
+      storage_bucket: 'obsidian-images',
+      storage_path: filePath,
+    })
+
+    if (imageError) {
+      await supabase.storage.from('obsidian-images').remove([filePath])
+      throw new Error(imageError.message)
+    }
   }
 
   revalidatePath(`/projects/${projectId}`)
@@ -577,6 +627,7 @@ const allStagesError =
     projectImageRows[0] ||
     null
   const projectTheme = firstRelation(project?.theme)
+  const defaultTab = (units?.length ?? 0) > 0 ? 'units' : 'add'
   const normalizedProject = project
     ? ({
         ...project,
@@ -615,6 +666,7 @@ const allStagesError =
         projectImagesError={projectImagesError}
         stagesByUnitId={stagesByUnitId}
         imagesByUnitId={imagesByUnitId}
+        defaultTab={defaultTab}
         addUnitAction={addUnit}
         updateProjectHeaderAction={updateProjectHeader}
         setFeaturedUnitAction={setFeaturedUnit}

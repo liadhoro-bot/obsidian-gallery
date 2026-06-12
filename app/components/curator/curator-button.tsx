@@ -76,6 +76,7 @@ export default function CuratorButton({
   const dismissedLoggedRef = useRef(false)
   const ctaClickedRef = useRef(false)
   const activePromptKeyRef = useRef<string | null>(null)
+  const historyEntryOpenRef = useRef(false)
 
   const derivedContext = useMemo<{
     surface: CuratorSurface
@@ -182,6 +183,11 @@ export default function CuratorButton({
   async function closeCurator(options: { logDismissed?: boolean } = { logDismissed: true }) {
     setIsOpen(false)
 
+    if (historyEntryOpenRef.current) {
+      historyEntryOpenRef.current = false
+      window.history.back()
+    }
+
     if (
       options.logDismissed &&
       promptEventInput &&
@@ -207,9 +213,38 @@ export default function CuratorButton({
     setIsOpen(false)
 
     if (normalizedCtaHref) {
-      router.push(normalizedCtaHref)
+      router.replace(normalizedCtaHref)
     }
   }
+
+  useEffect(() => {
+    if (!isOpen || historyEntryOpenRef.current) return
+
+    window.history.pushState({ curatorOpen: true }, '', window.location.href)
+    historyEntryOpenRef.current = true
+  }, [isOpen])
+
+  useEffect(() => {
+    function handlePopState() {
+      if (!historyEntryOpenRef.current) return
+
+      historyEntryOpenRef.current = false
+      ctaClickedRef.current = false
+      setIsOpen(false)
+
+      if (promptEventInput && !dismissedLoggedRef.current) {
+        dismissedLoggedRef.current = true
+        void logPromptEvent('dismissed', { dismissedBy: 'browser_back' })
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promptEventInput])
 
   useEffect(() => {
     if (hideOnDashboard && derivedContext.surface === 'dashboard') return
@@ -269,7 +304,7 @@ export default function CuratorButton({
       <button
         type="button"
         onClick={openCurator}
-        className="fixed bottom-24 left-1/2 z-40 ml-[8.5rem] flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/40 bg-[#07131a]/90 shadow-[0_0_28px_rgba(34,211,238,0.35)] backdrop-blur transition active:scale-95"
+        className="tap-press fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-40 ml-[8.5rem] flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/40 bg-[#07131a]/90 shadow-[0_0_28px_rgba(34,211,238,0.35)] backdrop-blur"
         aria-label="Open The Curator"
       >
         <Image
@@ -282,7 +317,7 @@ export default function CuratorButton({
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm">
+        <div className="curator-overlay fixed inset-0 z-40 bg-black/75 backdrop-blur-sm">
           <button
             type="button"
             aria-label="Close The Curator"
@@ -292,8 +327,8 @@ export default function CuratorButton({
             className="absolute inset-0"
           />
 
-          <div className="pointer-events-none fixed inset-x-0 top-14 bottom-16 z-50 mx-auto flex max-w-md flex-col items-center justify-start px-0 overflow-visible">
-            <div className="pointer-events-auto relative z-30 mx-3 w-[calc(100%-1.5rem)] rounded-[28px] border border-cyan-300/30 bg-[#02070b]/90 px-5 pb-6 pt-9 text-center text-white shadow-[0_0_55px_rgba(34,211,238,0.24)] backdrop-blur-md">
+          <div className="pointer-events-none fixed inset-x-0 top-[max(3.5rem,env(safe-area-inset-top))] bottom-[calc(4rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-md flex-col items-center justify-start overflow-visible px-0">
+            <div className="curator-panel mobile-scroll pointer-events-auto relative z-30 mx-3 max-h-[58dvh] w-[calc(100%-1.5rem)] overflow-y-auto rounded-[28px] border border-cyan-300/30 bg-[#02070b]/90 px-5 pb-6 pt-9 text-center text-white shadow-[0_0_55px_rgba(34,211,238,0.24)] backdrop-blur-md">
               <div className="absolute -top-7 left-1/2 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full border border-cyan-300/40 bg-[#02070b] shadow-[0_0_24px_rgba(34,211,238,0.45)]">
                 <Image
                   src="/curator/curator-bubble.png"
@@ -326,7 +361,7 @@ export default function CuratorButton({
                   onClick={() => {
                     void closeCurator()
                   }}
-                  className="rounded-xl border border-white/15 bg-white/[0.02] px-3 py-3 text-sm font-semibold text-slate-400"
+                  className="tap-press tap-target rounded-xl border border-white/15 bg-white/[0.02] px-3 py-3 text-sm font-semibold text-slate-400"
                 >
                   {message?.secondaryCtaLabel ?? 'Not Now'}
                 </button>
@@ -336,14 +371,14 @@ export default function CuratorButton({
                   onClick={() => {
                     void handleCtaClick()
                   }}
-                  className="rounded-xl border border-cyan-300/70 bg-cyan-400/10 px-3 py-3 text-sm font-semibold text-cyan-200 shadow-[0_0_20px_rgba(34,211,238,0.25)]"
+                  className="tap-press tap-target rounded-xl border border-cyan-300/70 bg-cyan-400/10 px-3 py-3 text-sm font-semibold text-cyan-200 shadow-[0_0_20px_rgba(34,211,238,0.25)]"
                 >
                   {message?.primaryCtaLabel ?? 'Show Me Insights'}
                 </button>
               </div>
             </div>
 
-            <div className="relative -mt-px min-h-0 flex-1 w-full overflow-hidden">
+            <div className="curator-character relative -mt-px min-h-0 flex-1 w-full overflow-hidden">
               <Image
                 src={curatorImageUrl}
                 alt="The Curator"

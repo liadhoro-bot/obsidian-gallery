@@ -5,6 +5,7 @@ export type DashboardCuratorState = {
   sessionsThisWeek: number
   daysSinceLastSession: number | null
   deadlineWithinDays: number | null
+  focusUnitId: string | null
   unitProgress: number | null
 }
 
