@@ -266,17 +266,17 @@ export default async function DashboardUnitInProgress({
         )}
 
         <div className="relative z-10 flex min-h-[260px] flex-col justify-end p-5 sm:p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-end justify-between gap-4 sm:gap-5">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">
                 {inProgressUnit.is_featured ? 'Featured Unit' : 'In Progress'}
               </p>
 
               <div className="mt-3 space-y-2">
-                <h2 className="max-w-xl text-3xl font-semibold leading-tight text-white sm:text-4xl">
+                <h2 className="max-w-xl text-2xl font-semibold leading-tight text-white sm:text-4xl">
                   {inProgressUnit.name}
                 </h2>
-                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-cyan-200/85">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-200/85 sm:text-sm">
                   Deadline: {formatDate(inProgressUnit.deadline)}
                 </p>
                 {inProgressUnit.is_featured && parentProjects.length > 0 ? (
@@ -291,7 +291,7 @@ export default async function DashboardUnitInProgress({
                 <PrefetchButton
                   type="submit"
                   prefetchHref={unitHref}
-                  className="inline-flex rounded-2xl border border-cyan-300/55 bg-black/45 px-5 py-3 text-sm font-black uppercase text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950"
+                  className="inline-flex rounded-2xl border border-cyan-300/55 bg-black/45 px-4 py-2.5 text-xs font-black uppercase text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950 sm:px-5 sm:py-3 sm:text-sm"
                 >
                   Resume Painting
                 </PrefetchButton>
@@ -300,7 +300,7 @@ export default async function DashboardUnitInProgress({
 
             <ProgressWheel
               value={progress}
-              className="shrink-0 self-start sm:self-end"
+              className="shrink-0 self-end"
             />
           </div>
         </div>
