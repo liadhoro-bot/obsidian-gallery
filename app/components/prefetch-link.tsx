@@ -10,6 +10,7 @@ import {
   useEffect,
   useRef,
 } from 'react'
+import { isPrefetchableHref, prefetchRoute } from './route-prefetch'
 
 type PrefetchLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> & {
   href: string
@@ -23,44 +24,9 @@ type PrefetchButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   prefetchHref: string
 }
 
-const prefetched = new Set<string>()
 let visiblePrefetchCount = 0
-let inFlight = 0
-const queue: (() => void)[] = []
-
-function schedule(task: () => void) {
-  queue.push(task)
-  drainQueue()
-}
-
-function drainQueue() {
-  if (inFlight >= 2) return
-
-  const task = queue.shift()
-  if (!task) return
-
-  inFlight += 1
-  task()
-  window.setTimeout(() => {
-    inFlight -= 1
-    drainQueue()
-  }, 250)
-}
 
 type Router = ReturnType<typeof useRouter>
-
-function isPrefetchableHref(href: string) {
-  return href.startsWith('/') && !href.startsWith('//')
-}
-
-export function prefetchRoute(router: Router, href: string) {
-  if (!isPrefetchableHref(href) || prefetched.has(href)) return
-
-  prefetched.add(href)
-  schedule(() => {
-    router.prefetch(href)
-  })
-}
 
 export function useRoutePrefetch(href: string) {
   const router = useRouter()
@@ -75,10 +41,9 @@ export default function PrefetchLink({
   prefetchHref = href,
   children,
   viewportPrefetch = false,
-  viewportLimit = 6,
+  viewportLimit = 2,
   onMouseEnter,
   onFocus,
-  onTouchStart,
   className,
   ...props
 }: PrefetchLinkProps) {
@@ -87,7 +52,7 @@ export default function PrefetchLink({
 
   const prefetch = useCallback(
     (countsAgainstViewportLimit: boolean) => {
-      if (!isPrefetchableHref(prefetchHref) || prefetched.has(prefetchHref)) {
+      if (!isPrefetchableHref(prefetchHref)) {
         return
       }
 
@@ -95,12 +60,8 @@ export default function PrefetchLink({
         return
       }
 
-      prefetched.add(prefetchHref)
-      if (countsAgainstViewportLimit) visiblePrefetchCount += 1
-
-      schedule(() => {
-        router.prefetch(prefetchHref)
-      })
+      const didPrefetch = prefetchRoute(router, prefetchHref)
+      if (countsAgainstViewportLimit && didPrefetch) visiblePrefetchCount += 1
     },
     [prefetchHref, router, viewportLimit]
   )
@@ -136,10 +97,6 @@ export default function PrefetchLink({
         prefetch(false)
         onFocus?.(event)
       }}
-      onTouchStart={(event) => {
-        prefetch(false)
-        onTouchStart?.(event)
-      }}
       className={['tap-card', className].filter(Boolean).join(' ')}
       {...props}
     >
@@ -152,7 +109,6 @@ export function PrefetchButton({
   prefetchHref,
   onMouseEnter,
   onFocus,
-  onTouchStart,
   className,
   ...props
 }: PrefetchButtonProps) {
@@ -168,10 +124,6 @@ export function PrefetchButton({
       onFocus={(event) => {
         prefetch()
         onFocus?.(event)
-      }}
-      onTouchStart={(event) => {
-        prefetch()
-        onTouchStart?.(event)
       }}
       className={['tap-press tap-target', className].filter(Boolean).join(' ')}
     />

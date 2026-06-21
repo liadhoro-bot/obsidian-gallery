@@ -77,7 +77,7 @@ export default async function SettingsProfileCard() {
           </span>
         </div>
 
-        <SettingsProfileEditor username={username} />
+        <SettingsProfileEditor email={user.email || ''} username={username} />
         
       </div>
     </section>

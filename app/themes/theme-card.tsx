@@ -95,6 +95,7 @@ export default function ThemeCard({
         hex: catalogPaint?.hex_approx || customPaint?.color_hex || null,
       }
     })
+    .filter((swatch) => swatch.imageUrl || swatch.hex)
     .sort((a, b) => a.sort_order - b.sort_order)
     .slice(0, 5)
 
@@ -112,16 +113,14 @@ export default function ThemeCard({
 
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-black/55" />
 
-      <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-full border border-white/10 bg-black/35 p-1 backdrop-blur">
-        {Array.from({ length: 5 }).map((_, index) => {
-          const swatch = swatches[index]
-
-          return (
+      {swatches.length > 0 && (
+        <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-full border border-white/10 bg-black/35 p-1 backdrop-blur">
+          {swatches.map((swatch) => (
             <div
-              key={swatch?.id || index}
+              key={swatch.id}
               className="relative h-6 w-6 overflow-hidden rounded-md border border-white/20 bg-white/10 shadow-sm"
             >
-              {swatch?.imageUrl ? (
+              {swatch.imageUrl ? (
                 <Image
                   src={swatch.imageUrl}
                   alt="Theme swatch"
@@ -129,16 +128,16 @@ export default function ThemeCard({
                   sizes="24px"
                   className="object-cover"
                 />
-              ) : swatch?.hex ? (
+              ) : (
                 <div
                   className="h-full w-full"
-                  style={{ backgroundColor: swatch.hex }}
+                  style={{ backgroundColor: swatch.hex || undefined }}
                 />
-              ) : null}
+              )}
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="absolute bottom-2 left-2 right-9">
         <h3 className="line-clamp-2 text-sm font-bold leading-tight text-white">
@@ -159,24 +158,6 @@ export default function ThemeCard({
       )}
 
       <div className="space-y-2 p-3">
-        <div className="flex flex-wrap gap-1.5">
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] text-white/55">
-            {theme.is_public ? 'Public' : 'Private'}
-          </span>
-
-          {isOwner && (
-            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2 py-0.5 text-[10px] text-cyan-200">
-              Owner
-            </span>
-          )}
-
-          {!isOwner && isSaved && (
-            <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[10px] text-white/55">
-              Saved
-            </span>
-          )}
-        </div>
-
         {isSelectingForProject && attachThemeToProjectAction ? (
           <form action={attachThemeToProjectAction}>
             <input type="hidden" name="projectId" value={selectForProject ?? ''} />
@@ -201,9 +182,10 @@ export default function ThemeCard({
         ) : (
           <button
             type="button"
-            className="tap-press w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/65"
+            className="w-full rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-300"
+            disabled
           >
-            Your Theme
+            Saved
           </button>
         )}
       </div>

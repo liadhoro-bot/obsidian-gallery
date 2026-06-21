@@ -552,6 +552,16 @@ export default async function ProjectDetailPage({
     .map((unit) => unit.id)
     .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
 
+  const { data: projectStatUnits, error: projectStatUnitsError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('project_id', id)
+    .eq('user_id', user.id)
+
+  const projectStatUnitIds = (projectStatUnits ?? [])
+    .map((unit) => unit.id)
+    .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
+
   const [stageProgressResult, progressStepsResult] = unitIds.length
   ? await Promise.all([
       supabase
@@ -576,6 +586,14 @@ const allStages = [
 
 const allStagesError =
   stageProgressResult.error || progressStepsResult.error
+
+  const { data: projectSessions, error: projectSessionsError } = projectStatUnitIds.length
+    ? await supabase
+        .from('unit_sessions')
+        .select('duration_seconds')
+        .eq('user_id', user.id)
+        .in('unit_id', projectStatUnitIds)
+    : { data: [], error: null }
 
   const { data: allUnitImages, error: allUnitImagesError } = unitIds.length
     ? await supabase
@@ -622,6 +640,19 @@ const allStagesError =
   )
 
   const projectImageRows = (projectImages ?? []) as ProjectImage[]
+  if (projectStatUnitsError || projectSessionsError) {
+    console.error(
+      'Error fetching project stats:',
+      projectStatUnitsError || projectSessionsError
+    )
+  }
+
+  const projectTotalSessionSeconds = (projectSessions ?? []).reduce(
+    (total, session) => {
+      return total + (session.duration_seconds ?? 0)
+    },
+    0
+  )
   const featuredProjectImage =
     projectImageRows.find((image) => image.is_featured) ||
     projectImageRows[0] ||
@@ -659,6 +690,8 @@ const allStagesError =
         projectId={id}
         featuredProjectImage={featuredProjectImage}
         projectImages={projectImageRows}
+        projectUnitCount={projectStatUnitIds.length}
+        projectTotalSessionSeconds={projectTotalSessionSeconds}
         units={units ?? []}
         unitsError={unitsError}
         allStagesError={allStagesError}

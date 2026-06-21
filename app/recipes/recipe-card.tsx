@@ -29,6 +29,7 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
               src={recipe.image_url}
               alt={recipe.name || 'Recipe image'}
               fill
+              sizes="(max-width: 768px) 50vw, 240px"
               className="object-cover transition duration-[180ms] group-hover:scale-[1.025]"
             />
           ) : (

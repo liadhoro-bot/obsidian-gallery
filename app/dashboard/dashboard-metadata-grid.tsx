@@ -1,10 +1,41 @@
 import { createClient } from '../../utils/supabase/server'
+import DashboardMetadataCards, {
+  type DashboardMetadataItem,
+} from './dashboard-metadata-cards'
 
 const USER_TIMEZONE = 'Asia/Jerusalem'
 
 function formatDuration(totalSeconds: number) {
   const totalHours = Math.floor(totalSeconds / 3600)
   return `${totalHours}h`
+}
+
+function formatSessionLength(totalSeconds: number) {
+  if (totalSeconds <= 0) {
+    return '0m'
+  }
+
+  const totalMinutes = Math.round(totalSeconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours === 0) {
+    return `${minutes}m`
+  }
+
+  if (minutes === 0) {
+    return `${hours}h`
+  }
+
+  return `${hours}h ${minutes}m`
+}
+
+function formatWeeklySessions(value: number) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0/wk'
+  }
+
+  return `${value.toFixed(value >= 10 ? 0 : 1)}/wk`
 }
 
 function formatTimeSince(dateString: string | null) {
@@ -74,6 +105,39 @@ function getPaintStreak(
   return `${streak}d`
 }
 
+type DashboardSession = {
+  created_at: string | null
+  duration_seconds: number | null
+}
+
+async function fetchAllSessions(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) {
+  const pageSize = 1000
+  const sessions: DashboardSession[] = []
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('unit_sessions')
+      .select('duration_seconds, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      throw error
+    }
+
+    const page = data ?? []
+    sessions.push(...page)
+
+    if (page.length < pageSize) {
+      return sessions
+    }
+  }
+}
+
 export default async function DashboardMetadataGrid({
   userId,
 }: {
@@ -100,7 +164,7 @@ export default async function DashboardMetadataGrid({
     totalUnitsResult,
     recentUnitsResult,
     ownedColorsResult,
-    sessionsResult,
+    sessions,
   ] = await Promise.all([
     supabase
       .from('units')
@@ -119,77 +183,101 @@ export default async function DashboardMetadataGrid({
       .eq('user_id', resolvedUserId)
       .eq('is_owned', true),
 
-    supabase
-  .from('unit_sessions')
-  .select('duration_seconds, created_at')
-  .eq('user_id', resolvedUserId)
-  .order('created_at', { ascending: false })
-  .limit(60),
+    fetchAllSessions(supabase, resolvedUserId),
   ])
 
   const totalUnits = totalUnitsResult.count ?? 0
   const recentUnits = recentUnitsResult.count ?? 0
   const ownedColors = ownedColorsResult.count ?? 0
 
-  const sessions = sessionsResult.data ?? []
-
   const totalSeconds = sessions.reduce((sum, session) => {
     return sum + (session.duration_seconds ?? 0)
   }, 0)
+
+  const completedSessions = sessions.filter(
+    (session) => (session.duration_seconds ?? 0) > 0
+  )
+  const averageSessionSeconds =
+    completedSessions.length > 0
+      ? completedSessions.reduce((sum, session) => {
+          return sum + (session.duration_seconds ?? 0)
+        }, 0) / completedSessions.length
+      : 0
+  const datedSessions = sessions.filter(
+    (session): session is DashboardSession & { created_at: string } =>
+      Boolean(session.created_at)
+  )
+  const oldestSessionAt = datedSessions[datedSessions.length - 1]?.created_at ?? null
+  const newestSessionAt = datedSessions[0]?.created_at ?? null
+  const sessionSpanWeeks =
+    oldestSessionAt && newestSessionAt
+      ? Math.max(
+          1,
+          (new Date(newestSessionAt).getTime() -
+            new Date(oldestSessionAt).getTime()) /
+            (1000 * 60 * 60 * 24 * 7)
+        )
+      : 0
+  const averageSessionsPerWeek =
+    datedSessions.length > 0 ? datedSessions.length / sessionSpanWeeks : 0
 
   const timeLogged = formatDuration(totalSeconds)
   const lastSessionAt = sessions[0]?.created_at ?? null
   const timeSinceLastSession = formatTimeSince(lastSessionAt)
   const paintStreak = getPaintStreak(sessions, USER_TIMEZONE)
+  const averageSessionLength = formatSessionLength(averageSessionSeconds)
+  const weeklySessions = formatWeeklySessions(averageSessionsPerWeek)
 
-  const items = [
+  const items: DashboardMetadataItem[] = [
     {
+      id: 'total-units',
       label: 'Total Units',
       value: totalUnits.toString(),
       accent: 'text-white',
     },
     {
+      id: 'added-last-30-days',
       label: 'Added Last 30 Days',
       value: `+${recentUnits}`,
       accent: 'text-orange-400',
     },
     {
+      id: 'time-logged',
       label: 'Time Logged',
       value: timeLogged,
       accent: 'text-white',
     },
     {
+      id: 'average-session-length',
+      label: 'Avg Session Length',
+      value: averageSessionLength,
+      accent: 'text-white',
+    },
+    {
+      id: 'weekly-sessions',
+      label: 'Weekly Sessions',
+      value: weeklySessions,
+      accent: 'text-orange-400',
+    },
+    {
+      id: 'colors-in-vault',
       label: 'Colors in Vault',
       value: ownedColors.toString(),
       accent: 'text-white',
     },
     {
+      id: 'since-last-session',
       label: 'Since Last Session',
       value: timeSinceLastSession,
       accent: 'text-white',
     },
     {
+      id: 'paint-streak',
       label: 'Paint Streak',
       value: paintStreak,
       accent: 'text-orange-400',
     },
   ]
 
-  return (
-    <section className="grid grid-cols-2 gap-3">
-      {items.map((item) => (
-        <div
-          key={item.label}
-          className="rounded-2xl border border-white/10 bg-white/5 p-4"
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
-            {item.label}
-          </p>
-          <p className={`mt-3 text-3xl font-semibold ${item.accent}`}>
-            {item.value}
-          </p>
-        </div>
-      ))}
-    </section>
-  )
+  return <DashboardMetadataCards items={items} />
 }

@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { prefetchRoute } from './prefetch-link'
+import { prefetchRoute } from './route-prefetch'
 
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
@@ -12,8 +11,6 @@ const navItems = [
   { name: 'Recipes', href: '/recipes', icon: '/icons/nav/recipes.svg' },
   { name: 'Themes', href: '/themes', icon: '/icons/nav/themes.svg' },
 ]
-
-const mainPrefetchHrefs = [...navItems.map((item) => item.href), '/settings']
 
 export default function MobileNav() {
   const pathname = usePathname()
@@ -26,36 +23,6 @@ export default function MobileNav() {
     pathname.startsWith('/offline') ||
     pathname.startsWith('/support') ||
     pathname.startsWith('/settings/terms')
-
-  useEffect(() => {
-    if (shouldHide) {
-      return
-    }
-
-    const win = window as Window & {
-      requestIdleCallback?: (
-        callback: IdleRequestCallback,
-        options?: IdleRequestOptions
-      ) => number
-      cancelIdleCallback?: (handle: number) => void
-    }
-
-    const prefetch = () => {
-      for (const href of mainPrefetchHrefs) {
-        if (href !== pathname) {
-          prefetchRoute(router, href)
-        }
-      }
-    }
-
-    if (win.requestIdleCallback && win.cancelIdleCallback) {
-      const idleId = win.requestIdleCallback(prefetch, { timeout: 2500 })
-      return () => win.cancelIdleCallback?.(idleId)
-    }
-
-    const timeoutId = window.setTimeout(prefetch, 1200)
-    return () => window.clearTimeout(timeoutId)
-  }, [pathname, router, shouldHide])
 
   if (shouldHide) {
     return null

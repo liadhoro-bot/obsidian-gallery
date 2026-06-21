@@ -1,9 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
+import { useDeferredValue, useMemo, useState } from 'react'
 import RecipeCard from './recipe-card'
 import RecipeSearchBar from './recipe-search-bar'
-import CreateRecipeForm from './create-recipe-form'
+const CreateRecipeForm = dynamic(() => import('./create-recipe-form'))
 
 type Recipe = {
   id: string
@@ -35,6 +36,8 @@ export default function RecipesPageClient({
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab)
   const [findSearch, setFindSearch] = useState('')
   const [mySearch, setMySearch] = useState('')
+  const deferredFindSearch = useDeferredValue(findSearch)
+  const deferredMySearch = useDeferredValue(mySearch)
 
   const savedSet = useMemo(() => new Set(savedRecipeIds), [savedRecipeIds])
 
@@ -54,25 +57,26 @@ export default function RecipesPageClient({
     return Array.from(map.values())
   }, [myRecipes, savedRecipes])
 
-  const filteredPublicRecipes = publicRecipes.filter((recipe) =>
-    recipe.name?.toLowerCase().includes(findSearch.toLowerCase())
-  )
+  const filteredPublicRecipes = useMemo(() => {
+    const search = deferredFindSearch.toLowerCase()
 
-  const filteredMyLibrary = myLibrary.filter((recipe) =>
-    recipe.name?.toLowerCase().includes(mySearch.toLowerCase())
-  )
+    return publicRecipes.filter((recipe) =>
+      recipe.name?.toLowerCase().includes(search)
+    )
+  }, [deferredFindSearch, publicRecipes])
+
+  const filteredMyLibrary = useMemo(() => {
+    const search = deferredMySearch.toLowerCase()
+
+    return myLibrary.filter((recipe) =>
+      recipe.name?.toLowerCase().includes(search)
+    )
+  }, [deferredMySearch, myLibrary])
 
   return (
     <section className="space-y-5">
       {/* ✅ TABS */}
       <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
-        <button
-          onClick={() => setActiveTab('find')}
-          className={tabClass(activeTab === 'find')}
-        >
-          Find Recipe
-        </button>
-
         <button
           onClick={() => setActiveTab('mine')}
           className={tabClass(activeTab === 'mine')}
@@ -81,10 +85,17 @@ export default function RecipesPageClient({
         </button>
 
         <button
+          onClick={() => setActiveTab('find')}
+          className={tabClass(activeTab === 'find')}
+        >
+          Find Recipe
+        </button>
+
+        <button
           onClick={() => setActiveTab('custom')}
           className={tabClass(activeTab === 'custom')}
         >
-          Custom Recipe
+          Create Recipe
         </button>
       </div>
 

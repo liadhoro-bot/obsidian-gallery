@@ -25,9 +25,9 @@ export default function VaultSegmentedTabs({
     key: VaultTab
     label: string
   }[] = [
-    { key: 'find', label: 'Find Color' },
     { key: 'collection', label: 'My Collection' },
-    { key: 'custom', label: 'Custom Color' },
+    { key: 'find', label: 'Find Paint' },
+    { key: 'custom', label: 'Create Custom' },
   ]
 
   return (

@@ -37,6 +37,9 @@ export default function RecipeGallerySection({
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [localImages, setLocalImages] = useState(recipeImages)
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([])
+  const [isEditingImages, setIsEditingImages] = useState(false)
+  const [isConfirmingBatchDelete, setIsConfirmingBatchDelete] = useState(false)
   const [isPending, startTransition] = useTransition()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
@@ -153,6 +156,9 @@ export default function RecipeGallerySection({
 
     setActionError(null)
     setDeleteConfirmImageId(null)
+    setSelectedImageIds((current) =>
+      current.filter((selectedImageId) => selectedImageId !== imageId)
+    )
     setLocalImages((current) => current.filter((image) => image.id !== imageId))
 
     startTransition(async () => {
@@ -163,6 +169,47 @@ export default function RecipeGallerySection({
         setDeleteConfirmImageId(imageId)
         setActionError(
           error instanceof Error ? error.message : 'Could not delete image.'
+        )
+      }
+    })
+  }
+
+  function toggleSelectedImage(imageId: string) {
+    setIsConfirmingBatchDelete(false)
+    setSelectedImageIds((current) =>
+      current.includes(imageId)
+        ? current.filter((selectedImageId) => selectedImageId !== imageId)
+        : [...current, imageId]
+    )
+  }
+
+  function handleDeleteSelectedImages() {
+    if (selectedImageIds.length === 0) return
+
+    const imageIdsToDelete = selectedImageIds
+    const previousImages = localImages
+    const formData = new FormData()
+
+    formData.set('recipeId', recipe.id)
+    imageIdsToDelete.forEach((imageId) =>
+      formData.append('imageIds', imageId)
+    )
+
+    setActionError(null)
+    setIsConfirmingBatchDelete(false)
+    setSelectedImageIds([])
+    setLocalImages((current) =>
+      current.filter((image) => !imageIdsToDelete.includes(image.id))
+    )
+
+    startTransition(async () => {
+      try {
+        await deleteRecipeImageAction(formData)
+      } catch (error) {
+        setLocalImages(previousImages)
+        setSelectedImageIds(imageIdsToDelete)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not delete images.'
         )
       }
     })
@@ -312,20 +359,107 @@ export default function RecipeGallerySection({
       ) : null}
 
       {localImages.length > 0 ? (
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          {localImages.map((image) => (
-            <div
-              key={image.id}
-              className="overflow-hidden rounded-2xl border border-neutral-800 bg-black"
-            >
+        <>
+          {isOwner ? (
+            <>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingImages((current) => !current)
+                    setSelectedImageIds([])
+                    setIsConfirmingBatchDelete(false)
+                  }}
+                  className="tap-press rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-white"
+                >
+                  {isEditingImages ? 'Done' : 'Edit'}
+                </button>
+              </div>
+
+              {isEditingImages ? (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-neutral-800 bg-black p-3">
+                  <p className="text-xs font-semibold text-neutral-400">
+                    {selectedImageIds.length > 0
+                      ? `${selectedImageIds.length} selected`
+                      : 'Select images to erase'}
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedImageIds(localImages.map((image) => image.id))
+                      }
+                      className="tap-press rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-white"
+                    >
+                      Select All
+                    </button>
+
+                    {selectedImageIds.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedImageIds([])
+                          setIsConfirmingBatchDelete(false)
+                        }}
+                        className="tap-press rounded-lg border border-neutral-700 px-3 py-2 text-xs font-semibold text-white"
+                      >
+                        Clear
+                      </button>
+                    ) : null}
+
+                    {selectedImageIds.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          isConfirmingBatchDelete
+                            ? handleDeleteSelectedImages()
+                            : setIsConfirmingBatchDelete(true)
+                        }
+                        disabled={isPending}
+                        className="tap-press rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
+                      >
+                        {isPending
+                          ? 'Deleting...'
+                          : isConfirmingBatchDelete
+                            ? `Erase ${selectedImageIds.length}`
+                            : 'Delete Selected'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            {localImages.map((image) => (
+              <div
+                key={image.id}
+                className="overflow-hidden rounded-2xl border border-neutral-800 bg-black"
+              >
+              <div className="relative">
+                {isOwner && isEditingImages ? (
+                  <label className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 ring-1 ring-white/20">
+                    <input
+                      type="checkbox"
+                      checked={selectedImageIds.includes(image.id)}
+                      onChange={() => toggleSelectedImage(image.id)}
+                      className="h-4 w-4 accent-red-500"
+                      aria-label="Select image for deletion"
+                    />
+                  </label>
+                ) : null}
+
               <Image
                 src={image.image_url}
                 alt={image.alt_text || recipe.name}
-                width={320}
-                height={160}
-                sizes="(max-width: 768px) 50vw, 200px"
-                className="h-40 w-full object-cover"
+                width={180}
+                height={120}
+                sizes="(max-width: 768px) 33vw, 160px"
+                className="h-28 w-full object-cover"
               />
+              </div>
 
               <div className="space-y-2 p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -391,8 +525,9 @@ export default function RecipeGallerySection({
                 ) : null}
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       ) : (
         <p className="mt-4 text-sm text-neutral-400">No recipe images yet.</p>
       )}

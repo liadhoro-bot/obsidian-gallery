@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import posthog from 'posthog-js'
+import { capturePostHog } from '../../utils/analytics/client'
 import DisplayModeToggle, {
   type DisplayMode,
 } from '../display-mode-toggle'
@@ -47,7 +47,7 @@ export default function ProjectListView({
   function handleModeChange(nextMode: DisplayMode) {
     setMode(nextMode)
     window.localStorage.setItem(STORAGE_KEY, nextMode)
-    posthog.capture('display_mode_changed', {
+    capturePostHog('display_mode_changed', {
       entity: 'project',
       mode: nextMode,
       surface,

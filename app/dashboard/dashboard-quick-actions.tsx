@@ -1,9 +1,13 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import PaintPickerDialog from '../../components/paints/paint-picker-dialog'
 import PrefetchLink from '../components/prefetch-link'
+
+const PaintPickerDialog = dynamic(
+  () => import('../../components/paints/paint-picker-dialog')
+)
 
 type Action = {
   label: string
@@ -153,7 +157,7 @@ export default function DashboardQuickActions() {
 
       {showStartOptions ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 pb-5 backdrop-blur-sm sm:items-center sm:pb-0"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-24 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label="Start Project or Unit"

@@ -345,6 +345,12 @@ export default function UnitDetailClient({
   const [liveNow, setLiveNow] = useState(() => Date.now())
   const [unit, setLocalUnit] = useState(initialUnit)
   const [localImages, setLocalImages] = useState(images)
+  const [selectedGalleryImageIds, setSelectedGalleryImageIds] = useState<
+    string[]
+  >([])
+  const [isEditingGalleryImages, setIsEditingGalleryImages] = useState(false)
+  const [isConfirmingGalleryDelete, setIsConfirmingGalleryDelete] =
+    useState(false)
   const [localStagePaints, setLocalStagePaints] = useState(stagePaints)
   const [localParentProjects, setLocalParentProjects] = useState(parentProjects)
   const [localSelectedProjectIds, setLocalSelectedProjectIds] =
@@ -670,6 +676,9 @@ const handleRemoveStagePaint = (stagePaintId: string) => {
 const handleRemoveStagePhoto = (imageId: string) => {
   const previousImages = localImages
   setLocalImages((current) => current.filter((image) => image.id !== imageId))
+  setSelectedGalleryImageIds((current) =>
+    current.filter((selectedImageId) => selectedImageId !== imageId)
+  )
 
   startTransition(async () => {
     const formData = new FormData()
@@ -685,6 +694,48 @@ const handleRemoveStagePhoto = (imageId: string) => {
     }
   })
 }
+
+  const handleToggleGalleryImageSelection = (imageId: string) => {
+    setIsConfirmingGalleryDelete(false)
+    setSelectedGalleryImageIds((current) =>
+      current.includes(imageId)
+        ? current.filter((selectedImageId) => selectedImageId !== imageId)
+        : [...current, imageId]
+    )
+  }
+
+  const handleDeleteSelectedGalleryImages = () => {
+    if (selectedGalleryImageIds.length === 0) return
+
+    const imageIdsToDelete = selectedGalleryImageIds
+    const previousImages = localImages
+
+    setGalleryUploadError(null)
+    setIsConfirmingGalleryDelete(false)
+    setSelectedGalleryImageIds([])
+    setLocalImages((current) =>
+      current.filter((image) => !imageIdsToDelete.includes(image.id))
+    )
+
+    startTransition(async () => {
+      const formData = new FormData()
+
+      formData.set('unitId', unit.id)
+      imageIdsToDelete.forEach((imageId) =>
+        formData.append('imageIds', imageId)
+      )
+
+      try {
+        await deleteUnitImage(formData)
+      } catch (error) {
+        setLocalImages(previousImages)
+        setSelectedGalleryImageIds(imageIdsToDelete)
+        setGalleryUploadError(
+          error instanceof Error ? error.message : 'Could not delete images.'
+        )
+      }
+    })
+  }
 
   const handleUploadClick = () => {
     fileInputRef.current?.click()
@@ -1359,16 +1410,105 @@ const handleRemoveStagePhoto = (imageId: string) => {
               </p>
             ) : null}
 
-            <div className="mt-4 grid grid-cols-2 gap-4">
+            {localImages.length > 0 ? (
+              <>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingGalleryImages((current) => !current)
+                      setSelectedGalleryImageIds([])
+                      setIsConfirmingGalleryDelete(false)
+                    }}
+                    className="tap-press rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70"
+                  >
+                    {isEditingGalleryImages ? 'Done' : 'Edit'}
+                  </button>
+                </div>
+
+                {isEditingGalleryImages ? (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-xs font-semibold text-white/55">
+                      {selectedGalleryImageIds.length > 0
+                        ? `${selectedGalleryImageIds.length} selected`
+                        : 'Select images to erase'}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedGalleryImageIds(
+                            localImages.map((image) => image.id)
+                          )
+                        }
+                        className="tap-press rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70"
+                      >
+                        Select All
+                      </button>
+
+                      {selectedGalleryImageIds.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedGalleryImageIds([])
+                            setIsConfirmingGalleryDelete(false)
+                          }}
+                          className="tap-press rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70"
+                        >
+                          Clear
+                        </button>
+                      ) : null}
+
+                      {selectedGalleryImageIds.length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            isConfirmingGalleryDelete
+                              ? handleDeleteSelectedGalleryImages()
+                              : setIsConfirmingGalleryDelete(true)
+                          }
+                          disabled={isPending}
+                          className="tap-press rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
+                        >
+                          {isPending
+                            ? 'Deleting...'
+                            : isConfirmingGalleryDelete
+                              ? `Erase ${selectedGalleryImageIds.length}`
+                              : 'Delete Selected'}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+
+            <div className="mt-4 grid grid-cols-3 gap-3">
               {localImages.map((image) => (
-                <GalleryImageCard
-                  key={image.id}
-                  image={image}
-                  canEdit={true}
-                  onToggleFeatured={async (imageId) => {
-                    handleSetFeatured(imageId)
-                  }}
-                />
+                <div key={image.id} className="relative">
+                  {isEditingGalleryImages ? (
+                    <label className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 ring-1 ring-white/20">
+                      <input
+                        type="checkbox"
+                        checked={selectedGalleryImageIds.includes(image.id)}
+                        onChange={() =>
+                          handleToggleGalleryImageSelection(image.id)
+                        }
+                        className="h-4 w-4 accent-red-500"
+                        aria-label="Select image for deletion"
+                      />
+                    </label>
+                  ) : null}
+
+                  <GalleryImageCard
+                    image={image}
+                    canEdit={true}
+                    onToggleFeatured={async (imageId) => {
+                      handleSetFeatured(imageId)
+                    }}
+                  />
+                </div>
               ))}
 
               <button

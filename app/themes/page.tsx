@@ -1,8 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
-import ThemeTabsClient from './theme-tabs-client'
-import ThemeCard from './theme-card'
-import ThemeForm from './theme-form'
+import ThemesPageClient from './themes-page-client'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import {
   getCachedCatalogPaintOptions,
@@ -13,6 +11,7 @@ import { createPerfTimer } from '../../utils/perf/server'
 type Props = {
   searchParams: Promise<{
     tab?: string
+    q?: string
     selectForProject?: string
   }>
 }
@@ -50,6 +49,7 @@ type ThemeSummary = {
   description: string | null
   image_url: string | null
   is_public: boolean | null
+  tags?: string[] | null
   theme_paints?: ThemePaintSummary[] | null
 }
 
@@ -172,6 +172,7 @@ async function attachThemeToProject(formData: FormData) {
 export default async function ThemesPage({ searchParams }: Props) {
   const perf = createPerfTimer('/themes')
   const params = await searchParams
+  const themeSearch = params.q?.trim() || ''
   const selectForProject = params.selectForProject || null
   const supabase = await createClient()
 
@@ -201,6 +202,7 @@ export default async function ThemesPage({ searchParams }: Props) {
   description,
   image_url,
   is_public,
+  tags,
   created_at,
   theme_paints (
     id,
@@ -234,6 +236,7 @@ export default async function ThemesPage({ searchParams }: Props) {
             description,
             image_url,
             is_public,
+            tags,
             created_at,
             theme_paints (
               id,
@@ -351,51 +354,17 @@ export default async function ThemesPage({ searchParams }: Props) {
           </p>
         </div>
 
-        <ThemeTabsClient activeTab={tab} />
-
-        {tab === 'find' && (
-          <div className="grid grid-cols-2 gap-3">
-            {(publicThemes ?? []).length > 0 ? (
-              publicThemeRows.map((theme) => (
-                <ThemeCard
-                  key={theme.id}
-                  theme={theme}
-                  currentUserId={user.id}
-                  isSaved={savedThemeIds.includes(theme.id)}
-                  selectForProject={selectForProject}
-                  attachThemeToProjectAction={attachThemeToProject}
-                />
-              ))
-            ) : (
-              <div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/60">
-                No public themes yet.
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === 'mine' && (
-          <div className="grid grid-cols-2 gap-3">
-            {myAndSavedThemes.length > 0 ? (
-              myAndSavedThemes.map((theme) => (
-                <ThemeCard
-                  key={theme.id}
-                  theme={theme}
-                  currentUserId={user.id}
-                  isSaved={savedThemeIds.includes(theme.id)}
-                  selectForProject={selectForProject}
-                  attachThemeToProjectAction={attachThemeToProject}
-                />
-              ))
-            ) : (
-              <div className="col-span-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/60">
-                You have not created or saved any themes yet.
-              </div>
-            )}
-          </div>
-        )}
-
-        {tab === 'create' && <ThemeForm paints={paintOptions} />}
+        <ThemesPageClient
+          currentUserId={user.id}
+          publicThemes={publicThemeRows}
+          myAndSavedThemes={myAndSavedThemes}
+          savedThemeIds={savedThemeIds}
+          paintOptions={paintOptions}
+          defaultTab={tab}
+          initialSearch={themeSearch}
+          selectForProject={selectForProject}
+          attachThemeToProjectAction={attachThemeToProject}
+        />
       </div>
     </main>
   )

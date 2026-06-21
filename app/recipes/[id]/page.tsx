@@ -795,26 +795,53 @@ async function deleteRecipeImage(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
   const recipeId = formData.get('recipeId')?.toString()
+  const imageIds = formData
+    .getAll('imageIds')
+    .map((value) => String(value))
+    .filter(Boolean)
   const imageId = formData.get('imageId')?.toString()
+  const targetImageIds = imageIds.length > 0 ? imageIds : imageId ? [imageId] : []
 
-  if (!recipeId || !imageId) return
+  if (!recipeId || targetImageIds.length === 0) return
 
-  const { data: image, error: fetchError } = await supabase
+  const { data: images, error: fetchError } = await supabase
     .from('image_assets')
     .select('id, storage_bucket, storage_path, is_featured')
-    .eq('id', imageId)
-    .single()
+    .eq('entity_type', 'recipe')
+    .eq('entity_id', recipeId)
+    .eq('user_id', user.id)
+    .in('id', targetImageIds)
 
-  if (fetchError || !image) {
+  if (fetchError || !images || images.length === 0) {
     console.error('Error fetching recipe image for delete:', fetchError)
     return
   }
 
-  if (image.storage_bucket && image.storage_path) {
+  const storagePathsByBucket = images.reduce<Record<string, string[]>>(
+    (acc, image) => {
+      if (image.storage_bucket && image.storage_path) {
+        acc[image.storage_bucket] = acc[image.storage_bucket] || []
+        acc[image.storage_bucket].push(image.storage_path)
+      }
+
+      return acc
+    },
+    {}
+  )
+
+  for (const [bucket, paths] of Object.entries(storagePathsByBucket)) {
     const { error: storageError } = await supabase.storage
-      .from(image.storage_bucket)
-      .remove([image.storage_path])
+      .from(bucket)
+      .remove(paths)
 
     if (storageError) {
       console.error('Error deleting recipe image from storage:', storageError)
@@ -825,14 +852,17 @@ async function deleteRecipeImage(formData: FormData) {
   const { error: deleteError } = await supabase
     .from('image_assets')
     .delete()
-    .eq('id', imageId)
+    .eq('entity_type', 'recipe')
+    .eq('entity_id', recipeId)
+    .eq('user_id', user.id)
+    .in('id', images.map((image) => image.id))
 
   if (deleteError) {
     console.error('Error deleting recipe image asset:', deleteError)
     return
   }
 
-  if (image.is_featured) {
+  if (images.some((image) => image.is_featured)) {
     const { data: remainingImages } = await supabase
       .from('image_assets')
       .select('id')

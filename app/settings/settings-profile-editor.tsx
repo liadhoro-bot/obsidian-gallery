@@ -3,23 +3,29 @@
 import { useActionState, useState } from 'react'
 import SubmitButton from '../components/SubmitButton'
 import {
-  updateUsernameAction,
-  type UpdateUsernameState,
+  updateProfileAction,
+  type UpdateProfileState,
 } from './settings-actions'
 
-const initialState: UpdateUsernameState = {
+const initialState: UpdateProfileState = {
   error: null,
+  message: null,
 }
 
 export default function SettingsProfileEditor({
+  email,
   username,
 }: {
+  email: string
   username: string
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [clientError, setClientError] = useState<string | null>(null)
-  const [state, formAction] = useActionState(updateUsernameAction, initialState)
+  const [state, formAction] = useActionState(updateProfileAction, initialState)
   const errorMessage = clientError || state.error
+  const messageId = errorMessage ? 'profile-error' : 'profile-message'
+  const currentUsername = username === 'No username yet' ? '' : username
+  const currentEmail = email.trim()
 
   if (!isEditing) {
     return (
@@ -42,10 +48,36 @@ export default function SettingsProfileEditor({
         const nextUsername = String(formData.get('username') || '')
           .trim()
           .replace(/^@/, '')
+        const nextEmail = String(formData.get('email') || '').trim()
 
         if (!nextUsername) {
           event.preventDefault()
           setClientError('Username cannot be empty.')
+          return
+        }
+
+        if (!nextEmail) {
+          event.preventDefault()
+          setClientError('Email cannot be empty.')
+          return
+        }
+
+        if (!event.currentTarget.reportValidity()) {
+          event.preventDefault()
+          return
+        }
+
+        const usernameChanged = nextUsername !== currentUsername
+        const emailChanged =
+          nextEmail.toLowerCase() !== currentEmail.toLowerCase()
+
+        if (
+          (usernameChanged || emailChanged) &&
+          !window.confirm(
+            'Are you sure you want to change your profile details?'
+          )
+        ) {
+          event.preventDefault()
         }
       }}
     >
@@ -55,14 +87,32 @@ export default function SettingsProfileEditor({
         placeholder="Choose a username"
         required
         aria-invalid={Boolean(errorMessage)}
-        aria-describedby={errorMessage ? 'username-error' : undefined}
+        aria-describedby={errorMessage || state.message ? messageId : undefined}
+        onChange={() => setClientError(null)}
+        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-center text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/60"
+      />
+
+      <input
+        name="email"
+        type="email"
+        defaultValue={email}
+        placeholder="Email address"
+        required
+        aria-invalid={Boolean(errorMessage)}
+        aria-describedby={errorMessage || state.message ? messageId : undefined}
         onChange={() => setClientError(null)}
         className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-center text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/60"
       />
 
       {errorMessage ? (
-        <p id="username-error" className="text-sm font-medium text-red-300">
+        <p id="profile-error" className="text-sm font-medium text-red-300">
           {errorMessage}
+        </p>
+      ) : null}
+
+      {!errorMessage && state.message ? (
+        <p id="profile-message" className="text-sm font-medium text-cyan-200">
+          {state.message}
         </p>
       ) : null}
 

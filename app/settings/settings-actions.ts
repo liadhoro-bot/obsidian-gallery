@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { createClient } from '../../utils/supabase/server'
 
 export async function logout() {
@@ -63,17 +64,20 @@ export async function updateAvatar(formData: FormData) {
   revalidatePath('/dashboard')
 }
 export async function updateUsername(formData: FormData) {
-  return updateUsernameAction(null, formData)
+  return updateProfileAction(null, formData)
 }
 
-export type UpdateUsernameState = {
+export type UpdateProfileState = {
   error: string | null
+  message: string | null
 }
 
-export async function updateUsernameAction(
-  _prevState: UpdateUsernameState | null,
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export async function updateProfileAction(
+  _prevState: UpdateProfileState | null,
   formData: FormData
-): Promise<UpdateUsernameState> {
+): Promise<UpdateProfileState> {
   const supabase = await createClient()
 
   const {
@@ -81,15 +85,27 @@ export async function updateUsernameAction(
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: 'Please sign in again before updating your profile.' }
+    return {
+      error: 'Please sign in again before updating your profile.',
+      message: null,
+    }
   }
 
   const username = String(formData.get('username') || '')
     .trim()
     .replace(/^@/, '')
+  const email = String(formData.get('email') || '').trim()
 
   if (!username) {
-    return { error: 'Username cannot be empty.' }
+    return { error: 'Username cannot be empty.', message: null }
+  }
+
+  if (!email) {
+    return { error: 'Email cannot be empty.', message: null }
+  }
+
+  if (!emailPattern.test(email)) {
+    return { error: 'Enter a valid email address.', message: null }
   }
 
   const { error } = await supabase
@@ -98,11 +114,36 @@ export async function updateUsernameAction(
     .eq('id', user.id)
 
   if (error) {
-    return { error: error.message }
+    return { error: error.message, message: null }
+  }
+
+  const emailChanged = email.toLowerCase() !== user.email?.toLowerCase()
+
+  if (emailChanged) {
+    const requestHeaders = await headers()
+    const origin = requestHeaders.get('origin')
+
+    const { error: emailError } = await supabase.auth.updateUser(
+      { email },
+      origin
+        ? {
+            emailRedirectTo: `${origin}/auth/callback?next=/settings`,
+          }
+        : undefined
+    )
+
+    if (emailError) {
+      return { error: emailError.message, message: null }
+    }
   }
 
   revalidatePath('/settings')
   revalidatePath('/dashboard')
 
-  return { error: null }
+  return {
+    error: null,
+    message: emailChanged
+      ? 'Profile saved. Check your inbox to confirm the new email address.'
+      : 'Profile saved.',
+  }
 }

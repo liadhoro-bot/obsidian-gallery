@@ -1,7 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-
 type BackButtonProps = {
   fallbackHref: string
   className?: string
@@ -11,15 +9,13 @@ export default function BackButton({
   fallbackHref,
   className,
 }: BackButtonProps) {
-  const router = useRouter()
-
   function handleBack() {
     if (window.history.length > 1) {
-      router.back()
+      window.history.back()
       return
     }
 
-    router.push(fallbackHref)
+    window.location.assign(fallbackHref)
   }
 
   return (

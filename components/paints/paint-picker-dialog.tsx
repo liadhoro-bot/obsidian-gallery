@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import type { KeyboardEvent, MouseEvent } from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import posthog from 'posthog-js'
+import { capturePostHog } from '../../utils/analytics/client'
 
 export type PaintPickerPaint = {
   id: string
@@ -277,7 +277,7 @@ export default function PaintPickerDialog({
 
   const capture = useCallback(
     (event: string, properties: Record<string, unknown> = {}) => {
-      posthog.capture(event, {
+      capturePostHog(event, {
         context: source,
         source,
         brand: brand || null,
@@ -476,14 +476,14 @@ export default function PaintPickerDialog({
 
   return (
     <div
-      className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/75 backdrop-blur-sm"
+      className="mobile-sheet-overlay paint-picker-overlay fixed inset-0 z-50 flex justify-center bg-black/75 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={title}
       onClick={closeDialog}
     >
       <div
-        className="mobile-sheet max-w-lg rounded-3xl border border-white/10 bg-[#07111b] shadow-[0_0_42px_rgba(34,211,238,0.18)]"
+        className="mobile-sheet paint-picker-sheet max-w-lg rounded-3xl border border-white/10 bg-[#07111b] shadow-[0_0_42px_rgba(34,211,238,0.18)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="border-b border-white/10 p-4">

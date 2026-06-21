@@ -5,10 +5,15 @@ import { createClient } from '../../../utils/supabase/server'
 import SubmitButton from '../../components/SubmitButton'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import ThemeDetailHero from './theme-detail-hero'
+import ThemeImageGallery from './theme-image-gallery'
 import ThemePaletteEditor from './theme-palette-editor'
 import ThemeAssignmentPanel from './theme-assignment-panel'
 import DeleteConfirmationCard from '../../components/delete-confirmation-card'
-import { calculateThemePaletteAction, deleteTheme } from './actions'
+import {
+  calculateThemePaletteAction,
+  deleteTheme,
+  deleteThemeImage,
+} from './actions'
 import { getCachedPublicTheme } from '../../../lib/public-cache'
 import { createPerfTimer } from '../../../utils/perf/server'
 import ContentActionRow from '../../components/social/content-action-row'
@@ -625,6 +630,15 @@ export default async function ThemeDetailPage({ params }: Props) {
           toggleSaveAction={toggleThemeSave}
           reportAction={reportTheme}
         />
+
+        {isOwner ? (
+          <ThemeImageGallery
+            themeId={theme.id}
+            heroUrl={heroUrl}
+            themeName={theme.name || 'Theme image'}
+            deleteThemeImageAction={deleteThemeImage}
+          />
+        ) : null}
 
         <section className="px-4 pt-6">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/45">

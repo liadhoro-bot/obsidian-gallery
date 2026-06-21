@@ -67,21 +67,20 @@ async function ProjectsTabsContent({
       throw new Error(imagesError.message)
     }
 
-    for (const projectId of projectIds) {
-      const projectImages = (images ?? []).filter(
-        (image) => image.entity_id === projectId
-      )
+    const featuredProjectIds = new Set<string>()
 
-      const primaryImage =
-        projectImages.find((image) => image.is_featured) ||
-        projectImages[0] ||
-        null
+    for (const image of images ?? []) {
+      const existingImage = featuredImagesByProjectId[image.entity_id]
+      if (existingImage && (!image.is_featured || featuredProjectIds.has(image.entity_id))) {
+        continue
+      }
 
-      if (primaryImage) {
-        featuredImagesByProjectId[projectId] = {
-          image_url: primaryImage.image_url,
-          alt_text: primaryImage.alt_text,
-        }
+      if (image.is_featured) {
+        featuredProjectIds.add(image.entity_id)
+      }
+      featuredImagesByProjectId[image.entity_id] = {
+        image_url: image.image_url,
+        alt_text: image.alt_text,
       }
     }
   }

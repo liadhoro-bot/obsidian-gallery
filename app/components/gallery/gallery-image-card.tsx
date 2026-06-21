@@ -55,7 +55,7 @@ export default function GalleryImageCard({
           src={image.image_url}
           alt={image.alt_text || 'Gallery image'}
           fill
-          sizes="50vw"
+          sizes="(max-width: 768px) 33vw, 180px"
           className="object-cover transition duration-300 group-hover:scale-105"
         />
 

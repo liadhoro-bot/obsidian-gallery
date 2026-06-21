@@ -325,6 +325,67 @@ export async function updateTheme(themeId: string, formData: FormData) {
   revalidateThemeCaches(themeId)
 }
 
+export async function deleteThemeImage(formData: FormData) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return
+
+  const themeId = String(formData.get('themeId') || '')
+  const imageIds = formData
+    .getAll('imageIds')
+    .map((value) => String(value))
+    .filter(Boolean)
+
+  if (!themeId || imageIds.length === 0 || !imageIds.includes('hero')) return
+
+  const { data: theme, error: themeError } = await supabase
+    .from('themes')
+    .select('id, image_url')
+    .eq('id', themeId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (themeError) {
+    throw themeError
+  }
+
+  if (!theme?.image_url) return
+
+  const storageMarker = '/obsidian-images/'
+  const storagePath = theme.image_url.includes(storageMarker)
+    ? decodeURIComponent(theme.image_url.split(storageMarker)[1].split('?')[0])
+    : null
+
+  if (storagePath) {
+    const { error: storageError } = await supabase.storage
+      .from('obsidian-images')
+      .remove([storagePath])
+
+    if (storageError) {
+      throw storageError
+    }
+  }
+
+  const { error: updateError } = await supabase
+    .from('themes')
+    .update({
+      image_url: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', themeId)
+    .eq('user_id', user.id)
+
+  if (updateError) {
+    throw updateError
+  }
+
+  revalidateThemeCaches(themeId)
+}
+
 export async function deleteTheme(formData: FormData) {
   const supabase = await createClient()
 

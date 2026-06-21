@@ -19,7 +19,7 @@ export default function DashboardTabs({
     key: ActiveTab
     label: string
   }[] = [
-    { key: 'profile', label: 'My Profile' },
+    { key: 'profile', label: 'My Stats' },
     { key: 'painting-table', label: 'Painting Table' },
   ]
 

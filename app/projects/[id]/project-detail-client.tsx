@@ -27,6 +27,8 @@ type Props = {
   projectId: string
   featuredProjectImage: ProjectImage | null
   projectImages: ProjectImage[]
+  projectUnitCount: number
+  projectTotalSessionSeconds: number
   units: ProjectUnit[]
   unitsError: SerializableError | null
   allStagesError: SerializableError | null
@@ -53,6 +55,8 @@ export default function ProjectDetailClient({
   projectId,
   featuredProjectImage,
   projectImages,
+  projectUnitCount,
+  projectTotalSessionSeconds,
   units,
   unitsError,
   projectImagesError,
@@ -205,6 +209,8 @@ export default function ProjectDetailClient({
           project={project}
           projectTheme={projectTheme}
           projectId={projectId}
+          projectUnitCount={projectUnitCount}
+          projectTotalSessionSeconds={projectTotalSessionSeconds}
           projectImages={projectImages}
           projectImagesError={projectImagesError}
           uploadProjectImageAction={uploadProjectImageAction}

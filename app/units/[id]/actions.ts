@@ -1806,33 +1806,49 @@ export async function deleteUnitImage(formData: FormData) {
   }
 
   const unitId = String(formData.get('unitId') || '')
+  const imageIds = formData
+    .getAll('imageIds')
+    .map((value) => String(value))
+    .filter(Boolean)
   const imageId = String(formData.get('imageId') || '')
+  const targetImageIds = imageIds.length > 0 ? imageIds : imageId ? [imageId] : []
 
-  if (!unitId || !imageId) {
+  if (!unitId || targetImageIds.length === 0) {
     throw new Error('Missing image details')
   }
 
-  const { data: image, error: imageError } = await supabase
+  const { data: images, error: imageError } = await supabase
     .from('image_assets')
     .select('id, storage_bucket, storage_path')
-    .eq('id', imageId)
     .eq('entity_type', 'unit')
     .eq('entity_id', unitId)
     .eq('user_id', user.id)
-    .maybeSingle()
+    .in('id', targetImageIds)
 
   if (imageError) {
     throw imageError
   }
 
-  if (!image) {
+  if (!images || images.length === 0) {
     throw new Error('Image not found')
   }
 
-  if (image.storage_bucket && image.storage_path) {
+  const storagePathsByBucket = images.reduce<Record<string, string[]>>(
+    (acc, image) => {
+      if (image.storage_bucket && image.storage_path) {
+        acc[image.storage_bucket] = acc[image.storage_bucket] || []
+        acc[image.storage_bucket].push(image.storage_path)
+      }
+
+      return acc
+    },
+    {}
+  )
+
+  for (const [bucket, paths] of Object.entries(storagePathsByBucket)) {
     const { error: storageError } = await supabase.storage
-      .from(image.storage_bucket)
-      .remove([image.storage_path])
+      .from(bucket)
+      .remove(paths)
 
     if (storageError) {
       throw storageError
@@ -1842,10 +1858,10 @@ export async function deleteUnitImage(formData: FormData) {
   const { error: deleteError } = await supabase
     .from('image_assets')
     .delete()
-    .eq('id', imageId)
     .eq('entity_type', 'unit')
     .eq('entity_id', unitId)
     .eq('user_id', user.id)
+    .in('id', images.map((image) => image.id))
 
   if (deleteError) {
     throw deleteError

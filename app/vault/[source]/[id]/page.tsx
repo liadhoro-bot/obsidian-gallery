@@ -6,6 +6,7 @@ import DashboardTopBar from '../../../dashboard/dashboard-top-bar'
 import PaintHero from './paint-hero'
 import PaintTechnicalSpecs from './paint-technical-specs'
 import PaintOwnershipCard from './paint-ownership-card'
+import PaintConversionChartCard from './paint-conversion-chart-card'
 import PaintUsedIn from './paint-recipes-used'
 import CustomPaintForm from '../../custom-paint-form'
 import { deleteCustomPaintAction } from '../../custom-paint-actions'
@@ -15,6 +16,7 @@ import {
   PaintEditorSkeleton,
   PaintTechnicalSpecsSkeleton,
   PaintOwnershipSkeleton,
+  PaintConversionChartSkeleton,
   PaintRecipesSkeleton,
 } from './paint-skeletons'
 import { createPerfTimer } from '../../../../utils/perf/server'
@@ -123,6 +125,10 @@ export default async function PaintPage({ params }: PageProps) {
 
             <Suspense fallback={<PaintOwnershipSkeleton />}>
               <PaintOwnershipCard paintRef={paintRef} />
+            </Suspense>
+
+            <Suspense fallback={<PaintConversionChartSkeleton />}>
+              <PaintConversionChartCard paintRef={paintRef} />
             </Suspense>
           </>
         )}

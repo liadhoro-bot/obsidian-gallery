@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --font-geist-sans: Arial, Helvetica, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 @theme inline {
@@ -22,7 +24,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
 }
 
 html {
@@ -230,6 +232,15 @@ button:disabled {
   animation: sheetRiseIn 160ms cubic-bezier(0.2, 0, 0.2, 1) both;
 }
 
+.paint-picker-overlay {
+  align-items: flex-start;
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.paint-picker-sheet {
+  max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+
 .mobile-close-button {
   min-width: 44px;
   min-height: 44px;
@@ -250,6 +261,14 @@ button:disabled {
     max-height: min(88dvh, 760px);
     border-radius: 1.5rem;
     animation-name: dialogScaleIn;
+  }
+
+  .paint-picker-overlay {
+    align-items: flex-start;
+  }
+
+  .paint-picker-sheet {
+    max-height: calc(100dvh - 2.5rem);
   }
 }
 

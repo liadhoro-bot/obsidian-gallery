@@ -42,12 +42,19 @@ export default async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/offline' ||
     pathname === '/onboarding' ||
+    pathname === '/support' ||
     pathname === '/settings/terms' ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||
     pathname.includes('.')
 
   if (!user) {
+    if (!isPublicRoute) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+
     return response
   }
 

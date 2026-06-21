@@ -1,25 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import ClientShell from './providers/client-shell'
 
-import { PHProvider } from './providers/posthog-provider'
-import PostHogUserIdentifier from './providers/posthog-user-identifier'
-import ServiceWorkerRegistrar from './providers/service-worker-registrar'
-
-import MobileNav from './components/MobileNav'
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
+const enableProductionTelemetry = process.env.VERCEL_ENV === 'production'
 
 export const metadata: Metadata = {
   title: 'Obsidian Gallery',
@@ -77,21 +63,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <PHProvider>
-          <ServiceWorkerRegistrar />
-          <PostHogUserIdentifier />
-          {children}
-        </PHProvider>
+        <ClientShell enableProductionTelemetry={enableProductionTelemetry} />
+        {children}
 
-        <MobileNav />
-
-        <Analytics />
-        <SpeedInsights />
+        {enableProductionTelemetry ? (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        ) : null}
       </body>
     </html>
   )

@@ -17,6 +17,8 @@ type CustomFilterRow = {
 }
 
 const EMPTY_ID = '00000000-0000-0000-0000-000000000000'
+const CUSTOM_BRAND_LABEL = 'Custom'
+const CUSTOM_LINE_LABEL = 'Custom Color'
 
 function uniqueSorted(values: (string | null | undefined)[]) {
   return Array.from(new Set(values.filter(Boolean) as string[])).sort((a, b) =>
@@ -103,6 +105,24 @@ export async function GET(request: Request) {
   const escapedQuery = escapeFilterValue(q)
   const pageSize = 1000
 
+  function getCustomBrand(paint: { manufacturer: string | null }) {
+    return paint.manufacturer || CUSTOM_BRAND_LABEL
+  }
+
+  function getCustomLine(paint: { series: string | null }) {
+    return paint.series || CUSTOM_LINE_LABEL
+  }
+
+  function matchesCustomFilters(paint: {
+    manufacturer: string | null
+    series: string | null
+  }) {
+    return (
+      (!brand || getCustomBrand(paint) === brand) &&
+      (!line || getCustomLine(paint) === line)
+    )
+  }
+
   async function getCatalogFilterRows(filterBrand = '') {
     if (ownership === 'owned' && ownedIds.length === 0) return []
     if (ownership === 'wishlist' && wishlistIds.length === 0) return []
@@ -187,48 +207,88 @@ export async function GET(request: Request) {
     return (data || []) as CustomFilterRow[]
   }
 
-  let catalogQuery = supabase
-    .from('paint_catalog')
-    .select('id, name, brand, line, sku, swatch_image_url, hex_approx, paint_type')
-    .eq('is_active', true)
+  function buildCatalogQuery() {
+    let catalogQuery = supabase
+      .from('paint_catalog')
+      .select('id, name, brand, line, sku, swatch_image_url, hex_approx, paint_type')
+      .eq('is_active', true)
 
-  if (q) {
-    catalogQuery = catalogQuery.or(
-      `name.ilike.%${escapedQuery}%,brand.ilike.%${escapedQuery}%,line.ilike.%${escapedQuery}%,sku.ilike.%${escapedQuery}%`
-    )
+    if (q) {
+      catalogQuery = catalogQuery.or(
+        `name.ilike.%${escapedQuery}%,brand.ilike.%${escapedQuery}%,line.ilike.%${escapedQuery}%,sku.ilike.%${escapedQuery}%`
+      )
+    }
+
+    if (brand) {
+      catalogQuery = catalogQuery.eq('brand', brand)
+    }
+
+    if (line) {
+      catalogQuery = catalogQuery.eq('line', line)
+    }
+
+    if (ownership === 'owned') {
+      catalogQuery = catalogQuery.in('id', ownedIds.length > 0 ? ownedIds : [EMPTY_ID])
+    }
+
+    if (ownership === 'wishlist') {
+      catalogQuery = catalogQuery.in(
+        'id',
+        wishlistIds.length > 0 ? wishlistIds : [EMPTY_ID]
+      )
+    }
+
+    if (ownership === 'unowned' && ownedIds.length > 0) {
+      catalogQuery = catalogQuery.not('id', 'in', `(${ownedIds.join(',')})`)
+    }
+
+    return catalogQuery
   }
 
-  if (brand) {
-    catalogQuery = catalogQuery.eq('brand', brand)
-  }
+  let catalogPaints: {
+    id: string
+    name: string | null
+    brand: string | null
+    line: string | null
+    sku: string | null
+    swatch_image_url: string | null
+    hex_approx: string | null
+    paint_type: string | null
+  }[] = []
 
-  if (line) {
-    catalogQuery = catalogQuery.eq('line', line)
-  }
+  if (colorGroup) {
+    let from = 0
 
-  if (ownership === 'owned') {
-    catalogQuery = catalogQuery.in('id', ownedIds.length > 0 ? ownedIds : [EMPTY_ID])
-  }
+    while (true) {
+      const { data, error } = await buildCatalogQuery()
+        .order('brand', { ascending: true })
+        .order('line', { ascending: true })
+        .order('name', { ascending: true })
+        .range(from, from + pageSize - 1)
 
-  if (ownership === 'wishlist') {
-    catalogQuery = catalogQuery.in(
-      'id',
-      wishlistIds.length > 0 ? wishlistIds : [EMPTY_ID]
-    )
-  }
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
 
-  if (ownership === 'unowned' && ownedIds.length > 0) {
-    catalogQuery = catalogQuery.not('id', 'in', `(${ownedIds.join(',')})`)
-  }
+      const rows = data || []
+      catalogPaints = [...catalogPaints, ...rows]
 
-  const { data: catalogPaints, error } = await catalogQuery
-    .order('brand', { ascending: true })
-    .order('line', { ascending: true })
-    .order('name', { ascending: true })
-    .limit(limit)
+      if (rows.length < pageSize) break
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+      from += pageSize
+    }
+  } else {
+    const { data, error } = await buildCatalogQuery()
+      .order('brand', { ascending: true })
+      .order('line', { ascending: true })
+      .order('name', { ascending: true })
+      .limit(limit)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    catalogPaints = data || []
   }
 
   let customPaints: {
@@ -258,31 +318,23 @@ export async function GET(request: Request) {
       )
     }
 
-    if (brand) {
-      customQuery = customQuery.eq('manufacturer', brand)
-    }
-
-    if (line) {
-      customQuery = customQuery.eq('series', line)
-    }
-
     const { data: customRows, error: customError } = await customQuery
       .order('manufacturer', { ascending: true })
       .order('series', { ascending: true })
       .order('name', { ascending: true })
-      .limit(limit)
+      .range(0, colorGroup || brand || line ? pageSize - 1 : limit - 1)
 
     if (customError) {
       return NextResponse.json({ error: customError.message }, { status: 500 })
     }
 
     customPaints =
-      customRows?.map((paint) => ({
+      customRows?.filter(matchesCustomFilters).map((paint) => ({
         id: paint.id,
         source: 'custom' as const,
         name: paint.name || 'Unnamed paint',
-        brand: paint.manufacturer,
-        line: paint.series,
+        brand: getCustomBrand(paint),
+        line: getCustomLine(paint),
         sku: null,
         swatch_image_url: null,
         hex: paint.color_hex,
@@ -340,8 +392,8 @@ export async function GET(request: Request) {
     const brandRows: CatalogFilterRow[] = [
       ...catalogBrandRows,
       ...customBrandRows.map((row) => ({
-        brand: row.manufacturer || 'Custom',
-        line: row.series || 'Custom Color',
+        brand: row.manufacturer || CUSTOM_BRAND_LABEL,
+        line: row.series || CUSTOM_LINE_LABEL,
         name: row.name,
         paint_type: row.paint_type,
       })),
@@ -350,10 +402,10 @@ export async function GET(request: Request) {
     const lineRows: CatalogFilterRow[] = [
       ...catalogLineRows,
       ...customLineRows.map((row) => ({
-      brand: row.manufacturer || 'Custom',
-      line: row.series || 'Custom Color',
-      name: row.name,
-      paint_type: row.paint_type,
+        brand: row.manufacturer || CUSTOM_BRAND_LABEL,
+        line: row.series || CUSTOM_LINE_LABEL,
+        name: row.name,
+        paint_type: row.paint_type,
       })),
     ]
 

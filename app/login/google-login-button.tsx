@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '../../utils/supabase/client'
 
 function GoogleIcon() {
   return (
@@ -38,6 +37,7 @@ export default function GoogleLoginButton() {
     setIsLoading(true)
     setErrorMessage(null)
 
+    const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
     const origin = window.location.origin
 

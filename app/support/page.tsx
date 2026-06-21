@@ -1,5 +1,6 @@
+import dynamic from 'next/dynamic'
 import BackButton from '../components/back-button'
-import FeedbackCard from './feedback-card'
+const FeedbackCard = dynamic(() => import('./feedback-card'))
 
 const payboxLink = 'https://links.payboxapp.com/oPJxbFBZM2b'
 const bitPhone = '054-4459145'

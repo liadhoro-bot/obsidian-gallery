@@ -13,16 +13,22 @@ export function SectionCardSkeleton() {
 
 export function StatsSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div
-          key={index}
-          className="rounded-2xl border border-white/10 bg-white/5 p-4 animate-pulse"
-        >
-          <div className="h-4 w-20 rounded bg-white/10" />
-          <div className="mt-3 h-8 w-12 rounded bg-white/10" />
-        </div>
-      ))}
+    <div className="grid gap-3">
+      <div className="flex items-center justify-between">
+        <div className="h-4 w-24 rounded bg-white/10" />
+        <div className="h-8 w-16 rounded-xl bg-white/10" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="min-h-[86px] rounded-xl border border-white/10 bg-white/5 p-3 animate-pulse"
+          >
+            <div className="h-3 w-16 rounded bg-white/10" />
+            <div className="mt-3 h-6 w-10 rounded bg-white/10" />
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

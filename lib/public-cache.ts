@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 
 const ONE_DAY = 60 * 60 * 24
 const TEN_MINUTES = 60 * 10
-const CACHE_VERSION = 'v2.8.1'
+const CACHE_VERSION = 'v2.8.5'
 
 export const getCachedCatalogFilterRows = unstable_cache(
   async () => {
@@ -208,6 +208,7 @@ export const getCachedPublicThemes = unstable_cache(
         description,
         image_url,
         is_public,
+        tags,
         created_at,
         theme_paints (
           id,

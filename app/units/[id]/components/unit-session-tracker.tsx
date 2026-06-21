@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState, useTransition } from 'react'
-import posthog from 'posthog-js'
+import { capturePostHog } from '../../../../utils/analytics/client'
 import {
   deleteUnitSession,
   endUnitSession,
@@ -406,9 +406,9 @@ export default function UnitSessionTracker({
       const nextValue = !current
 
       if (nextValue) {
-        posthog.capture('unit_session_history_opened', {
-        unit_id: unitId,
-        session_count: completedSessions.length,
+        capturePostHog('unit_session_history_opened', {
+          unit_id: unitId,
+          session_count: completedSessions.length,
         })
       }
 

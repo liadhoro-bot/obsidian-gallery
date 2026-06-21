@@ -14,6 +14,10 @@ export function PaintOwnershipSkeleton() {
   return <SkeletonBlock className="h-44" />
 }
 
+export function PaintConversionChartSkeleton() {
+  return <SkeletonBlock className="h-96" />
+}
+
 export function PaintEditorSkeleton() {
   return <SkeletonBlock className="h-96" />
 }

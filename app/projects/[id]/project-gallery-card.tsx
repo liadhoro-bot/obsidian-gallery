@@ -316,7 +316,7 @@ export default function ProjectGalleryCard({
           {JSON.stringify(projectImagesError, null, 2)}
         </pre>
       ) : localImages.length > 0 ? (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-3 gap-3">
           {localImages.map((image) => (
             <div
               key={image.id}
@@ -331,10 +331,10 @@ export default function ProjectGalleryCard({
   <Image
     src={image.image_url}
     alt={image.alt_text || project?.name || 'Project image'}
-    width={240}
+    width={180}
     height={112}
-    sizes="(max-width: 640px) 50vw, 140px"
-    className="h-28 w-full rounded-xl object-cover transition hover:scale-[1.02]"
+    sizes="(max-width: 768px) 33vw, 160px"
+    className="h-24 w-full rounded-xl object-cover transition hover:scale-[1.02]"
   />
 </button>
 

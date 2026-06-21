@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+/test-results
+/playwright-report
+/.lighthouseci
+/.tmp
 
 # next.js
 /.next/

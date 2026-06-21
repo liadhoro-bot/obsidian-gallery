@@ -1,0 +1,6 @@
+id,brand,line,name,sku,swatch_image_url,hex_approx,finish,paint_type,is_active,created_at
+1a28ca6a-6b85-47f3-bd3e-90c1df3dfb1e,Vallejo,Mecha Primer,White,70.640,https://ckzrvjisesooqcmmtvwl.supabase.co/storage/v1/object/public/paint-swatches/vallejo/mecha-primer/70-640_white.png,#FFFFFF,,primer,true,2026-06-15T14:00:39+00:00
+e589238c-6379-4cd7-8393-25154c64eb76,Vallejo,Mecha Primer,Grey,70.641,https://ckzrvjisesooqcmmtvwl.supabase.co/storage/v1/object/public/paint-swatches/vallejo/mecha-primer/70-641_grey.png,#B6C5C5,,primer,true,2026-06-15T14:00:39+00:00
+21dec1b8-841c-4909-9d64-ba356475b604,Vallejo,Mecha Primer,Black,70.642,https://ckzrvjisesooqcmmtvwl.supabase.co/storage/v1/object/public/paint-swatches/vallejo/mecha-primer/70-642_black.png,#020407,,primer,true,2026-06-15T14:00:39+00:00
+fe2b8a1d-5fe3-4c70-8f90-04a33f67e2d3,Vallejo,Mecha Primer,Ivory,70.643,https://ckzrvjisesooqcmmtvwl.supabase.co/storage/v1/object/public/paint-swatches/vallejo/mecha-primer/70-643_ivory.png,#ECEBD1,,primer,true,2026-06-15T14:00:39+00:00
+9fd6f291-4bfc-418c-9045-9e8378a91967,Vallejo,Mecha Primer,Sand,70.644,https://ckzrvjisesooqcmmtvwl.supabase.co/storage/v1/object/public/paint-swatches/vallejo/mecha-primer/70-644_sand.png,#CFB38A,,primer,true,2026-06-15T14:00:39+00:00
