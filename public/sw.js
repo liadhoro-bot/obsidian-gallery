@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-pwa-v2.8.3'
+const CACHE_VERSION = 'obsidian-gallery-pwa-v2.8.6'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'

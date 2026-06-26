@@ -36,21 +36,24 @@ async function userHasOwnedPaints(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string
 ) {
-  const [{ count: ownedCatalogCount }, { count: customPaintCount }] =
-    await Promise.all([
-      supabase
-        .from('user_paint_ownership')
-        .select('paint_catalog_id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_owned', true),
+  const [{ data: ownedCatalogPaint }, { data: customPaint }] = await Promise.all([
+    supabase
+      .from('user_paint_ownership')
+      .select('paint_catalog_id')
+      .eq('user_id', userId)
+      .eq('is_owned', true)
+      .limit(1)
+      .maybeSingle(),
 
-      supabase
-        .from('paints')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId),
-    ])
+    supabase
+      .from('paints')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle(),
+  ])
 
-  return (ownedCatalogCount ?? 0) > 0 || (customPaintCount ?? 0) > 0
+  return Boolean(ownedCatalogPaint || customPaint)
 }
 
 export default async function VaultPage({ searchParams }: PageProps) {
@@ -69,12 +72,19 @@ export default async function VaultPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams
   perf.mark('search params')
 
-  const defaultTab = (await userHasOwnedPaints(supabase, user.id))
-    ? 'collection'
-    : 'find'
+  const requestedTab = resolveVaultTab(resolvedSearchParams.tab)
   const activeTab = resolvedSearchParams.tab
-    ? resolveVaultTab(resolvedSearchParams.tab)
-    : defaultTab
+    ? requestedTab
+    : (await userHasOwnedPaints(supabase, user.id))
+      ? 'collection'
+      : 'find'
+
+  const profilePromise = (async () =>
+    supabase
+      .from('profiles')
+      .select('avatar_url, level, username')
+      .eq('id', user.id)
+      .single())()
 
   const q = resolvedSearchParams.q?.trim() || ''
   const brand = resolvedSearchParams.brand || ''
@@ -93,7 +103,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={null}>
-          <DashboardTopBar />
+          <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
         </Suspense>
 
         <section>
@@ -132,6 +142,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
               ownership={ownership}
               matchHex={matchHex}
               tab={activeTab === 'collection' ? 'collection' : 'find'}
+              userId={user.id}
             />
           </Suspense>
         ) : null}
@@ -151,6 +162,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
               matchHex={matchHex}
               limit={limit}
               tab={activeTab === 'collection' ? 'collection' : 'find'}
+              userId={user.id}
             />
           </Suspense>
         )}

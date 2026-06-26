@@ -19,12 +19,29 @@ import {
   uploadUnitGalleryImages,
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
-import UnitSessionTracker from './components/unit-session-tracker'
+import LazyUnitSessionTracker from './components/lazy-unit-session-tracker'
 import ProjectPaletteCard from '../../projects/[id]/project-palette-card'
-import GalleryImageCard from '@/app/components/gallery/gallery-image-card'
 import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 
 const StagePaintPicker = dynamic(() => import('./components/stage-paint-picker'))
+const UnitGallerySection = dynamic(() => import('./components/unit-gallery-section'), {
+  loading: () => (
+    <section className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <div className="space-y-2">
+        <div className="h-7 w-48 rounded bg-white/10" />
+        <div className="h-4 w-64 rounded bg-white/5" />
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="aspect-square rounded-2xl border border-white/10 bg-white/[0.04]"
+          />
+        ))}
+      </div>
+    </section>
+  ),
+})
 
 type Unit = {
   id: string
@@ -132,6 +149,7 @@ type Theme = {
 } | null
 
 type Props = {
+  activeTab: 'overview' | 'progress'
   unit: Unit
   projectTheme: Theme
   images: UnitImage[]
@@ -324,6 +342,7 @@ function getStagePaintHref(paint: StagePaint) {
 }
 
 export default function UnitDetailClient({
+  activeTab,
   unit: initialUnit,
   projectTheme,
   images,
@@ -356,9 +375,6 @@ export default function UnitDetailClient({
   const [localSelectedProjectIds, setLocalSelectedProjectIds] =
     useState(selectedProjectIds)
   const [optimisticSteps, setOptimisticSteps] = useState(steps)
-  const [activeTab, setActiveTab] = useState<'overview' | 'progress'>(
-    'overview'
-  )
   const [openStageId, setOpenStageId] = useState<string | null>(null)
   const [uploadingStageId, setUploadingStageId] = useState<string | null>(null)
   const [expandedStagePhoto, setExpandedStagePhoto] =
@@ -1029,28 +1045,31 @@ const handleRemoveStagePhoto = (imageId: string) => {
       <div className="mt-4 grid gap-5">
   <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
     {[
-      { key: 'overview' as const, label: 'Overview' },
-      { key: 'progress' as const, label: 'Progress' },
+      { key: 'overview' as const, label: 'Overview', href: `/units/${unit.id}` },
+      {
+        key: 'progress' as const,
+        label: 'Progress',
+        href: `/units/${unit.id}?tab=progress`,
+      },
     ].map((tab) => {
       const isActive = activeTab === tab.key
 
       return (
-        <button
+        <Link
           key={tab.key}
-          type="button"
-          onClick={() => setActiveTab(tab.key)}
+          href={tab.href}
           className={[
-            'rounded-xl px-2 py-3 text-center text-xs font-black transition active:scale-[0.98] active:opacity-70',
+            'rounded-xl px-2 py-3 text-center text-xs font-black transition',
             isActive
               ? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/50 shadow-[0_0_18px_rgba(34,211,238,0.18)]'
               : 'text-white/45 hover:bg-white/5 hover:text-white/75',
           ].join(' ')}
         >
           {tab.label}
-        </button>
+        </Link>
       )
     })}
-  </div>
+</div>
 </div>
 
       {activeTab === 'overview' && (
@@ -1125,8 +1144,8 @@ const handleRemoveStagePhoto = (imageId: string) => {
                 </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-4 border-t border-white/10 pt-4 sm:grid-cols-3">
-                  <div className="flex flex-col gap-1 sm:col-span-2">
+                <div className="mt-4 grid grid-cols-3 gap-4 border-t border-white/10 pt-4">
+                  <div className="col-span-2 flex min-w-0 flex-col gap-1">
                     <span className="text-[11px] text-white/50">
                       Parent Project
                     </span>
@@ -1148,14 +1167,14 @@ const handleRemoveStagePhoto = (imageId: string) => {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-1">
+                  <div className="flex min-w-0 flex-col items-end gap-1">
                     <label
                       htmlFor="unit-status"
                       className="text-[11px] text-white/50"
                     >
                       Status
                     </label>
-                    <div className="flex min-h-[32px] items-center">
+                    <div className="flex min-h-[32px] w-full items-center justify-end">
                       <select
                         id="unit-status"
                         value={statusValue}
@@ -1270,7 +1289,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
             )}
           </div>
 
-          <UnitSessionTracker
+          <LazyUnitSessionTracker
             unitId={unit.id}
             activeSession={activeSession}
             sessions={sessions}
@@ -1285,241 +1304,51 @@ const handleRemoveStagePhoto = (imageId: string) => {
             />
           </section>
 
-          <section className="mt-10">
-            <div className="mb-2 flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                <h2 className="text-2xl font-bold">
-                  Inspiration & Art Gallery
-                </h2>
-                <p className="text-sm text-white/50">
-                  Concept art, stage photos, and reference images
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleUploadClick}
-                  className="tap-press mobile-upload-action rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/70 hover:border-cyan-300/35 hover:text-cyan-100"
-                >
-                  Upload from Gallery
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCameraClick}
-                  className="tap-press mobile-upload-action rounded-xl bg-cyan-400 px-3 py-2 text-xs font-bold text-black hover:bg-cyan-300"
-                >
-                  Take Photo
-                </button>
-              </div>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(event) => handleFileChange(event, 'gallery_picker')}
-            />
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(event) => handleFileChange(event, 'camera')}
-            />
-
-            {galleryFilePreviews.length > 0 ? (
-              <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {galleryFilePreviews.map((preview, index) => (
-                    <div
-                      key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
-                      className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30"
-                    >
-                      <Image
-                        src={preview.previewUrl}
-                        alt={preview.file.name}
-                        width={120}
-                        height={96}
-                        unoptimized
-                        className="h-20 w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemovePendingGalleryFile(index)}
-                        className="tap-press absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-xs font-black text-white"
-                        aria-label={`Remove ${preview.file.name}`}
-                      >
-                        X
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {galleryUploadError ? (
-                  <p className="mt-3 rounded-xl border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">
-                    {galleryUploadError}
-                  </p>
-                ) : null}
-
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleUploadSelectedGalleryFiles}
-                    disabled={isPending || selectedGalleryFiles.length === 0}
-                    className="tap-press tap-target inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
-                  >
-                    {isPending ? (
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    ) : null}
-                    <span>
-                      {isPending
-                        ? selectedGalleryFiles.length > 1
-                          ? 'Uploading images...'
-                          : 'Uploading image...'
-                        : selectedGalleryFiles.length > 1
-                          ? `Upload ${selectedGalleryFiles.length} images`
-                          : 'Upload image'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedGalleryFiles([])
-                      setGalleryUploadError(null)
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = ''
-                      }
-                      if (cameraInputRef.current) {
-                        cameraInputRef.current.value = ''
-                      }
-                    }}
-                    className="tap-press tap-target rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/70"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : galleryUploadError ? (
-              <p className="mt-4 rounded-xl border border-red-400/40 bg-red-500/10 p-3 text-sm text-red-200">
-                {galleryUploadError}
-              </p>
-            ) : null}
-
-            {localImages.length > 0 ? (
-              <>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditingGalleryImages((current) => !current)
-                      setSelectedGalleryImageIds([])
-                      setIsConfirmingGalleryDelete(false)
-                    }}
-                    className="tap-press rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70"
-                  >
-                    {isEditingGalleryImages ? 'Done' : 'Edit'}
-                  </button>
-                </div>
-
-                {isEditingGalleryImages ? (
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                    <p className="text-xs font-semibold text-white/55">
-                      {selectedGalleryImageIds.length > 0
-                        ? `${selectedGalleryImageIds.length} selected`
-                        : 'Select images to erase'}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedGalleryImageIds(
-                            localImages.map((image) => image.id)
-                          )
-                        }
-                        className="tap-press rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70"
-                      >
-                        Select All
-                      </button>
-
-                      {selectedGalleryImageIds.length > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedGalleryImageIds([])
-                            setIsConfirmingGalleryDelete(false)
-                          }}
-                          className="tap-press rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-white/70"
-                        >
-                          Clear
-                        </button>
-                      ) : null}
-
-                      {selectedGalleryImageIds.length > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            isConfirmingGalleryDelete
-                              ? handleDeleteSelectedGalleryImages()
-                              : setIsConfirmingGalleryDelete(true)
-                          }
-                          disabled={isPending}
-                          className="tap-press rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
-                        >
-                          {isPending
-                            ? 'Deleting...'
-                            : isConfirmingGalleryDelete
-                              ? `Erase ${selectedGalleryImageIds.length}`
-                              : 'Delete Selected'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              {localImages.map((image) => (
-                <div key={image.id} className="relative">
-                  {isEditingGalleryImages ? (
-                    <label className="absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 ring-1 ring-white/20">
-                      <input
-                        type="checkbox"
-                        checked={selectedGalleryImageIds.includes(image.id)}
-                        onChange={() =>
-                          handleToggleGalleryImageSelection(image.id)
-                        }
-                        className="h-4 w-4 accent-red-500"
-                        aria-label="Select image for deletion"
-                      />
-                    </label>
-                  ) : null}
-
-                  <GalleryImageCard
-                    image={image}
-                    canEdit={true}
-                    onToggleFeatured={async (imageId) => {
-                      handleSetFeatured(imageId)
-                    }}
-                  />
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={handleUploadClick}
-                className="tap-card flex aspect-square min-h-24 items-center justify-center rounded-2xl border border-dashed border-white/20 bg-white/[0.03] text-sm font-medium text-white/60"
-              >
-                Upload Reference
-              </button>
-            </div>
-          </section>
+          <UnitGallerySection
+            images={localImages}
+            isPending={isPending}
+            galleryFilePreviews={galleryFilePreviews}
+            selectedGalleryFiles={selectedGalleryFiles}
+            galleryUploadError={galleryUploadError}
+            isEditingGalleryImages={isEditingGalleryImages}
+            selectedGalleryImageIds={selectedGalleryImageIds}
+            isConfirmingGalleryDelete={isConfirmingGalleryDelete}
+            fileInputRef={fileInputRef}
+            cameraInputRef={cameraInputRef}
+            onUploadClick={handleUploadClick}
+            onCameraClick={handleCameraClick}
+            onFileChange={handleFileChange}
+            onRemovePendingGalleryFile={handleRemovePendingGalleryFile}
+            onUploadSelectedGalleryFiles={handleUploadSelectedGalleryFiles}
+            onClearPendingGalleryFiles={() => {
+              setSelectedGalleryFiles([])
+              setGalleryUploadError(null)
+              if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+              }
+              if (cameraInputRef.current) {
+                cameraInputRef.current.value = ''
+              }
+            }}
+            onToggleEditingGalleryImages={() => {
+              setIsEditingGalleryImages((current) => !current)
+              setSelectedGalleryImageIds([])
+              setIsConfirmingGalleryDelete(false)
+            }}
+            onToggleGalleryImageSelection={handleToggleGalleryImageSelection}
+            onSelectAllGalleryImages={() => {
+              setSelectedGalleryImageIds(localImages.map((image) => image.id))
+            }}
+            onClearSelectedGalleryImages={() => {
+              setSelectedGalleryImageIds([])
+              setIsConfirmingGalleryDelete(false)
+            }}
+            onDeleteSelectedGalleryImages={handleDeleteSelectedGalleryImages}
+            onRequestDeleteSelectedGalleryImages={() =>
+              setIsConfirmingGalleryDelete(true)
+            }
+            onToggleFeatured={handleSetFeatured}
+          />
         </div>
       )}
 

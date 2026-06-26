@@ -232,7 +232,7 @@ export default function ProjectUnitsTab({
               imageUrl: primaryImage?.image_url ?? null,
             }
           })}
-          cards={cardUnits}
+          renderCards={() => cardUnits}
           surface="project_detail_units"
           emptyMessage="No units yet."
           header={(toggle) => (

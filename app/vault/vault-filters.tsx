@@ -1,5 +1,7 @@
 import { createClient } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
+import { unstable_cache } from 'next/cache'
+import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import VaultFiltersClient from './vault-filters-client'
 
 type VaultFiltersProps = {
@@ -9,6 +11,7 @@ type VaultFiltersProps = {
   ownership: string
   matchHex: string
   tab: 'find' | 'collection'
+  userId: string
 }
 
 type CatalogFilterRow = {
@@ -50,6 +53,15 @@ async function getCatalogFilterRows(supabase: SupabaseClient) {
   return allRows
 }
 
+const getCachedCatalogFilterRows = unstable_cache(
+  async () => {
+    const supabase = createServiceRoleClient()
+    return getCatalogFilterRows(supabase as SupabaseClient)
+  },
+  ['vault-catalog-filter-rows'],
+  { revalidate: 3600 }
+)
+
 async function getCustomFilterRows(
   supabase: SupabaseClient,
   userId: string
@@ -73,18 +85,14 @@ export default async function VaultFilters({
   ownership,
   matchHex,
   tab,
+  userId,
 }: VaultFiltersProps) {
   const perf = createPerfTimer('/vault:filters')
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  perf.mark('auth/session fetch')
-
   const [catalogRows, customRows] = await Promise.all([
-    getCatalogFilterRows(supabase),
-    user ? getCustomFilterRows(supabase, user.id) : Promise.resolve([]),
+    getCachedCatalogFilterRows(),
+    userId ? getCustomFilterRows(supabase, userId) : Promise.resolve([]),
   ])
   perf.mark('filter Supabase queries')
 

@@ -44,6 +44,7 @@ export default async function proxy(request: NextRequest) {
     pathname === '/onboarding' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
+    pathname === '/api/vault/paint-equivalencies' ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||
     pathname.includes('.')

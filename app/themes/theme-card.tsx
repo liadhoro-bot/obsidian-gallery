@@ -152,7 +152,7 @@ export default function ThemeCard({
       {isSelectingForProject ? (
         imageBlock
       ) : (
-        <PrefetchLink href={`/themes/${theme.id}`} viewportPrefetch>
+        <PrefetchLink href={`/themes/${theme.id}`}>
           {imageBlock}
         </PrefetchLink>
       )}

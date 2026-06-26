@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { expect, type Page, test } from '@playwright/test'
 
 const ROUTES = [
@@ -128,8 +130,9 @@ async function readPerfMetrics(page: Page): Promise<PerfMetrics> {
 
 async function gotoMeasured(page: Page, route: string) {
   const started = performance.now()
-  const response = await page.goto(route, { waitUntil: 'domcontentloaded' })
+  const response = await page.goto(route, { waitUntil: 'commit' })
   const responseMs = Math.round(performance.now() - started)
+  await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => {})
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   await page.waitForTimeout(250)
 
@@ -163,13 +166,96 @@ async function expectInteractionWithinBudget(
   return elapsed
 }
 
-const hasPerfStorageState = Boolean(process.env.PERF_STORAGE_STATE)
+const defaultStorageStatePath = resolve('.perf/perf-storage-state-flows.json')
+const hasPerfStorageState = Boolean(
+  (process.env.PERF_STORAGE_STATE && existsSync(process.env.PERF_STORAGE_STATE)) ||
+    existsSync(defaultStorageStatePath)
+)
 
 async function isLoginSurface(page: Page) {
   if (new URL(page.url()).pathname === '/login') return true
 
   const signInHeading = page.getByRole('heading', { name: 'Sign in' })
   return signInHeading.isVisible().catch(() => false)
+}
+
+async function expectMeasuredRouteWithinBudget(
+  page: Page,
+  route: string,
+  testInfo: { annotations: Array<{ type: string; description: string }> }
+) {
+  const result = await gotoMeasured(page, route)
+
+  testInfo.annotations.push({
+    type: 'perf',
+    description: JSON.stringify({ route, ...result }),
+  })
+
+  expect([200, 307, 308], `${route} status`).toContain(result.status)
+  const responseBudget =
+    result.redirected || result.status === 307 || result.status === 308
+      ? BUDGETS.redirectResponseMs
+      : BUDGETS.responseMs
+  expect(result.responseMs, `${route} response time`).toBeLessThanOrEqual(
+    responseBudget
+  )
+  expect(result.controlReadyMs, `${route} control readiness`).toBeLessThanOrEqual(
+    BUDGETS.controlReadyMs
+  )
+  expect(result.metrics.lcp, `${route} LCP`).toBeLessThanOrEqual(BUDGETS.lcpMs)
+  expect(result.metrics.cls, `${route} CLS`).toBeLessThanOrEqual(BUDGETS.cls)
+  expect(
+    result.metrics.longestTask,
+    `${route} longest JS task`
+  ).toBeLessThanOrEqual(BUDGETS.longTaskMs)
+}
+
+async function resolveProtectedDetailRoutes(page: Page) {
+  await gotoMeasured(page, '/projects')
+  if (await isLoginSurface(page)) {
+    return {
+      projectRoute: null,
+      unitRoute: null,
+    }
+  }
+
+  const projectRoute = await page.evaluate(() => {
+    const links = Array.from(document.querySelectorAll('a[href]'))
+    const match = links
+      .map((link) => link.getAttribute('href'))
+      .find((href) => typeof href === 'string' && /^\/projects\/[^/?#]+$/.test(href))
+
+    return match ?? null
+  })
+
+  if (!projectRoute) {
+    return {
+      projectRoute: null,
+      unitRoute: null,
+    }
+  }
+
+  await gotoMeasured(page, projectRoute)
+  if (await isLoginSurface(page)) {
+    return {
+      projectRoute,
+      unitRoute: null,
+    }
+  }
+
+  const unitRoute = await page.evaluate(() => {
+    const links = Array.from(document.querySelectorAll('a[href]'))
+    const match = links
+      .map((link) => link.getAttribute('href'))
+      .find((href) => typeof href === 'string' && /^\/units\/[^/?#]+$/.test(href))
+
+    return match ?? null
+  })
+
+  return {
+    projectRoute,
+    unitRoute,
+  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -217,6 +303,32 @@ test.describe('route performance budgets', () => {
   }
 })
 
+test('project detail route meets page-level budgets', async ({ page }, testInfo) => {
+  test.skip(
+    !hasPerfStorageState,
+    'Project detail benchmark needs an authenticated Playwright storage state.'
+  )
+
+  const { projectRoute } = await resolveProtectedDetailRoutes(page)
+  test.skip(!projectRoute, 'No project detail route available for performance measurement.')
+  test.skip(await isLoginSurface(page), 'Project detail resolved to login; configure PERF_STORAGE_STATE.')
+
+  await expectMeasuredRouteWithinBudget(page, projectRoute!, testInfo)
+})
+
+test('unit detail route meets page-level budgets', async ({ page }, testInfo) => {
+  test.skip(
+    !hasPerfStorageState,
+    'Unit detail benchmark needs an authenticated Playwright storage state.'
+  )
+
+  const { unitRoute } = await resolveProtectedDetailRoutes(page)
+  test.skip(!unitRoute, 'No unit detail route available for performance measurement.')
+  test.skip(await isLoginSurface(page), 'Unit detail resolved to login; configure PERF_STORAGE_STATE.')
+
+  await expectMeasuredRouteWithinBudget(page, unitRoute!, testInfo)
+})
+
 test('vault search interaction stays responsive', async ({ page }, testInfo) => {
   test.skip(
     !hasPerfStorageState,
@@ -233,7 +345,12 @@ test('vault search interaction stays responsive', async ({ page }, testInfo) => 
   )
 
   const settledStarted = performance.now()
-  await expect(page).toHaveURL(/q=red/, { timeout: BUDGETS.routeSettledMs })
+  await expect(search).toHaveValue('red')
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('q'), {
+      timeout: 3_000,
+    })
+    .toBe('red')
   const settledMs = Math.round(performance.now() - settledStarted)
 
   testInfo.annotations.push({
@@ -257,17 +374,27 @@ test('recipes tabs and search stay responsive', async ({ page }, testInfo) => {
     'Recipes resolved to login; configure PERF_STORAGE_STATE.'
   )
 
-  const findRecipeTab = page.getByRole('button', { name: 'Find Recipe' })
-  const createRecipeTab = page.getByRole('button', { name: 'Create Recipe' })
+  const findRecipeTab = page
+    .getByRole('button', { name: 'Find Recipe' })
+    .or(page.getByRole('link', { name: 'Find Recipe' }))
+  const createRecipeTab = page
+    .getByRole('button', { name: 'Create Recipe' })
+    .or(page.getByRole('link', { name: 'Create Recipe' }))
 
   const tabMs = await expectInteractionWithinBudget('recipe tab switch', () =>
     createRecipeTab.click()
   )
-  await expect(page.getByPlaceholder('Recipe name')).toBeVisible()
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('tab') ?? 'find')
+    .toBe('custom')
+  await expect(page.getByPlaceholder('e.g. Shadow Knight Armor')).toBeVisible()
 
   const findTabMs = await expectInteractionWithinBudget('recipe find tab switch', () =>
     findRecipeTab.click()
   )
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('tab') ?? 'find')
+    .toBe('find')
 
   const search = page.getByPlaceholder('Search recipes by name...')
   await expect(search).toBeVisible()

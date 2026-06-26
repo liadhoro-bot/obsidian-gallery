@@ -1,13 +1,7 @@
-'use client'
-
-import dynamic from 'next/dynamic'
 import type { ReactNode } from 'react'
-import { useState } from 'react'
 import PrefetchLink from '../components/prefetch-link'
-
-const PaintPickerDialog = dynamic(
-  () => import('../../components/paints/paint-picker-dialog')
-)
+import DashboardQuickActionPaintButton from './dashboard-quick-action-paint-button'
+import DashboardQuickActionStartButton from './dashboard-quick-action-start-button'
 
 type Action = {
   label: string
@@ -90,9 +84,6 @@ function PaintVaultIcon() {
 }
 
 export default function DashboardQuickActions() {
-  const [showStartOptions, setShowStartOptions] = useState(false)
-  const [showPaintPicker, setShowPaintPicker] = useState(false)
-
   const actions: Action[] = [
     {
       label: 'Get Inspired',
@@ -109,17 +100,13 @@ export default function DashboardQuickActions() {
       </p>
 
       <div className="grid grid-cols-3 gap-3">
-        <button
-          type="button"
-          onClick={() => setShowStartOptions(true)}
-          className={actionClass}
-        >
+        <DashboardQuickActionStartButton className={actionClass}>
           <span className="pointer-events-none absolute inset-0 bg-cyan-300/[0.03] opacity-0 transition group-hover:opacity-100" />
           <FigurineIcon />
           <span className="relative mt-3 text-[11px] font-bold leading-tight text-white">
             Start Project / Unit
           </span>
-        </button>
+        </DashboardQuickActionStartButton>
 
         {actions.map((action) => (
           <PrefetchLink
@@ -141,72 +128,14 @@ export default function DashboardQuickActions() {
           </PrefetchLink>
         ))}
 
-        <button
-          type="button"
-          onClick={() => setShowPaintPicker(true)}
-          className={actionClass}
-          aria-label="Build Your Collection. Track owned paints, wishlist colors, and missing supplies."
-        >
+        <DashboardQuickActionPaintButton className={actionClass}>
           <span className="pointer-events-none absolute inset-0 bg-cyan-300/[0.03] opacity-0 transition group-hover:opacity-100" />
           <PaintVaultIcon />
           <span className="relative mt-3 text-[11px] font-bold leading-tight text-white">
             Build Your Collection
           </span>
-        </button>
+        </DashboardQuickActionPaintButton>
       </div>
-
-      {showStartOptions ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-24 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Start Project or Unit"
-          onClick={() => setShowStartOptions(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-cyan-300/45 bg-[#061018]/95 p-4 shadow-[0_0_34px_rgba(34,211,238,0.2)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
-                Start
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowStartOptions(false)}
-                className="tap-press tap-target rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-bold text-white/70 hover:border-cyan-300/40 hover:text-white"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <PrefetchLink
-                href="/projects?tab=create"
-                prefetchHref="/projects"
-                className="tap-card rounded-xl border border-cyan-300/45 bg-black/45 px-4 py-5 text-center text-sm font-black text-white shadow-[0_0_16px_rgba(34,211,238,0.12)] hover:bg-cyan-300/[0.08]"
-              >
-                Project
-              </PrefetchLink>
-              <PrefetchLink
-                href="/units/new"
-                prefetchHref="/units/new"
-                className="tap-card rounded-xl border border-cyan-300/45 bg-black/45 px-4 py-5 text-center text-sm font-black text-white shadow-[0_0_16px_rgba(34,211,238,0.12)] hover:bg-cyan-300/[0.08]"
-              >
-                Unit
-              </PrefetchLink>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <PaintPickerDialog
-        open={showPaintPicker}
-        onOpenChange={setShowPaintPicker}
-        title="Build Your Collection"
-        source="dashboard_quick_action"
-        mode="collection"
-      />
     </section>
   )
 }

@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { createClient } from '../../../../utils/supabase/server'
-import { getCachedCatalogPaint } from '../../../../lib/public-cache'
+import { createServiceRoleClient } from '../../../../utils/supabase/service-role'
 
 type PaintRef = {
   source: 'catalog' | 'custom'
@@ -12,18 +12,14 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
   const supabase = await createClient()
 
   if (paintRef.source === 'catalog') {
-    const cachedPaint = await getCachedCatalogPaint(paintRef.paintId)
-    const paint =
-      cachedPaint ||
-      (
-        await supabase
-          .from('paint_catalog')
-          .select(
-            'id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type'
-          )
-          .eq('id', paintRef.paintId)
-          .maybeSingle()
-      ).data
+    const serviceSupabase = createServiceRoleClient()
+    const { data: paint } = await serviceSupabase
+      .from('paint_catalog')
+      .select(
+        'id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type'
+      )
+      .eq('id', paintRef.paintId)
+      .maybeSingle()
 
     if (!paint) return null
 

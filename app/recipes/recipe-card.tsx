@@ -22,7 +22,7 @@ type Props = {
 export default function RecipeCard({ recipe, mode, isSaved }: Props) {
   return (
     <div className="tap-card group flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] shadow-lg hover:border-cyan-400/40 hover:bg-white/[0.06]">
-      <PrefetchLink href={`/recipes/${recipe.id}`} viewportPrefetch>
+      <PrefetchLink href={`/recipes/${recipe.id}`}>
         <div className="relative aspect-square bg-white/5">
           {recipe.image_url ? (
             <Image

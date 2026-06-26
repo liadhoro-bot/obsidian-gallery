@@ -1,46 +1,24 @@
-import { createClient } from '../../utils/supabase/server'
+import {
+  getDashboardCurrentUser,
+  getDashboardXpState,
+} from './dashboard-data'
 
-export default async function DashboardXpCard() {
-  const supabase = await createClient()
+export default async function DashboardXpCard({
+  userId,
+}: {
+  userId?: string
+}) {
+  const resolvedUserId = userId ?? (await getDashboardCurrentUser())?.id
+
+  if (!resolvedUserId) return null
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return null
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('xp, level')
-    .eq('id', user.id)
-    .single()
-
-  const currentXp = profile?.xp ?? 0
-  const currentLevel = profile?.level ?? 0
-
-  const { data: currentLevelRow } = await supabase
-    .from('levels')
-    .select('xp_required')
-    .eq('level', currentLevel)
-    .maybeSingle()
-
-  const { data: nextLevelRow } = await supabase
-    .from('levels')
-    .select('xp_required')
-    .eq('level', currentLevel + 1)
-    .maybeSingle()
-
-  const currentLevelXp = currentLevelRow?.xp_required ?? 0
-  const nextLevelXp = nextLevelRow?.xp_required ?? currentXp
-
-  const xpIntoLevel = Math.max(0, currentXp - currentLevelXp)
-  const xpNeededForLevel = Math.max(1, nextLevelXp - currentLevelXp)
-  const xpToNextLevel = Math.max(0, nextLevelXp - currentXp)
-
-  const progressPercent = Math.min(
-    100,
-    (xpIntoLevel / xpNeededForLevel) * 100
-  )
+    currentLevel,
+    xpIntoLevel,
+    xpNeededForLevel,
+    xpToNextLevel,
+    progressPercent,
+  } = await getDashboardXpState(resolvedUserId)
 
   return (
     <section className="rounded-3xl border border-white/10 bg-white/5 p-5">

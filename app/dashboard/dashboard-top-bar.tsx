@@ -1,6 +1,6 @@
 import Image from 'next/image'
+import Link from 'next/link'
 import { createClient } from '../../utils/supabase/server'
-import PrefetchLink from '../components/prefetch-link'
 import SupportButton from '../components/SupportButton'
 import DownloadAppButton from '../components/download-app-button'
 
@@ -65,9 +65,8 @@ export default async function DashboardTopBar({
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <PrefetchLink
+        <Link
           href="/settings"
-          viewportPrefetch
           className="block rounded-full focus:outline-none focus:ring-2 focus:ring-cyan-400/60"
           aria-label="Open settings"
         >
@@ -87,7 +86,7 @@ export default async function DashboardTopBar({
               {avatarInitials}
             </div>
           )}
-        </PrefetchLink>
+        </Link>
 
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-white/50">
@@ -99,10 +98,10 @@ export default async function DashboardTopBar({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-  <DownloadAppButton />
-  <SupportButton />
-</div>
+      <div className="flex min-h-11 items-center justify-end gap-2">
+        <DownloadAppButton />
+        <SupportButton />
+      </div>
     </div>
   )
 }

@@ -76,8 +76,10 @@ function getRuleContextualCtaHref(rule: CuratorRule, state: DashboardCuratorStat
   const isUnitPrompt =
     keyAndCategory.includes('unit') ||
     keyAndCategory.includes('deadline') ||
+    keyAndCategory.includes('session') ||
+    keyAndCategory.includes('painting') ||
     conditionFields.some((field) =>
-      ['deadlineWithinDays', 'unitProgress'].includes(field),
+      ['deadlineWithinDays', 'daysSinceLastSession', 'unitProgress'].includes(field),
     )
 
   if (isUnitPrompt && state.focusUnitId) {
@@ -137,7 +139,7 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
 
   const { data: lastSession } = await supabase
     .from('unit_sessions')
-    .select('created_at')
+    .select('created_at, unit_id')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -163,6 +165,18 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
       )
     : null
 
+  const { data: fallbackFocusUnit } = await supabase
+    .from('units')
+    .select('id')
+    .eq('user_id', userId)
+    .neq('status', 'complete')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const focusUnitId =
+    deadlineUnit?.id ?? lastSession?.unit_id ?? fallbackFocusUnit?.id ?? null
+
   // Temporary V1 placeholder.
   // Later replace with real unit progress calculation.
   const unitProgress = deadlineUnit ? 0 : null
@@ -174,7 +188,7 @@ export async function getDashboardCuratorPrompt(): Promise<DashboardCuratorPromp
     sessionsThisWeek: sessionsThisWeek ?? 0,
     daysSinceLastSession,
     deadlineWithinDays,
-    focusUnitId: deadlineUnit?.id ?? null,
+    focusUnitId,
     unitProgress,
   }
 

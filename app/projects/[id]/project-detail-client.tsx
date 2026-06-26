@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import BackButton from '../../components/back-button'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
@@ -21,6 +21,7 @@ import type {
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
+  activeTab: ProjectDetailTab
   project: ProjectRow | null
   projectTheme: ProjectTheme | null
   projectError: SerializableError | null
@@ -36,7 +37,6 @@ type Props = {
   projectImagesError: SerializableError | null
   stagesByUnitId: Record<string, UnitStage[]>
   imagesByUnitId: Record<string, UnitImage[]>
-  defaultTab: ProjectDetailTab
   addUnitAction: (formData: FormData) => Promise<void>
   updateProjectHeaderAction: (formData: FormData) => Promise<void>
   setFeaturedUnitAction: (formData: FormData) => Promise<void>
@@ -49,6 +49,7 @@ type Props = {
 export type ProjectDetailTab = 'details' | 'units' | 'add'
 
 export default function ProjectDetailClient({
+  activeTab,
   project,
   projectTheme,
   projectError,
@@ -62,7 +63,6 @@ export default function ProjectDetailClient({
   projectImagesError,
   stagesByUnitId,
   imagesByUnitId,
-  defaultTab,
   addUnitAction,
   updateProjectHeaderAction,
   uploadProjectImageAction,
@@ -71,20 +71,9 @@ export default function ProjectDetailClient({
   deleteProjectAction,
 }: Props) {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const requestedTab = searchParams.get('tab')
-  const initialTab: ProjectDetailTab =
-    requestedTab === 'add' || requestedTab === 'details' || requestedTab === 'units'
-      ? requestedTab
-      : defaultTab
-  const [activeTab, setActiveTab] = useState<ProjectDetailTab>(initialTab)
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isPending, startTransition] = useTransition()
   const projectName = project?.name || 'Untitled Project'
-
-  useEffect(() => {
-    setActiveTab(initialTab)
-  }, [initialTab])
 
   function handleUpdateHeader(formData: FormData) {
     startTransition(async () => {
@@ -196,7 +185,7 @@ export default function ProjectDetailClient({
         </section>
       ) : null}
 
-      <ProjectDetailTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      <ProjectDetailTabs activeTab={activeTab} projectId={projectId} />
 
       {projectError ? (
         <pre className="mt-5 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">

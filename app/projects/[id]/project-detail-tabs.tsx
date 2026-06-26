@@ -1,18 +1,20 @@
+import Link from 'next/link'
 import { ProjectDetailTab } from './project-detail-client'
 
 type Props = {
   activeTab: ProjectDetailTab
-  setActiveTab: (tab: ProjectDetailTab) => void
+  projectId: string
 }
 
-export default function ProjectDetailTabs({ activeTab, setActiveTab }: Props) {
-  const tabs: {
+export default function ProjectDetailTabs({ activeTab, projectId }: Props) {
+  const tabs: Array<{
     key: ProjectDetailTab
     label: string
-  }[] = [
-    { key: 'details', label: 'Project Details' },
-    { key: 'units', label: 'Units' },
-    { key: 'add', label: 'Add Unit' },
+    href: string
+  }> = [
+    { key: 'details', label: 'Project Details', href: `/projects/${projectId}?tab=details` },
+    { key: 'units', label: 'Units', href: `/projects/${projectId}?tab=units` },
+    { key: 'add', label: 'Add Unit', href: `/projects/${projectId}?tab=add` },
   ]
 
   return (
@@ -21,19 +23,18 @@ export default function ProjectDetailTabs({ activeTab, setActiveTab }: Props) {
         const isActive = activeTab === tab.key
 
         return (
-          <button
+          <Link
             key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
+            href={tab.href}
             className={[
-              'rounded-xl px-2 py-3 text-center text-xs font-black transition active:scale-[0.98] active:opacity-70',
+              'rounded-xl px-2 py-3 text-center text-xs font-black transition',
               isActive
                 ? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/50 shadow-[0_0_18px_rgba(34,211,238,0.18)]'
                 : 'text-white/45 hover:bg-white/5 hover:text-white/75',
             ].join(' ')}
           >
             {tab.label}
-          </button>
+          </Link>
         )
       })}
     </div>

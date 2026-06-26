@@ -54,25 +54,43 @@ export function TopBarSkeleton() {
         </div>
       </div>
 
-      <div className="h-8 w-24 rounded-full bg-white/10" />
+      <div className="h-11 w-[214px] rounded-full bg-white/10" />
     </div>
   )
 }
 
 export function FeaturedUnitSkeleton() {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-5 animate-pulse">
-      <div className="h-3 w-24 rounded bg-white/10" />
-      <div className="mt-4 h-8 w-48 rounded bg-white/10" />
-      <div className="mt-2 h-4 w-32 rounded bg-white/10" />
-      <div className="mt-5 h-12 w-40 rounded-2xl bg-white/10" />
+    <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 animate-pulse">
+      <div className="relative min-h-[260px]">
+        <div className="absolute inset-0 bg-white/10" />
+        <div className="relative flex min-h-[260px] flex-col justify-end p-5 sm:p-6">
+          <div className="flex items-end justify-between gap-4 sm:gap-5">
+            <div className="min-w-0 flex-1">
+              <div className="h-3 w-24 rounded bg-white/10" />
+              <div className="mt-3 space-y-2">
+                <div className="h-8 w-48 max-w-full rounded bg-white/10 sm:h-10 sm:w-64" />
+                <div className="h-4 w-36 rounded bg-white/10" />
+              </div>
+              <div className="mt-5 h-12 w-40 rounded-2xl bg-white/10" />
+            </div>
+            <div className="h-24 w-24 rounded-full bg-white/10 sm:h-[118px] sm:w-[118px]" />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
 export function BenchUnitsSkeleton() {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-5 animate-pulse">
+    <div
+      className="rounded-3xl border border-white/10 bg-white/5 p-5 animate-pulse"
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '920px',
+      }}
+    >
       <div className="flex items-center justify-between">
         <div className="h-4 w-36 rounded bg-white/10" />
         <div className="h-4 w-16 rounded bg-white/10" />

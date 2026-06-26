@@ -1,8 +1,13 @@
 import net from 'node:net'
 import { spawn, type ChildProcess } from 'node:child_process'
+import { resolve } from 'node:path'
+import { ensurePerfStorageState } from './perf-auth-utils.mjs'
 
 const requestedPort = Number(process.env.PERF_PORT ?? 3102)
 const isWindows = process.platform === 'win32'
+const perfStorageStatePath = resolve(
+  process.env.PERF_STORAGE_STATE ?? '.perf/perf-storage-state-flows.json'
+)
 
 function bin(name: string) {
   return `node_modules${isWindows ? '\\' : '/'} .bin`
@@ -95,6 +100,10 @@ async function main() {
 
   try {
     await waitForServer(baseUrl)
+    await ensurePerfStorageState({
+      baseUrl,
+      storageStatePath: perfStorageStatePath,
+    })
 
     const testProcess = spawnCommand(
       bin('playwright'),
@@ -103,6 +112,7 @@ async function main() {
         ...process.env,
         PERF_BASE_URL: baseUrl,
         PERF_PORT: String(port),
+        PERF_STORAGE_STATE: perfStorageStatePath,
       }
     )
 

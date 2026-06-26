@@ -1,9 +1,13 @@
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import net from 'node:net'
 import { resolve } from 'node:path'
 import lighthouse from 'lighthouse'
 import { chromium } from 'playwright'
+import {
+  applyStorageStateToContext,
+  ensurePerfStorageState,
+} from './perf-auth-utils.mjs'
 
 const routes = [
   { path: '/login', requiresAuth: false },
@@ -31,10 +35,13 @@ const isWindows = process.platform === 'win32'
 const requestedAppPort = Number(process.env.PERF_LIGHTHOUSE_APP_PORT ?? 3100)
 const requestedChromePort = Number(process.env.PERF_LIGHTHOUSE_CHROME_PORT ?? 9229)
 const outputDir = resolve('.lighthouseci')
-const perfStorageStatePath = process.env.PERF_STORAGE_STATE
+const perfStorageStatePath = resolve(
+  process.env.PERF_STORAGE_STATE ?? '.perf/perf-storage-state-lighthouse.json'
+)
 const hasPerfStorageState = Boolean(
   perfStorageStatePath && existsSync(perfStorageStatePath)
 )
+const chromeUserDataDir = resolve('.perf/lighthouse-browser-profile')
 
 function bin(name) {
   return `node_modules${isWindows ? '\\' : '/'} .bin`
@@ -146,6 +153,45 @@ function formatMetricLine(route, score, lcp, tbt, cls, scriptKb, imageKb, totalK
   ].join('  ')
 }
 
+async function resolveProtectedDetailRoutes(context, baseUrl) {
+  const page = await context.newPage()
+
+  try {
+    await page.goto(`${baseUrl}/projects`, { waitUntil: 'networkidle' })
+
+    const projectRoute = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a[href]'))
+      const match = links
+        .map((link) => link.getAttribute('href'))
+        .find((href) => typeof href === 'string' && /^\/projects\/[^/?#]+$/.test(href))
+
+      return match ?? null
+    })
+
+    if (!projectRoute) {
+      return []
+    }
+
+    await page.goto(`${baseUrl}${projectRoute}`, { waitUntil: 'networkidle' })
+
+    const unitRoute = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a[href]'))
+      const match = links
+        .map((link) => link.getAttribute('href'))
+        .find((href) => typeof href === 'string' && /^\/units\/[^/?#]+$/.test(href))
+
+      return match ?? null
+    })
+
+    return [
+      { path: projectRoute, requiresAuth: true },
+      ...(unitRoute ? [{ path: unitRoute, requiresAuth: true }] : []),
+    ]
+  } finally {
+    await page.close()
+  }
+}
+
 async function main() {
   mkdirSync(outputDir, { recursive: true })
 
@@ -159,13 +205,29 @@ async function main() {
   try {
     await waitForServer(baseUrl)
 
-    const browser = await chromium.launch({
+    if (!hasPerfStorageState) {
+      await ensurePerfStorageState({
+        baseUrl,
+        storageStatePath: perfStorageStatePath,
+      })
+    }
+
+    const context = await chromium.launchPersistentContext(chromeUserDataDir, {
+      headless: true,
       args: [`--remote-debugging-port=${chromePort}`],
     })
 
     try {
-      for (const route of routes) {
-        if (route.requiresAuth && !hasPerfStorageState) {
+      await applyStorageStateToContext({
+        context,
+        storageStatePath: perfStorageStatePath,
+        baseUrl,
+      })
+
+      const detailRoutes = await resolveProtectedDetailRoutes(context, baseUrl)
+
+      for (const route of [...routes, ...detailRoutes]) {
+        if (route.requiresAuth && !existsSync(perfStorageStatePath)) {
           skippedRoutes.push(route.path)
           console.log(`${route.path.padEnd(16)} skipped  missing PERF_STORAGE_STATE`)
           continue
@@ -289,10 +351,11 @@ async function main() {
         )
       }
     } finally {
-      await browser.close()
+      await context.close()
     }
   } finally {
     await stopServer(server)
+    rmSync(chromeUserDataDir, { recursive: true, force: true })
   }
 
   if (skippedRoutes.length) {

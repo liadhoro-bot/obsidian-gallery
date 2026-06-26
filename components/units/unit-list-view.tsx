@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { capturePostHog } from '../../utils/analytics/client'
 import DisplayModeToggle, {
   type DisplayMode,
 } from '../display-mode-toggle'
@@ -12,11 +11,12 @@ const STORAGE_KEY = 'og_unit_view_mode'
 
 type UnitListViewProps = {
   units: UnitTileData[]
-  cards: ReactNode
+  renderCards: () => ReactNode
   surface: string
   header?: (toggle: ReactNode) => ReactNode
   emptyMessage?: string
   className?: string
+  initialMode?: DisplayMode
 }
 
 function isDisplayMode(value: string | null): value is DisplayMode {
@@ -25,13 +25,14 @@ function isDisplayMode(value: string | null): value is DisplayMode {
 
 export default function UnitListView({
   units,
-  cards,
+  renderCards,
   surface,
   header,
   emptyMessage = 'No units yet.',
   className = '',
+  initialMode = 'cards',
 }: UnitListViewProps) {
-  const [mode, setMode] = useState<DisplayMode>('cards')
+  const [mode, setMode] = useState<DisplayMode>(initialMode)
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -47,10 +48,12 @@ export default function UnitListView({
   function handleModeChange(nextMode: DisplayMode) {
     setMode(nextMode)
     window.localStorage.setItem(STORAGE_KEY, nextMode)
-    capturePostHog('display_mode_changed', {
-      entity: 'unit',
-      mode: nextMode,
-      surface,
+    void import('../../utils/analytics/client').then(({ capturePostHog }) => {
+      void capturePostHog('display_mode_changed', {
+        entity: 'unit',
+        mode: nextMode,
+        surface,
+      })
     })
   }
 
@@ -63,7 +66,7 @@ export default function UnitListView({
       {header ? header(toggle) : <div className="mb-3 flex justify-end">{toggle}</div>}
 
       {mode === 'cards' ? (
-        cards
+        renderCards()
       ) : units.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {units.map((unit) => (

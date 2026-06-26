@@ -35,6 +35,7 @@ type CuratorSurface =
 type CuratorButtonProps = {
   curatorPrompt?: DashboardCuratorPrompt | null
   hideOnDashboard?: boolean
+  showLauncher?: boolean
 }
 
 function mapPromptToMessage(curatorPrompt: DashboardCuratorPrompt): CuratorMessage {
@@ -69,6 +70,7 @@ function normalizeInternalHref(href?: string | null) {
 export default function CuratorButton({
   curatorPrompt,
   hideOnDashboard = false,
+  showLauncher = false,
 }: CuratorButtonProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -301,20 +303,22 @@ export default function CuratorButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={openCurator}
-        className="tap-press fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-40 ml-[8.5rem] flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/40 bg-[#07131a]/90 shadow-[0_0_28px_rgba(34,211,238,0.35)] backdrop-blur"
-        aria-label="Open The Curator"
-      >
-        <Image
-          src="/curator/curator-bubble.png"
-          alt=""
-          width={64}
-          height={64}
-          className="h-14 w-14 object-contain"
-        />
-      </button>
+      {showLauncher && (
+        <button
+          type="button"
+          onClick={openCurator}
+          className="tap-press fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 z-40 ml-[8.5rem] flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/40 bg-[#07131a]/90 shadow-[0_0_28px_rgba(34,211,238,0.35)] backdrop-blur"
+          aria-label="Open The Curator"
+        >
+          <Image
+            src="/curator/curator-bubble.png"
+            alt=""
+            width={64}
+            height={64}
+            className="h-14 w-14 object-contain"
+          />
+        </button>
+      )}
 
       {isOpen && (
         <div className="curator-overlay fixed inset-0 z-40 bg-black/75 backdrop-blur-sm">

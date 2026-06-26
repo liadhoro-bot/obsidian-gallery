@@ -149,7 +149,7 @@ export default function VaultGridClient({
   key={`${paint.source}-${paint.id}`}
   className="min-w-0 space-y-2"
 >
-              <PrefetchLink href={href} viewportPrefetch className="tap-card group block w-full text-left">
+              <PrefetchLink href={href} className="tap-card group block w-full text-left">
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-[0_0_18px_rgba(0,0,0,0.6)] transition duration-150 group-hover:border-cyan-400/60">
                 {paint.source === 'custom' && (
   <span className="absolute left-2 top-2 z-10 rounded-md bg-cyan-500/15 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-300">

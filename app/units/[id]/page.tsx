@@ -5,11 +5,13 @@ import { createClient } from '../../../utils/supabase/server'
 import UnitDetailClient from './unit-detail-client'
 import UnitHeroClient from './unit-hero-client'
 import { createPerfTimer } from '../../../utils/perf/server'
+import { getDashboardProfile } from '../../dashboard/dashboard-data'
 
 type PageProps = {
   params: Promise<{ id: string }>
   searchParams: Promise<{
     session?: string
+    tab?: string
   }>
 }
 
@@ -54,7 +56,6 @@ type ProjectThemePaintRaw = {
     name: string | null
     color_hex: string | null
   }[] | null
-  [key: string]: unknown
 }
 
 type ProjectThemeRaw = {
@@ -62,7 +63,6 @@ type ProjectThemeRaw = {
   name: string | null
   description: string | null
   theme_paints?: ProjectThemePaintRaw[] | null
-  [key: string]: unknown
 }
 
 const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
@@ -75,11 +75,13 @@ async function UnitDetailBody({
   id,
   userId,
   unit,
+  activeTab,
   showSessionStartedNotice,
 }: {
   id: string
   userId: string
   unit: UnitDetailUnit
+  activeTab: 'overview' | 'progress'
   showSessionStartedNotice: boolean
 }) {
   const perf = createPerfTimer('/units/[id]:details')
@@ -103,246 +105,113 @@ async function UnitDetailBody({
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
 
-  const stepsPromise = supabase
-    .from('unit_progress_steps')
-    .select(`
-      id,
-      step_key,
-      step_label,
-      step_order,
-      status,
-      progress
-    `)
-    .eq('unit_id', id)
-    .order('step_order', { ascending: true })
+  let images: Awaited<typeof imagesPromise>['data'] = []
+  let imagesError: Awaited<typeof imagesPromise>['error'] = null
+  let steps: Array<{
+    id: string
+    step_key: string
+    step_label: string
+    step_order: number
+    status: 'pending' | 'in_progress' | 'done'
+    progress: number
+  }> = []
+  let totalLoggedSeconds = 0
+  let activeSession = null
+  let sessions: Array<{
+    id: string
+    started_at: string
+    ended_at: string | null
+    duration_seconds: number | null
+    user_id?: string | null
+    entry_source?: string | null
+    notes?: string | null
+  }> = []
+  let stagePaints: Array<{
+    id: string
+    unit_id: string
+    progress_step_id: string
+    paint_source: 'catalog' | 'custom'
+    paint_catalog_id: string | null
+    custom_paint_id: string | null
+    sort_order: number | null
+    catalog_paint?: {
+      id: string
+      name: string | null
+      brand: string | null
+      line: string | null
+      hex_approx: string | null
+      swatch_image_url: string | null
+    } | null
+    custom_paint?: {
+      id: string
+      name: string | null
+      manufacturer: string | null
+      series: string | null
+      color_hex: string | null
+    } | null
+  }> = []
+  let parentProjects: ParentProject[] = []
+  let availableProjects: ParentProject[] = []
+  let selectedProjectIds: string[] = []
+  let projectTheme: {
+    id: string
+    name: string | null
+    description: string | null
+    theme_paints: Array<{
+      id: string
+      sort_order: number | null
+      paint_source: string | null
+      paint_catalog_id: string | null
+      custom_paint_id: string | null
+      catalog_paint?: {
+        id: string
+        name: string | null
+        hex_approx: string | null
+        swatch_image_url: string | null
+      } | null
+      custom_paint?: {
+        id: string
+        name: string | null
+        color_hex: string | null
+      } | null
+    }>
+  } | null = null
 
-  const sessionsPromise = supabase
-    .from('unit_sessions')
-    .select(`
+  if (activeTab === 'overview') {
+    const unitThemeSelect = `
       id,
-      started_at,
-      ended_at,
-      duration_seconds,
-      user_id,
-      entry_source,
-      notes
-    `)
-    .eq('unit_id', id)
-    .eq('user_id', userId)
-    .order('started_at', { ascending: false })
-
-  const stagePaintsPromise = supabase
-    .from('unit_stage_paints')
-    .select(`
-      id,
-      unit_id,
-      progress_step_id,
-      paint_source,
-      paint_catalog_id,
-      custom_paint_id,
-      sort_order,
-      catalog_paint:paint_catalog (
+      name,
+      description,
+      theme_paints (
         id,
-        name,
-        brand,
-        line,
-        hex_approx,
-        swatch_image_url
-      ),
-      custom_paint:paints (
-        id,
-        name,
-        manufacturer,
-        series,
-        color_hex
-      )
-    `)
-    .eq('unit_id', id)
-    .eq('user_id', userId)
-    .order('sort_order', { ascending: true })
-
-  const projectPromise = unit.project_id
-    ? supabase
-        .from('projects')
-        .select(`
+        sort_order,
+        paint_source,
+        paint_catalog_id,
+        custom_paint_id,
+        catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
           id,
-          name
-        `)
-        .eq('id', unit.project_id)
-        .eq('user_id', userId)
-        .maybeSingle()
-    : Promise.resolve({ data: null, error: null })
-
-  const unitThemeSelect = `
-    id,
-    name,
-    description,
-    theme_paints (
-      id,
-      sort_order,
-      paint_source,
-      paint_catalog_id,
-      custom_paint_id,
-      catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
-        id,
-        name,
-        hex_approx,
-        swatch_image_url
-      ),
-      custom_paint:paints!theme_paints_custom_paint_id_fkey (
-        id,
-        name,
-        color_hex
+          name,
+          hex_approx,
+          swatch_image_url
+        ),
+        custom_paint:paints!theme_paints_custom_paint_id_fkey (
+          id,
+          name,
+          color_hex
+        )
       )
-    )
-  `
+    `
 
-  const unitThemePromise = unit.theme_id
-    ? supabase
-        .from('themes')
-        .select(unitThemeSelect)
-        .eq('id', unit.theme_id)
-        .eq('user_id', userId)
-        .maybeSingle()
-    : supabase
-        .from('themes')
-        .select(unitThemeSelect)
-        .eq('user_id', userId)
-        .ilike('description', `%${unitThemeMarker(id)}%`)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-  const linkedProjectsPromise = supabase
-    .from('unit_projects')
-    .select(`
-      project_id,
-      project:projects (
-        id,
-        name
-      )
-    `)
-    .eq('unit_id', id)
-    .eq('user_id', userId)
-
-  const allProjectsPromise = supabase
-    .from('projects')
-    .select('id, name')
-    .eq('user_id', userId)
-    .order('name', { ascending: true })
-
-  const [
-    { data: images, error: imagesError },
-    initialStepsResult,
-    initialSessionsResult,
-    { data: stagePaintRows, error: stagePaintsError },
-    { data: project, error: projectError },
-    { data: unitThemeRaw, error: unitThemeError },
-    { data: linkedProjectRows, error: linkedProjectsError },
-    { data: allProjects, error: allProjectsError },
-  ] = await Promise.all([
-    imagesPromise,
-    stepsPromise,
-    sessionsPromise,
-    stagePaintsPromise,
-    projectPromise,
-    unitThemePromise,
-    linkedProjectsPromise,
-    allProjectsPromise,
-  ])
-  perf.mark('secondary Supabase queries')
-
-  if (imagesError) {
-    throw new Error(imagesError.message)
-  }
-
-  let steps = initialStepsResult.data
-  const stepsError = initialStepsResult.error
-
-  if (stepsError) {
-    throw new Error(stepsError.message)
-  }
-
-  if (!steps || steps.length === 0) {
-    const defaultSteps = [
-      ['assembled', 'Assembled', 1],
-      ['primed', 'Primed', 2],
-      ['initial_paints', 'Initial Paints', 3],
-      ['fine_details', 'Fine Details', 4],
-      ['base_rim', 'Base & Rim', 5],
-      ['done', 'Done', 6],
-    ].map(([step_key, step_label, step_order]) => ({
-      unit_id: id,
-      step_key,
-      step_label,
-      step_order,
-      status: 'pending',
-      progress: 0,
-    }))
-
-    const { error: insertStepsError } = await supabase
-      .from('unit_progress_steps')
-      .insert(defaultSteps)
-
-    if (insertStepsError) {
-      throw new Error(insertStepsError.message)
-    }
-
-    const reloadSteps = await supabase
-      .from('unit_progress_steps')
-      .select(`
-        id,
-        step_key,
-        step_label,
-        step_order,
-        status,
-        progress
-      `)
-      .eq('unit_id', id)
-      .order('step_order', { ascending: true })
-
-    if (reloadSteps.error) {
-      throw new Error(reloadSteps.error.message)
-    }
-
-    steps = reloadSteps.data ?? []
-    perf.mark('unit stage progress bootstrap')
-  }
-
-  let sessions = initialSessionsResult.data
-  const sessionsError = initialSessionsResult.error
-
-  if (sessionsError) {
-    throw new Error(sessionsError.message)
-  }
-
-  const activeSession =
-    sessions?.find(
-      (session) =>
-        session.ended_at === null && session.user_id === userId
-    ) ?? null
-
-  if (activeSession) {
-    const startedAtMs = new Date(activeSession.started_at).getTime()
-    const nowMs = new Date().getTime()
-    const elapsedSeconds = Math.floor((nowMs - startedAtMs) / 1000)
-
-    if (elapsedSeconds >= 7200) {
-      const forcedEndAt = new Date(startedAtMs + 7200 * 1000).toISOString()
-
-      const { error: expireError } = await supabase
-        .from('unit_sessions')
-        .update({
-          ended_at: forcedEndAt,
-          duration_seconds: 7200,
-        })
-        .eq('id', activeSession.id)
-
-      if (expireError) {
-        throw new Error(expireError.message)
-      }
-
-      const reload = await supabase
+    const [
+      imageResult,
+      sessionsResult,
+      projectResult,
+      unitThemeResult,
+      linkedProjectsResult,
+      allProjectsResult,
+    ] = await Promise.all([
+      imagesPromise,
+      supabase
         .from('unit_sessions')
         .select(`
           id,
@@ -355,65 +224,74 @@ async function UnitDetailBody({
         `)
         .eq('unit_id', id)
         .eq('user_id', userId)
-        .order('started_at', { ascending: false })
+        .order('started_at', { ascending: false }),
+      unit.project_id
+        ? supabase
+            .from('projects')
+            .select('id, name')
+            .eq('id', unit.project_id)
+            .eq('user_id', userId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      unit.theme_id
+        ? supabase
+            .from('themes')
+            .select(unitThemeSelect)
+            .eq('id', unit.theme_id)
+            .eq('user_id', userId)
+            .maybeSingle()
+        : supabase
+            .from('themes')
+            .select(unitThemeSelect)
+            .eq('user_id', userId)
+            .ilike('description', `%${unitThemeMarker(id)}%`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+      supabase
+        .from('unit_projects')
+        .select(`
+          project_id,
+          project:projects (
+            id,
+            name
+          )
+        `)
+        .eq('unit_id', id)
+        .eq('user_id', userId),
+      supabase
+        .from('projects')
+        .select('id, name')
+        .eq('user_id', userId)
+        .order('name', { ascending: true }),
+    ])
 
-      if (reload.error) {
-        throw new Error(reload.error.message)
-      }
+    images = imageResult.data ?? []
+    imagesError = imageResult.error
 
-      sessions = reload.data
-      perf.mark('unit sessions expiry')
+    if (projectResult.error || unitThemeResult.error || linkedProjectsResult.error || allProjectsResult.error) {
+      throw new Error(
+        projectResult.error?.message ||
+          unitThemeResult.error?.message ||
+          linkedProjectsResult.error?.message ||
+          allProjectsResult.error?.message ||
+          'Could not load unit overview data.'
+      )
     }
-  }
 
-  const totalLoggedSeconds =
-    sessions?.reduce((sum, session) => {
-      return sum + (session.duration_seconds ?? 0)
-    }, 0) ?? 0
+    sessions = sessionsResult.data ?? []
+    totalLoggedSeconds = sessions.reduce(
+      (sum, session) => sum + (session.duration_seconds ?? 0),
+      0
+    )
+    activeSession =
+      sessions.find((session) => session.ended_at === null && session.user_id === userId) ??
+      null
 
-  const currentActiveSession =
-    sessions?.find(
-      (session) =>
-        session.ended_at === null && session.user_id === userId
-    ) ?? null
-
-  if (stagePaintsError) {
-    throw new Error(stagePaintsError.message)
-  }
-
-  if (projectError) {
-    throw new Error(projectError.message)
-  }
-
-  if (unitThemeError) {
-    throw new Error(unitThemeError.message)
-  }
-
-  if (linkedProjectsError) {
-    throw new Error(linkedProjectsError.message)
-  }
-
-  if (allProjectsError) {
-    throw new Error(allProjectsError.message)
-  }
-
-  const stagePaints =
-    stagePaintRows?.map((paint) => ({
-      ...paint,
-      catalog_paint: Array.isArray(paint.catalog_paint)
-        ? paint.catalog_paint[0] ?? null
-        : paint.catalog_paint ?? null,
-      custom_paint: Array.isArray(paint.custom_paint)
-        ? paint.custom_paint[0] ?? null
-        : paint.custom_paint ?? null,
-    })) ?? []
-
-  const projectThemeRaw = unitThemeRaw as ProjectThemeRaw | null
-  const linkedProjectIds = ((linkedProjectRows ?? []) as UnitProjectRaw[])
-    .map((row) => row.project_id)
-    .filter(Boolean)
-  const parentProjects =
-    ((linkedProjectRows ?? []) as UnitProjectRaw[])
+    const linkedProjectIds = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
+      .map((row) => row.project_id)
+      .filter(Boolean)
+    parentProjects = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
       .map((row) =>
         Array.isArray(row.project) ? row.project[0] ?? null : row.project ?? null
       )
@@ -421,45 +299,170 @@ async function UnitDetailBody({
         Boolean(linkedProject?.id)
       )
 
-  if (parentProjects.length === 0 && project?.id) {
-    parentProjects.push({
-      id: project.id,
-      name: project.name ?? null,
-    })
+    if (parentProjects.length === 0 && projectResult.data?.id) {
+      parentProjects.push({
+        id: projectResult.data.id,
+        name: projectResult.data.name ?? null,
+      })
+    }
+
+    selectedProjectIds =
+      linkedProjectIds.length > 0
+        ? linkedProjectIds
+        : unit.project_id
+          ? [unit.project_id]
+          : []
+    availableProjects = allProjectsResult.data ?? []
+
+    const projectThemeRaw = unitThemeResult.data as ProjectThemeRaw | null
+    projectTheme = projectThemeRaw
+      ? {
+          ...projectThemeRaw,
+          theme_paints:
+            projectThemeRaw.theme_paints?.map((paint) => ({
+              ...paint,
+              catalog_paint: firstRelation(paint.catalog_paint),
+              custom_paint: firstRelation(paint.custom_paint),
+            })) ?? [],
+        }
+      : null
+  } else {
+    const [imageResult, initialStepsResult, stagePaintsResult] = await Promise.all([
+      imagesPromise,
+      supabase
+        .from('unit_progress_steps')
+        .select(`
+          id,
+          step_key,
+          step_label,
+          step_order,
+          status,
+          progress
+        `)
+        .eq('unit_id', id)
+        .order('step_order', { ascending: true }),
+      supabase
+        .from('unit_stage_paints')
+        .select(`
+          id,
+          unit_id,
+          progress_step_id,
+          paint_source,
+          paint_catalog_id,
+          custom_paint_id,
+          sort_order,
+          catalog_paint:paint_catalog (
+            id,
+            name,
+            brand,
+            line,
+            hex_approx,
+            swatch_image_url
+          ),
+          custom_paint:paints (
+            id,
+            name,
+            manufacturer,
+            series,
+            color_hex
+          )
+        `)
+        .eq('unit_id', id)
+        .eq('user_id', userId)
+        .order('sort_order', { ascending: true }),
+    ])
+
+    images = imageResult.data ?? []
+    imagesError = imageResult.error
+
+    if (initialStepsResult.error || stagePaintsResult.error) {
+      throw new Error(
+        initialStepsResult.error?.message ||
+          stagePaintsResult.error?.message ||
+          'Could not load unit progress data.'
+      )
+    }
+
+    steps = initialStepsResult.data ?? []
+
+    if (steps.length === 0) {
+      const defaultSteps = [
+        ['assembled', 'Assembled', 1],
+        ['primed', 'Primed', 2],
+        ['initial_paints', 'Initial Paints', 3],
+        ['fine_details', 'Fine Details', 4],
+        ['base_rim', 'Base & Rim', 5],
+        ['done', 'Done', 6],
+      ].map(([step_key, step_label, step_order]) => ({
+        unit_id: id,
+        step_key,
+        step_label,
+        step_order,
+        status: 'pending',
+        progress: 0,
+      }))
+
+      const { error: insertStepsError } = await supabase
+        .from('unit_progress_steps')
+        .insert(defaultSteps)
+
+      if (insertStepsError) {
+        throw new Error(insertStepsError.message)
+      }
+
+      const reloadSteps = await supabase
+        .from('unit_progress_steps')
+        .select(`
+          id,
+          step_key,
+          step_label,
+          step_order,
+          status,
+          progress
+        `)
+        .eq('unit_id', id)
+        .order('step_order', { ascending: true })
+
+      if (reloadSteps.error) {
+        throw new Error(reloadSteps.error.message)
+      }
+
+      steps = reloadSteps.data ?? []
+    }
+
+    stagePaints =
+      stagePaintsResult.data?.map((paint) => ({
+        ...paint,
+        catalog_paint: Array.isArray(paint.catalog_paint)
+          ? paint.catalog_paint[0] ?? null
+          : paint.catalog_paint ?? null,
+        custom_paint: Array.isArray(paint.custom_paint)
+          ? paint.custom_paint[0] ?? null
+          : paint.custom_paint ?? null,
+      })) ?? []
   }
 
-  const selectedProjectIds =
-    linkedProjectIds.length > 0
-      ? linkedProjectIds
-      : unit.project_id
-        ? [unit.project_id]
-        : []
+  perf.mark('secondary Supabase queries')
+
+  if (imagesError) {
+    throw new Error(imagesError.message)
+  }
 
   perf.total()
-  const projectTheme = projectThemeRaw
-    ? {
-        ...projectThemeRaw,
-        theme_paints:
-          projectThemeRaw.theme_paints?.map((paint) => ({
-            ...paint,
-            catalog_paint: firstRelation(paint.catalog_paint),
-            custom_paint: firstRelation(paint.custom_paint),
-          })) ?? [],
-      }
-    : null
 
   return (
     <UnitDetailClient
+      activeTab={activeTab}
       unit={unit}
       projectTheme={projectTheme}
-      images={images ?? []}
-      steps={steps ?? []}
+      images={images}
+      steps={steps}
       totalLoggedSeconds={totalLoggedSeconds}
-      activeSession={currentActiveSession}
-      sessions={sessions ?? []}
+      activeSession={activeSession}
+      sessions={sessions}
       stagePaints={stagePaints}
       parentProjects={parentProjects}
-      availableProjects={allProjects ?? []}
+      availableProjects={availableProjects}
       selectedProjectIds={selectedProjectIds}
       showSessionStartedNotice={showSessionStartedNotice}
     />
@@ -488,9 +491,9 @@ function UnitDetailBodySkeleton() {
 
 export default async function UnitDetailPage({ params, searchParams }: PageProps) {
   const perf = createPerfTimer('/units/[id]')
-  const { id } = await params
-  const resolvedSearchParams = await searchParams
+  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
   const showSessionStartedNotice = resolvedSearchParams.session === 'started'
+  const activeTab = resolvedSearchParams.tab === 'progress' ? 'progress' : 'overview'
 
   const supabase = await createClient()
 
@@ -502,6 +505,24 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   if (!user) {
     redirect('/login')
   }
+
+  const profilePromise = perf.measure('topbar profile fetch', async () => ({
+    data: await getDashboardProfile(user.id),
+  }))
+
+  const featuredImagePromise = supabase
+    .from('image_assets')
+    .select(
+      'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path'
+    )
+    .eq('entity_type', 'unit')
+    .eq('entity_id', id)
+    .eq('user_id', user.id)
+    .order('is_featured', { ascending: false })
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
@@ -515,7 +536,8 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
       is_active,
       is_featured,
       status,
-      project_id
+      project_id,
+      theme_id
     `)
     .eq('id', id)
     .eq('user_id', user.id)
@@ -524,34 +546,9 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   if (unitError || !unit) {
     notFound()
   }
-
-  const { data: unitThemeIdRow } = await supabase
-    .from('units')
-    .select('theme_id')
-    .eq('id', id)
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  const unitWithTheme = {
-    ...unit,
-    theme_id:
-      typeof unitThemeIdRow?.theme_id === 'string'
-        ? unitThemeIdRow.theme_id
-        : null,
-  }
   perf.mark('main Supabase query')
 
-  const { data: featuredImage } = await supabase
-    .from('image_assets')
-    .select('id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path')
-    .eq('entity_type', 'unit')
-    .eq('entity_id', id)
-    .eq('user_id', user.id)
-    .order('is_featured', { ascending: false })
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const { data: featuredImage } = await featuredImagePromise
   perf.mark('image/gallery queries')
   perf.total()
 
@@ -559,17 +556,18 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={null}>
-          <DashboardTopBar />
+          <DashboardTopBar profilePromise={profilePromise} />
         </Suspense>
 
         <div>
-          <UnitHeroClient unit={unitWithTheme} featuredImage={featuredImage ?? null} />
+          <UnitHeroClient unit={unit} featuredImage={featuredImage ?? null} />
 
           <Suspense fallback={<UnitDetailBodySkeleton />}>
             <UnitDetailBody
               id={id}
               userId={user.id}
-              unit={unitWithTheme}
+              unit={unit}
+              activeTab={activeTab}
               showSessionStartedNotice={showSessionStartedNotice}
             />
           </Suspense>
@@ -578,4 +576,3 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
     </main>
   )
 }
-

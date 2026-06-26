@@ -7,7 +7,7 @@ import SubmitButton from '../../components/SubmitButton'
 import type { ProjectImage, ProjectRow, SerializableError } from './types'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
-type Props = {
+export type ProjectGalleryCardProps = {
   project: ProjectRow | null
   projectId: string
   projectImages: ProjectImage[]
@@ -25,7 +25,7 @@ export default function ProjectGalleryCard({
   uploadProjectImageAction,
   setFeaturedProjectImageAction,
   deleteProjectImageAction,
-}: Props) {
+}: ProjectGalleryCardProps) {
   const [isAddingImage, setIsAddingImage] = useState(false)
   const [selectedImage, setSelectedImage] = useState<ProjectImage | null>(null)
   const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)

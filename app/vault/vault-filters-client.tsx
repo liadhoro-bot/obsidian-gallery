@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
-const BarcodeScannerModal = dynamic(() => import('./barcode-scanner-modal'))
+const BarcodeScannerModal = dynamic(() => import('./barcode-scanner-modal'), {
+  ssr: false,
+})
 const ColorMatchModal = dynamic(() => import('./color-match-modal'))
 
 const COLOR_GROUP_OPTIONS = [
@@ -52,6 +54,7 @@ export default function VaultFiltersClient({
   const pendingSearchRef = useRef<{ value: string; revision: number } | null>(
     null
   )
+  const [scannerRequested, setScannerRequested] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [localBrand, setLocalBrand] = useState(brand)
   const [localLine, setLocalLine] = useState(line)
@@ -100,7 +103,7 @@ export default function VaultFiltersClient({
     }
 
     startTransition(() => {
-      router.replace(`/vault?${params.toString()}`)
+      router.replace(`/vault?${params.toString()}`, { scroll: false })
     })
   }, [
     localBrand,
@@ -170,8 +173,13 @@ export default function VaultFiltersClient({
     setColorGroup('')
 
     startTransition(() => {
-      router.replace('/vault?tab=find')
+      router.replace('/vault?tab=find', { scroll: false })
     })
+  }
+
+  function openScanner() {
+    setScannerRequested(true)
+    setScannerOpen(true)
   }
 
   useEffect(() => {
@@ -213,7 +221,7 @@ export default function VaultFiltersClient({
       if (scheduledSearchValue !== q) {
         updateParam('q', scheduledSearchValue, scheduledRevision)
       }
-    }, 500)
+    }, 250)
 
     return () => clearTimeout(timeout)
   }, [searchValue, q, updateParam])
@@ -232,7 +240,7 @@ export default function VaultFiltersClient({
 
         <button
           type="button"
-          onClick={() => setScannerOpen(true)}
+          onClick={openScanner}
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.12)] transition hover:border-cyan-200/60 hover:bg-cyan-300/15"
           aria-label="Scan barcode"
         >
@@ -361,11 +369,13 @@ export default function VaultFiltersClient({
         </div>
       ) : null}
 
-      <BarcodeScannerModal
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onDetected={handleBarcodeDetected}
-      />
+      {scannerRequested ? (
+        <BarcodeScannerModal
+          open={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          onDetected={handleBarcodeDetected}
+        />
+      ) : null}
     </div>
   )
 }

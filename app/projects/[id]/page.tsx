@@ -1,7 +1,7 @@
 import { createClient } from '../../../utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import ProjectDetailClient from './project-detail-client'
+import ProjectDetailClient, { type ProjectDetailTab } from './project-detail-client'
 import { Suspense } from 'react'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { deleteProject } from './actions'
@@ -62,19 +62,19 @@ async function addUnit(formData: FormData) {
     return
   }
 
-await captureServerEvent({
-  distinctId: user.id,
-  event: 'unit_created',
-  properties: {
-    unit_id: insertedUnit.id,
-    unit_name: name,
-    project_id: projectId,
-    model_count: Number.isNaN(modelCount) ? 1 : modelCount,
-    has_deadline: Boolean(deadline),
-    has_notes: Boolean(notes),
-    source: 'project_page',
-  },
-})
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_created',
+    properties: {
+      unit_id: insertedUnit.id,
+      unit_name: name,
+      project_id: projectId,
+      model_count: Number.isNaN(modelCount) ? 1 : modelCount,
+      has_deadline: Boolean(deadline),
+      has_notes: Boolean(notes),
+      source: 'project_page',
+    },
+  })
   const progressSteps = [
     {
       step_key: 'assembled',
@@ -481,10 +481,276 @@ async function deleteProjectImage(formData: FormData) {
   revalidatePath(`/projects/${projectId}`)
 }
 
+async function getProjectDetailData({
+  projectId,
+  userId,
+  activeTab,
+}: {
+  projectId: string
+  userId: string
+  activeTab: ProjectDetailTab
+}) {
+  const supabase = await createClient()
+  const baseProjectResult = await supabase
+    .from('projects')
+    .select(`
+      id,
+      name,
+      description,
+      created_at,
+      updated_at,
+      user_id,
+      theme_id
+    `)
+    .eq('id', projectId)
+    .eq('user_id', userId)
+    .single()
+
+  const project = baseProjectResult.data
+  const projectError = baseProjectResult.error
+
+  if (!project) {
+    return {
+      project: null,
+      projectTheme: null,
+      projectError,
+      featuredProjectImage: null,
+      projectImages: [],
+      projectUnitCount: 0,
+      projectTotalSessionSeconds: 0,
+      units: [],
+      unitsError: null,
+      allStagesError: null,
+      allUnitImagesError: null,
+      projectImagesError: null,
+      stagesByUnitId: {},
+      imagesByUnitId: {},
+      defaultTab: 'add' as ProjectDetailTab,
+    }
+  }
+
+  const [unitCountResult, featuredProjectImageResult] = await Promise.all([
+    supabase
+      .from('units')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+      .eq('user_id', userId),
+    supabase
+      .from('image_assets')
+      .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
+      .eq('entity_type', 'project')
+      .eq('entity_id', projectId)
+      .eq('user_id', userId)
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const projectUnitCount = unitCountResult.count ?? 0
+  const defaultTab: ProjectDetailTab = projectUnitCount > 0 ? 'units' : 'add'
+  const projectImagesError = activeTab === 'details' ? null : null
+
+  if (activeTab === 'details') {
+    const [projectThemeResult, projectImagesResult, projectSessionsResult] =
+      await Promise.all([
+        project.theme_id
+          ? supabase
+              .from('themes')
+              .select(`
+                id,
+                name,
+                description,
+                theme_paints (
+                  id,
+                  sort_order,
+                  paint_source,
+                  paint_catalog_id,
+                  custom_paint_id,
+                  catalog_paint:paint_catalog (
+                    id,
+                    name,
+                    hex_approx,
+                    swatch_image_url
+                  ),
+                  custom_paint:paints (
+                    id,
+                    name,
+                    color_hex
+                  )
+                )
+              `)
+              .eq('id', project.theme_id)
+              .eq('user_id', userId)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        supabase
+          .from('image_assets')
+          .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
+          .eq('entity_type', 'project')
+          .eq('entity_id', projectId)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('unit_sessions')
+          .select('duration_seconds, unit_id, unit:units!inner(project_id)')
+          .eq('user_id', userId)
+          .eq('unit.project_id', projectId),
+      ])
+
+    const projectTheme = projectThemeResult.data
+      ? ({
+          ...projectThemeResult.data,
+          theme_paints:
+            projectThemeResult.data.theme_paints?.map((paint) => ({
+              ...paint,
+              catalog_paint: firstRelation(paint.catalog_paint),
+              custom_paint: firstRelation(paint.custom_paint),
+            })) ?? [],
+        } as ProjectRow['theme'])
+      : null
+
+    const normalizedProject = {
+      ...project,
+      theme: projectTheme,
+    } as ProjectRow
+
+    return {
+      project: normalizedProject,
+      projectTheme,
+      projectError,
+      featuredProjectImage: (featuredProjectImageResult.data as ProjectImage | null) ?? null,
+      projectImages: (projectImagesResult.data ?? []) as ProjectImage[],
+      projectUnitCount,
+      projectTotalSessionSeconds: (projectSessionsResult.data ?? []).reduce(
+        (total, session) => total + (session.duration_seconds ?? 0),
+        0
+      ),
+      units: [],
+      unitsError: null,
+      allStagesError: null,
+      allUnitImagesError: null,
+      projectImagesError: projectImagesResult.error,
+      stagesByUnitId: {},
+      imagesByUnitId: {},
+      defaultTab,
+    }
+  }
+
+  if (activeTab === 'units') {
+    const unitsResult = await supabase
+      .from('units')
+      .select('id, name, notes, created_at, updated_at, project_id, status, is_active')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    const units = unitsResult.data ?? []
+    const unitIds = units
+      .map((unit) => unit.id)
+      .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
+
+    const [progressStepsResult, allUnitImagesResult] =
+      unitIds.length > 0
+        ? await Promise.all([
+            supabase
+              .from('unit_progress_steps')
+              .select('id, unit_id, step_key, step_label, step_order, status, progress')
+              .in('unit_id', unitIds),
+            supabase
+              .from('image_assets')
+              .select('id, entity_id, image_url, alt_text, is_featured, created_at')
+              .eq('entity_type', 'unit')
+              .eq('user_id', userId)
+              .eq('is_featured', true)
+              .in('entity_id', unitIds)
+              .order('created_at', { ascending: false }),
+          ])
+        : [
+            { data: [], error: null },
+            { data: [], error: null },
+          ]
+
+    const needsLegacyStages =
+      (progressStepsResult.data?.length ?? 0) === 0 && unitIds.length > 0
+
+    const legacyStageProgressResult = needsLegacyStages
+      ? await supabase
+          .from('unit_stage_progress')
+          .select('id, unit_id, stage_key, stage_label, status, created_at')
+          .in('unit_id', unitIds)
+      : { data: [], error: null }
+
+    const allStages = [
+      ...((legacyStageProgressResult.data ?? []) as UnitStage[]),
+      ...((progressStepsResult.data ?? []) as UnitStage[]),
+    ]
+    const stagesByUnitId = allStages.reduce<Record<string, UnitStage[]>>(
+      (acc, stage) => {
+        if (!acc[stage.unit_id]) {
+          acc[stage.unit_id] = []
+        }
+        acc[stage.unit_id].push(stage)
+        return acc
+      },
+      {}
+    )
+    const imagesByUnitId = ((allUnitImagesResult.data ?? []) as UnitImage[]).reduce<
+      Record<string, UnitImage[]>
+    >((acc, image) => {
+      if (!acc[image.entity_id]) {
+        acc[image.entity_id] = []
+      }
+      acc[image.entity_id].push(image)
+      return acc
+    }, {})
+
+    return {
+      project: { ...project, theme: null } as ProjectRow,
+      projectTheme: null,
+      projectError,
+      featuredProjectImage: (featuredProjectImageResult.data as ProjectImage | null) ?? null,
+      projectImages: [],
+      projectUnitCount,
+      projectTotalSessionSeconds: 0,
+      units,
+      unitsError: unitsResult.error,
+      allStagesError:
+        legacyStageProgressResult.error || progressStepsResult.error,
+      allUnitImagesError: allUnitImagesResult.error,
+      projectImagesError,
+      stagesByUnitId,
+      imagesByUnitId,
+      defaultTab,
+    }
+  }
+
+  return {
+    project: { ...project, theme: null } as ProjectRow,
+    projectTheme: null,
+    projectError,
+    featuredProjectImage: (featuredProjectImageResult.data as ProjectImage | null) ?? null,
+    projectImages: [],
+    projectUnitCount,
+    projectTotalSessionSeconds: 0,
+    units: [],
+    unitsError: null,
+    allStagesError: null,
+    allUnitImagesError: null,
+    projectImagesError,
+    stagesByUnitId: {},
+    imagesByUnitId: {},
+    defaultTab,
+  }
+}
+
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const supabase = await createClient()
 
@@ -502,213 +768,53 @@ export default async function ProjectDetailPage({
     throw new Error('Missing or invalid project id in route params')
   }
 
-  const { data: project, error: projectError } = await supabase
-  .from('projects')
-  .select(`
-    id,
-    name,
-    description,
-    created_at,
-    updated_at,
-    user_id,
-    theme_id,
-    theme:themes (
-      id,
-      name,
-      description,
-      theme_paints (
-        id,
-        sort_order,
-        paint_source,
-        paint_catalog_id,
-        custom_paint_id,
-        catalog_paint:paint_catalog (
-          id,
-          name,
-          hex_approx,
-          swatch_image_url
-        ),
-       custom_paint:paints (
-  id,
-  name,
-  color_hex
-)
-      )
-    )
-  `)
-  .eq('id', id)
-  .eq('user_id', user.id)
-  .single()
+  const resolvedSearchParams = await searchParams
+  const activeTab: ProjectDetailTab =
+    resolvedSearchParams.tab === 'details' ||
+    resolvedSearchParams.tab === 'units' ||
+    resolvedSearchParams.tab === 'add'
+      ? resolvedSearchParams.tab
+      : 'units'
 
-  const { data: units, error: unitsError } = await supabase
-    .from('units')
-    .select('id, name, notes, created_at, updated_at, project_id, status, is_active')
-    .eq('project_id', id)
-    .eq('user_id', user.id)
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-
-  const unitIds = (units ?? [])
-    .map((unit) => unit.id)
-    .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
-
-  const { data: projectStatUnits, error: projectStatUnitsError } = await supabase
-    .from('units')
-    .select('id')
-    .eq('project_id', id)
-    .eq('user_id', user.id)
-
-  const projectStatUnitIds = (projectStatUnits ?? [])
-    .map((unit) => unit.id)
-    .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
-
-  const [stageProgressResult, progressStepsResult] = unitIds.length
-  ? await Promise.all([
-      supabase
-        .from('unit_stage_progress')
-        .select('id, unit_id, stage_key, stage_label, status, created_at')
-        .in('unit_id', unitIds),
-
-      supabase
-        .from('unit_progress_steps')
-        .select('id, unit_id, step_key, step_label, step_order, status, progress')
-        .in('unit_id', unitIds),
-    ])
-  : [
-      { data: [], error: null },
-      { data: [], error: null },
-    ]
-
-const allStages = [
-  ...(stageProgressResult.data ?? []),
-  ...(progressStepsResult.data ?? []),
-]
-
-const allStagesError =
-  stageProgressResult.error || progressStepsResult.error
-
-  const { data: projectSessions, error: projectSessionsError } = projectStatUnitIds.length
-    ? await supabase
-        .from('unit_sessions')
-        .select('duration_seconds')
-        .eq('user_id', user.id)
-        .in('unit_id', projectStatUnitIds)
-    : { data: [], error: null }
-
-  const { data: allUnitImages, error: allUnitImagesError } = unitIds.length
-    ? await supabase
-        .from('image_assets')
-        .select('id, entity_id, image_url, alt_text, is_featured, created_at')
-        .eq('entity_type', 'unit')
-        .eq('user_id', user.id)
-        .in('entity_id', unitIds)
-        .order('created_at', { ascending: true })
-    : { data: [], error: null }
-
-  const { data: projectImages, error: projectImagesError } = await supabase
-    .from('image_assets')
-    .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
-    .eq('entity_type', 'project')
-    .eq('entity_id', id)
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-
-  const stagesByUnitId = ((allStages ?? []) as UnitStage[]).reduce<
-    Record<string, UnitStage[]>
-  >(
-    (acc, stage) => {
-      if (!acc[stage.unit_id]) {
-        acc[stage.unit_id] = []
-      }
-      acc[stage.unit_id].push(stage)
-      return acc
-    },
-    {}
-  )
-
-  const imagesByUnitId = ((allUnitImages ?? []) as UnitImage[]).reduce<
-    Record<string, UnitImage[]>
-  >(
-    (acc, image) => {
-      if (!acc[image.entity_id]) {
-        acc[image.entity_id] = []
-      }
-      acc[image.entity_id].push(image)
-      return acc
-    },
-    {}
-  )
-
-  const projectImageRows = (projectImages ?? []) as ProjectImage[]
-  if (projectStatUnitsError || projectSessionsError) {
-    console.error(
-      'Error fetching project stats:',
-      projectStatUnitsError || projectSessionsError
-    )
-  }
-
-  const projectTotalSessionSeconds = (projectSessions ?? []).reduce(
-    (total, session) => {
-      return total + (session.duration_seconds ?? 0)
-    },
-    0
-  )
-  const featuredProjectImage =
-    projectImageRows.find((image) => image.is_featured) ||
-    projectImageRows[0] ||
-    null
-  const projectTheme = firstRelation(project?.theme)
-  const defaultTab = (units?.length ?? 0) > 0 ? 'units' : 'add'
-  const normalizedProject = project
-    ? ({
-        ...project,
-        theme: projectTheme
-          ? {
-              ...projectTheme,
-              theme_paints:
-                projectTheme.theme_paints?.map((paint) => ({
-                  ...paint,
-                  catalog_paint: firstRelation(paint.catalog_paint),
-                  custom_paint: firstRelation(paint.custom_paint),
-                })) ?? [],
-            }
-          : null,
-      } as ProjectRow)
-    : null
+  const data = await getProjectDetailData({
+    projectId: id,
+    userId: user.id,
+    activeTab,
+  })
 
   return (
-  <main className="min-h-screen bg-[#081018] text-white">
-    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-      <Suspense fallback={null}>
-        <DashboardTopBar />
-      </Suspense>
+    <main className="min-h-screen bg-[#081018] text-white">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
+        <Suspense fallback={null}>
+          <DashboardTopBar />
+        </Suspense>
 
-      <ProjectDetailClient
-        project={normalizedProject}
-        projectTheme={normalizedProject?.theme ?? null}
-        projectError={projectError}
-        projectId={id}
-        featuredProjectImage={featuredProjectImage}
-        projectImages={projectImageRows}
-        projectUnitCount={projectStatUnitIds.length}
-        projectTotalSessionSeconds={projectTotalSessionSeconds}
-        units={units ?? []}
-        unitsError={unitsError}
-        allStagesError={allStagesError}
-        allUnitImagesError={allUnitImagesError}
-        projectImagesError={projectImagesError}
-        stagesByUnitId={stagesByUnitId}
-        imagesByUnitId={imagesByUnitId}
-        defaultTab={defaultTab}
-        addUnitAction={addUnit}
-        updateProjectHeaderAction={updateProjectHeader}
-        setFeaturedUnitAction={setFeaturedUnit}
-        uploadProjectImageAction={uploadProjectImage}
-        setFeaturedProjectImageAction={setFeaturedProjectImage}
-        deleteProjectImageAction={deleteProjectImage}
-        deleteProjectAction={deleteProject}
-      />
-    </div>
-  </main>
-)
+        <ProjectDetailClient
+          activeTab={activeTab}
+          project={data.project}
+          projectTheme={data.projectTheme ?? null}
+          projectError={data.projectError}
+          projectId={id}
+          featuredProjectImage={data.featuredProjectImage}
+          projectImages={data.projectImages}
+          projectUnitCount={data.projectUnitCount}
+          projectTotalSessionSeconds={data.projectTotalSessionSeconds}
+          units={data.units}
+          unitsError={data.unitsError}
+          allStagesError={data.allStagesError}
+          allUnitImagesError={data.allUnitImagesError}
+          projectImagesError={data.projectImagesError}
+          stagesByUnitId={data.stagesByUnitId}
+          imagesByUnitId={data.imagesByUnitId}
+          addUnitAction={addUnit}
+          updateProjectHeaderAction={updateProjectHeader}
+          setFeaturedUnitAction={setFeaturedUnit}
+          uploadProjectImageAction={uploadProjectImage}
+          setFeaturedProjectImageAction={setFeaturedProjectImage}
+          deleteProjectImageAction={deleteProjectImage}
+          deleteProjectAction={deleteProject}
+        />
+      </div>
+    </main>
+  )
 }

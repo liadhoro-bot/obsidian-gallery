@@ -1,5 +1,5 @@
 import ProjectPaletteCard from './project-palette-card'
-import ProjectGalleryCard from './project-gallery-card'
+import ProjectGalleryCardLazy from './project-gallery-card-lazy'
 import type {
   ProjectImage,
   ProjectRow,
@@ -82,7 +82,7 @@ export default function ProjectDetailsTab({
 
       <ProjectPaletteCard theme={projectTheme} projectId={projectId} />
 
-      <ProjectGalleryCard
+      <ProjectGalleryCardLazy
         project={project}
         projectId={projectId}
         projectImages={projectImages}

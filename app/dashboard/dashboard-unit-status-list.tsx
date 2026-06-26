@@ -1,11 +1,23 @@
 'use client'
 
-import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
 import UnitListView from '../../components/units/unit-list-view'
-import ProgressWheel from '../components/progress-wheel'
-import PrefetchLink, { PrefetchButton } from '../components/prefetch-link'
+import { PrefetchButton } from '../components/prefetch-link'
 import { startDashboardUnitSession } from './actions'
+
+const DashboardBenchCards = dynamic(() => import('./dashboard-bench-cards'), {
+  loading: () => (
+    <div className="space-y-3">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          className="min-h-[110px] rounded-2xl border border-white/10 bg-white/[0.04]"
+        />
+      ))}
+    </div>
+  ),
+})
 
 export type UnitStatus = 'complete' | 'active' | 'bench' | 'pile' | 'other'
 
@@ -34,14 +46,20 @@ const STATUS_OPTIONS: StatusOption[] = [
   { value: 'other', label: 'Other', headingLabel: 'other' },
 ]
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return '-'
-
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value))
+function StartPaintingForm({ unitId }: { unitId: string }) {
+  return (
+    <form action={startDashboardUnitSession} className="relative z-20">
+      <input type="hidden" name="unitId" value={unitId} />
+      <PrefetchButton
+        type="submit"
+        prefetchHref={`/units/${unitId}`}
+        onClick={(event) => event.stopPropagation()}
+        className="rounded-xl border border-cyan-300/55 bg-black/55 px-2.5 py-1.5 text-[10px] font-black uppercase text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950"
+      >
+        Start Painting
+      </PrefetchButton>
+    </form>
+  )
 }
 
 export default function DashboardUnitStatusList({
@@ -61,86 +79,7 @@ export default function DashboardUnitStatusList({
     [selectedStatus, units]
   )
   const displayUnits = selectedUnits.slice(0, 8)
-  const cardUnits =
-    displayUnits.length > 0 ? (
-      <div className="space-y-3">
-        {displayUnits.map((unit) => (
-          <div
-            key={unit.id}
-            className="group relative flex overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:bg-white/[0.08]"
-          >
-            <PrefetchLink
-              href={`/units/${unit.id}`}
-              viewportPrefetch
-              className="absolute inset-0 z-10"
-              aria-label={`Open ${unit.name}`}
-            >
-              <span className="sr-only">Open {unit.name}</span>
-            </PrefetchLink>
-
-            <div className="relative min-h-[110px] w-[30%]">
-              {unit.imageUrl ? (
-                <Image
-                  src={unit.imageUrl}
-                  alt={unit.name}
-                  fill
-                  className="object-cover"
-                  sizes="120px"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-white/5 text-xs text-white/40">
-                  No image
-                </div>
-              )}
-              <form
-                action={startDashboardUnitSession}
-                className="absolute bottom-2 left-2 z-20"
-              >
-                <input type="hidden" name="unitId" value={unit.id} />
-                <PrefetchButton
-                  type="submit"
-                  prefetchHref={`/units/${unit.id}`}
-                  onClick={(event) => event.stopPropagation()}
-                  className="rounded-xl border border-cyan-300/55 bg-black/55 px-2.5 py-1.5 text-[10px] font-black uppercase text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950"
-                >
-                  Start Painting
-                </PrefetchButton>
-              </form>
-            </div>
-
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-3 p-4">
-              <div className="min-w-0">
-                <p className="text-lg font-semibold leading-tight text-white">
-                  {unit.name}
-                </p>
-
-                <p className="mt-2 text-xs text-white/60">
-                  LAST SESSION: {formatDate(unit.lastSession)}
-                </p>
-
-                <p className="text-xs font-semibold text-orange-400">
-                  DEADLINE: {formatDate(unit.deadline)}
-                </p>
-              </div>
-
-              <ProgressWheel
-                value={unit.progress}
-                showLabel={false}
-                className="shrink-0"
-                svgClassName="h-16 w-16"
-                centerTextSize={30}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    ) : (
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-        <p className="text-sm text-white/60">
-          No {selectedOption.headingLabel} units yet.
-        </p>
-      </div>
-    )
+  const emptyMessage = `No ${selectedOption.headingLabel} units yet.`
 
   return (
     <section className="space-y-3">
@@ -149,10 +88,14 @@ export default function DashboardUnitStatusList({
           id: unit.id,
           name: unit.name,
           imageUrl: unit.imageUrl,
+          action: <StartPaintingForm unitId={unit.id} />,
         }))}
-        cards={cardUnits}
+        renderCards={() => (
+          <DashboardBenchCards units={displayUnits} emptyMessage={emptyMessage} />
+        )}
         surface="dashboard_active_bench"
-        emptyMessage={`No ${selectedOption.headingLabel} units yet.`}
+        emptyMessage={emptyMessage}
+        initialMode="tiles"
         header={(toggle) => (
           <div className="relative z-40 mb-3 flex items-end justify-between gap-3">
             <h2 className="min-w-0 text-xl font-semibold text-white">

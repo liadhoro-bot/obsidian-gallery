@@ -1,38 +1,29 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import ProjectCreateForm from './project-create-form'
 import ProjectLibrary, { ProjectWithImage } from './project-library'
 
 type ProjectsTabsProps = {
+  activeTab: ActiveTab
   projects: ProjectWithImage[]
   addProjectAction: (formData: FormData) => Promise<void>
-  initialTab?: ActiveTab
 }
 
 type ActiveTab = 'mine' | 'create'
 
 export default function ProjectsTabs({
+  activeTab,
   projects,
   addProjectAction,
-  initialTab = 'mine',
 }: ProjectsTabsProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const currentTab = searchParams.get('tab') === 'create' ? 'create' : 'mine'
-  const [activeTab, setActiveTab] = useState<ActiveTab>(initialTab)
-
-  useEffect(() => {
-    setActiveTab(currentTab)
-  }, [currentTab])
-
-  const tabs: {
+  const tabs: Array<{
     key: ActiveTab
     label: string
-  }[] = [
-    { key: 'mine', label: 'My Projects' },
-    { key: 'create', label: 'New Project' },
+    href: string
+  }> = [
+    { key: 'mine', label: 'My Projects', href: '/projects' },
+    { key: 'create', label: 'New Project', href: '/projects?tab=create' },
   ]
 
   return (
@@ -42,29 +33,18 @@ export default function ProjectsTabs({
           const isActive = activeTab === tab.key
 
           return (
-            <button
+            <Link
               key={tab.key}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.key)
-                const params = new URLSearchParams(searchParams.toString())
-                if (tab.key === 'mine') {
-                  params.delete('tab')
-                } else {
-                  params.set('tab', tab.key)
-                }
-                const query = params.toString()
-                router.push(query ? `/projects?${query}` : '/projects')
-              }}
+              href={tab.href}
               className={[
-                'rounded-xl px-2 py-3 text-center text-xs font-black transition active:scale-[0.98] active:opacity-70',
+                'rounded-xl px-2 py-3 text-center text-xs font-black transition',
                 isActive
                   ? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/50 shadow-[0_0_18px_rgba(34,211,238,0.18)]'
                   : 'text-white/45 hover:bg-white/5 hover:text-white/75',
               ].join(' ')}
             >
               {tab.label}
-            </button>
+            </Link>
           )
         })}
       </div>

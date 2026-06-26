@@ -4,6 +4,8 @@ import { createClient } from '../../utils/supabase/server'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import RecipesPageClient from './recipes-page-client'
 import { createPerfTimer } from '../../utils/perf/server'
+import { getCachedPublicRecipes } from '../../lib/public-cache'
+import { getDashboardProfile } from '../dashboard/dashboard-data'
 
 type RecipeRow = {
   id: string
@@ -17,87 +19,81 @@ type RecipeRow = {
 
 type SavedRecipeRow = {
   recipe_id: string
-  recipes: RecipeRow | RecipeRow[] | null
+  recipes?: RecipeRow | RecipeRow[] | null
 }
 
-function firstValue<T>(value: T | T[] | null) {
-  return Array.isArray(value) ? value[0] ?? null : value
+type RecipesPageProps = {
+  searchParams?: Promise<{
+    tab?: string
+  }>
 }
 
-async function fetchPublicRecipes(
-  supabase: Awaited<ReturnType<typeof createClient>>
-) {
-  const pageSize = 1000
-  let from = 0
-  let allRecipes: RecipeRow[] = []
+type RecipesTab = 'find' | 'mine' | 'custom'
 
-  while (true) {
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('id, name, description, image_url, is_public, created_at, user_id')
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .range(from, from + pageSize - 1)
-
-    if (error) throw error
-
-    const recipes = (data || []) as RecipeRow[]
-    allRecipes = [...allRecipes, ...recipes]
-
-    if (recipes.length < pageSize) break
-
-    from += pageSize
-  }
-
-  return allRecipes
+function firstValue<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
 
-async function RecipesContent({ userId }: { userId: string }) {
+async function RecipesContent({
+  userId,
+  activeTab,
+}: {
+  userId: string
+  activeTab: Extract<RecipesTab, 'find' | 'mine'>
+}) {
   const perf = createPerfTimer('/recipes:content')
   const supabase = await createClient()
 
-  const [publicRecipes, { data: myRecipes }, { data: savedRows }] =
-    await Promise.all([
-      fetchPublicRecipes(supabase),
-
-      supabase
-        .from('recipes')
-        .select('id, name, description, image_url, is_public, created_at, user_id')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false }),
-
-      supabase
-        .from('saved_recipes')
-        .select(
-          `
-          recipe_id,
-          recipes (
-            id,
-            name,
-            description,
-            image_url,
-            is_public,
-            created_at,
-            user_id
+  const [publicRecipes, myRecipesResult, savedRowsResult] = await Promise.all([
+    activeTab === 'find'
+      ? getCachedPublicRecipes()
+      : Promise.resolve([] as RecipeRow[]),
+    activeTab === 'mine'
+      ? supabase
+          .from('recipes')
+          .select(
+            'id, name, description, image_url, is_public, created_at, user_id'
           )
-        `
-        )
-        .eq('user_id', userId),
-    ])
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] as RecipeRow[] }),
+    activeTab === 'mine'
+      ? supabase
+          .from('saved_recipes')
+          .select(
+            `
+            recipe_id,
+            recipes (
+              id,
+              name,
+              description,
+              image_url,
+              is_public,
+              created_at,
+              user_id
+            )
+          `
+          )
+          .eq('user_id', userId)
+      : supabase
+          .from('saved_recipes')
+          .select('recipe_id')
+          .eq('user_id', userId),
+  ])
   perf.mark('main Supabase query')
 
-  // ✅ FIX: must come BEFORE recipeIds
-  const typedSavedRows = (savedRows ?? []) as SavedRecipeRow[]
+  const myRecipes = (myRecipesResult.data ?? []) as RecipeRow[]
+  const typedSavedRows = (savedRowsResult.data ?? []) as SavedRecipeRow[]
   const savedRecipes = typedSavedRows
     .map((row) => firstValue(row.recipes))
     .filter((recipe): recipe is RecipeRow => Boolean(recipe))
-  const publicRecipeMap = new Map<string, RecipeRow>()
 
+  const publicRecipeMap = new Map<string, RecipeRow>()
   for (const recipe of publicRecipes) {
     publicRecipeMap.set(recipe.id, recipe)
   }
 
-  for (const recipe of myRecipes ?? []) {
+  for (const recipe of myRecipes) {
     if (recipe.is_public) {
       publicRecipeMap.set(recipe.id, recipe)
     }
@@ -109,14 +105,12 @@ async function RecipesContent({ userId }: { userId: string }) {
       new Date(a.created_at || 0).getTime()
   )
 
-  // Collect all recipe IDs for image lookup
   const recipeIds = [
-    ...allPublicRecipes.map((r) => r.id),
-    ...(myRecipes ?? []).map((r) => r.id),
-    ...savedRecipes.map((r) => r.id),
+    ...allPublicRecipes.filter((recipe) => !recipe.image_url).map((recipe) => recipe.id),
+    ...myRecipes.filter((recipe) => !recipe.image_url).map((recipe) => recipe.id),
+    ...savedRecipes.filter((recipe) => !recipe.image_url).map((recipe) => recipe.id),
   ]
 
-  // Fetch images safely (avoid empty .in())
   const { data: imageRows } = recipeIds.length
     ? await supabase
         .from('image_assets')
@@ -140,15 +134,11 @@ async function RecipesContent({ userId }: { userId: string }) {
 
   return (
     <RecipesPageClient
+      activeTab={activeTab}
       publicRecipes={withRecipeImages(allPublicRecipes)}
-      myRecipes={withRecipeImages(myRecipes ?? [])}
+      myRecipes={withRecipeImages(myRecipes)}
       savedRecipes={withRecipeImages(savedRecipes)}
       savedRecipeIds={typedSavedRows.map((row) => row.recipe_id)}
-      defaultTab={
-        (myRecipes?.length ?? 0) > 0 || savedRecipes.length > 0
-          ? 'mine'
-          : 'find'
-      }
     />
   )
 }
@@ -184,7 +174,7 @@ function RecipesContentSkeleton() {
   )
 }
 
-export default async function RecipesPage() {
+export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const perf = createPerfTimer('/recipes')
   const supabase = await createClient()
 
@@ -194,12 +184,48 @@ export default async function RecipesPage() {
   perf.mark('auth/session fetch')
 
   if (!user) redirect('/login')
+
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const requestedTab =
+    resolvedSearchParams?.tab === 'find' ||
+    resolvedSearchParams?.tab === 'custom' ||
+    resolvedSearchParams?.tab === 'mine'
+      ? resolvedSearchParams.tab
+      : null
+
+  let activeTab: RecipesTab
+  if (requestedTab) {
+    activeTab = requestedTab
+  } else {
+    const [{ data: myRecipe }, { data: savedRecipe }] = await Promise.all([
+      supabase
+        .from('recipes')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('saved_recipes')
+        .select('recipe_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle(),
+    ])
+
+    activeTab = myRecipe || savedRecipe ? 'mine' : 'find'
+  }
+
+  const profilePromise = (async () => ({
+    data: await getDashboardProfile(user.id),
+  }))()
   perf.total()
 
   return (
     <main className="min-h-screen bg-[#03070b] pb-24 text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-        <DashboardTopBar userId={user.id} />
+        <Suspense fallback={null}>
+          <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
+        </Suspense>
 
         <section className="space-y-4">
           <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-400">
@@ -221,11 +247,20 @@ export default async function RecipesPage() {
           </p>
         </section>
 
-        <Suspense fallback={<RecipesContentSkeleton />}>
-          <RecipesContent userId={user.id} />
-        </Suspense>
+        {activeTab === 'custom' ? (
+          <RecipesPageClient
+            activeTab={activeTab}
+            publicRecipes={[]}
+            myRecipes={[]}
+            savedRecipes={[]}
+            savedRecipeIds={[]}
+          />
+        ) : (
+          <Suspense fallback={<RecipesContentSkeleton />}>
+            <RecipesContent userId={user.id} activeTab={activeTab} />
+          </Suspense>
+        )}
       </div>
     </main>
   )
 }
-

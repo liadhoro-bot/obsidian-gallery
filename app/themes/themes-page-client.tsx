@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import ThemeCard from './theme-card'
 import ThemeForm from './theme-form'
@@ -54,12 +55,12 @@ type PaintOption = {
 type Tab = 'find' | 'mine' | 'create'
 
 type Props = {
+  activeTab: Tab
   currentUserId: string
   publicThemes: Theme[]
   myAndSavedThemes: Theme[]
   savedThemeIds: string[]
   paintOptions: PaintOption[]
-  defaultTab: Tab
   initialSearch: string
   selectForProject?: string | null
   attachThemeToProjectAction?: (formData: FormData) => Promise<void>
@@ -83,23 +84,19 @@ function themeMatchesSearch(theme: Theme, query: string) {
 }
 
 export default function ThemesPageClient({
+  activeTab,
   currentUserId,
   publicThemes,
   myAndSavedThemes,
   savedThemeIds,
   paintOptions,
-  defaultTab,
   initialSearch,
   selectForProject = null,
   attachThemeToProjectAction,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>(defaultTab)
   const [findSearch, setFindSearch] = useState(initialSearch)
 
-  const savedThemeSet = useMemo(
-    () => new Set(savedThemeIds),
-    [savedThemeIds]
-  )
+  const savedThemeSet = useMemo(() => new Set(savedThemeIds), [savedThemeIds])
   const filteredPublicThemes = useMemo(
     () =>
       publicThemes.filter((theme) =>
@@ -115,55 +112,48 @@ export default function ThemesPageClient({
     [findSearch, myAndSavedThemes]
   )
 
-  function writeUrl(tab: Tab, search = findSearch) {
+  function buildHref(tab: Tab) {
     const params = new URLSearchParams()
     params.set('tab', tab)
 
-    const trimmedSearch = search.trim()
-    if (tab === 'find' && trimmedSearch) params.set('q', trimmedSearch)
-    if (selectForProject) params.set('selectForProject', selectForProject)
+    const trimmedSearch = findSearch.trim()
+    if (tab === 'find' && trimmedSearch) {
+      params.set('q', trimmedSearch)
+    }
+    if (selectForProject) {
+      params.set('selectForProject', selectForProject)
+    }
 
-    window.history.replaceState(null, '', `/themes?${params.toString()}`)
-  }
-
-  function switchTab(tab: Tab) {
-    setActiveTab(tab)
-    writeUrl(tab)
-  }
-
-  function updateSearch(value: string) {
-    setFindSearch(value)
-    if (activeTab === 'find') writeUrl('find', value)
+    return `/themes?${params.toString()}`
   }
 
   return (
     <section className="space-y-5">
       <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
         {tabs.map((tab) => (
-          <button
+          <Link
             key={tab.key}
-            type="button"
-            onClick={() => switchTab(tab.key)}
+            href={buildHref(tab.key)}
             className={tabClass(activeTab === tab.key)}
           >
             {tab.label}
-          </button>
+          </Link>
         ))}
       </div>
 
-      {activeTab !== 'create' && (
+      {activeTab !== 'create' ? (
         <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
           <input
             type="search"
             value={findSearch}
-            onChange={(event) => updateSearch(event.target.value)}
+            onChange={(event) => setFindSearch(event.target.value)}
             placeholder="Search themes by name or tags..."
             className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
           />
         </div>
-      )}
+      ) : null}
 
-      {activeTab === 'find' && (
+      {activeTab === 'find' ? (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             {filteredPublicThemes.length > 0 ? (
@@ -186,9 +176,9 @@ export default function ThemesPageClient({
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {activeTab === 'mine' && (
+      {activeTab === 'mine' ? (
         <div className="grid grid-cols-2 gap-3">
           {filteredMyAndSavedThemes.length > 0 ? (
             filteredMyAndSavedThemes.map((theme) => (
@@ -209,16 +199,16 @@ export default function ThemesPageClient({
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
-      {activeTab === 'create' && <ThemeForm paints={paintOptions} />}
+      {activeTab === 'create' ? <ThemeForm paints={paintOptions} /> : null}
     </section>
   )
 }
 
 function tabClass(active: boolean) {
   return [
-    'rounded-lg px-2 py-3 text-xs font-semibold transition',
+    'rounded-lg px-2 py-3 text-center text-xs font-semibold transition',
     active
       ? 'border border-cyan-400/60 bg-cyan-400/15 text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.25)]'
       : 'text-white/60',

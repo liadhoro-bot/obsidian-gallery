@@ -6,6 +6,7 @@ import ProjectsTabs from './projects-tabs'
 import { addProject } from './actions'
 import { ProjectWithImage } from './project-library'
 import { createPerfTimer } from '../../utils/perf/server'
+import { getDashboardProfile } from '../dashboard/dashboard-data'
 
 type ProjectsPageProps = {
   searchParams: Promise<{
@@ -15,90 +16,96 @@ type ProjectsPageProps = {
 
 async function ProjectsTabsContent({
   userId,
-  initialTab,
+  activeTab,
 }: {
   userId: string
-  initialTab: 'mine' | 'create'
+  activeTab: 'mine' | 'create'
 }) {
   const perf = createPerfTimer('/projects:content')
   const supabase = await createClient()
-  const { data: projects, error: projectsError } = await supabase
-    .from('projects')
-    .select(`
-      id,
-      name,
-      description,
-      created_at
-    `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+  let projectsWithImages: ProjectWithImage[] = []
 
-  if (projectsError) {
-    throw new Error(projectsError.message)
-  }
-  perf.mark('main Supabase query')
-
-  const projectIds = (projects ?? []).map((project) => project.id)
-
-  const featuredImagesByProjectId: Record<
-    string,
-    {
-      image_url: string
-      alt_text: string | null
-    }
-  > = {}
-
-  if (projectIds.length > 0) {
-    const { data: images, error: imagesError } = await supabase
-      .from('image_assets')
+  if (activeTab === 'mine') {
+    const { data: projects, error: projectsError } = await supabase
+      .from('projects')
       .select(`
-        entity_id,
-        image_url,
-        alt_text,
-        is_featured,
+        id,
+        name,
+        description,
         created_at
       `)
-      .eq('entity_type', 'project')
       .eq('user_id', userId)
-      .in('entity_id', projectIds)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
 
-    if (imagesError) {
-      throw new Error(imagesError.message)
+    if (projectsError) {
+      throw new Error(projectsError.message)
     }
+    perf.mark('main Supabase query')
 
-    const featuredProjectIds = new Set<string>()
+    const projectIds = (projects ?? []).map((project) => project.id)
+    const featuredImagesByProjectId: Record<
+      string,
+      {
+        image_url: string
+        alt_text: string | null
+      }
+    > = {}
 
-    for (const image of images ?? []) {
-      const existingImage = featuredImagesByProjectId[image.entity_id]
-      if (existingImage && (!image.is_featured || featuredProjectIds.has(image.entity_id))) {
-        continue
+    if (projectIds.length > 0) {
+      const { data: images, error: imagesError } = await supabase
+        .from('image_assets')
+        .select(`
+          entity_id,
+          image_url,
+          alt_text,
+          is_featured,
+          created_at
+        `)
+        .eq('entity_type', 'project')
+        .eq('user_id', userId)
+        .in('entity_id', projectIds)
+        .order('created_at', { ascending: true })
+
+      if (imagesError) {
+        throw new Error(imagesError.message)
       }
 
-      if (image.is_featured) {
-        featuredProjectIds.add(image.entity_id)
-      }
-      featuredImagesByProjectId[image.entity_id] = {
-        image_url: image.image_url,
-        alt_text: image.alt_text,
+      const featuredProjectIds = new Set<string>()
+
+      for (const image of images ?? []) {
+        const existingImage = featuredImagesByProjectId[image.entity_id]
+        if (
+          existingImage &&
+          (!image.is_featured || featuredProjectIds.has(image.entity_id))
+        ) {
+          continue
+        }
+
+        if (image.is_featured) {
+          featuredProjectIds.add(image.entity_id)
+        }
+
+        featuredImagesByProjectId[image.entity_id] = {
+          image_url: image.image_url,
+          alt_text: image.alt_text,
+        }
       }
     }
-  }
-  perf.mark('image/gallery queries')
+    perf.mark('image/gallery queries')
 
-  const projectsWithImages: ProjectWithImage[] = (projects ?? []).map(
-    (project) => ({
+    projectsWithImages = (projects ?? []).map((project) => ({
       ...project,
       primaryImage: featuredImagesByProjectId[project.id] || null,
-    })
-  )
+    }))
+  }
+
   perf.total()
 
   return (
     <ProjectsTabs
+      activeTab={activeTab}
       projects={projectsWithImages}
       addProjectAction={addProject}
-      initialTab={initialTab}
     />
   )
 }
@@ -138,7 +145,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const perf = createPerfTimer('/projects')
   const supabase = await createClient()
   const resolvedSearchParams = await searchParams
-  const initialTab = resolvedSearchParams.tab === 'create' ? 'create' : 'mine'
+  const activeTab = resolvedSearchParams.tab === 'create' ? 'create' : 'mine'
 
   const {
     data: { user },
@@ -148,13 +155,17 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   if (!user) {
     redirect('/login')
   }
+
+  const profilePromise = (async () => ({
+    data: await getDashboardProfile(user.id),
+  }))()
   perf.total()
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={null}>
-          <DashboardTopBar />
+          <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
         </Suspense>
 
         <header>
@@ -171,10 +182,9 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
         </header>
 
         <Suspense fallback={<ProjectsTabsSkeleton />}>
-          <ProjectsTabsContent userId={user.id} initialTab={initialTab} />
+          <ProjectsTabsContent userId={user.id} activeTab={activeTab} />
         </Suspense>
       </div>
     </main>
   )
 }
-

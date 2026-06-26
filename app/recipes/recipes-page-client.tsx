@@ -1,9 +1,11 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useDeferredValue, useMemo, useState } from 'react'
 import RecipeCard from './recipe-card'
 import RecipeSearchBar from './recipe-search-bar'
+
 const CreateRecipeForm = dynamic(() => import('./create-recipe-form'))
 
 type Recipe = {
@@ -16,24 +18,23 @@ type Recipe = {
   user_id: string | null
 }
 
+type Tab = 'find' | 'mine' | 'custom'
+
 type Props = {
+  activeTab: Tab
   publicRecipes: Recipe[]
   myRecipes: Recipe[]
   savedRecipes: Recipe[]
   savedRecipeIds: string[]
-  defaultTab: Tab
 }
 
-type Tab = 'find' | 'mine' | 'custom'
-
 export default function RecipesPageClient({
+  activeTab,
   publicRecipes,
   myRecipes,
   savedRecipes,
   savedRecipeIds,
-  defaultTab,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>(defaultTab)
   const [findSearch, setFindSearch] = useState('')
   const [mySearch, setMySearch] = useState('')
   const deferredFindSearch = useDeferredValue(findSearch)
@@ -75,31 +76,24 @@ export default function RecipesPageClient({
 
   return (
     <section className="space-y-5">
-      {/* ✅ TABS */}
       <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
-        <button
-          onClick={() => setActiveTab('mine')}
-          className={tabClass(activeTab === 'mine')}
-        >
+        <Link href="/recipes?tab=mine" className={tabClass(activeTab === 'mine')}>
           My Recipes
-        </button>
+        </Link>
 
-        <button
-          onClick={() => setActiveTab('find')}
-          className={tabClass(activeTab === 'find')}
-        >
+        <Link href="/recipes?tab=find" className={tabClass(activeTab === 'find')}>
           Find Recipe
-        </button>
+        </Link>
 
-        <button
-          onClick={() => setActiveTab('custom')}
+        <Link
+          href="/recipes?tab=custom"
           className={tabClass(activeTab === 'custom')}
         >
           Create Recipe
-        </button>
+        </Link>
       </div>
 
-      {activeTab === 'find' && (
+      {activeTab === 'find' ? (
         <div className="space-y-5">
           <RecipeSearchBar
             value={findSearch}
@@ -122,9 +116,9 @@ export default function RecipesPageClient({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {activeTab === 'mine' && (
+      {activeTab === 'mine' ? (
         <div className="space-y-5">
           <RecipeSearchBar
             value={mySearch}
@@ -147,16 +141,16 @@ export default function RecipesPageClient({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {activeTab === 'custom' && <CreateRecipeForm />}
+      {activeTab === 'custom' ? <CreateRecipeForm /> : null}
     </section>
   )
 }
 
 function tabClass(active: boolean) {
   return [
-    'rounded-lg px-2 py-3 text-xs font-semibold transition',
+    'rounded-lg px-2 py-3 text-center text-xs font-semibold transition',
     active
       ? 'border border-cyan-400/60 bg-cyan-400/15 text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.25)]'
       : 'text-white/60',

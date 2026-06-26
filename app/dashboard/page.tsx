@@ -21,6 +21,7 @@ import {
   StatsSkeleton,
   TopBarSkeleton,
 } from './dashboard-skeletons'
+import { getDashboardProfile } from './dashboard-data'
 
 async function DashboardCuratorButton() {
   const perf = createPerfTimer('/dashboard:curator')
@@ -31,7 +32,15 @@ async function DashboardCuratorButton() {
   return <CuratorButton curatorPrompt={curatorPrompt} />
 }
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams?: Promise<{
+    tab?: string
+  }>
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: DashboardPageProps) {
   const perf = createPerfTimer('/dashboard')
   const supabase = await createClient()
 
@@ -44,13 +53,12 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const profilePromise = perf.measure('profile fetch', async () =>
-    await supabase
-      .from('profiles')
-      .select('avatar_url, level, username')
-      .eq('id', user.id)
-      .single()
-  )
+  const profilePromise = perf.measure('profile fetch', async () => ({
+    data: await getDashboardProfile(user.id),
+  }))
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const activeTab =
+    resolvedSearchParams?.tab === 'profile' ? 'profile' : 'painting-table'
   perf.total()
 
   return (
@@ -62,31 +70,30 @@ export default async function DashboardPage() {
 
         <DashboardWelcome />
 
-        <DashboardTabs
-          profileContent={
-            <div className="grid gap-5">
-              <DashboardXpCard />
-              <DashboardHobbyBadges />
+        <DashboardTabs activeTab={activeTab} />
 
-              <Suspense fallback={<StatsSkeleton />}>
-                <DashboardMetadataGrid userId={user.id} />
-              </Suspense>
-            </div>
-          }
-          paintingTableContent={
-            <div className="grid gap-5">
-              <DashboardQuickActions />
+        {activeTab === 'profile' ? (
+          <div className="grid gap-5">
+            <DashboardXpCard userId={user.id} />
+            <DashboardHobbyBadges />
 
-              <Suspense fallback={<FeaturedUnitSkeleton />}>
-                <DashboardUnitInProgress userId={user.id} />
-              </Suspense>
+            <Suspense fallback={<StatsSkeleton />}>
+              <DashboardMetadataGrid userId={user.id} />
+            </Suspense>
+          </div>
+        ) : (
+          <div className="grid gap-5">
+            <DashboardQuickActions />
 
-              <Suspense fallback={<BenchUnitsSkeleton />}>
-                <DashboardActiveBench userId={user.id} />
-              </Suspense>
-            </div>
-          }
-        />
+            <Suspense fallback={<FeaturedUnitSkeleton />}>
+              <DashboardUnitInProgress userId={user.id} />
+            </Suspense>
+
+            <Suspense fallback={<BenchUnitsSkeleton />}>
+              <DashboardActiveBench userId={user.id} />
+            </Suspense>
+          </div>
+        )}
       </div>
       <Suspense fallback={null}>
         <DashboardCuratorButton />

@@ -25,7 +25,6 @@ export default function ProjectLibrary({ projects }: ProjectLibraryProps) {
           <PrefetchLink
             key={project.id}
             href={`/projects/${project.id}`}
-            viewportPrefetch
             className="block overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/80 transition active:scale-[0.98] active:opacity-70 hover:border-cyan-500"
           >
             {project.primaryImage ? (

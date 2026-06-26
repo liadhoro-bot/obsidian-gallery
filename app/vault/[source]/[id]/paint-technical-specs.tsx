@@ -1,5 +1,5 @@
 import { createClient } from '../../../../utils/supabase/server'
-import { getCachedCatalogPaint } from '../../../../lib/public-cache'
+import { createServiceRoleClient } from '../../../../utils/supabase/service-role'
 
 type PaintRef = {
   source: 'catalog' | 'custom'
@@ -21,7 +21,14 @@ export default async function PaintTechnicalSpecs({
   } | null = null
 
   if (paintRef.source === 'catalog') {
-    specs = await getCachedCatalogPaint(paintRef.paintId)
+    const serviceSupabase = createServiceRoleClient()
+    const { data } = await serviceSupabase
+      .from('paint_catalog')
+      .select('sku, finish, paint_type')
+      .eq('id', paintRef.paintId)
+      .maybeSingle()
+
+    specs = data
   } else {
     const { data } = await supabase
       .from('paints')
