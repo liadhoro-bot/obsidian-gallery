@@ -29,6 +29,11 @@ type UnitDetailUnit = {
   theme_id: string | null
 }
 
+type UnitQueryError = {
+  code?: string
+  message?: string
+}
+
 type ParentProject = {
   id: string
   name: string | null
@@ -524,9 +529,7 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
     .limit(1)
     .maybeSingle()
 
-  const { data: unit, error: unitError } = await supabase
-    .from('units')
-    .select(`
+  const unitSelectWithTheme = `
       id,
       name,
       notes,
@@ -538,13 +541,55 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
       status,
       project_id,
       theme_id
-    `)
+    `
+  const unitSelectWithoutTheme = `
+      id,
+      name,
+      notes,
+      complexity,
+      unit_size,
+      deadline,
+      is_active,
+      is_featured,
+      status,
+      project_id
+    `
+
+  let { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select(unitSelectWithTheme)
     .eq('id', id)
     .eq('user_id', user.id)
     .single()
 
+  const queryError = unitError as UnitQueryError | null
+  if (
+    queryError?.code === '42703' &&
+    queryError.message?.includes('theme_id')
+  ) {
+    const fallbackResult = await supabase
+      .from('units')
+      .select(unitSelectWithoutTheme)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    unit = fallbackResult.data
+      ? {
+          ...fallbackResult.data,
+          theme_id: null,
+        }
+      : null
+    unitError = fallbackResult.error
+  }
+
   if (unitError || !unit) {
-    notFound()
+    const finalError = unitError as UnitQueryError | null
+    if (finalError?.code === 'PGRST116' || (!finalError && !unit)) {
+      notFound()
+    }
+
+    throw new Error(finalError?.message || 'Could not load unit detail.')
   }
   perf.mark('main Supabase query')
 
