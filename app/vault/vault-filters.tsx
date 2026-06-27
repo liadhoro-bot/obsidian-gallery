@@ -62,6 +62,15 @@ const getCachedCatalogFilterRows = unstable_cache(
   { revalidate: 3600 }
 )
 
+async function safelyGetCatalogFilterRows() {
+  try {
+    return await getCachedCatalogFilterRows()
+  } catch (error) {
+    console.error('Vault catalog filters failed:', error)
+    return [] as CatalogFilterRow[]
+  }
+}
+
 async function getCustomFilterRows(
   supabase: SupabaseClient,
   userId: string
@@ -78,6 +87,18 @@ async function getCustomFilterRows(
   return (data || []) as CustomFilterRow[]
 }
 
+async function safelyGetCustomFilterRows(
+  supabase: SupabaseClient,
+  userId: string
+) {
+  try {
+    return await getCustomFilterRows(supabase, userId)
+  } catch (error) {
+    console.error('Vault custom filters failed:', error)
+    return [] as CustomFilterRow[]
+  }
+}
+
 export default async function VaultFilters({
   q,
   brand,
@@ -91,8 +112,8 @@ export default async function VaultFilters({
   const supabase = await createClient()
 
   const [catalogRows, customRows] = await Promise.all([
-    getCachedCatalogFilterRows(),
-    userId ? getCustomFilterRows(supabase, userId) : Promise.resolve([]),
+    safelyGetCatalogFilterRows(),
+    userId ? safelyGetCustomFilterRows(supabase, userId) : Promise.resolve([]),
   ])
   perf.mark('filter Supabase queries')
 

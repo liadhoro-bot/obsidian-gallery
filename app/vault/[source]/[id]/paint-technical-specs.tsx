@@ -21,14 +21,23 @@ export default async function PaintTechnicalSpecs({
   } | null = null
 
   if (paintRef.source === 'catalog') {
-    const serviceSupabase = createServiceRoleClient()
-    const { data } = await serviceSupabase
-      .from('paint_catalog')
-      .select('sku, finish, paint_type')
-      .eq('id', paintRef.paintId)
-      .maybeSingle()
+    try {
+      const serviceSupabase = createServiceRoleClient()
+      const { data, error } = await serviceSupabase
+        .from('paint_catalog')
+        .select('sku, finish, paint_type')
+        .eq('id', paintRef.paintId)
+        .maybeSingle()
 
-    specs = data
+      if (error) {
+        console.error('Catalog paint specs failed:', error)
+      }
+
+      specs = data
+    } catch (error) {
+      console.error('Catalog paint specs failed:', error)
+      specs = null
+    }
   } else {
     const { data } = await supabase
       .from('paints')

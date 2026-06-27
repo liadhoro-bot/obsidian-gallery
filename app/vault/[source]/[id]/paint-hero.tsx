@@ -12,14 +12,34 @@ export default async function PaintHero({ paintRef }: { paintRef: PaintRef }) {
   const supabase = await createClient()
 
   if (paintRef.source === 'catalog') {
-    const serviceSupabase = createServiceRoleClient()
-    const { data: paint } = await serviceSupabase
-      .from('paint_catalog')
-      .select(
-        'id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type'
-      )
-      .eq('id', paintRef.paintId)
-      .maybeSingle()
+    let paint: {
+      id: string
+      name: string | null
+      brand: string | null
+      line: string | null
+      sku: string | null
+      swatch_image_url: string | null
+      hex_approx: string | null
+    } | null = null
+
+    try {
+      const serviceSupabase = createServiceRoleClient()
+      const { data, error } = await serviceSupabase
+        .from('paint_catalog')
+        .select(
+          'id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type'
+        )
+        .eq('id', paintRef.paintId)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Catalog paint hero failed:', error)
+      }
+
+      paint = data
+    } catch (error) {
+      console.error('Catalog paint hero failed:', error)
+    }
 
     if (!paint) return null
 
