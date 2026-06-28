@@ -3,6 +3,14 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import type { PointerEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { buildVaultColorMatchHref } from '../../components/color-sampler/color-match-navigation'
+import type { SampledImageColor } from '../../components/color-sampler/types'
+
+const ColorSamplerDialog = dynamic(
+  () => import('../../components/color-sampler/ColorSamplerDialog'),
+  { ssr: false }
+)
 
 const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/
 
@@ -118,6 +126,7 @@ export default function ColorMatchModal({
   const [, startTransition] = useTransition()
   const initialHex = normalizeHex(selectedHex) ?? '#22D3EE'
   const [isOpen, setIsOpen] = useState(false)
+  const [samplerOpen, setSamplerOpen] = useState(false)
   const [hex, setHex] = useState(initialHex)
   const [hsl, setHsl] = useState<HslColor>(() => hexToHsl(initialHex))
   const wheelRef = useRef<HTMLDivElement>(null)
@@ -178,24 +187,25 @@ export default function ColorMatchModal({
     setIsOpen(false)
   }
 
-  function findClosestPaints() {
-    if (!selectedColor) return
-
-    const params = new URLSearchParams()
-    params.set('tab', 'find')
-    params.set('matchHex', selectedColor)
-
-    if (brand) params.set('brand', brand)
-    if (line) params.set('line', line)
-
-    if (ownership && ownership !== 'all') {
-      params.set('ownership', ownership)
-    }
+  function findClosestPaints(nextHex = selectedColor) {
+    if (!nextHex) return
 
     startTransition(() => {
-      router.replace(`/vault?${params.toString()}`)
+      router.replace(
+        buildVaultColorMatchHref(nextHex, {
+          brand,
+          line,
+          ownership,
+        })
+      )
       closeModal()
     })
+  }
+
+  function handleSampleConfirmed(sample: SampledImageColor) {
+    updateFromHex(sample.hex)
+    setSamplerOpen(false)
+    findClosestPaints(sample.hex)
   }
 
   return (
@@ -307,6 +317,15 @@ export default function ColorMatchModal({
               </div>
 
               <div className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/70 p-4">
+                <button
+                  type="button"
+                  onClick={() => setSamplerOpen(true)}
+                  className="tap-press tap-target flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-300/15"
+                >
+                  <span aria-hidden="true">◎</span>
+                  Sample from Image
+                </button>
+
                 <ColorDial
                   label="Tone"
                   value={hsl.h}
@@ -362,7 +381,7 @@ export default function ColorMatchModal({
 
               <button
                 type="button"
-                onClick={findClosestPaints}
+                onClick={() => findClosestPaints()}
                 disabled={!selectedColor}
                 className="tap-press tap-target rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.18)] transition hover:border-cyan-200/60 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/35 disabled:shadow-none"
               >
@@ -377,6 +396,17 @@ export default function ColorMatchModal({
             ) : null}
           </div>
         </div>
+      ) : null}
+
+      {samplerOpen ? (
+        <ColorSamplerDialog
+          open={samplerOpen}
+          onOpenChange={setSamplerOpen}
+          source="vault_upload"
+          allowCameraCapture={true}
+          allowImageUpload={true}
+          onConfirm={handleSampleConfirmed}
+        />
       ) : null}
     </>
   )

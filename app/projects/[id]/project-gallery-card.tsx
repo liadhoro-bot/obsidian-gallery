@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
+import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFromImageAction'
 import SubmitButton from '../../components/SubmitButton'
 import type { ProjectImage, ProjectRow, SerializableError } from './types'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
@@ -404,8 +405,26 @@ export default function ProjectGalleryCard({
       {selectedImage && (
   <div
     className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
-    onClick={() => setSelectedImage(null)}
+    onClick={(event) => {
+      if (event.target === event.currentTarget) {
+        setSelectedImage(null)
+      }
+    }}
   >
+    <div className="absolute left-4 top-4 z-50">
+      <SampleColorFromImageAction
+        imageSrc={selectedImage.image_url}
+        imageAlt={
+          selectedImage.alt_text ||
+          project?.name ||
+          'Project image'
+        }
+        sourceType="project_gallery"
+        sourceId={selectedImage.id}
+        label="Match Paint"
+      />
+    </div>
+
     <button
       type="button"
       onClick={() => setSelectedImage(null)}

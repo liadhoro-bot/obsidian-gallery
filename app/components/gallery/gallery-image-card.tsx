@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
+import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFromImageAction'
+import type { ColorSamplerSource } from '@/components/color-sampler/types'
 
 const ZoomImage = dynamic(() => import('./zoomable-gallery-image'))
 
@@ -16,12 +18,14 @@ type GalleryImage = {
 type GalleryImageCardProps = {
   image: GalleryImage
   canEdit?: boolean
+  samplerSourceType?: Exclude<ColorSamplerSource, 'vault_upload' | 'vault_camera'>
   onToggleFeatured?: (imageId: string) => Promise<void>
 }
 
 export default function GalleryImageCard({
   image,
   canEdit = false,
+  samplerSourceType = 'unit_gallery',
   onToggleFeatured,
 }: GalleryImageCardProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -75,13 +79,37 @@ export default function GalleryImageCard({
             {image.is_featured ? 'Featured' : 'Make featured'}
           </button>
         )}
+
+        <div className="absolute bottom-2 left-2 z-10">
+          <SampleColorFromImageAction
+            imageSrc={image.image_url}
+            imageAlt={image.alt_text || 'Gallery image'}
+            sourceType={samplerSourceType}
+            sourceId={image.id}
+            label="Match Paint"
+          />
+        </div>
       </div>
 
       {isOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3"
-          onClick={() => setIsOpen(false)}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setIsOpen(false)
+            }
+          }}
         >
+          <div className="absolute left-4 top-4 z-50">
+            <SampleColorFromImageAction
+              imageSrc={image.image_url}
+              imageAlt={image.alt_text || 'Gallery image'}
+              sourceType={samplerSourceType}
+              sourceId={image.id}
+              label="Match Paint"
+            />
+          </div>
+
           <button
             type="button"
             onClick={() => setIsOpen(false)}

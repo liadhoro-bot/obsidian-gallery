@@ -1,11 +1,18 @@
 'use client'
 
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { buildVaultColorMatchHref } from '@/components/color-sampler/color-match-navigation'
 import BackButton from '../../components/back-button'
 import ThemeVisibilityPill from './theme-visibility-pill'
 import { updateTheme } from './actions'
+
+const ColorSamplerDialog = dynamic(
+  () => import('@/components/color-sampler/ColorSamplerDialog'),
+  { ssr: false }
+)
 
 type Props = {
   themeId: string
@@ -28,6 +35,8 @@ export default function ThemeDetailHero({
 }: Props) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
+  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null)
+  const [samplerImageUrl, setSamplerImageUrl] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleUpdate(formData: FormData) {
@@ -42,19 +51,26 @@ export default function ThemeDetailHero({
     <section className="relative mt-4">
       <div className="relative h-[340px] overflow-hidden bg-white/[0.04]">
         {heroUrl ? (
-          <Image
-            src={heroUrl}
-            alt={name || 'Theme image'}
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw, 420px"
-            className="object-cover"
-          />
+          <button
+            type="button"
+            onClick={() => setExpandedImageUrl(heroUrl)}
+            className="absolute inset-0 z-0 block"
+            aria-label="Expand theme image"
+          >
+            <Image
+              src={heroUrl}
+              alt={name || 'Theme image'}
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 420px"
+              className="object-cover"
+            />
+          </button>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/30 via-slate-900 to-black" />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#07090d]" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#07090d]" />
 
         <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-4">
           <BackButton fallbackHref="/themes" />
@@ -186,6 +202,79 @@ export default function ThemeDetailHero({
             </div>
           </form>
         </div>
+      ) : null}
+
+      {expandedImageUrl ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setExpandedImageUrl(null)
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${name || 'Theme'} image`}
+        >
+          <div
+            className="absolute left-4 top-4 z-50"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onPointerUp={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSamplerImageUrl(expandedImageUrl)}
+              className="tap-press inline-flex items-center justify-center gap-2 rounded-full border border-cyan-300/35 bg-black/70 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 backdrop-blur transition hover:bg-cyan-300/15"
+              aria-label="Match Paint from theme image"
+            >
+              <span aria-hidden="true">◎</span>
+              Match Paint
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setExpandedImageUrl(null)}
+            className="tap-press mobile-close-button absolute right-4 top-4 z-50 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur"
+          >
+            Close
+          </button>
+
+          <div
+            className="mobile-scroll max-h-[88dvh] max-w-6xl overflow-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Image
+              src={expandedImageUrl}
+              alt={name || 'Theme image'}
+              width={1400}
+              height={1400}
+              sizes="100vw"
+              className="max-h-[88dvh] rounded-2xl object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {samplerImageUrl ? (
+        <ColorSamplerDialog
+          open={Boolean(samplerImageUrl)}
+          onOpenChange={(open) => {
+            if (!open) setSamplerImageUrl(null)
+          }}
+          imageSource={{ src: samplerImageUrl, alt: name || 'Theme image' }}
+          source="theme_gallery"
+          allowCameraCapture={false}
+          allowImageUpload={false}
+          onConfirm={(sample) => {
+            setSamplerImageUrl(null)
+            setExpandedImageUrl(null)
+            startTransition(() => {
+              router.push(buildVaultColorMatchHref(sample))
+            })
+          }}
+        />
       ) : null}
     </section>
   )

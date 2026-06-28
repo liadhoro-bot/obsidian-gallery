@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
+import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFromImageAction'
 import SubmitButton from '../../../components/SubmitButton'
 import { Recipe, RecipeImage } from './types'
 import type { GalleryUploadResult } from '../../../../utils/images/gallery-upload'
@@ -38,6 +39,7 @@ export default function RecipeGallerySection({
   const [actionError, setActionError] = useState<string | null>(null)
   const [localImages, setLocalImages] = useState(recipeImages)
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([])
+  const [expandedImage, setExpandedImage] = useState<RecipeImage | null>(null)
   const [isEditingImages, setIsEditingImages] = useState(false)
   const [isConfirmingBatchDelete, setIsConfirmingBatchDelete] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -451,14 +453,23 @@ export default function RecipeGallerySection({
                   </label>
                 ) : null}
 
-              <Image
-                src={image.image_url}
-                alt={image.alt_text || recipe.name}
-                width={180}
-                height={120}
-                sizes="(max-width: 768px) 33vw, 160px"
-                className="h-28 w-full object-cover"
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isEditingImages) setExpandedImage(image)
+                }}
+                className="tap-card block w-full"
+                aria-label="Expand recipe image"
+              >
+                <Image
+                  src={image.image_url}
+                  alt={image.alt_text || recipe.name}
+                  width={180}
+                  height={120}
+                  sizes="(max-width: 768px) 33vw, 160px"
+                  className="h-28 w-full object-cover"
+                />
+              </button>
               </div>
 
               <div className="space-y-2 p-3">
@@ -531,6 +542,52 @@ export default function RecipeGallerySection({
       ) : (
         <p className="mt-4 text-sm text-neutral-400">No recipe images yet.</p>
       )}
+
+      {expandedImage ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setExpandedImage(null)
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${recipe.name} image`}
+        >
+          <div className="absolute left-4 top-4 z-50">
+            <SampleColorFromImageAction
+              imageSrc={expandedImage.image_url}
+              imageAlt={expandedImage.alt_text || recipe.name}
+              sourceType="recipe_gallery"
+              sourceId={expandedImage.id}
+              label="Match Paint"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setExpandedImage(null)}
+            className="tap-press mobile-close-button absolute right-4 top-4 z-50 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur"
+          >
+            Close
+          </button>
+
+          <div
+            className="mobile-scroll max-h-[88dvh] max-w-6xl overflow-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Image
+              src={expandedImage.image_url}
+              alt={expandedImage.alt_text || recipe.name}
+              width={1400}
+              height={1400}
+              sizes="100vw"
+              className="max-h-[88dvh] rounded-2xl object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

@@ -1,8 +1,15 @@
 'use client'
 
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { buildVaultColorMatchHref } from '@/components/color-sampler/color-match-navigation'
+
+const ColorSamplerDialog = dynamic(
+  () => import('@/components/color-sampler/ColorSamplerDialog'),
+  { ssr: false }
+)
 
 type Props = {
   themeId: string
@@ -22,6 +29,8 @@ export default function ThemeImageGallery({
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([])
   const [isEditingImages, setIsEditingImages] = useState(false)
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+  const [expandedImageUrl, setExpandedImageUrl] = useState<string | null>(null)
+  const [samplerImageUrl, setSamplerImageUrl] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -153,17 +162,99 @@ export default function ThemeImageGallery({
               </label>
             ) : null}
 
-            <Image
-              src={localHeroUrl}
-              alt={themeName || 'Theme image'}
-              width={180}
-              height={120}
-              sizes="(max-width: 768px) 33vw, 160px"
-              className="h-28 w-full object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => {
+                if (!isEditingImages) setExpandedImageUrl(localHeroUrl)
+              }}
+              className="tap-card block w-full"
+              aria-label="Expand theme image"
+            >
+              <Image
+                src={localHeroUrl}
+                alt={themeName || 'Theme image'}
+                width={180}
+                height={120}
+                sizes="(max-width: 768px) 33vw, 160px"
+                className="h-28 w-full object-cover"
+              />
+            </button>
           </div>
         </div>
       </div>
+
+      {expandedImageUrl ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setExpandedImageUrl(null)
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${themeName || 'Theme'} image`}
+        >
+          <div
+            className="absolute left-4 top-4 z-50"
+            onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onPointerUp={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSamplerImageUrl(expandedImageUrl)}
+              className="tap-press inline-flex items-center justify-center gap-2 rounded-full border border-cyan-300/35 bg-black/70 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 backdrop-blur transition hover:bg-cyan-300/15"
+              aria-label="Match Paint from theme image"
+            >
+              <span aria-hidden="true">◎</span>
+              Match Paint
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setExpandedImageUrl(null)}
+            className="tap-press mobile-close-button absolute right-4 top-4 z-50 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur"
+          >
+            Close
+          </button>
+
+          <div
+            className="mobile-scroll max-h-[88dvh] max-w-6xl overflow-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Image
+              src={expandedImageUrl}
+              alt={themeName || 'Theme image'}
+              width={1400}
+              height={1400}
+              sizes="100vw"
+              className="max-h-[88dvh] rounded-2xl object-contain"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {samplerImageUrl ? (
+        <ColorSamplerDialog
+          open={Boolean(samplerImageUrl)}
+          onOpenChange={(open) => {
+            if (!open) setSamplerImageUrl(null)
+          }}
+          imageSource={{ src: samplerImageUrl, alt: themeName || 'Theme image' }}
+          source="theme_gallery"
+          allowCameraCapture={false}
+          allowImageUpload={false}
+          onConfirm={(sample) => {
+            setSamplerImageUrl(null)
+            setExpandedImageUrl(null)
+            startTransition(() => {
+              router.push(buildVaultColorMatchHref(sample))
+            })
+          }}
+        />
+      ) : null}
     </section>
   )
 }

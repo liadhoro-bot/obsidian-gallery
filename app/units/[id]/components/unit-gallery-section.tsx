@@ -268,6 +268,7 @@ export default function UnitGallerySection({
             <GalleryImageCard
               image={image}
               canEdit={true}
+              samplerSourceType="unit_gallery"
               onToggleFeatured={async (imageId) => {
                 onToggleFeatured(imageId)
               }}

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
+import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFromImageAction'
 import {
   deleteUnitImage,
   deleteUnit,
@@ -75,6 +76,7 @@ type UnitImage = {
 }
 
 type ExpandedStagePhoto = {
+  id: string
   src: string
   alt: string
   label: string
@@ -1481,6 +1483,7 @@ const paintsForStage = localStagePaints
                         type="button"
                         onClick={() =>
                           setExpandedStagePhoto({
+                            id: stagePhoto.id,
                             src: stagePhoto.image_url,
                             alt: stagePhoto.alt_text || step.step_label,
                             label: step.step_label,
@@ -1697,6 +1700,7 @@ const paintsForStage = localStagePaints
       type="button"
       onClick={() =>
         setExpandedStagePhoto({
+          id: stagePhoto.id,
           src: stagePhoto.image_url,
           alt: stagePhoto.alt_text || step.step_label,
           label: step.step_label,
@@ -1753,6 +1757,16 @@ const paintsForStage = localStagePaints
           aria-label={`${expandedStagePhoto.label} photo`}
           onClick={() => setExpandedStagePhoto(null)}
         >
+          <div className="absolute left-4 top-4 z-10">
+            <SampleColorFromImageAction
+              imageSrc={expandedStagePhoto.src}
+              imageAlt={expandedStagePhoto.alt}
+              sourceType="unit_stage"
+              sourceId={expandedStagePhoto.id}
+              label="Match Paint"
+            />
+          </div>
+
           <button
             type="button"
             onClick={() => setExpandedStagePhoto(null)}
