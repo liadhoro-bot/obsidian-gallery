@@ -5,21 +5,45 @@ import type { SampledImageColor } from './types'
 export default function SamplingLoupe({
   sample,
   pointer,
+  containerSize,
 }: {
   sample: SampledImageColor | null
   pointer: { x: number; y: number } | null
+  containerSize: { width: number; height: number }
 }) {
   if (!sample || !pointer) return null
 
-  const placeLeft = pointer.x > 150
-  const placeTop = pointer.y > 150
+  const loupeSize = 112
+  const edgePadding = 12
+  const pointerGap = 36
+
+  const preferredLeft = pointer.x - loupeSize - pointerGap
+  const preferredTop = pointer.y - loupeSize - pointerGap
+  const fallbackLeft = pointer.x + pointerGap
+  const fallbackTop = pointer.y + pointerGap
+  const maxLeft = Math.max(edgePadding, containerSize.width - loupeSize - edgePadding)
+  const maxTop = Math.max(edgePadding, containerSize.height - loupeSize - edgePadding)
+
+  const left =
+    preferredLeft >= edgePadding
+      ? preferredLeft
+      : fallbackLeft + loupeSize <= containerSize.width - edgePadding
+        ? fallbackLeft
+        : Math.min(Math.max(pointer.x - loupeSize / 2, edgePadding), maxLeft)
+
+  const top =
+    preferredTop >= edgePadding
+      ? preferredTop
+      : fallbackTop + loupeSize <= containerSize.height - edgePadding
+        ? fallbackTop
+        : Math.min(Math.max(pointer.y - loupeSize / 2, edgePadding), maxTop)
 
   return (
     <div
       className="pointer-events-none absolute z-20 grid h-28 w-28 place-items-center rounded-full border-2 border-white bg-slate-950/95 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
       style={{
-        left: placeLeft ? pointer.x - 132 : pointer.x + 24,
-        top: placeTop ? pointer.y - 132 : pointer.y + 24,
+        left,
+        top,
       }}
       aria-hidden="true"
     >

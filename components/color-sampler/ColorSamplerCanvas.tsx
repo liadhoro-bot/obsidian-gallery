@@ -253,7 +253,11 @@ export default function ColorSamplerCanvas({
         </span>
       ) : null}
 
-      <SamplingLoupe sample={visibleSample} pointer={visiblePointer} />
+      <SamplingLoupe
+        sample={visibleSample}
+        pointer={visiblePointer}
+        containerSize={canvasSize}
+      />
     </div>
   )
 }
