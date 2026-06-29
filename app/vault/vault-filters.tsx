@@ -58,13 +58,19 @@ const getCachedCatalogFilterRows = unstable_cache(
     const supabase = createServiceRoleClient()
     return getCatalogFilterRows(supabase as SupabaseClient)
   },
-  ['vault-catalog-filter-rows-v2'],
+  ['vault-catalog-filter-rows-v3'],
   { revalidate: 3600 }
 )
 
 async function safelyGetCatalogFilterRows(fallbackSupabase: SupabaseClient) {
   try {
-    return await getCachedCatalogFilterRows()
+    const cachedRows = await getCachedCatalogFilterRows()
+
+    if (cachedRows.length > 0) {
+      return cachedRows
+    }
+
+    console.error('Vault catalog filters cache returned no rows')
   } catch (error) {
     console.error('Vault catalog filters failed:', error)
   }
