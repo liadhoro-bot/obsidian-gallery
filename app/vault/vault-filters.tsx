@@ -1,7 +1,5 @@
 import { createClient } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
-import { unstable_cache } from 'next/cache'
-import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import VaultFiltersClient from './vault-filters-client'
 
 type VaultFiltersProps = {
@@ -57,35 +55,13 @@ async function getCatalogFilterRows(supabase: SupabaseClient) {
   return allRows
 }
 
-const getCachedCatalogFilterRows = unstable_cache(
-  async () => {
-    const supabase = createServiceRoleClient()
-    return getCatalogFilterRows(supabase as SupabaseClient)
-  },
-  ['vault-catalog-filter-rows-v3'],
-  { revalidate: 3600 }
-)
-
-async function safelyGetCatalogFilterRows(fallbackSupabase: SupabaseClient) {
+async function safelyGetCatalogFilterRows(supabase: SupabaseClient) {
   try {
-    const cachedRows = await getCachedCatalogFilterRows()
-
-    if (cachedRows.length > 0) {
-      return cachedRows
-    }
-
-    console.error('Vault catalog filters cache returned no rows')
+    return await getCatalogFilterRows(supabase)
   } catch (error) {
     console.error('Vault catalog filters failed:', error)
+    return [] as CatalogFilterRow[]
   }
-
-  try {
-    return await getCatalogFilterRows(fallbackSupabase)
-  } catch (error) {
-    console.error('Vault catalog filters fallback failed:', error)
-  }
-
-  return [] as CatalogFilterRow[]
 }
 
 async function getCustomFilterRows(
