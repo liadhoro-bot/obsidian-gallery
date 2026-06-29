@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { useState, useTransition } from 'react'
 import { buildVaultColorMatchHref } from './color-match-navigation'
+import EyedropperIcon from './EyedropperIcon'
 import type { ColorSamplerSource, SampledImageColor } from './types'
 
 const ColorSamplerDialog = dynamic(() => import('./ColorSamplerDialog'), {
@@ -45,32 +46,34 @@ export default function SampleColorFromImageAction({
         onMouseUp={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
         onPointerUp={(event) => event.stopPropagation()}
-        className="tap-press inline-flex items-center justify-center gap-2 rounded-full border border-cyan-300/35 bg-black/70 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 backdrop-blur transition hover:bg-cyan-300/15"
+        className="tap-press inline-flex h-9 w-9 items-center justify-center rounded-full border border-cyan-300/40 bg-black/70 text-cyan-100 shadow-lg backdrop-blur transition hover:bg-cyan-300/15 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
         aria-label={`${label} from image`}
+        title={label}
         data-source-id={sourceId}
       >
-        <span aria-hidden="true">◎</span>
-        {label}
+        <EyedropperIcon />
       </button>
 
-      {open && canPortal ? createPortal(
-        <ColorSamplerDialog
-          open={open}
-          onOpenChange={setOpen}
-          imageSource={{ src: imageSrc, alt: imageAlt }}
-          source={sourceType}
-          allowCameraCapture={false}
-          allowImageUpload={false}
-          onConfirm={(sample) => {
-            onColorConfirmed?.(sample)
-            setOpen(false)
-            startTransition(() => {
-              router.push(buildVaultColorMatchHref(sample))
-            })
-          }}
-        />,
-        document.body
-      ) : null}
+      {open && canPortal
+        ? createPortal(
+            <ColorSamplerDialog
+              open={open}
+              onOpenChange={setOpen}
+              imageSource={{ src: imageSrc, alt: imageAlt }}
+              source={sourceType}
+              allowCameraCapture={false}
+              allowImageUpload={false}
+              onConfirm={(sample) => {
+                onColorConfirmed?.(sample)
+                setOpen(false)
+                startTransition(() => {
+                  router.push(buildVaultColorMatchHref(sample))
+                })
+              }}
+            />,
+            document.body
+          )
+        : null}
     </>
   )
 }

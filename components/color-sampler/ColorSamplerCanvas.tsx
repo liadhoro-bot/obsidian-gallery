@@ -1,6 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import SamplingLoupe from './SamplingLoupe'
 import type { SampledImageColor } from './types'
 import {
@@ -22,6 +29,11 @@ type Props = {
   sampleRadius?: number
   onSampleChange: (sample: SampledImageColor) => void
   onError: (message: string) => void
+}
+
+const TOUCH_SAMPLE_TARGET_OFFSET = {
+  x: -44,
+  y: -58,
 }
 
 export default function ColorSamplerCanvas({
@@ -196,6 +208,28 @@ export default function ColorSamplerCanvas({
   const visibleSample = lockedSample ?? previewSample
   const visiblePointer = lockedPointer ?? previewPointer
 
+  function getSamplingClientPoint(event: PointerEvent<HTMLCanvasElement>) {
+    if (event.pointerType !== 'touch') {
+      return {
+        clientX: event.clientX,
+        clientY: event.clientY,
+      }
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect()
+
+    return {
+      clientX: Math.min(
+        rect.right - 1,
+        Math.max(rect.left + 1, event.clientX + TOUCH_SAMPLE_TARGET_OFFSET.x)
+      ),
+      clientY: Math.min(
+        rect.bottom - 1,
+        Math.max(rect.top + 1, event.clientY + TOUCH_SAMPLE_TARGET_OFFSET.y)
+      ),
+    }
+  }
+
   return (
     <div className="relative min-h-[42dvh] overflow-hidden rounded-3xl border border-white/10 bg-black">
       <canvas
@@ -204,21 +238,25 @@ export default function ColorSamplerCanvas({
         role="img"
         aria-label={`Image color sampling area for ${image.alt}. Move over, tap, or drag on the image to sample a color.`}
         onPointerEnter={(event) => {
-          scheduleSample(event.clientX, event.clientY)
+          const point = getSamplingClientPoint(event)
+          scheduleSample(point.clientX, point.clientY)
         }}
         onPointerDown={(event) => {
+          const point = getSamplingClientPoint(event)
           event.currentTarget.setPointerCapture(event.pointerId)
-          scheduleSample(event.clientX, event.clientY, true)
+          scheduleSample(point.clientX, point.clientY, true)
         }}
         onPointerMove={(event) => {
+          const point = getSamplingClientPoint(event)
           scheduleSample(
-            event.clientX,
-            event.clientY,
+            point.clientX,
+            point.clientY,
             event.currentTarget.hasPointerCapture(event.pointerId)
           )
         }}
         onPointerUp={(event) => {
-          scheduleSample(event.clientX, event.clientY, true)
+          const point = getSamplingClientPoint(event)
+          scheduleSample(point.clientX, point.clientY, true)
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId)
           }
