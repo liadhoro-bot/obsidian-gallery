@@ -26,6 +26,10 @@ type CustomFilterRow = {
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
+function isPresentText(value: string | null): value is string {
+  return Boolean(value)
+}
+
 async function getCatalogFilterRows(supabase: SupabaseClient) {
   const pageSize = 1000
   let from = 0
@@ -147,7 +151,7 @@ export default async function VaultFilters({
     .filter((row) => row.brand || row.line)
 
   const brands = Array.from(
-    new Set(filterRows.map((row) => row.brand).filter(Boolean))
+    new Set(filterRows.map((row) => row.brand).filter(isPresentText))
   ).sort((a, b) => a.localeCompare(b)) as string[]
   perf.total()
 
