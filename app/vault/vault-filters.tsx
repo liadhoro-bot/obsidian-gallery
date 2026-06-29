@@ -58,17 +58,24 @@ const getCachedCatalogFilterRows = unstable_cache(
     const supabase = createServiceRoleClient()
     return getCatalogFilterRows(supabase as SupabaseClient)
   },
-  ['vault-catalog-filter-rows'],
+  ['vault-catalog-filter-rows-v2'],
   { revalidate: 3600 }
 )
 
-async function safelyGetCatalogFilterRows() {
+async function safelyGetCatalogFilterRows(fallbackSupabase: SupabaseClient) {
   try {
     return await getCachedCatalogFilterRows()
   } catch (error) {
     console.error('Vault catalog filters failed:', error)
-    return [] as CatalogFilterRow[]
   }
+
+  try {
+    return await getCatalogFilterRows(fallbackSupabase)
+  } catch (error) {
+    console.error('Vault catalog filters fallback failed:', error)
+  }
+
+  return [] as CatalogFilterRow[]
 }
 
 async function getCustomFilterRows(
@@ -112,33 +119,30 @@ export default async function VaultFilters({
   const supabase = await createClient()
 
   const [catalogRows, customRows] = await Promise.all([
-    safelyGetCatalogFilterRows(),
+    safelyGetCatalogFilterRows(supabase),
     userId ? safelyGetCustomFilterRows(supabase, userId) : Promise.resolve([]),
   ])
   perf.mark('filter Supabase queries')
 
-  const customAsFilterRows: CatalogFilterRow[] = customRows.map((row) => ({
-    brand: row.manufacturer || 'Custom',
-    line: row.series || 'Custom Color',
-  }))
+  const customAsFilterRows: CatalogFilterRow[] = customRows
+    .map((row) => ({
+      brand: row.manufacturer?.trim() || null,
+      line: row.series?.trim() || null,
+    }))
+    .filter((row) => row.brand || row.line)
 
-  const allRows =
-    tab === 'collection'
-      ? [...catalogRows, ...customAsFilterRows]
-      : catalogRows
+  const allRows = [...catalogRows, ...customAsFilterRows]
+
+  const filterRows = allRows
+    .map((row) => ({
+      brand: row.brand?.trim() || null,
+      line: row.line?.trim() || null,
+    }))
+    .filter((row) => row.brand || row.line)
 
   const brands = Array.from(
-    new Set(allRows.map((row) => row.brand).filter(Boolean))
-  ).sort() as string[]
-
-  const lines = Array.from(
-    new Set(
-      allRows
-        .filter((row) => !brand || row.brand === brand)
-        .map((row) => row.line)
-        .filter(Boolean)
-    )
-  ).sort() as string[]
+    new Set(filterRows.map((row) => row.brand).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b)) as string[]
   perf.total()
 
   return (
@@ -150,7 +154,7 @@ export default async function VaultFilters({
       matchHex={matchHex}
       tab={tab}
       brands={brands}
-      lines={lines}
+      filterRows={filterRows}
     />
   )
 }

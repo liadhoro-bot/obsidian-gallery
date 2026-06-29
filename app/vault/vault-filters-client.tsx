@@ -1,6 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
@@ -32,7 +39,7 @@ type VaultFiltersClientProps = {
   matchHex: string
   tab: 'find' | 'collection'
   brands: string[]
-  lines: string[]
+  filterRows: { brand: string | null; line: string | null }[]
 }
 
 export default function VaultFiltersClient({
@@ -42,8 +49,8 @@ export default function VaultFiltersClient({
   ownership,
   matchHex,
   tab,
-  brands,
-  lines,
+  brands = [],
+  filterRows = [],
 }: VaultFiltersClientProps) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -62,6 +69,16 @@ export default function VaultFiltersClient({
     tab === 'collection' ? 'owned' : ownership || 'all'
   )
   const [colorGroup, setColorGroup] = useState('')
+  const lines = useMemo(() => {
+    return Array.from(
+      new Set(
+        filterRows
+          .filter((row) => !localBrand || row.brand === localBrand)
+          .map((row) => row.line)
+          .filter((value): value is string => Boolean(value))
+      )
+    ).sort((a, b) => a.localeCompare(b))
+  }, [filterRows, localBrand])
 
   useEffect(() => {
     searchValueRef.current = searchValue
