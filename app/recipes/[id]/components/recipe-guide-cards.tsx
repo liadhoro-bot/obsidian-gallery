@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import type { CSSProperties } from 'react'
 import type { ReactNode } from 'react'
+import { useId } from 'react'
 import type { Recipe, RecipeImage, RecipeStep, StepPaintLink } from './types'
 
 type RecipeGuidePaint = NonNullable<StepPaintLink['paint']> & {
@@ -120,11 +121,15 @@ function getTitleLines(title: string) {
   return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')]
 }
 
-function getPaintDaubStyle(color: string): CSSProperties {
+function getPaintDaubPresentation(color: string) {
   const match = color.match(/^#?([0-9a-f]{6})$/i)
 
   if (!match) {
-    return { '--paint-color': color } as CSSProperties
+    return {
+      color,
+      sheenOpacity: 0.14,
+      textureOpacity: 0.34,
+    }
   }
 
   const value = match[1]
@@ -135,10 +140,10 @@ function getPaintDaubStyle(color: string): CSSProperties {
   const isDark = luminance < 0.18
 
   return {
-    '--paint-color': color,
-    '--paint-daub-texture-opacity': isDark ? '0.78' : '0.46',
-    '--paint-daub-sheen-opacity': isDark ? '0.07' : '0.18',
-  } as CSSProperties
+    color,
+    sheenOpacity: isDark ? 0.06 : 0.18,
+    textureOpacity: isDark ? 0.22 : 0.46,
+  }
 }
 
 function GuideTitle({
@@ -171,10 +176,12 @@ function PaintMark({
   paint: RecipeGuidePaint
   showParts: boolean
 }) {
+  const maskId = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const color = paint?.hex_approx || '#8b8b8b'
   const ratio = Math.max(1, Math.min(parseInt(paint?.ratio_text || '1', 10) || 1, 6))
   const name = paint?.name || 'Unnamed paint'
   const label = showParts ? `${ratio} ${ratio === 1 ? 'Pt' : 'Pts'} ${name}` : name
+  const daub = getPaintDaubPresentation(color)
 
   return (
     <div className="recipe-guide-paint-row flex min-w-0 flex-col items-center text-center">
@@ -183,10 +190,60 @@ function PaintMark({
         aria-label={label}
         title={label}
       >
-        <span
-          className="recipe-guide-paint-daub"
-          style={getPaintDaubStyle(color)}
-        />
+        <span className="recipe-guide-paint-daub">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 590 300"
+            preserveAspectRatio="xMidYMid meet"
+            className="recipe-guide-paint-daub-svg"
+          >
+            <defs>
+              <mask id={`${maskId}-paint-daub-mask`} maskUnits="userSpaceOnUse">
+                <image
+                  href="/recipe-guide/paint-daub-mask.png"
+                  width="590"
+                  height="300"
+                  preserveAspectRatio="xMidYMid meet"
+                />
+              </mask>
+              <radialGradient id={`${maskId}-paint-daub-sheen`}>
+                <stop offset="0%" stopColor="#ffffff" stopOpacity={daub.sheenOpacity} />
+                <stop offset="58%" stopColor="#ffffff" stopOpacity="0" />
+              </radialGradient>
+              <linearGradient
+                id={`${maskId}-paint-daub-shadow`}
+                x1="0"
+                x2="1"
+                y1="0"
+                y2="1"
+              >
+                <stop offset="35%" stopColor="#000000" stopOpacity="0" />
+                <stop offset="100%" stopColor="#000000" stopOpacity="0.2" />
+              </linearGradient>
+            </defs>
+            <g mask={`url(#${maskId}-paint-daub-mask)`}>
+              <rect width="590" height="300" fill={daub.color} />
+              <image
+                href="/recipe-guide/paint-daub-texture.png"
+                width="590"
+                height="300"
+                preserveAspectRatio="xMidYMid meet"
+                opacity={daub.textureOpacity}
+                style={{ mixBlendMode: 'overlay' } as CSSProperties}
+              />
+              <rect
+                width="590"
+                height="300"
+                fill={`url(#${maskId}-paint-daub-sheen)`}
+              />
+              <rect
+                width="590"
+                height="300"
+                fill={`url(#${maskId}-paint-daub-shadow)`}
+              />
+            </g>
+          </svg>
+        </span>
       </div>
       <div className="recipe-guide-paint-copy min-w-0">
         <p className="recipe-guide-paint-name font-serif leading-tight text-white">

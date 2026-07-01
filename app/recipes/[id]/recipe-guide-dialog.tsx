@@ -166,17 +166,26 @@ export default function RecipeGuideDialog({
         height: '100dvh',
         overflow: 'hidden',
         background: 'rgba(0, 0, 0, 0.92)',
-        padding: '16px 12px',
+        padding: '10px 8px',
       }}
     >
+      <button
+        type="button"
+        aria-label="Close recipe cards"
+        onClick={onClose}
+        className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-black/70 text-lg font-black leading-none text-white/80 shadow-lg shadow-black/40 backdrop-blur transition hover:bg-white/10 hover:text-white active:scale-95 active:opacity-80"
+      >
+        x
+      </button>
+
       <div
         className="cursor-grab touch-pan-y overflow-hidden active:cursor-grabbing"
         style={{
-          aspectRatio: '2 / 3',
+          aspectRatio: '9 / 16',
           width:
-            'min(430px, calc(100vw - 24px), calc((100dvh - 32px) * 0.6667))',
-          maxWidth: 'calc(100vw - 24px)',
-          maxHeight: 'calc(100dvh - 32px)',
+            'min(430px, calc(100vw - 16px), calc((100dvh - 20px) * 0.5625))',
+          maxWidth: 'calc(100vw - 16px)',
+          maxHeight: 'calc(100dvh - 20px)',
         }}
         onWheel={handleWheel}
         onTouchStart={(event) =>

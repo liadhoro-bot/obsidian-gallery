@@ -18,7 +18,7 @@ export default function RecipeDetailTabs({
     label: string
   }[] = [
     { key: 'details', label: 'Recipe Details' },
-    { key: 'steps', label: 'Recipe Steps' },
+    { key: 'steps', label: 'Recipe Cards' },
   ]
 
   if (isOwner) {
