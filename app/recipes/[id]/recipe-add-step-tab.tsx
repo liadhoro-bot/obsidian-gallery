@@ -17,7 +17,6 @@ type Props = {
   setPaintLine: (value: string) => void
   paintOwnership: string
   setPaintOwnership: (value: string) => void
-  createCustomPaintAction: (formData: FormData) => Promise<void>
   addRecipeStepAction: (formData: FormData) => Promise<void>
 }
 
@@ -33,11 +32,9 @@ export default function RecipeAddStepTab({
   setPaintLine,
   paintOwnership,
   setPaintOwnership,
-  createCustomPaintAction,
   addRecipeStepAction,
 }: Props) {
   const [isPaintFiltersOpen, setIsPaintFiltersOpen] = useState(false)
-  const [isAddingCustomPaint, setIsAddingCustomPaint] = useState(false)
 
   const availableBrands = useMemo(
     () =>
@@ -265,98 +262,6 @@ export default function RecipeAddStepTab({
             className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-black shadow-lg shadow-cyan-500/20"
           />
         </form>
-      </section>
-
-      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-sm uppercase tracking-wider text-cyan-400">
-              Custom Paint
-            </p>
-            <h2 className="mt-1 text-xl font-semibold">Create Paint</h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsAddingCustomPaint((current) => !current)}
-            className="rounded-xl border border-cyan-500/50 px-3 py-2 text-xs font-bold text-cyan-300 transition active:scale-[0.98] active:opacity-70 hover:bg-cyan-500/10"
-          >
-            {isAddingCustomPaint ? 'Close' : 'Open'}
-          </button>
-        </div>
-
-        {isAddingCustomPaint ? (
-          <form action={createCustomPaintAction} className="mt-4 grid gap-3">
-            <input type="hidden" name="recipeId" value={recipe.id} />
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Name
-              </label>
-              <input
-                name="name"
-                type="text"
-                required
-                placeholder="For example: Necro Violet"
-                className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Brand
-              </label>
-              <input
-                name="manufacturer"
-                type="text"
-                placeholder="Scale75"
-                className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Line
-              </label>
-              <input
-                name="series"
-                type="text"
-                placeholder="Layer Paint"
-                className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Paint Type
-              </label>
-              <input
-                name="paintType"
-                type="text"
-                placeholder="Acrylic"
-                className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm text-neutral-300">
-                Color Hex
-              </label>
-              <input
-                name="colorHex"
-                type="text"
-                placeholder="#7a5ca8"
-                className="w-full rounded-xl border border-neutral-700 bg-black px-3 py-2 text-sm text-white"
-              />
-            </div>
-
-            <SubmitButton
-              idleText="Create Custom Paint"
-              pendingText="Creating..."
-              className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-black shadow-lg shadow-cyan-500/20"
-            />
-          </form>
-        ) : null}
       </section>
     </div>
   )

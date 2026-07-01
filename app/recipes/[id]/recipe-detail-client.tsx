@@ -12,8 +12,9 @@ import {
 } from './components/types'
 import RecipeDetailTabs, { RecipeDetailTab } from './recipe-detail-tabs'
 import RecipeDetailsTab from './recipe-details-tab'
-import RecipeStepsTab from './recipe-steps-tab'
 import RecipeAddStepTab from './recipe-add-step-tab'
+import RecipeGuideDialog from './recipe-guide-dialog'
+import RecipeStepsTab from './recipe-steps-tab'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 
 type Props = {
@@ -27,7 +28,6 @@ type Props = {
   updateRecipeHeaderAction: (formData: FormData) => Promise<void>
   updateRecipeInventoryAction: (formData: FormData) => Promise<void>
   updateRecipeTipsAction: (formData: FormData) => Promise<void>
-  createCustomPaintAction: (formData: FormData) => Promise<void>
   addRecipeStepAction: (formData: FormData) => Promise<void>
   updateRecipeStepAction: (formData: FormData) => Promise<void>
   deleteRecipeStepAction: (formData: FormData) => Promise<void>
@@ -50,7 +50,6 @@ export default function RecipeDetailClient({
   paints,
   updateRecipeHeaderAction,
   updateRecipeInventoryAction,
-  createCustomPaintAction,
   addRecipeStepAction,
   updateRecipeStepAction,
   deleteRecipeStepAction,
@@ -65,8 +64,8 @@ export default function RecipeDetailClient({
   const [activeTab, setActiveTab] = useState<RecipeDetailTab>('details')
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isEditingInventory, setIsEditingInventory] = useState(false)
+  const [isRecipeGuideOpen, setIsRecipeGuideOpen] = useState(false)
   const [activeStepIndex, setActiveStepIndex] = useState(0)
-  const [editingStepId, setEditingStepId] = useState<string | null>(null)
   const [deleteConfirmStepId, setDeleteConfirmStepId] = useState<string | null>(null)
 
   const [paintSearch, setPaintSearch] = useState('')
@@ -125,7 +124,18 @@ export default function RecipeDetailClient({
   activeTab={activeTab}
   setActiveTab={setActiveTab}
   isOwner={isOwner}
+  onRecipeStepsClick={() => setIsRecipeGuideOpen(true)}
 />
+
+      <RecipeGuideDialog
+        isOpen={isRecipeGuideOpen}
+        onClose={() => setIsRecipeGuideOpen(false)}
+        recipe={recipe}
+        steps={steps}
+        featuredImage={featuredImage}
+        paintsByStepId={paintsByStepId}
+        stepPaintLinks={stepPaintLinks}
+      />
 
       {activeTab === 'details' ? (
         <RecipeDetailsTab
@@ -143,41 +153,47 @@ export default function RecipeDetailClient({
         />
       ) : null}
 
-      {activeTab === 'steps' ? (
-        <RecipeStepsTab
-          isOwner={isOwner}
-          recipe={recipe}
-          steps={steps}
-          paintsByStepId={paintsByStepId}
-          filteredPaints={filteredPaints}
-          activeStepIndex={activeStepIndex}
-          setActiveStepIndex={setActiveStepIndex}
-          editingStepId={editingStepId}
-          setEditingStepId={setEditingStepId}
-          deleteConfirmStepId={deleteConfirmStepId}
-          setDeleteConfirmStepId={setDeleteConfirmStepId}
-          moveRecipeStepAction={moveRecipeStepAction}
-          updateRecipeStepAction={updateRecipeStepAction}
-          deleteRecipeStepAction={deleteRecipeStepAction}
-        />
-      ) : null}
+      {isOwner && activeTab === 'edit' ? (
+        <div className="mt-5 space-y-5">
+          <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+            <div className="mb-5">
+              <p className="text-sm uppercase tracking-wider text-cyan-400">
+                Edit Recipe
+              </p>
+              <h2 className="mt-1 text-xl font-semibold">Recipe Steps</h2>
+            </div>
 
-      {isOwner && activeTab === 'add' ? (
-        <RecipeAddStepTab
-          recipe={recipe}
-          paints={paints}
-          filteredPaints={filteredPaints}
-          paintSearch={paintSearch}
-          setPaintSearch={setPaintSearch}
-          paintBrand={paintBrand}
-          setPaintBrand={setPaintBrand}
-          paintLine={paintLine}
-          setPaintLine={setPaintLine}
-          paintOwnership={paintOwnership}
-          setPaintOwnership={setPaintOwnership}
-          createCustomPaintAction={createCustomPaintAction}
-          addRecipeStepAction={addRecipeStepAction}
-        />
+            <RecipeStepsTab
+              isOwner={isOwner}
+              recipe={recipe}
+              steps={steps}
+              paintsByStepId={paintsByStepId}
+              filteredPaints={filteredPaints}
+              activeStepIndex={activeStepIndex}
+              setActiveStepIndex={setActiveStepIndex}
+              deleteConfirmStepId={deleteConfirmStepId}
+              setDeleteConfirmStepId={setDeleteConfirmStepId}
+              moveRecipeStepAction={moveRecipeStepAction}
+              updateRecipeStepAction={updateRecipeStepAction}
+              deleteRecipeStepAction={deleteRecipeStepAction}
+            />
+          </section>
+
+          <RecipeAddStepTab
+            recipe={recipe}
+            paints={paints}
+            filteredPaints={filteredPaints}
+            paintSearch={paintSearch}
+            setPaintSearch={setPaintSearch}
+            paintBrand={paintBrand}
+            setPaintBrand={setPaintBrand}
+            paintLine={paintLine}
+            setPaintLine={setPaintLine}
+            paintOwnership={paintOwnership}
+            setPaintOwnership={setPaintOwnership}
+            addRecipeStepAction={addRecipeStepAction}
+          />
+        </div>
       ) : null}
     </div>
   )

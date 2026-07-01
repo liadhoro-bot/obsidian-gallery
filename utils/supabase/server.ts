@@ -25,3 +25,18 @@ export async function createClient() {
     }
   )
 }
+
+export async function getSessionUser(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession()
+
+  if (error) {
+    return null
+  }
+
+  return session?.user ?? null
+}

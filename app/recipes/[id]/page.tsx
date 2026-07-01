@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
-import { createClient } from '../../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import { updatePaintOwnership } from '../../../utils/paint-ownership/update-paint-ownership'
 import { redirect, notFound } from 'next/navigation'
 import { revalidatePath, revalidateTag } from 'next/cache'
@@ -170,65 +170,6 @@ async function updateRecipeTips(formData: FormData) {
     console.error('Error updating recipe tips:', error)
     return
   }
-
-  revalidateRecipeCaches(recipeId)
-}
-
-async function createCustomPaint(formData: FormData) {
-  'use server'
-
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return
-
-  const recipeId = formData.get('recipeId')?.toString()
-  const name = formData.get('name')?.toString().trim()
-  const manufacturer = formData.get('manufacturer')?.toString().trim() || null
-  const series = formData.get('series')?.toString().trim() || null
-  const paintType = formData.get('paintType')?.toString().trim() || null
-  const colorHex = formData.get('colorHex')?.toString().trim() || null
-
-  if (!recipeId || !name) return
-
-  const { data: paint, error } = await supabase
-  .from('paints')
-  .insert([
-    {
-      user_id: user.id,
-      name,
-      manufacturer,
-      series,
-      paint_type: paintType,
-      color_hex: colorHex,
-    },
-  ])
-  .select('id')
-  .single()
-
-  if (error) {
-    console.error('Error creating custom paint:', error)
-    return
-  }
-
-await captureServerEvent({
-  distinctId: user.id,
-  event: 'custom_color_created',
-  properties: {
-    custom_paint_id: paint?.id || null,
-    paint_name: name,
-    manufacturer,
-    series,
-    paint_type: paintType,
-    has_color_hex: Boolean(colorHex),
-    has_swatch_image: false,
-    source: 'recipe_page',
-    recipe_id: recipeId,
-  },
-})
 
   revalidateRecipeCaches(recipeId)
 }
@@ -1076,9 +1017,7 @@ export default async function RecipeDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   const cachedPublicRecipe = await getCachedPublicRecipe(id)
@@ -1281,7 +1220,6 @@ const wishlistPaintIds = new Set(
         uploadRecipeImageAction={uploadRecipeImage}
         setFeaturedRecipeImageAction={setFeaturedRecipeImage}
         deleteRecipeImageAction={deleteRecipeImage}
-        createCustomPaintAction={createCustomPaint}
         updateRecipePaintOwnershipAction={updateRecipePaintOwnership}
         deleteRecipeAction={deleteRecipe}
         actionRow={

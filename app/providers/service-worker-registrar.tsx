@@ -8,6 +8,15 @@ export default function ServiceWorkerRegistrar() {
       return
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          registrations.forEach((registration) => registration.unregister())
+        )
+      return
+    }
+
     const canRegister =
       window.location.protocol === 'https:' ||
       window.location.hostname === 'localhost'

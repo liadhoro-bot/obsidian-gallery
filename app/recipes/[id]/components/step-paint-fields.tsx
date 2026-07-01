@@ -45,7 +45,9 @@ export default function StepPaintFields({
   existingPaints = [],
   keyPrefix,
 }: Props) {
-  const [visiblePaints, setVisiblePaints] = useState(0)
+  const [visiblePaints, setVisiblePaints] = useState(
+    Math.min(existingPaints.length, 3)
+  )
 
   function addPaint() {
     setVisiblePaints((current) => Math.min(current + 1, 3))

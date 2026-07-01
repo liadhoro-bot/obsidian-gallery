@@ -1,15 +1,17 @@
-export type RecipeDetailTab = 'details' | 'steps' | 'add'
+export type RecipeDetailTab = 'details' | 'steps' | 'edit'
 
 type Props = {
   activeTab: RecipeDetailTab
   setActiveTab: (tab: RecipeDetailTab) => void
   isOwner: boolean
+  onRecipeStepsClick?: () => void
 }
 
 export default function RecipeDetailTabs({
   activeTab,
   setActiveTab,
   isOwner,
+  onRecipeStepsClick,
 }: Props) {
   const tabs: {
     key: RecipeDetailTab
@@ -20,7 +22,7 @@ export default function RecipeDetailTabs({
   ]
 
   if (isOwner) {
-    tabs.push({ key: 'add', label: 'Add Step' })
+    tabs.push({ key: 'edit', label: 'Edit Recipe' })
   }
 
   return (
@@ -37,7 +39,14 @@ export default function RecipeDetailTabs({
           <button
             key={tab.key}
             type="button"
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => {
+              if (tab.key === 'steps' && onRecipeStepsClick) {
+                onRecipeStepsClick()
+                return
+              }
+
+              setActiveTab(tab.key)
+            }}
             className={[
               'rounded-xl px-2 py-3 text-center text-xs font-black transition active:scale-[0.98] active:opacity-70',
               isActive
