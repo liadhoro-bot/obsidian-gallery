@@ -1,7 +1,6 @@
 'use client'
 
 import Image from 'next/image'
-import type { CSSProperties } from 'react'
 import type { ReactNode } from 'react'
 import { useId } from 'react'
 import type { Recipe, RecipeImage, RecipeStep, StepPaintLink } from './types'
@@ -127,8 +126,7 @@ function getPaintDaubPresentation(color: string) {
   if (!match) {
     return {
       color,
-      sheenOpacity: 0.14,
-      textureOpacity: 0.34,
+      sheenOpacity: 0.08,
     }
   }
 
@@ -141,8 +139,7 @@ function getPaintDaubPresentation(color: string) {
 
   return {
     color,
-    sheenOpacity: isDark ? 0.06 : 0.18,
-    textureOpacity: isDark ? 0.22 : 0.46,
+    sheenOpacity: isDark ? 0.035 : 0.08,
   }
 }
 
@@ -182,6 +179,9 @@ function PaintMark({
   const name = paint?.name || 'Unnamed paint'
   const label = showParts ? `${ratio} ${ratio === 1 ? 'Pt' : 'Pts'} ${name}` : name
   const daub = getPaintDaubPresentation(color)
+  const swatchUrl = isUsableImageUrl(paint?.swatch_image_url)
+    ? paint.swatch_image_url
+    : null
 
   return (
     <div className="recipe-guide-paint-row flex min-w-0 flex-col items-center text-center">
@@ -223,14 +223,15 @@ function PaintMark({
             </defs>
             <g mask={`url(#${maskId}-paint-daub-mask)`}>
               <rect width="590" height="300" fill={daub.color} />
-              <image
-                href="/recipe-guide/paint-daub-texture.png"
-                width="590"
-                height="300"
-                preserveAspectRatio="xMidYMid meet"
-                opacity={daub.textureOpacity}
-                style={{ mixBlendMode: 'overlay' } as CSSProperties}
-              />
+              {swatchUrl ? (
+                <image
+                  href={swatchUrl}
+                  width="590"
+                  height="300"
+                  preserveAspectRatio="xMidYMid slice"
+                  opacity="0.96"
+                />
+              ) : null}
               <rect
                 width="590"
                 height="300"
