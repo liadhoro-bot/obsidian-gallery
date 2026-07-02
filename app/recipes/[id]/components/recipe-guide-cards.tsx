@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useId } from 'react'
 import type { Recipe, RecipeImage, RecipeStep, StepPaintLink } from './types'
@@ -14,7 +15,13 @@ function isUsableImageUrl(value?: string | null) {
   return url.startsWith('http://') || url.startsWith('https://')
 }
 
-function CardFrame({ children }: { children: ReactNode }) {
+function CardFrame({
+  children,
+  showBrandMark = false,
+}: {
+  children: ReactNode
+  showBrandMark?: boolean
+}) {
   return (
     <article className="recipe-guide-card relative isolate flex h-full w-full overflow-hidden border border-[#b98137]/70 bg-[#020806] text-white shadow-[0_24px_80px_rgba(0,0,0,0.75)]">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_18%,rgba(29,221,211,0.2),transparent_25%),radial-gradient(circle_at_50%_100%,rgba(38,236,224,0.16),transparent_16%),linear-gradient(135deg,#010504,#061715_48%,#020403)]" />
@@ -26,7 +33,20 @@ function CardFrame({ children }: { children: ReactNode }) {
       <Corner className="bottom-[21px] right-[21px] rotate-180" />
       <Corner className="bottom-[21px] left-[21px] -rotate-90" />
       <div className="relative z-10 flex min-h-0 w-full flex-col">{children}</div>
+      {showBrandMark ? <RecipeGuideBrandMark /> : null}
     </article>
+  )
+}
+
+function RecipeGuideBrandMark() {
+  return (
+    <Link
+      href="/"
+      className="recipe-guide-brand-mark"
+      aria-label="Made with Obsidian Gallery"
+    >
+      made with the Obsidian Gallery
+    </Link>
   )
 }
 
@@ -299,18 +319,21 @@ export function RecipeGuideCoverCard({
   featuredImage,
   stepCount,
   paintCount,
+  showBrandMark = false,
 }: {
   recipe: Recipe
   featuredImage: RecipeImage | null
   stepCount: number
   paintCount: number
+  showBrandMark?: boolean
 }) {
   const imageUrl = isUsableImageUrl(featuredImage?.image_url)
     ? featuredImage?.image_url
     : null
+  const description = recipe.description?.trim()
 
   return (
-    <CardFrame>
+    <CardFrame showBrandMark={showBrandMark}>
       <div className="relative -mx-1 -mt-1 h-[43%] shrink-0 overflow-hidden rounded-t-[18px] border border-[#8d5d2d]/60 bg-black">
         {imageUrl ? (
           <Image
@@ -330,7 +353,7 @@ export function RecipeGuideCoverCard({
       <div className="recipe-guide-cover-divider flex items-center gap-2 text-[#d69a45]">
         <span className="h-px flex-1 bg-[#8d5d2d]" />
         <p className="recipe-guide-kicker font-black uppercase">
-          Miniature Painting Recipe
+          Miniature Painting Guide
         </p>
         <span className="h-px flex-1 bg-[#8d5d2d]" />
       </div>
@@ -339,6 +362,12 @@ export function RecipeGuideCoverCard({
         <div className="recipe-guide-cover-title">
           <GuideTitle title={recipe.name} />
         </div>
+        <Ornament />
+        {description ? (
+          <p className="recipe-guide-cover-description font-serif text-white">
+            {description}
+          </p>
+        ) : null}
         <Ornament />
         <div className="recipe-guide-stats grid grid-cols-[1fr_auto_1fr] items-center font-serif uppercase text-white">
           <CoverStat icon={<StepIcon />} count={stepCount} label="Steps" />
@@ -354,15 +383,17 @@ export function RecipeGuideImageStepCard({
   step,
   stepsLength,
   paints,
+  showBrandMark = false,
 }: {
   step: RecipeStep
   stepsLength: number
   paints: RecipeGuidePaint[]
+  showBrandMark?: boolean
 }) {
   const imageUrl = isUsableImageUrl(step.image_url) ? step.image_url : null
 
   return (
-    <CardFrame>
+    <CardFrame showBrandMark={showBrandMark}>
       <div className="recipe-guide-step-head shrink-0 text-center">
         <p className="recipe-guide-step-number font-serif uppercase text-cyan-300">
           <span className="recipe-guide-step-number-word">Step</span>
@@ -403,13 +434,15 @@ export function RecipeGuideDescriptiveStepCard({
   step,
   stepsLength,
   paints,
+  showBrandMark = false,
 }: {
   step: RecipeStep
   stepsLength: number
   paints: RecipeGuidePaint[]
+  showBrandMark?: boolean
 }) {
   return (
-    <CardFrame>
+    <CardFrame showBrandMark={showBrandMark}>
       <div className="recipe-guide-step-head recipe-guide-step-head-descriptive shrink-0 text-center">
         <p className="recipe-guide-step-number font-serif uppercase text-cyan-300">
           <span className="recipe-guide-step-number-word">Step</span>
