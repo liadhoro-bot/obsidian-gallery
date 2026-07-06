@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import ContestAdminForm from '../../../../components/contests/contest-admin-form'
 import ContestAllowlistManager from '../../../../components/contests/contest-allowlist-manager'
 import ContestModerationList from '../../../../components/contests/contest-moderation-list'
+import PendingSubmitButton from '../../../../components/contests/pending-submit-button'
 import {
   finalizeContestResultsAction,
   publishContestResultsAction,
@@ -58,16 +59,22 @@ export default async function ManageContestPage({
               <div className="mt-3 flex flex-wrap gap-2">
                 <form action={finalizeContestResultsAction}>
                   <input type="hidden" name="contestId" value={contest.id} />
-                  <button className="rounded-xl border border-white/10 px-4 py-2 font-black text-white">
+                  <PendingSubmitButton
+                    pendingLabel="Finalizing..."
+                    className="rounded-xl border border-white/10 px-4 py-2 font-black text-white"
+                  >
                     Finalize
-                  </button>
+                  </PendingSubmitButton>
                 </form>
                 <form action={publishContestResultsAction}>
                   <input type="hidden" name="contestId" value={contest.id} />
                   <input type="hidden" name="slug" value={contest.slug} />
-                  <button className="rounded-xl bg-cyan-400 px-4 py-2 font-black text-black">
+                  <PendingSubmitButton
+                    pendingLabel="Publishing..."
+                    className="rounded-xl bg-cyan-400 px-4 py-2 font-black text-black"
+                  >
                     Publish Results
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               </div>
             </section>

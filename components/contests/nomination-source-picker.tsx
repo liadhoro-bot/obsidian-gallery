@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import type { Contest, ContestNomineeType } from '../../lib/contests/types'
 import type { ContestPickerSource } from '../../lib/contests/queries'
+import PendingSubmitButton from './pending-submit-button'
 
 const typeLabels: Record<ContestNomineeType, string> = {
   project: 'Projects',
@@ -97,9 +98,10 @@ export default function NominationSourcePicker({
                 <input type="hidden" name="contestId" value={contest.id} />
                 <input type="hidden" name="sourceType" value={source.sourceType} />
                 <input type="hidden" name="sourceId" value={source.id} />
-                <button
+                <PendingSubmitButton
                   disabled={isDemoContest}
-                  className={`tap-card group block h-full w-full overflow-hidden rounded-2xl border bg-white/[0.05] text-left transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-85 ${
+                  pendingLabel="Nominating..."
+                  className={`tap-card group block min-h-[17rem] w-full overflow-hidden rounded-2xl border bg-white/[0.05] text-left transition hover:border-cyan-300/50 disabled:cursor-not-allowed disabled:opacity-85 ${
                     isSelected ? 'border-cyan-300' : 'border-white/10'
                   }`}
                 >
@@ -133,7 +135,7 @@ export default function NominationSourcePicker({
                     {isDemoContest ? 'Demo Only' : `Nominate this ${source.sourceType}`}
                   </span>
                 </div>
-                </button>
+                </PendingSubmitButton>
               </form>
             )
           })}

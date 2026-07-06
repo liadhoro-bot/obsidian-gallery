@@ -2,6 +2,7 @@ import Image from 'next/image'
 import type { ReactNode } from 'react'
 import type { Contest, ContestNomineeType } from '../../lib/contests/types'
 import { saveContestAction } from '../../lib/contests/actions'
+import PendingSubmitButton from './pending-submit-button'
 
 function toDatetimeLocal(value?: string | null) {
   if (!value) return ''
@@ -403,40 +404,40 @@ export default function ContestAdminForm({
 
       {isReadOnly ? null : (
         <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="submit"
+          <PendingSubmitButton
             name="intent"
             value="save"
+            pendingLabel="Saving..."
             className="rounded-xl border border-white/10 px-4 py-3 font-black text-white"
           >
             Save Changes
-          </button>
-          <button
-            type="submit"
+          </PendingSubmitButton>
+          <PendingSubmitButton
             name="intent"
             value="publish"
+            pendingLabel="Publishing..."
             className="rounded-xl bg-cyan-400 px-4 py-3 font-black text-black"
           >
             Publish
-          </button>
+          </PendingSubmitButton>
           {contest ? (
             <>
-              <button
-                type="submit"
+              <PendingSubmitButton
                 name="intent"
                 value="cancel"
+                pendingLabel="Cancelling..."
                 className="rounded-xl border border-red-300/30 px-4 py-3 font-black text-red-100"
               >
                 Cancel Contest
-              </button>
-              <button
-                type="submit"
+              </PendingSubmitButton>
+              <PendingSubmitButton
                 name="intent"
                 value="archive"
+                pendingLabel="Archiving..."
                 className="rounded-xl border border-white/10 px-4 py-3 font-black text-white/70"
               >
                 Archive
-              </button>
+              </PendingSubmitButton>
             </>
           ) : null}
         </div>

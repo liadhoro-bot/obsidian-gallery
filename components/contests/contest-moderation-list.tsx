@@ -1,6 +1,7 @@
 import type { ContestNomination } from '../../lib/contests/types'
 import { moderateNominationAction } from '../../lib/contests/actions'
 import NomineeCard from './nominee-card'
+import PendingSubmitButton from './pending-submit-button'
 
 export default function ContestModerationList({
   contestId,
@@ -39,34 +40,38 @@ export default function ContestModerationList({
                   className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
                 />
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <PendingSubmitButton
                     name="action"
                     value="approve"
+                    pendingLabel="Approving..."
                     className="rounded-xl bg-emerald-400 px-3 py-2 text-sm font-black text-black"
                   >
                     Approve
-                  </button>
-                  <button
+                  </PendingSubmitButton>
+                  <PendingSubmitButton
                     name="action"
                     value="reject"
+                    pendingLabel="Rejecting..."
                     className="rounded-xl border border-amber-300/30 px-3 py-2 text-sm font-black text-amber-100"
                   >
                     Reject
-                  </button>
-                  <button
+                  </PendingSubmitButton>
+                  <PendingSubmitButton
                     name="action"
                     value="disqualify"
+                    pendingLabel="Disqualifying..."
                     className="rounded-xl border border-red-300/30 px-3 py-2 text-sm font-black text-red-100"
                   >
                     Disqualify
-                  </button>
-                  <button
+                  </PendingSubmitButton>
+                  <PendingSubmitButton
                     name="action"
                     value="restore"
+                    pendingLabel="Restoring..."
                     className="rounded-xl border border-white/10 px-3 py-2 text-sm font-black text-white/75"
                   >
                     Restore
-                  </button>
+                  </PendingSubmitButton>
                 </div>
               </form>
             </div>

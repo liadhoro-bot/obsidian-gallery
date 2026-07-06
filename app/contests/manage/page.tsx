@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import ContestPhaseBadge from '../../../components/contests/contest-phase-badge'
+import PendingSubmitButton from '../../../components/contests/pending-submit-button'
 import { createMvpContestsAction } from '../../../lib/contests/actions'
 import { isCurrentUserAdmin } from '../../../lib/admin'
 import { getContestPhase } from '../../../lib/contests/phases'
@@ -44,9 +45,12 @@ export default async function ContestManagePage() {
               Create or refresh the Path to Glory Coolest Army and Best Painting
               Guide contests with the MVP rules.
             </p>
-            <button className="mt-3 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-black">
+            <PendingSubmitButton
+              pendingLabel="Refreshing..."
+              className="mt-3 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-black"
+            >
               Create / Refresh MVP Contests
-            </button>
+            </PendingSubmitButton>
           </form>
         ) : null}
         <div className="space-y-3">

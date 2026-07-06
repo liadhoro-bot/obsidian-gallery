@@ -4,6 +4,7 @@ import {
   removeContestParticipantAction,
 } from '../../lib/contests/actions'
 import type { ContestInvitedParticipant } from '../../lib/contests/types'
+import PendingSubmitButton from './pending-submit-button'
 
 export default function ContestAllowlistManager({
   contestId,
@@ -37,9 +38,12 @@ export default function ContestAllowlistManager({
           placeholder="player@email.com, @username, another@email.com"
           className="rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white"
         />
-        <button className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-black text-black">
+        <PendingSubmitButton
+          pendingLabel="Adding..."
+          className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-black text-black"
+        >
           Add Participants
-        </button>
+        </PendingSubmitButton>
       </form>
 
       <div className="mt-4 space-y-2">
@@ -64,9 +68,12 @@ export default function ContestAllowlistManager({
               <input type="hidden" name="contestId" value={contestId} />
               <input type="hidden" name="participantId" value={participant.id} />
               <input type="hidden" name="userId" value={participant.user_id ?? ''} />
-              <button className="rounded-lg border border-red-300/25 px-3 py-1 text-xs font-bold text-red-100">
+              <PendingSubmitButton
+                pendingLabel="Removing..."
+                className="rounded-lg border border-red-300/25 px-3 py-1 text-xs font-bold text-red-100"
+              >
                 Remove
-              </button>
+              </PendingSubmitButton>
             </form>
           </div>
         ))}
@@ -87,9 +94,12 @@ export default function ContestAllowlistManager({
             <form action={removeContestAllowlistUserAction}>
               <input type="hidden" name="contestId" value={contestId} />
               <input type="hidden" name="userId" value={entry.user_id} />
-              <button className="rounded-lg border border-red-300/25 px-3 py-1 text-xs font-bold text-red-100">
+              <PendingSubmitButton
+                pendingLabel="Removing..."
+                className="rounded-lg border border-red-300/25 px-3 py-1 text-xs font-bold text-red-100"
+              >
                 Remove
-              </button>
+              </PendingSubmitButton>
             </form>
           </div>
         ))}
