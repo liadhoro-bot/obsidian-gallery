@@ -22,12 +22,6 @@ export default async function ContestManagePage() {
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-3xl font-black">Manage Contests</h1>
           <div className="flex flex-wrap justify-end gap-2">
-            <Link
-              href="/contests/manage/preview"
-              className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100"
-            >
-              Preview
-            </Link>
             {canCreateContests ? (
               <Link href="/contests/manage/new" className="rounded-xl bg-cyan-400 px-4 py-3 font-black text-black">
                 New

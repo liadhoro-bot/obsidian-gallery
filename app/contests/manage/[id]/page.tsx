@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import Link from 'next/link'
 import ContestAdminForm from '../../../../components/contests/contest-admin-form'
 import ContestAllowlistManager from '../../../../components/contests/contest-allowlist-manager'
 import ContestModerationList from '../../../../components/contests/contest-moderation-list'
@@ -41,7 +42,15 @@ export default async function ManageContestPage({
   return (
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 pb-24 pt-6 sm:max-w-4xl">
-        <h1 className="text-3xl font-black">{contest.title}</h1>
+        <header className="flex items-center justify-between gap-3">
+          <h1 className="text-3xl font-black">{contest.title}</h1>
+          <Link
+            href={`/contests/manage/${contest.id}/preview`}
+            className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-sm font-black text-cyan-100"
+          >
+            Preview
+          </Link>
+        </header>
         <ContestAdminForm contest={contest} isReadOnly={isDemoContest} />
         {isDemoContest ? null : (
           <>
