@@ -1,6 +1,13 @@
 import Image from 'next/image'
 import type { ContestNomination } from '../../lib/contests/types'
 
+function formatSubmittedDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value))
+}
+
 export default function NomineeCard({
   nomination,
   hideIdentity,
@@ -38,11 +45,19 @@ export default function NomineeCard({
             {nomination.snapshot_description}
           </p>
         ) : null}
-        {!hideIdentity && nomination.snapshot_owner_display_name ? (
-          <p className="text-xs text-white/40">
-            By {nomination.snapshot_owner_display_name}
-          </p>
-        ) : null}
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {!hideIdentity && nomination.snapshot_owner_display_name ? (
+            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase text-white/60">
+              By {nomination.snapshot_owner_display_name}
+            </span>
+          ) : null}
+          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase text-white/60">
+            {nomination.status}
+          </span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase text-white/60">
+            {formatSubmittedDate(nomination.submitted_at)}
+          </span>
+        </div>
       </div>
     </article>
   )

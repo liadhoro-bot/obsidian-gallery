@@ -6,6 +6,7 @@ function formatDate(value: string) {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZoneName: 'short',
   }).format(new Date(value))
 }
 
