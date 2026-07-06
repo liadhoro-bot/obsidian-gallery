@@ -41,12 +41,16 @@ function getUploadedImageFile(formData: FormData, key: string) {
 }
 
 function contestRevalidate(slugOrId?: string | null) {
-  revalidatePath('/contests')
-  revalidatePath('/dashboard')
-  if (slugOrId) {
-    revalidatePath(`/contests/${slugOrId}`)
+  try {
+    revalidatePath('/contests')
+    revalidatePath('/dashboard')
+    if (slugOrId) {
+      revalidatePath(`/contests/${slugOrId}`)
+    }
+    revalidateTag('contests', 'max')
+  } catch (error) {
+    console.error('Contest cache revalidation failed', error)
   }
-  revalidateTag('contests', 'max')
 }
 
 async function replaceAllowedNomineeTypes(
@@ -260,14 +264,19 @@ export async function saveContestAction(formData: FormData) {
 
   await replaceAllowedNomineeTypes(supabase, savedContestId, nomineeTypes)
 
-  const { error: auditError } = await supabase.from('contest_audit_events').insert({
-    contest_id: savedContestId,
-    actor_user_id: user.id,
-    action: contestId ? 'contest_edited' : 'contest_created',
-  })
+  const { error: auditError } = await createServiceRoleClient()
+    .from('contest_audit_events')
+    .insert({
+      contest_id: savedContestId,
+      actor_user_id: user.id,
+      action: contestId ? 'contest_edited' : 'contest_created',
+    })
 
   if (auditError) {
-    throw new Error(auditError.message)
+    console.error('Contest audit insert failed after save', {
+      contestId: savedContestId,
+      message: auditError.message,
+    })
   }
 
   contestRevalidate(existingContest?.slug)
