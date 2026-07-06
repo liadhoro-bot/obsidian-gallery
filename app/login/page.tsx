@@ -1,6 +1,16 @@
 import LoginForm from './login-form'
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{
+    next?: string
+  }>
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const requestedNext = resolvedSearchParams?.next ?? '/dashboard'
+  const nextPath = requestedNext.startsWith('/') ? requestedNext : '/dashboard'
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-neutral-950 p-6 text-white">
       <div className="mx-auto max-w-md rounded-2xl border border-neutral-800 bg-neutral-900 p-6 shadow-sm">
@@ -14,7 +24,7 @@ export default function LoginPage() {
           Enter your email and we&apos;ll send you a magic link.
         </p>
 
-        <LoginForm />
+        <LoginForm nextPath={nextPath} />
       </div>
     </main>
   )

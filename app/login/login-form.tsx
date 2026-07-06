@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic'
 import { useState } from 'react'
 const GoogleLoginButton = dynamic(() => import('./google-login-button'))
 
-export default function LoginForm() {
+export default function LoginForm({ nextPath }: { nextPath: string }) {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,11 +16,13 @@ export default function LoginForm() {
 
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
+    const callbackUrl = new URL('/auth/callback', window.location.origin)
+    callbackUrl.searchParams.set('next', nextPath)
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl.toString(),
       },
     })
 
@@ -50,7 +52,7 @@ export default function LoginForm() {
           />
         </div>
 
-        <GoogleLoginButton />
+        <GoogleLoginButton nextPath={nextPath} />
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />

@@ -29,7 +29,7 @@ function GoogleIcon() {
   )
 }
 
-export default function GoogleLoginButton() {
+export default function GoogleLoginButton({ nextPath }: { nextPath: string }) {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -39,12 +39,13 @@ export default function GoogleLoginButton() {
 
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
-    const origin = window.location.origin
+    const callbackUrl = new URL('/auth/callback', window.location.origin)
+    callbackUrl.searchParams.set('next', nextPath)
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${origin}/auth/callback?next=/dashboard`,
+        redirectTo: callbackUrl.toString(),
       },
     })
 
