@@ -40,3 +40,18 @@ export async function getSessionUser(
 
   return session?.user ?? null
 }
+
+export async function getSessionAccessToken(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession()
+
+  if (error) {
+    return null
+  }
+
+  return session?.access_token ?? null
+}
