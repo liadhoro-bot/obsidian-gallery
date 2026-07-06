@@ -1,6 +1,6 @@
 {
   "name": "obsidian-gallery",
-  "version": "2.8.4",
+  "version": "2.8.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,6 +11,8 @@
     "perf:lighthouse": "node scripts/run-lighthouse-ci.mjs",
     "perf:flows": "tsx scripts/run-performance-flows.ts",
     "perf:install-browsers": "playwright install chromium",
+    "qa": "npm run qa:functional",
+    "qa:functional": "tsx scripts/run-functional-qa.ts",
     "import-curator-templates": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/import-curator-templates.ts",
     "audit:paint-swatches": "tsx scripts/audit-paint-swatches.ts",
     "fix:paint-swatches": "tsx scripts/audit-paint-swatches.ts --apply"
@@ -22,6 +24,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@zxing/browser": "^0.2.0",
+    "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "jszip": "^3.10.1",
