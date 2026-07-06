@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import ContestAdminForm from '../../../../components/contests/contest-admin-form'
 import ContestAllowlistManager from '../../../../components/contests/contest-allowlist-manager'
@@ -19,6 +20,17 @@ import {
 } from '../../../../lib/contests/queries'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 
+function getRequestOrigin(requestHeaders: Headers) {
+  const explicitOrigin = requestHeaders.get('origin')
+  if (explicitOrigin) return explicitOrigin
+
+  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host')
+  if (!host) return ''
+
+  const proto = requestHeaders.get('x-forwarded-proto') ?? 'https'
+  return `${proto}://${host}`
+}
+
 export default async function ManageContestPage({
   params,
 }: {
@@ -38,6 +50,7 @@ export default async function ManageContestPage({
   const results = isDemoContest ? [] : await getContestResults(id)
   const allowlist = isDemoContest ? [] : await getContestAllowlist(id)
   const participants = isDemoContest ? [] : await getContestParticipants(id)
+  const shareOrigin = getRequestOrigin(await headers())
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
@@ -52,7 +65,11 @@ export default async function ManageContestPage({
             Preview
           </PendingNavButton>
         </header>
-        <ContestAdminForm contest={contest} isReadOnly={isDemoContest} />
+        <ContestAdminForm
+          contest={contest}
+          isReadOnly={isDemoContest}
+          shareOrigin={shareOrigin}
+        />
         {isDemoContest ? null : (
           <>
             <ContestModerationList contestId={contest.id} nominations={nominations} />

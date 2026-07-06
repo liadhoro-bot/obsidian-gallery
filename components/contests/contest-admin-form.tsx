@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { Contest, ContestNomineeType } from '../../lib/contests/types'
 import { saveContestAction } from '../../lib/contests/actions'
 import PendingSubmitButton from './pending-submit-button'
+import ContestShareLinkBox from './contest-share-link-box'
 
 function toDatetimeLocal(value?: string | null) {
   if (!value) return ''
@@ -63,9 +64,11 @@ function Field({
 export default function ContestAdminForm({
   contest,
   isReadOnly = false,
+  shareOrigin,
 }: {
   contest?: Contest | null
   isReadOnly?: boolean
+  shareOrigin?: string
 }) {
   const selectedTypes = new Set(
     contest?.allowed_nominee_types?.map((row) => row.nominee_type) ?? [
@@ -79,6 +82,9 @@ export default function ContestAdminForm({
     contest?.submissions_close_at ?? hoursFromNow(24 * 14)
   const defaultVotingOpenAt = contest?.voting_open_at ?? hoursFromNow(24 * 15)
   const defaultVotingCloseAt = contest?.voting_close_at ?? hoursFromNow(24 * 22)
+  const contestPath = contest ? `/contests/${contest.slug}` : ''
+  const contestShareUrl =
+    contestPath && shareOrigin ? new URL(contestPath, shareOrigin).toString() : contestPath
 
   return (
     <form action={saveContestAction} className="space-y-5">
@@ -89,6 +95,10 @@ export default function ContestAdminForm({
           This demo contest shows the editable fields and layout, but it does not
           save changes because it is generated locally.
         </p>
+      ) : null}
+
+      {contest ? (
+        <ContestShareLinkBox path={contestPath} shareUrl={contestShareUrl} />
       ) : null}
 
       <fieldset disabled={isReadOnly} className="space-y-5 disabled:opacity-80">
