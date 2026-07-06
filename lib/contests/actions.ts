@@ -83,6 +83,35 @@ async function replaceAllowedNomineeTypes(
   }
 }
 
+async function recordContestAuditEvent(payload: {
+  contest_id: string
+  actor_user_id: string
+  action: string
+  target_type?: string
+  target_id?: string
+  metadata?: Record<string, unknown>
+}) {
+  try {
+    const { error } = await createServiceRoleClient()
+      .from('contest_audit_events')
+      .insert(payload)
+
+    if (error) {
+      console.error('Contest audit insert failed', {
+        contestId: payload.contest_id,
+        action: payload.action,
+        message: error.message,
+      })
+    }
+  } catch (error) {
+    console.error('Contest audit insert failed', {
+      contestId: payload.contest_id,
+      action: payload.action,
+      error,
+    })
+  }
+}
+
 export async function saveContestAction(formData: FormData) {
   const supabase = await createClient()
   const {
@@ -264,23 +293,15 @@ export async function saveContestAction(formData: FormData) {
 
   await replaceAllowedNomineeTypes(supabase, savedContestId, nomineeTypes)
 
-  const { error: auditError } = await createServiceRoleClient()
-    .from('contest_audit_events')
-    .insert({
-      contest_id: savedContestId,
-      actor_user_id: user.id,
-      action: contestId ? 'contest_edited' : 'contest_created',
-    })
-
-  if (auditError) {
-    console.error('Contest audit insert failed after save', {
-      contestId: savedContestId,
-      message: auditError.message,
-    })
-  }
+  await recordContestAuditEvent({
+    contest_id: savedContestId,
+    actor_user_id: user.id,
+    action: contestId ? 'contest_edited' : 'contest_created',
+  })
 
   contestRevalidate(existingContest?.slug)
   contestRevalidate(result.data.slug)
+  revalidatePath(`/contests/manage/${savedContestId}`)
   redirect(`/contests/manage/${savedContestId}`)
 }
 
