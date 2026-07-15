@@ -31,6 +31,24 @@ export default async function ContestsPage() {
           ) : null}
         </header>
 
+        <Link
+          href="/contests/dice-roll"
+          className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 transition hover:border-cyan-200/40 hover:bg-cyan-300/15"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">
+            Direct campaign link
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black">2d6 Remote Roll</h2>
+              <p className="mt-1 text-sm text-white/55">
+                Let campaign players roll once, record the result, and notify the organizer.
+              </p>
+            </div>
+            <span className="shrink-0 text-2xl font-black text-cyan-100">2d6</span>
+          </div>
+        </Link>
+
         <Suspense fallback={null}>
           <ContestSection title="Active" contests={directory.active} empty="No active contests right now." />
           <ContestSection title="Upcoming" contests={directory.upcoming} empty="No upcoming contests yet." />
