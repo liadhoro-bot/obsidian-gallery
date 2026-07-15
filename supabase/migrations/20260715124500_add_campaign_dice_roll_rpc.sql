@@ -145,7 +145,7 @@ begin
     p_user_agent
   )
   on conflict (player_key, reason_key) do nothing
-  returning id, created_at
+  returning campaign_dice_rolls.id, campaign_dice_rolls.created_at
   into v_id, v_created_at;
 
   if not found then
