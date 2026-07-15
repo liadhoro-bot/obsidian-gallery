@@ -333,9 +333,9 @@ export default function UnitProgressTab({
           </span>
         </div>
 
-        <div className="relative -mx-2 mb-7 snap-x snap-mandatory overflow-x-auto px-2 pb-1 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="relative grid min-w-[372px] grid-cols-6 items-start min-[430px]:min-w-0">
-            <div className="absolute left-[8%] right-[8%] top-[41px] h-0.5 bg-[#11d7f4]/80 shadow-[0_0_12px_rgba(17,215,244,0.55)] min-[430px]:top-[43px]" />
+        <div className="relative mb-7 overflow-visible pb-1 pt-3">
+          <div className="relative grid w-full grid-cols-6 items-start gap-0">
+            <div className="absolute left-[8.333%] right-[8.333%] top-[calc(0.75rem+clamp(20px,6vw,28px))] h-0.5 bg-[#11d7f4]/80 shadow-[0_0_12px_rgba(17,215,244,0.55)]" />
 
             {sortedSteps.map((step) => {
               const isDone = step.status === 'done'
@@ -349,7 +349,7 @@ export default function UnitProgressTab({
                   }}
                   type="button"
                   onClick={() => handleSelectStage(step)}
-                  className="tap-press group relative z-10 flex min-h-[118px] snap-center flex-col items-center text-center outline-none focus-visible:ring-2 focus-visible:ring-[#22e5ff]/80"
+                  className="tap-press group relative z-10 flex min-h-[112px] min-w-0 flex-col items-center text-center outline-none focus-visible:ring-2 focus-visible:ring-[#22e5ff]/80"
                   aria-pressed={isSelected}
                   aria-label={`Select ${step.step_label} stage`}
                 >
@@ -357,16 +357,19 @@ export default function UnitProgressTab({
                     className={[
                       'relative flex items-center justify-center rounded-full border-2 transition duration-200 motion-reduce:transition-none',
                       isSelected
-                        ? 'h-[58px] w-[58px] border-[#22e5ff] bg-[radial-gradient(circle_at_50%_45%,rgba(34,229,255,0.78),rgba(8,117,138,0.42)_48%,rgba(4,29,41,0.98)_76%)] text-white shadow-[0_0_0_4px_rgba(17,215,244,0.12),0_0_22px_rgba(17,215,244,0.68),inset_0_0_18px_rgba(17,215,244,0.24)] min-[430px]:h-16 min-[430px]:w-16'
-                        : 'mt-1 h-[50px] w-[50px] border-[#11d7f4] bg-[#04202b] text-[#22e5ff] shadow-[inset_0_0_14px_rgba(17,215,244,0.08)] group-hover:shadow-[0_0_16px_rgba(17,215,244,0.28)] min-[430px]:h-14 min-[430px]:w-14',
+                        ? 'h-[clamp(48px,14vw,64px)] w-[clamp(48px,14vw,64px)] border-[#22e5ff] bg-[radial-gradient(circle_at_50%_45%,rgba(34,229,255,0.78),rgba(8,117,138,0.42)_48%,rgba(4,29,41,0.98)_76%)] text-white shadow-[0_0_0_3px_rgba(17,215,244,0.12),0_0_18px_rgba(17,215,244,0.62),inset_0_0_18px_rgba(17,215,244,0.24)] min-[430px]:shadow-[0_0_0_4px_rgba(17,215,244,0.12),0_0_22px_rgba(17,215,244,0.68),inset_0_0_18px_rgba(17,215,244,0.24)]'
+                        : 'mt-1 h-[clamp(40px,12vw,56px)] w-[clamp(40px,12vw,56px)] border-[#11d7f4] bg-[#04202b] text-[#22e5ff] shadow-[inset_0_0_14px_rgba(17,215,244,0.08)] group-hover:shadow-[0_0_16px_rgba(17,215,244,0.28)]',
                     ].join(' ')}
                   >
                     {isSelected ? (
-                      <span className="pointer-events-none absolute -inset-2 rounded-full border border-[#11d7f4]/45" />
+                      <span className="pointer-events-none absolute -inset-1.5 rounded-full border border-[#11d7f4]/45 min-[430px]:-inset-2" />
                     ) : null}
-                    <StageIcon stepKey={step.step_key} className="h-6 w-6 min-[430px]:h-7 min-[430px]:w-7" />
+                    <StageIcon
+                      stepKey={step.step_key}
+                      className="h-[clamp(19px,5.8vw,28px)] w-[clamp(19px,5.8vw,28px)]"
+                    />
                     {isDone ? (
-                      <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-[#b8fbff] bg-[#12697a] p-0.5 text-white shadow-[0_0_8px_rgba(17,215,244,0.5)]">
+                      <span className="absolute -right-0.5 -top-0.5 flex h-[clamp(16px,4.8vw,20px)] w-[clamp(16px,4.8vw,20px)] items-center justify-center rounded-full border border-[#b8fbff] bg-[#12697a] p-0.5 text-white shadow-[0_0_8px_rgba(17,215,244,0.5)] min-[430px]:-right-1 min-[430px]:-top-1">
                         <CheckIcon />
                       </span>
                     ) : null}
@@ -374,7 +377,7 @@ export default function UnitProgressTab({
 
                   <span
                     className={[
-                      'mt-4 min-h-9 max-w-[66px] text-[11px] font-medium leading-tight transition min-[430px]:max-w-[82px] min-[430px]:text-[13px]',
+                      'mt-3 min-h-9 w-full px-0.5 text-[clamp(9px,2.85vw,13px)] font-medium leading-tight transition min-[430px]:mt-4',
                       isSelected ? 'font-black text-[#22e5ff]' : 'text-white/78',
                     ].join(' ')}
                   >
@@ -382,7 +385,7 @@ export default function UnitProgressTab({
                   </span>
                   <span
                     className={[
-                      'mt-2 h-1 w-12 rounded-full transition',
+                      'mt-2 h-1 w-[min(48px,72%)] rounded-full transition',
                       isSelected ? 'bg-[#22e5ff]' : 'bg-transparent',
                     ].join(' ')}
                   />
