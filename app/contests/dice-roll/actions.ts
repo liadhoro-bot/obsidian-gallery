@@ -78,6 +78,19 @@ function getDatabaseErrorMessage(error: { code?: string; message?: string }) {
   return null
 }
 
+function getSetupErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+
+  if (
+    message.includes('SUPABASE_SERVICE_ROLE_KEY') ||
+    message.includes('NEXT_PUBLIC_SUPABASE_URL')
+  ) {
+    return 'The dice roller is missing production database configuration. Ask the organizer to set the Supabase service role environment variable, then try again.'
+  }
+
+  return 'The dice roller could not connect to the database. Please try again later.'
+}
+
 async function sendDiceRollEmail(result: DiceRollResult) {
   const adminEmail =
     process.env.ADMIN_DICE_ROLL_EMAIL ||
@@ -142,7 +155,14 @@ export async function rollCampaignDice(
 
   const playerKey = getPlayerKey(playerName)
   const reasonKey = getReasonKey(rollReason)
-  const supabase = createServiceRoleClient()
+  let supabase: ReturnType<typeof createServiceRoleClient>
+
+  try {
+    supabase = createServiceRoleClient()
+  } catch (error) {
+    console.error('Could not initialize campaign dice roll database client:', error)
+    return { error: getSetupErrorMessage(error), result: null }
+  }
 
   const { data: existingRoll, error: existingError } = await supabase
     .from('campaign_dice_rolls')
