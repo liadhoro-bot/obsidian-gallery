@@ -1,3 +1,50 @@
+create table if not exists public.campaign_dice_rolls (
+  id uuid primary key default gen_random_uuid(),
+  player_name text not null,
+  player_key text not null,
+  die_one integer not null check (die_one between 1 and 6),
+  die_two integer not null check (die_two between 1 and 6),
+  total integer not null check (total between 2 and 12),
+  ip_address text,
+  user_agent text,
+  email_sent boolean not null default false,
+  email_attempted_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint campaign_dice_rolls_total_matches_dice check (total = die_one + die_two)
+);
+
+alter table public.campaign_dice_rolls enable row level security;
+
+alter table public.campaign_dice_rolls
+add column if not exists roll_reason text;
+
+alter table public.campaign_dice_rolls
+add column if not exists reason_key text;
+
+update public.campaign_dice_rolls
+set
+  roll_reason = coalesce(nullif(roll_reason, ''), 'Unspecified roll'),
+  reason_key = coalesce(nullif(reason_key, ''), 'unspecified roll')
+where roll_reason is null
+  or roll_reason = ''
+  or reason_key is null
+  or reason_key = '';
+
+alter table public.campaign_dice_rolls
+alter column roll_reason set not null;
+
+alter table public.campaign_dice_rolls
+alter column reason_key set not null;
+
+alter table public.campaign_dice_rolls
+drop constraint if exists campaign_dice_rolls_one_roll_per_player;
+
+create unique index if not exists campaign_dice_rolls_one_roll_per_reason_idx
+on public.campaign_dice_rolls (player_key, reason_key);
+
+create index if not exists campaign_dice_rolls_created_at_idx
+on public.campaign_dice_rolls (created_at desc);
+
 create or replace function public.record_campaign_dice_roll(
   p_player_name text,
   p_roll_reason text,
