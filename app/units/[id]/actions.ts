@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '../../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import {
   calculateUnitXP,
   calculateStepXP,
@@ -30,16 +30,39 @@ const removeUnitThemeMarker = (description: string | null, unitId: string) =>
     .replace(new RegExp(`\\[unit:${unitId}\\]\\s*$`), '')
     .trim()
 
-export async function toggleUnitActive(unitId: string, nextValue: boolean) {
-  const supabase = await createClient()
+type UnitColumnQueryError = {
+  code?: string
+  message?: string
+}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+function isMissingUnitColumn(
+  error: UnitColumnQueryError | null | undefined,
+  column: 'completed_at'
+) {
+  return error?.code === '42703' && error.message?.includes(column)
+}
+
+async function requireSessionUser(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     throw new Error('Unauthorized')
   }
+
+  return user
+}
+
+function revalidateUnitThemePages(unitId: string, themeId: string) {
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/themes')
+  revalidatePath(`/themes/${themeId}`)
+}
+
+export async function toggleUnitActive(unitId: string, nextValue: boolean) {
+  const supabase = await createClient()
+  await requireSessionUser(supabase)
 
   const { error } = await supabase
     .from('units')
@@ -56,14 +79,7 @@ export async function toggleUnitActive(unitId: string, nextValue: boolean) {
 export async function setFeaturedUnit(unitId: string) {
   const perf = createPerfTimer('action:setFeaturedUnit')
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  await requireSessionUser(supabase)
 
   const { error } = await supabase.rpc('set_featured_unit', {
     p_unit_id: unitId,
@@ -83,14 +99,7 @@ export async function updateUnitStatus(
   status: 'complete' | 'active' | 'bench' | 'pile' | 'other'
 ) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const allowedStatuses = new Set([
     'complete',
@@ -104,9 +113,58 @@ export async function updateUnitStatus(
     throw new Error('Invalid unit status')
   }
 
+  let hasCompletedAtColumn = true
+  let { data: currentUnit, error: currentUnitError } = await supabase
+    .from('units')
+    .select('id, completed_at')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (
+    isMissingUnitColumn(
+      currentUnitError as UnitColumnQueryError | null,
+      'completed_at'
+    )
+  ) {
+    hasCompletedAtColumn = false
+    const fallbackResult = await supabase
+      .from('units')
+      .select('id')
+      .eq('id', unitId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    currentUnit = fallbackResult.data
+      ? {
+          ...fallbackResult.data,
+          completed_at: null,
+        }
+      : null
+    currentUnitError = fallbackResult.error
+  }
+
+  if (currentUnitError) {
+    throw currentUnitError
+  }
+
+  if (!currentUnit) {
+    throw new Error('Unit not found')
+  }
+
+  const completedAt =
+    status === 'complete' && !currentUnit.completed_at
+      ? new Date().toISOString()
+      : currentUnit.completed_at
+  const shouldOpenShareModal = status === 'complete' && !currentUnit.completed_at
+
+  const unitUpdate = hasCompletedAtColumn
+    ? { status, completed_at: completedAt }
+    : { status }
+
   const { error } = await supabase
     .from('units')
-    .update({ status })
+    .update(unitUpdate)
     .eq('id', unitId)
     .eq('user_id', user.id)
 
@@ -115,19 +173,17 @@ export async function updateUnitStatus(
   }
 
   revalidatePath(`/units/${unitId}`)
+
+  return {
+    completedAt,
+    shouldOpenShareModal,
+  }
 }
 
 export async function startUnitSession(unitId: string) {
   const perf = createPerfTimer('action:startUnitSession')
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const { data: existing, error: existingError } = await supabase
     .from('unit_sessions')
@@ -204,14 +260,7 @@ export async function startUnitSession(unitId: string) {
 export async function endUnitSession(unitId: string) {
   const perf = createPerfTimer('action:endUnitSession')
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const { data: session, error: sessionError } = await supabase
     .from('unit_sessions')
@@ -298,14 +347,7 @@ export async function endUnitSession(unitId: string) {
 
 export async function logManualUnitSession(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const startedAtRaw = String(formData.get('startedAt') || '')
@@ -442,13 +484,7 @@ export async function calculateUnitPaletteAction(formData: FormData) {
 
   if (!unitId) return
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
@@ -579,10 +615,7 @@ export async function calculateUnitPaletteAction(formData: FormData) {
     },
   })
 
-  revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/themes')
-  revalidatePath(`/themes/${themeId}`)
+  revalidateUnitThemePages(unitId, themeId)
 }
 
 export async function unassignUnitTheme(formData: FormData) {
@@ -593,13 +626,7 @@ export async function unassignUnitTheme(formData: FormData) {
 
   if (!unitId || !themeId) return
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
@@ -656,10 +683,7 @@ export async function unassignUnitTheme(formData: FormData) {
     }
   }
 
-  revalidatePath(`/units/${unitId}`)
-  revalidatePath('/dashboard')
-  revalidatePath('/themes')
-  revalidatePath(`/themes/${themeId}`)
+  revalidateUnitThemePages(unitId, themeId)
 }
 
 export async function setUnitPaletteSlot(
@@ -669,12 +693,7 @@ export async function setUnitPaletteSlot(
   paintId: string
 ) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return
+  const user = await requireSessionUser(supabase)
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
@@ -791,14 +810,7 @@ export async function uploadUnitGalleryImages(
   formData: FormData
 ): Promise<GalleryUploadResult | void> {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const uploadSource =
@@ -926,14 +938,7 @@ export async function uploadUnitGalleryImages(
 
 export async function updateUnitDetails(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') ?? '')
   const complexityRaw = String(formData.get('complexity') ?? '').trim()
@@ -1083,14 +1088,7 @@ export async function updateUnitDetails(formData: FormData) {
 
 export async function updateUnitHeader(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') ?? '')
   const name = String(formData.get('name') ?? '').trim()
@@ -1122,14 +1120,7 @@ export async function updateUnitHeader(formData: FormData) {
 
 export async function deleteUnit(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
 
@@ -1206,14 +1197,7 @@ export async function deleteUnit(formData: FormData) {
 
 export async function expireUnitSessionAtTwoHours(unitId: string) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const { data: session, error: sessionError } = await supabase
     .from('unit_sessions')
@@ -1255,14 +1239,7 @@ export async function expireUnitSessionAtTwoHours(unitId: string) {
 
 export async function toggleStepDone(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const stepId = formData.get('stepId')?.toString()
   const unitId = formData.get('unitId')?.toString()
@@ -1274,12 +1251,33 @@ export async function toggleStepDone(formData: FormData) {
 
   if (!stepId || !unitId || !nextStatus) return
 
-  const { data: unit, error: unitError } = await supabase
+  let hasCompletedAtColumn = true
+  let { data: unit, error: unitError } = await supabase
     .from('units')
-    .select('id, user_id, complexity, unit_size, is_active')
+    .select('id, user_id, complexity, unit_size, is_active, completed_at')
     .eq('id', unitId)
     .eq('user_id', user.id)
     .single()
+
+  if (
+    isMissingUnitColumn(unitError as UnitColumnQueryError | null, 'completed_at')
+  ) {
+    hasCompletedAtColumn = false
+    const fallbackResult = await supabase
+      .from('units')
+      .select('id, user_id, complexity, unit_size, is_active')
+      .eq('id', unitId)
+      .eq('user_id', user.id)
+      .single()
+
+    unit = fallbackResult.data
+      ? {
+          ...fallbackResult.data,
+          completed_at: null,
+        }
+      : null
+    unitError = fallbackResult.error
+  }
 
   if (unitError || !unit) {
     throw new Error('Unit not found')
@@ -1333,6 +1331,10 @@ export async function toggleStepDone(formData: FormData) {
 
   const shouldGrantCompletionBonus =
     allVisibleDone && unit.is_active !== false
+  const shouldOpenShareModal = allVisibleDone && !unit.completed_at
+  const completedAt = shouldOpenShareModal
+    ? new Date().toISOString()
+    : unit.completed_at
 
   const { error: updateDoneStepError } = await supabase
     .from('unit_progress_steps')
@@ -1347,9 +1349,18 @@ export async function toggleStepDone(formData: FormData) {
     throw updateDoneStepError
   }
 
+  const unitUpdate = hasCompletedAtColumn
+    ? {
+        is_active: !allVisibleDone,
+        completed_at: allVisibleDone ? completedAt : unit.completed_at,
+      }
+    : {
+        is_active: !allVisibleDone,
+      }
+
   const { error: updateUnitError } = await supabase
     .from('units')
-    .update({ is_active: !allVisibleDone })
+    .update(unitUpdate)
     .eq('id', unitId)
     .eq('user_id', user.id)
 
@@ -1373,16 +1384,16 @@ export async function toggleStepDone(formData: FormData) {
   }
 
   revalidatePath(`/units/${unitId}`)
+
+  return {
+    completedAt,
+    shouldOpenShareModal,
+  }
 }
 
 export async function updateUnitSession(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) throw new Error('Unauthorized')
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const sessionId = String(formData.get('sessionId') || '')
@@ -1426,12 +1437,7 @@ export async function updateUnitSession(formData: FormData) {
 
 export async function deleteUnitSession(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) throw new Error('Unauthorized')
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const sessionId = String(formData.get('sessionId') || '')
@@ -1455,21 +1461,14 @@ export async function deleteUnitSession(formData: FormData) {
 }
 export async function assignRecipeToStage(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const progressStepId = String(formData.get('progressStepId') || '')
   const recipeId = String(formData.get('recipeId') || '')
 
   if (!unitId || !progressStepId || !recipeId) {
-    throw new Error('Missing recipe stage details')
+    throw new Error('Missing guide stage details')
   }
 
   const { data: unit, error: unitError } = await supabase
@@ -1513,7 +1512,7 @@ export async function assignRecipeToStage(formData: FormData) {
   }
 
   if (!recipe) {
-    throw new Error('Recipe not found')
+    throw new Error('Guide not found')
   }
 
   const { data: savedRecipe, error: savedRecipeError } = await supabase
@@ -1531,7 +1530,7 @@ export async function assignRecipeToStage(formData: FormData) {
     recipe.user_id === user.id || recipe.is_public === true || !!savedRecipe
 
   if (!canUseRecipe) {
-    throw new Error('You cannot assign this recipe')
+    throw new Error('You cannot assign this guide')
   }
 
   const { error } = await supabase.from('unit_stage_recipes').upsert(
@@ -1555,20 +1554,13 @@ export async function assignRecipeToStage(formData: FormData) {
 
 export async function removeRecipeFromStage(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const progressStepId = String(formData.get('progressStepId') || '')
 
   if (!unitId || !progressStepId) {
-    throw new Error('Missing recipe stage details')
+    throw new Error('Missing guide stage details')
   }
 
   const { error } = await supabase
@@ -1587,14 +1579,7 @@ export async function removeRecipeFromStage(formData: FormData) {
 
 export async function addPaintToStage(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const progressStepId = String(formData.get('progressStepId') || '')
@@ -1765,14 +1750,7 @@ export async function addPaintToStage(formData: FormData) {
 
 export async function removePaintFromStage(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const stagePaintId = String(formData.get('stagePaintId') || '')
@@ -1796,14 +1774,7 @@ export async function removePaintFromStage(formData: FormData) {
 }
 export async function deleteUnitImage(formData: FormData) {
   const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
+  const user = await requireSessionUser(supabase)
 
   const unitId = String(formData.get('unitId') || '')
   const imageIds = formData

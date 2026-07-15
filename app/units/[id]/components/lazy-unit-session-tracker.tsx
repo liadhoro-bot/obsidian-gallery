@@ -28,6 +28,13 @@ export default function LazyUnitSessionTracker(props: {
   activeSession: Session | null
   sessions: Session[]
   totalLoggedSeconds: number
+  autoStart?: boolean
+  onMutationCommitted?: () => void
+  onStateChange?: (state: {
+    activeSession: Session | null
+    sessions: Session[]
+    totalLoggedSeconds: number
+  }) => void
 }) {
   return <DeferredUnitSessionTracker {...props} />
 }

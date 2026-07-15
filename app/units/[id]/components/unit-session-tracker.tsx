@@ -1,6 +1,13 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState, useTransition } from 'react'
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react'
 import { capturePostHog } from '../../../../utils/analytics/client'
 import {
   deleteUnitSession,
@@ -275,11 +282,21 @@ export default function UnitSessionTracker({
   activeSession,
   sessions,
   totalLoggedSeconds,
+  autoStart = false,
+  onMutationCommitted,
+  onStateChange,
 }: {
   unitId: string
   activeSession: Session | null
   sessions: Session[]
   totalLoggedSeconds: number
+  autoStart?: boolean
+  onMutationCommitted?: () => void
+  onStateChange?: (state: {
+    activeSession: Session | null
+    sessions: Session[]
+    totalLoggedSeconds: number
+  }) => void
 }) {
   const [isPending, startTransition] = useTransition()
   const [nowTick, setNowTick] = useState(() => Date.now())
@@ -294,6 +311,7 @@ export default function UnitSessionTracker({
   const [localSessions, setLocalSessions] = useState(sessions)
   const [localTotalLoggedSeconds, setLocalTotalLoggedSeconds] =
     useState(totalLoggedSeconds)
+  const [hasAutoStarted, setHasAutoStarted] = useState(false)
 
   useEffect(() => {
     setLocalActiveSession(activeSession)
@@ -317,6 +335,14 @@ export default function UnitSessionTracker({
     return () => clearInterval(interval)
   }, [localActiveSession])
 
+  useEffect(() => {
+    onStateChange?.({
+      activeSession: localActiveSession,
+      sessions: localSessions,
+      totalLoggedSeconds: localTotalLoggedSeconds,
+    })
+  }, [localActiveSession, localSessions, localTotalLoggedSeconds, onStateChange])
+
   const completedSessions = useMemo(
     () =>
       localSessions
@@ -329,8 +355,17 @@ export default function UnitSessionTracker({
   )
   const mostRecentSession = completedSessions[0] ?? null
   const historySessions = completedSessions.slice(0, 10)
+  const displayedTotalLoggedSeconds = localActiveSession
+    ? localTotalLoggedSeconds +
+      Math.max(
+        0,
+        Math.floor(
+          (nowTick - new Date(localActiveSession.started_at).getTime()) / 1000
+        )
+      )
+    : localTotalLoggedSeconds
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     const startedAt = new Date().toISOString()
     const optimisticSession: Session = {
       id: `optimistic-${startedAt}`,
@@ -354,6 +389,7 @@ export default function UnitSessionTracker({
           ended_at: null,
           duration_seconds: null,
         })
+        onMutationCommitted?.()
       } catch (error) {
         setLocalActiveSession(previousActiveSession)
         setActionError(
@@ -362,7 +398,16 @@ export default function UnitSessionTracker({
         throw error
       }
     })
-  }
+  }, [localActiveSession, onMutationCommitted, startTransition, unitId])
+
+  useEffect(() => {
+    if (!autoStart || hasAutoStarted || localActiveSession) {
+      return
+    }
+
+    setHasAutoStarted(true)
+    handleStart()
+  }, [autoStart, handleStart, hasAutoStarted, localActiveSession])
 
   const handleStop = () => {
     const previousActiveSession = localActiveSession
@@ -390,6 +435,7 @@ export default function UnitSessionTracker({
         if (result?.session) {
           setLocalSessions((current) => [result.session!, ...current])
         }
+        onMutationCommitted?.()
       } catch (error) {
         setLocalActiveSession(previousActiveSession)
         setLocalTotalLoggedSeconds(previousTotal)
@@ -476,6 +522,7 @@ export default function UnitSessionTracker({
             )
           )
         }
+        onMutationCommitted?.()
       } catch (error) {
         setLocalSessions(previousSessions)
         setLocalTotalLoggedSeconds(previousTotal)
@@ -545,6 +592,7 @@ export default function UnitSessionTracker({
         }
         setEditingId(null)
         setConfirmDeleteId(null)
+        onMutationCommitted?.()
       } catch (error) {
         setLocalSessions(previousSessions)
         setLocalTotalLoggedSeconds(previousTotal)
@@ -579,6 +627,7 @@ export default function UnitSessionTracker({
         setEditingId(null)
         setConfirmDeleteId(null)
         setDeletingId(null)
+        onMutationCommitted?.()
       } catch (error) {
         setLocalSessions(previousSessions)
         setLocalTotalLoggedSeconds(previousTotal)
@@ -611,7 +660,7 @@ export default function UnitSessionTracker({
 
       <div className="mt-5 flex items-end gap-3">
         <div className="text-4xl font-black leading-none text-white">
-          {formatSessionDuration(localTotalLoggedSeconds)}
+          {formatSessionDuration(displayedTotalLoggedSeconds)}
         </div>
         <div className="pb-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/35">
           Total Logged
