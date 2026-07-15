@@ -63,6 +63,12 @@ function RollResult({ state }: { state: DiceRollState }) {
           <dt className="font-bold text-white/40">Player</dt>
           <dd className="font-bold text-white">{state.result.playerName}</dd>
         </div>
+        {state.result.appUsername ? (
+          <div>
+            <dt className="font-bold text-white/40">App username</dt>
+            <dd>@{state.result.appUsername}</dd>
+          </div>
+        ) : null}
         <div>
           <dt className="font-bold text-white/40">Reason</dt>
           <dd>{state.result.rollReason}</dd>

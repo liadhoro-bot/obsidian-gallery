@@ -2,6 +2,7 @@ create table if not exists public.campaign_dice_rolls (
   id uuid primary key default gen_random_uuid(),
   player_name text not null,
   player_key text not null,
+  app_username text,
   die_one integer not null check (die_one between 1 and 6),
   die_two integer not null check (die_two between 1 and 6),
   total integer not null check (total between 2 and 12),
@@ -20,6 +21,9 @@ add column if not exists roll_reason text;
 
 alter table public.campaign_dice_rolls
 add column if not exists reason_key text;
+
+alter table public.campaign_dice_rolls
+add column if not exists app_username text;
 
 update public.campaign_dice_rolls
 set
@@ -45,20 +49,25 @@ on public.campaign_dice_rolls (player_key, reason_key);
 create index if not exists campaign_dice_rolls_created_at_idx
 on public.campaign_dice_rolls (created_at desc);
 
-create or replace function public.record_campaign_dice_roll(
+drop function if exists public.record_campaign_dice_roll(text, text, text, text);
+drop function if exists public.record_campaign_dice_roll(text, text, text, text, text);
+
+create function public.record_campaign_dice_roll(
   p_player_name text,
   p_roll_reason text,
+  p_app_username text default null,
   p_ip_address text default null,
   p_user_agent text default null
 )
 returns table (
-  id uuid,
-  player_name text,
-  roll_reason text,
-  die_one integer,
-  die_two integer,
-  total integer,
-  created_at timestamptz,
+  roll_id uuid,
+  roll_player_name text,
+  roll_app_username text,
+  roll_reason_text text,
+  roll_die_one integer,
+  roll_die_two integer,
+  roll_total integer,
+  roll_created_at timestamptz,
   duplicate boolean
 )
 language plpgsql
@@ -68,13 +77,17 @@ as $record_campaign_dice_roll$
 declare
   v_player_name text := regexp_replace(btrim(coalesce(p_player_name, '')), '\s+', ' ', 'g');
   v_roll_reason text := regexp_replace(btrim(coalesce(p_roll_reason, '')), '\s+', ' ', 'g');
+  v_app_username text := nullif(regexp_replace(btrim(coalesce(p_app_username, '')), '\s+', ' ', 'g'), '');
   v_player_key text := lower(regexp_replace(btrim(coalesce(p_player_name, '')), '\s+', ' ', 'g'));
   v_reason_key text := lower(regexp_replace(btrim(coalesce(p_roll_reason, '')), '\s+', ' ', 'g'));
-  v_id uuid;
-  v_die_one integer;
-  v_die_two integer;
-  v_total integer;
-  v_created_at timestamptz;
+  v_roll_id uuid;
+  v_roll_player_name text;
+  v_roll_app_username text;
+  v_roll_reason_text text;
+  v_roll_die_one integer;
+  v_roll_die_two integer;
+  v_roll_total integer;
+  v_roll_created_at timestamptz;
 begin
   if length(v_player_name) < 2 or length(v_player_name) > 80 then
     raise exception 'invalid_player_name';
@@ -87,19 +100,21 @@ begin
   select
     cdr.id,
     cdr.player_name,
+    cdr.app_username,
     cdr.roll_reason,
     cdr.die_one,
     cdr.die_two,
     cdr.total,
     cdr.created_at
   into
-    v_id,
-    v_player_name,
-    v_roll_reason,
-    v_die_one,
-    v_die_two,
-    v_total,
-    v_created_at
+    v_roll_id,
+    v_roll_player_name,
+    v_roll_app_username,
+    v_roll_reason_text,
+    v_roll_die_one,
+    v_roll_die_two,
+    v_roll_total,
+    v_roll_created_at
   from public.campaign_dice_rolls cdr
   where cdr.player_key = v_player_key
     and cdr.reason_key = v_reason_key
@@ -108,23 +123,26 @@ begin
   if found then
     return query
     select
-      v_id,
-      v_player_name,
-      v_roll_reason,
-      v_die_one,
-      v_die_two,
-      v_total,
-      v_created_at,
+      v_roll_id,
+      v_roll_player_name,
+      v_roll_app_username,
+      v_roll_reason_text,
+      v_roll_die_one,
+      v_roll_die_two,
+      v_roll_total,
+      v_roll_created_at,
       true;
     return;
   end if;
 
-  v_die_one := floor(random() * 6)::integer + 1;
-  v_die_two := floor(random() * 6)::integer + 1;
+  v_roll_die_one := floor(random() * 6)::integer + 1;
+  v_roll_die_two := floor(random() * 6)::integer + 1;
+  v_roll_total := v_roll_die_one + v_roll_die_two;
 
   insert into public.campaign_dice_rolls (
     player_name,
     player_key,
+    app_username,
     roll_reason,
     reason_key,
     die_one,
@@ -136,35 +154,38 @@ begin
   values (
     v_player_name,
     v_player_key,
+    v_app_username,
     v_roll_reason,
     v_reason_key,
-    v_die_one,
-    v_die_two,
-    v_die_one + v_die_two,
+    v_roll_die_one,
+    v_roll_die_two,
+    v_roll_total,
     p_ip_address,
     p_user_agent
   )
   on conflict (player_key, reason_key) do nothing
   returning campaign_dice_rolls.id, campaign_dice_rolls.created_at
-  into v_id, v_created_at;
+  into v_roll_id, v_roll_created_at;
 
   if not found then
     select
       cdr.id,
       cdr.player_name,
+      cdr.app_username,
       cdr.roll_reason,
       cdr.die_one,
       cdr.die_two,
       cdr.total,
       cdr.created_at
     into
-      v_id,
-      v_player_name,
-      v_roll_reason,
-      v_die_one,
-      v_die_two,
-      v_total,
-      v_created_at
+      v_roll_id,
+      v_roll_player_name,
+      v_roll_app_username,
+      v_roll_reason_text,
+      v_roll_die_one,
+      v_roll_die_two,
+      v_roll_total,
+      v_roll_created_at
     from public.campaign_dice_rolls cdr
     where cdr.player_key = v_player_key
       and cdr.reason_key = v_reason_key
@@ -172,28 +193,28 @@ begin
 
     return query
     select
-      v_id,
-      v_player_name,
-      v_roll_reason,
-      v_die_one,
-      v_die_two,
-      v_total,
-      v_created_at,
+      v_roll_id,
+      v_roll_player_name,
+      v_roll_app_username,
+      v_roll_reason_text,
+      v_roll_die_one,
+      v_roll_die_two,
+      v_roll_total,
+      v_roll_created_at,
       true;
     return;
   end if;
 
-  v_total := v_die_one + v_die_two;
-
   return query
   select
-    v_id,
+    v_roll_id,
     v_player_name,
+    v_app_username,
     v_roll_reason,
-    v_die_one,
-    v_die_two,
-    v_total,
-    v_created_at,
+    v_roll_die_one,
+    v_roll_die_two,
+    v_roll_total,
+    v_roll_created_at,
     false;
 end;
 $record_campaign_dice_roll$;
@@ -214,8 +235,8 @@ as $mark_campaign_dice_roll_email_attempted$
   where id = p_roll_id;
 $mark_campaign_dice_roll_email_attempted$;
 
-revoke all on function public.record_campaign_dice_roll(text, text, text, text) from public;
-grant execute on function public.record_campaign_dice_roll(text, text, text, text) to anon, authenticated, service_role;
+revoke all on function public.record_campaign_dice_roll(text, text, text, text, text) from public;
+grant execute on function public.record_campaign_dice_roll(text, text, text, text, text) to anon, authenticated, service_role;
 
 revoke all on function public.mark_campaign_dice_roll_email_attempted(uuid, boolean) from public;
 grant execute on function public.mark_campaign_dice_roll_email_attempted(uuid, boolean) to anon, authenticated, service_role;

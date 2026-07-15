@@ -2,11 +2,16 @@
 
 import { headers } from 'next/headers'
 import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import {
+  createClient as createServerSupabaseClient,
+  getSessionUser,
+} from '../../../utils/supabase/server'
 
 export type DiceRollResult = {
   id: string
   playerName: string
+  appUsername: string | null
   rollReason: string
   dieOne: number
   dieTwo: number
@@ -21,13 +26,14 @@ export type DiceRollState = {
 }
 
 type DiceRollRow = {
-  id: string
-  player_name: string
-  roll_reason: string
-  die_one: number
-  die_two: number
-  total: number
-  created_at: string
+  roll_id: string
+  roll_player_name: string
+  roll_app_username: string | null
+  roll_reason_text: string
+  roll_die_one: number
+  roll_die_two: number
+  roll_total: number
+  roll_created_at: string
   duplicate: boolean
 }
 
@@ -41,13 +47,14 @@ function normalizeRollReason(reason: string) {
 
 function toResult(row: DiceRollRow): DiceRollResult {
   return {
-    id: row.id,
-    playerName: row.player_name,
-    rollReason: row.roll_reason,
-    dieOne: row.die_one,
-    dieTwo: row.die_two,
-    total: row.total,
-    createdAt: row.created_at,
+    id: row.roll_id,
+    playerName: row.roll_player_name,
+    appUsername: row.roll_app_username,
+    rollReason: row.roll_reason_text,
+    dieOne: row.roll_die_one,
+    dieTwo: row.roll_die_two,
+    total: row.roll_total,
+    createdAt: row.roll_created_at,
     duplicate: row.duplicate,
   }
 }
@@ -60,7 +67,7 @@ function createDiceRollClient() {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
   }
 
-  return createClient(url, anonKey, {
+  return createSupabaseClient(url, anonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -107,6 +114,7 @@ async function sendDiceRollEmail(result: DiceRollResult) {
     'A campaign 2d6 roll was recorded in Obsidian Gallery.',
     '',
     `Player: ${result.playerName}`,
+    `App username: ${result.appUsername ? `@${result.appUsername}` : 'Not signed in'}`,
     `Reason: ${result.rollReason}`,
     `Roll: ${result.dieOne} + ${result.dieTwo} = ${result.total}`,
     `Recorded at: ${new Date(result.createdAt).toISOString()}`,
@@ -133,6 +141,28 @@ async function sendDiceRollEmail(result: DiceRollResult) {
     console.error('Campaign dice roll notification failed:', error)
     return false
   }
+}
+
+async function getCurrentUsername() {
+  const authSupabase = await createServerSupabaseClient()
+  const user = await getSessionUser(authSupabase)
+
+  if (!user) {
+    return null
+  }
+
+  const { data: profile, error } = await authSupabase
+    .from('profiles')
+    .select('username')
+    .eq('id', user.id)
+    .maybeSingle<{ username: string | null }>()
+
+  if (error) {
+    console.error('Could not load campaign dice roll username:', error)
+    return null
+  }
+
+  return profile?.username ?? user.email?.split('@')[0] ?? null
 }
 
 export async function rollCampaignDice(
@@ -168,6 +198,7 @@ export async function rollCampaignDice(
   }
 
   const headerStore = await headers()
+  const appUsername = await getCurrentUsername()
   const forwardedFor = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const realIp = headerStore.get('x-real-ip')
 
@@ -175,6 +206,7 @@ export async function rollCampaignDice(
     'record_campaign_dice_roll',
     {
       p_player_name: playerName,
+      p_app_username: appUsername,
       p_roll_reason: rollReason,
       p_ip_address: forwardedFor || realIp,
       p_user_agent: headerStore.get('user-agent'),
