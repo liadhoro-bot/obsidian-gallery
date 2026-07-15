@@ -1,12 +1,21 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react'
 import type { ChangeEvent } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
-import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFromImageAction'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import {
+  publishDashboardMetadataPatch,
+  publishDashboardUnitPatch,
+  type DashboardSyncStatus,
+} from '../../dashboard/dashboard-sync'
 import {
   deleteUnitImage,
   deleteUnit,
@@ -21,10 +30,61 @@ import {
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
 import LazyUnitSessionTracker from './components/lazy-unit-session-tracker'
-import ProjectPaletteCard from '../../projects/[id]/project-palette-card'
-import DeleteConfirmationCard from '../../components/delete-confirmation-card'
-
-const StagePaintPicker = dynamic(() => import('./components/stage-paint-picker'))
+const DeleteConfirmationCard = dynamic(
+  () => import('../../components/delete-confirmation-card')
+)
+const UnitCompletedShareModal = dynamic(
+  () => import('@/components/share/UnitCompletedShareModal')
+)
+const UnitCompletedInlinePreview = dynamic(
+  () => import('@/components/share/UnitCompletedInlinePreview'),
+  {
+    loading: () => (
+      <section className="mx-auto mt-8 h-48 max-w-[470px] animate-pulse rounded-[24px] border border-[#d8a84f]/25 bg-white/[0.035]" />
+    ),
+  }
+)
+const ProjectPaletteCard = dynamic(
+  () => import('../../projects/[id]/project-palette-card'),
+  {
+    loading: () => (
+      <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 animate-pulse">
+        <div className="h-4 w-32 rounded bg-white/10" />
+        <div className="mt-4 h-24 rounded-2xl bg-white/[0.05]" />
+      </section>
+    ),
+  }
+)
+const UnitProgressTab = dynamic(() => import('./unit-progress-tab'), {
+  loading: () => (
+    <section className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-40 rounded bg-white/10" />
+          <div className="h-4 w-56 rounded bg-white/5" />
+        </div>
+        <div className="h-7 w-14 rounded-full bg-cyan-400/10" />
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-white/10" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 rounded bg-white/10" />
+                <div className="h-3 w-24 rounded bg-white/5" />
+              </div>
+              <div className="h-12 w-12 rounded-xl bg-white/5" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  ),
+})
 const UnitGallerySection = dynamic(() => import('./components/unit-gallery-section'), {
   loading: () => (
     <section className="mt-10 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -55,6 +115,7 @@ type Unit = {
   is_featured: boolean
   status: UnitStatus
   project_id: string | null
+  completed_at: string | null
 }
 
 type UnitStatus = 'complete' | 'active' | 'bench' | 'pile' | 'other'
@@ -73,13 +134,7 @@ type UnitImage = {
   alt_text: string | null
   storage_bucket: string | null
   storage_path: string | null
-}
-
-type ExpandedStagePhoto = {
-  id: string
-  src: string
-  alt: string
-  label: string
+  is_optimistic?: boolean
 }
 
 type ProgressStep = {
@@ -151,7 +206,9 @@ type Theme = {
 } | null
 
 type Props = {
-  activeTab: 'overview' | 'progress'
+  initialTab: 'overview' | 'progress'
+  currentUserId: string
+  autoStartSession?: boolean
   unit: Unit
   projectTheme: Theme
   images: UnitImage[]
@@ -180,171 +237,85 @@ const UNIT_STATUS_OPTIONS: { value: UnitStatus; label: string }[] = [
   { value: 'pile', label: 'Pile of Shame' },
   { value: 'other', label: 'Other' },
 ]
+const DASHBOARD_PROGRESS_STEP_KEYS = [
+  'assembled',
+  'primed',
+  'initial_paints',
+  'fine_details',
+  'base_rim',
+] as const
 
-function BrushIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
-      <path
-        d="M14 4.5L19.5 10L10 19.5C8.7 20.8 6.6 20.8 5.3 19.5C4 18.2 4 16.1 5.3 14.8L14 4.5Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M13 6L18 11"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function SprayIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
-      <path
-        d="M9 4H15V7H9V4Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 7H16L17 20H7L8 7Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M10 11H14"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function PaletteIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
-      <path
-        d="M12 4C7.6 4 4 7.1 4 11C4 15.2 7.8 20 12.4 20C14.1 20 14.8 19.1 14.8 18.1C14.8 17.4 14.4 16.8 14.4 16.1C14.4 15 15.3 14.4 16.5 14.4H17.4C19 14.4 20 13.4 20 11.9C20 7.6 16.5 4 12 4Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path d="M8.3 11H8.4" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      <path d="M10.5 8H10.6" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      <path d="M14 8.4H14.1" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function SparkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
-      <path
-        d="M12 3L13.8 9.2L20 11L13.8 12.8L12 19L10.2 12.8L4 11L10.2 9.2L12 3Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M18 16L18.8 18.2L21 19L18.8 19.8L18 22L17.2 19.8L15 19L17.2 18.2L18 16Z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function BaseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
-      <path
-        d="M7 10L12 7L17 10V16L12 19L7 16V10Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M7 10L12 13L17 10"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M12 13V19"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
-      <path
-        d="M5 12.5L9.2 16.7L19 7"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function StageIcon({
-  stepKey,
-  isDone,
+function buildOptimisticImage({
+  file,
+  altText,
+  isFeatured,
 }: {
-  stepKey: string
-  isDone: boolean
-}) {
-  const icon =
-    stepKey === 'assembled' ? (
-      <BrushIcon />
-    ) : stepKey === 'primed' ? (
-      <SprayIcon />
-    ) : stepKey === 'initial_paints' ? (
-      <PaletteIcon />
-    ) : stepKey === 'fine_details' ? (
-      <SparkIcon />
-    ) : stepKey === 'base_rim' ? (
-      <BaseIcon />
-    ) : (
-      <CheckIcon />
-    )
+  file: File
+  altText: string | null
+  isFeatured: boolean
+}): UnitImage {
+  return {
+    id: `optimistic-${crypto.randomUUID()}`,
+    image_url: URL.createObjectURL(file),
+    is_featured: isFeatured,
+    created_at: new Date().toISOString(),
+    sort_order: 0,
+    alt_text: altText,
+    storage_bucket: null,
+    storage_path: null,
+    is_optimistic: true,
+  }
+}
+
+function getDashboardProgressPercent(
+  status: UnitStatus,
+  steps: ProgressStep[]
+) {
+  if (status === 'complete') {
+    return 100
+  }
+
+  if (steps.some((step) => step.step_key === 'done' && step.status === 'done')) {
+    return 100
+  }
 
   return (
-    <div
-      className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition ${
-        isDone
-          ? 'border-cyan-400 bg-cyan-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.3)]'
-          : 'border-white/10 bg-white/[0.04] text-white/35'
-      }`}
-    >
-      {icon}
-    </div>
+    DASHBOARD_PROGRESS_STEP_KEYS.filter((stepKey) =>
+      steps.some((step) => step.step_key === stepKey && step.status === 'done')
+    ).length * 20
   )
 }
 
-function getStagePaintHref(paint: StagePaint) {
-  const paintId =
-    paint.paint_source === 'custom'
-      ? paint.custom_paint_id || paint.custom_paint?.id
-      : paint.paint_catalog_id || paint.catalog_paint?.id
+function getDashboardFeaturedImageUrl(images: UnitImage[]) {
+  return (
+    images.find((image) => image.is_featured)?.image_url ??
+    images[0]?.image_url ??
+    null
+  )
+}
 
-  return paintId ? `/vault/${paint.paint_source}/${paintId}` : null
+function getDashboardLastSessionAt(
+  activeSession: Session | null,
+  sessions: Session[]
+) {
+  const timestamps = [
+    activeSession?.started_at ?? null,
+    ...sessions.map((session) => session.started_at),
+  ].filter((value): value is string => Boolean(value))
+
+  return timestamps.sort(
+    (a, b) => new Date(b).getTime() - new Date(a).getTime()
+  )[0] ?? null
+}
+
+function getCompletedSessionCount(sessions: Session[]) {
+  return sessions.filter((session) => (session.duration_seconds ?? 0) > 0).length
 }
 
 export default function UnitDetailClient({
-  activeTab,
+  initialTab,
+  currentUserId,
+  autoStartSession = false,
   unit: initialUnit,
   projectTheme,
   images,
@@ -358,14 +329,27 @@ export default function UnitDetailClient({
   selectedProjectIds,
   showSessionStartedNotice = false,
 }: Props) {
+  const pathname = usePathname()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  const refreshTimeoutRef = useRef<number | null>(null)
+  const hasPublishedDashboardUnitPatchRef = useRef(false)
+  const previousDashboardMetadataRef = useRef<{
+    totalLoggedSeconds: number
+    completedSessionsCount: number
+    lastSessionAt: string | null
+  } | null>(null)
   const [isSessionNoticeVisible, setIsSessionNoticeVisible] = useState(
     showSessionStartedNotice
   )
-  const [liveNow, setLiveNow] = useState(() => Date.now())
   const [unit, setLocalUnit] = useState(initialUnit)
   const [localImages, setLocalImages] = useState(images)
+  const [localSessionsState, setLocalSessionsState] = useState(sessions)
+  const [localActiveSessionState, setLocalActiveSessionState] =
+    useState(activeSession)
+  const [localTotalLoggedSecondsState, setLocalTotalLoggedSecondsState] =
+    useState(totalLoggedSeconds)
   const [selectedGalleryImageIds, setSelectedGalleryImageIds] = useState<
     string[]
   >([])
@@ -379,8 +363,6 @@ export default function UnitDetailClient({
   const [optimisticSteps, setOptimisticSteps] = useState(steps)
   const [openStageId, setOpenStageId] = useState<string | null>(null)
   const [uploadingStageId, setUploadingStageId] = useState<string | null>(null)
-  const [expandedStagePhoto, setExpandedStagePhoto] =
-    useState<ExpandedStagePhoto | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const cameraInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedGalleryFiles, setSelectedGalleryFiles] = useState<File[]>([])
@@ -408,6 +390,58 @@ export default function UnitDetailClient({
   )
   const [deadlineInput, setDeadlineInput] = useState(unit.deadline || '')
   const [statusValue, setStatusValue] = useState<UnitStatus>(unit.status)
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const requestedTab = searchParams.get('tab')
+  const resolvedTab =
+    requestedTab === 'progress' || requestedTab === 'overview'
+      ? requestedTab
+      : initialTab
+  const [currentTab, setCurrentTab] = useState<'overview' | 'progress'>(resolvedTab)
+
+  useEffect(() => {
+    let cancelled = false
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+
+    const warmInteractions = () => {
+      if (cancelled) {
+        return
+      }
+
+      void import('./unit-progress-tab')
+      void import('./components/unit-gallery-section')
+    }
+
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(warmInteractions, { timeout: 1200 })
+    } else {
+      timeoutId = window.setTimeout(warmInteractions, 300)
+    }
+
+    return () => {
+      cancelled = true
+
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId)
+      }
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    setCurrentTab(resolvedTab)
+  }, [resolvedTab])
 
   useEffect(() => {
     setLocalUnit(initialUnit)
@@ -416,6 +450,18 @@ export default function UnitDetailClient({
   useEffect(() => {
     setLocalImages(images)
   }, [images])
+
+  useEffect(() => {
+    setLocalSessionsState(sessions)
+  }, [sessions])
+
+  useEffect(() => {
+    setLocalActiveSessionState(activeSession)
+  }, [activeSession])
+
+  useEffect(() => {
+    setLocalTotalLoggedSecondsState(totalLoggedSeconds)
+  }, [totalLoggedSeconds])
 
   useEffect(() => {
     setLocalStagePaints(stagePaints)
@@ -433,19 +479,15 @@ export default function UnitDetailClient({
     if (!showSessionStartedNotice) return
 
     setIsSessionNoticeVisible(true)
-    router.replace(`/units/${unit.id}`, { scroll: false })
-  }, [showSessionStartedNotice, router, unit.id])
+    window.history.replaceState(null, '', pathname)
+  }, [pathname, showSessionStartedNotice])
 
   useEffect(() => {
-    if (!activeSession) {
+    if (!localActiveSessionState) {
       return
     }
 
-    const interval = setInterval(() => {
-      setLiveNow(Date.now())
-    }, 1000)
-
-    const startedAtMs = new Date(activeSession.started_at).getTime()
+    const startedAtMs = new Date(localActiveSessionState.started_at).getTime()
     const stopAtMs = startedAtMs + 7200 * 1000
     const delay = Math.max(0, stopAtMs - Date.now())
 
@@ -457,10 +499,9 @@ export default function UnitDetailClient({
     }, delay)
 
     return () => {
-      clearInterval(interval)
       clearTimeout(timeout)
     }
-  }, [activeSession, unit.id, router, startTransition])
+  }, [localActiveSessionState, unit.id, router, startTransition])
 
   useEffect(() => {
     setOptimisticSteps(steps)
@@ -472,6 +513,9 @@ export default function UnitDetailClient({
 
   useEffect(() => {
     return () => {
+      if (refreshTimeoutRef.current !== null) {
+        window.clearTimeout(refreshTimeoutRef.current)
+      }
       galleryFilePreviews.forEach((preview) =>
         URL.revokeObjectURL(preview.previewUrl)
       )
@@ -496,23 +540,137 @@ export default function UnitDetailClient({
     }
   }, [])
 
-  const displayedLoggedSeconds = activeSession
-    ? totalLoggedSeconds +
-      Math.min(
-        7200,
-        Math.floor(
-          (liveNow - new Date(activeSession.started_at).getTime()) / 1000
-        )
-      )
-    : totalLoggedSeconds
+  const handleSessionStateChange = useCallback(
+    ({
+      activeSession: nextActiveSession,
+      sessions: nextSessions,
+      totalLoggedSeconds: nextTotalLoggedSeconds,
+    }: {
+      activeSession: Session | null
+      sessions: Session[]
+      totalLoggedSeconds: number
+    }) => {
+      setLocalActiveSessionState(nextActiveSession)
+      setLocalSessionsState(nextSessions)
+      setLocalTotalLoggedSecondsState(nextTotalLoggedSeconds)
+    },
+    []
+  )
+
+  const dashboardUnitPatch = useMemo(
+    () => ({
+      unitId: unit.id,
+      name: unit.name,
+      deadline: unit.deadline,
+      status: unit.status as DashboardSyncStatus,
+      isFeatured: unit.is_featured,
+      updatedAt: new Date().toISOString(),
+      progressPercent: getDashboardProgressPercent(unit.status, optimisticSteps),
+      primaryImageUrl: getDashboardFeaturedImageUrl(localImages),
+      lastSessionAt: getDashboardLastSessionAt(
+        localActiveSessionState,
+        localSessionsState
+      ),
+      parentProjectNames: localParentProjects.map(
+        (project) => project.name || 'Untitled project'
+      ),
+    }),
+    [
+      localActiveSessionState,
+      localImages,
+      localParentProjects,
+      localSessionsState,
+      optimisticSteps,
+      unit.deadline,
+      unit.id,
+      unit.is_featured,
+      unit.name,
+      unit.status,
+    ]
+  )
+
+  const dashboardMetadataSnapshot = useMemo(
+    () => ({
+      totalLoggedSeconds: localTotalLoggedSecondsState,
+      completedSessionsCount: getCompletedSessionCount(localSessionsState),
+      lastSessionAt: getDashboardLastSessionAt(
+        localActiveSessionState,
+        localSessionsState
+      ),
+    }),
+    [localActiveSessionState, localSessionsState, localTotalLoggedSecondsState]
+  )
+
+  useEffect(() => {
+    if (!hasPublishedDashboardUnitPatchRef.current) {
+      hasPublishedDashboardUnitPatchRef.current = true
+      return
+    }
+
+    publishDashboardUnitPatch(dashboardUnitPatch)
+  }, [dashboardUnitPatch])
+
+  useEffect(() => {
+    const previousSnapshot = previousDashboardMetadataRef.current
+    previousDashboardMetadataRef.current = dashboardMetadataSnapshot
+
+    if (!previousSnapshot) {
+      return
+    }
+
+    const totalLoggedSecondsDelta =
+      dashboardMetadataSnapshot.totalLoggedSeconds -
+      previousSnapshot.totalLoggedSeconds
+    const completedSessionsDelta =
+      dashboardMetadataSnapshot.completedSessionsCount -
+      previousSnapshot.completedSessionsCount
+    const hasLastSessionChanged =
+      dashboardMetadataSnapshot.lastSessionAt !== previousSnapshot.lastSessionAt
+
+    if (
+      totalLoggedSecondsDelta === 0 &&
+      completedSessionsDelta === 0 &&
+      !hasLastSessionChanged
+    ) {
+      return
+    }
+
+    publishDashboardMetadataPatch({
+      totalLoggedSecondsDelta:
+        totalLoggedSecondsDelta === 0 ? undefined : totalLoggedSecondsDelta,
+      completedSessionsDelta:
+        completedSessionsDelta === 0 ? undefined : completedSessionsDelta,
+      lastSessionAt: hasLastSessionChanged
+        ? dashboardMetadataSnapshot.lastSessionAt
+        : undefined,
+      paintStreakDaysFloor: totalLoggedSecondsDelta >= 60 ? 1 : undefined,
+    })
+  }, [dashboardMetadataSnapshot])
 
   const completedCount = optimisticSteps.filter(
     (step) => step.status === 'done'
   ).length
+  const isUnitComplete =
+    statusValue === 'complete' ||
+    unit.status === 'complete' ||
+    Boolean(unit.completed_at)
 
   const sortedSteps = [...optimisticSteps].sort(
     (a, b) => a.step_order - b.step_order
   )
+
+  const queueBackgroundRefresh = useCallback((delay = 160) => {
+    if (refreshTimeoutRef.current !== null) {
+      window.clearTimeout(refreshTimeoutRef.current)
+    }
+
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      refreshTimeoutRef.current = null
+      startTransition(() => {
+        router.refresh()
+      })
+    }, delay)
+  }, [router, startTransition])
 
   const handleToggleStep = (step: ProgressStep) => {
     if (step.step_key === 'done') {
@@ -561,7 +719,20 @@ export default function UnitDetailClient({
       formData.set('nextStatus', nextStatus)
 
       try {
-        await toggleStepDone(formData)
+        const result = await toggleStepDone(formData)
+
+        if (result?.completedAt) {
+          setLocalUnit((current) => ({
+            ...current,
+            completed_at: result.completedAt,
+          }))
+        }
+
+        if (result?.shouldOpenShareModal) {
+          setIsShareModalOpen(true)
+        }
+
+        queueBackgroundRefresh()
       } catch (error) {
         setOptimisticSteps(previousSteps)
         throw error
@@ -597,15 +768,17 @@ export default function UnitDetailClient({
     }))
     setLocalParentProjects(nextParentProjects)
     setLocalSelectedProjectIds(nextProjectIds)
+    setIsEditingDetails(false)
 
     startTransition(async () => {
       try {
         await updateUnitDetails(formData)
-        setIsEditingDetails(false)
+        queueBackgroundRefresh()
       } catch (error) {
         setLocalUnit(previousUnit)
         setLocalParentProjects(previousParentProjects)
         setLocalSelectedProjectIds(previousSelectedProjectIds)
+        setIsEditingDetails(true)
         throw error
       }
     })
@@ -621,13 +794,15 @@ export default function UnitDetailClient({
       name,
       notes,
     }))
+    setIsEditingHeader(false)
 
     startTransition(async () => {
       try {
         await updateUnitHeader(formData)
-        setIsEditingHeader(false)
+        queueBackgroundRefresh()
       } catch (error) {
         setLocalUnit(previousUnit)
+        setIsEditingHeader(true)
         throw error
       }
     })
@@ -642,7 +817,20 @@ export default function UnitDetailClient({
 
     startTransition(async () => {
       try {
-        await updateUnitStatus(unit.id, nextStatus)
+        const result = await updateUnitStatus(unit.id, nextStatus)
+
+        if (result?.completedAt) {
+          setLocalUnit((current) => ({
+            ...current,
+            completed_at: result.completedAt,
+          }))
+        }
+
+        if (result?.shouldOpenShareModal) {
+          setIsShareModalOpen(true)
+        }
+
+        queueBackgroundRefresh()
       } catch (error) {
         setStatusValue(previousStatus)
         setLocalUnit(previousUnit)
@@ -664,6 +852,7 @@ export default function UnitDetailClient({
     startTransition(async () => {
       try {
         await setFeaturedUnitImage(unit.id, imageId)
+        queueBackgroundRefresh()
       } catch (error) {
         setLocalImages(previousImages)
         throw error
@@ -685,6 +874,7 @@ const handleRemoveStagePaint = (stagePaintId: string) => {
 
     try {
       await removePaintFromStage(formData)
+      queueBackgroundRefresh()
     } catch (error) {
       setLocalStagePaints(previousStagePaints)
       throw error
@@ -706,6 +896,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
     try {
       await deleteUnitImage(formData)
+      queueBackgroundRefresh()
     } catch (error) {
       setLocalImages(previousImages)
       throw error
@@ -745,6 +936,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
       try {
         await deleteUnitImage(formData)
+        queueBackgroundRefresh()
       } catch (error) {
         setLocalImages(previousImages)
         setSelectedGalleryImageIds(imageIdsToDelete)
@@ -775,15 +967,61 @@ const handleRemoveStagePhoto = (imageId: string) => {
       return
     }
 
+    const optimisticImages = selectedGalleryFiles.map((file, index) =>
+      buildOptimisticImage({
+        file,
+        altText: null,
+        isFeatured: localImages.length === 0 && index === 0,
+      })
+    )
+
+    setGalleryUploadError(null)
+    setSelectedGalleryFiles([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ''
+    }
+    setLocalImages((current) => [
+      ...optimisticImages,
+      ...current.map((image) =>
+        optimisticImages.some((optimisticImage) => optimisticImage.is_featured)
+          ? { ...image, is_featured: false }
+          : image
+      ),
+    ])
+
     startTransition(async () => {
       const formData = new FormData()
       formData.set('unitId', unit.id)
       formData.set('uploadSource', galleryUploadSource)
-      selectedGalleryFiles.forEach((file) => formData.append('image', file))
-
-      setGalleryUploadError(null)
+      optimisticImages.forEach((image, index) =>
+        formData.append('image', selectedGalleryFiles[index]!)
+      )
 
       const result = await uploadUnitGalleryImages(formData)
+      const uploadedImages = result?.uploadedImages ?? []
+
+      setLocalImages((current) => {
+        const withoutOptimistic = current.filter(
+          (image) => !optimisticImages.some((optimistic) => optimistic.id === image.id)
+        )
+
+        if (uploadedImages.length === 0) {
+          return withoutOptimistic
+        }
+
+        return [
+          ...uploadedImages,
+          ...withoutOptimistic.map((image) =>
+            uploadedImages.some((uploaded) => uploaded.is_featured)
+              ? { ...image, is_featured: false }
+              : image
+          ),
+        ]
+      })
+      optimisticImages.forEach((image) => URL.revokeObjectURL(image.image_url))
 
       if (result?.failed.length) {
         setGalleryUploadError(
@@ -791,25 +1029,9 @@ const handleRemoveStagePhoto = (imageId: string) => {
             .map((failure) => `${failure.fileName}: ${failure.reason}`)
             .join('; ')}`
         )
-      } else {
-        if (result?.uploadedImages?.length) {
-          setLocalImages((current) => [
-            ...result.uploadedImages!,
-            ...current.map((image) =>
-              result.uploadedImages!.some((uploaded) => uploaded.is_featured)
-                ? { ...image, is_featured: false }
-                : image
-            ),
-          ])
-        }
-        setSelectedGalleryFiles([])
-        if (fileInputRef.current) {
-          fileInputRef.current.value = ''
-        }
-        if (cameraInputRef.current) {
-          cameraInputRef.current.value = ''
-        }
       }
+
+      queueBackgroundRefresh()
     })
   }
 
@@ -824,15 +1046,6 @@ const handleRemoveStagePhoto = (imageId: string) => {
   }) => {
     const supabase = createClient()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      alert('You must be logged in.')
-      return false
-    }
-
     const fileExt = file.name.split('.').pop() || 'jpg'
     const filePath = `units/${unit.id}/${crypto.randomUUID()}.${fileExt}`
 
@@ -841,8 +1054,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
       .upload(filePath, file)
 
     if (uploadError) {
-      alert(uploadError.message)
-      return false
+      throw new Error(uploadError.message)
     }
 
     const { data } = supabase.storage
@@ -855,7 +1067,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
         entity_type: 'unit',
         entity_id: unit.id,
         image_url: data.publicUrl,
-        user_id: user.id,
+        user_id: currentUserId,
         storage_bucket: 'obsidian-images',
         storage_path: filePath,
         is_featured: makeFeaturedIfEmpty && localImages.length === 0,
@@ -868,20 +1080,10 @@ const handleRemoveStagePhoto = (imageId: string) => {
       .single()
 
     if (insertError) {
-      alert(insertError.message)
-      return false
+      throw new Error(insertError.message)
     }
 
-    if (imageAsset) {
-      setLocalImages((current) => [
-        imageAsset,
-        ...current.map((image) =>
-          imageAsset.is_featured ? { ...image, is_featured: false } : image
-        ),
-      ])
-    }
-
-    return true
+    return imageAsset
   }
 
   const handleFileChange = async (
@@ -904,13 +1106,42 @@ const handleRemoveStagePhoto = (imageId: string) => {
     }
 
     setUploadingStageId(step.id)
+    const optimisticImage = buildOptimisticImage({
+      file,
+      altText: `stage:${step.step_key}`,
+      isFeatured: localImages.length === 0,
+    })
+    setLocalImages((current) => [
+      optimisticImage,
+      ...current.map((image) =>
+        optimisticImage.is_featured ? { ...image, is_featured: false } : image
+      ),
+    ])
 
     try {
-      await uploadUnitImage({
+      const imageAsset = await uploadUnitImage({
         file,
         altText: `stage:${step.step_key}`,
         makeFeaturedIfEmpty: true,
       })
+      if (imageAsset) {
+        setLocalImages((current) => [
+          imageAsset,
+          ...current.filter((image) => image.id !== optimisticImage.id).map((image) =>
+            imageAsset.is_featured ? { ...image, is_featured: false } : image
+          ),
+        ])
+      }
+      queueBackgroundRefresh()
+      URL.revokeObjectURL(optimisticImage.image_url)
+    } catch (error) {
+      setLocalImages((current) =>
+        current.filter((image) => image.id !== optimisticImage.id)
+      )
+      URL.revokeObjectURL(optimisticImage.image_url)
+      setGalleryUploadError(
+        error instanceof Error ? error.message : 'Could not upload image.'
+      )
     } finally {
       setUploadingStageId(null)
       event.target.value = ''
@@ -935,6 +1166,29 @@ const handleRemoveStagePhoto = (imageId: string) => {
       ...current.filter((paint) => paint.id !== normalizedStagePaint.id),
       normalizedStagePaint,
     ])
+  }
+
+  const handleTabChange = (nextTab: 'overview' | 'progress') => {
+    if (nextTab === currentTab) {
+      return
+    }
+
+    setCurrentTab(nextTab)
+
+    if (nextTab === 'progress') {
+      void import('./unit-progress-tab')
+    }
+
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextTab === 'overview') {
+      params.delete('tab')
+    } else {
+      params.set('tab', 'progress')
+    }
+
+    const nextSearch = params.toString()
+    const href = nextSearch ? `${pathname}?${nextSearch}` : pathname
+    window.history.replaceState(null, '', href)
   }
 
   return (
@@ -1035,7 +1289,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
                 title="Delete Unit"
                 buttonLabel="Delete This Unit"
                 initialDescription="Permanently delete this unit from your gallery."
-                confirmDescription="If you delete this unit, it will be removed along with all the progress, sessions, paints, recipes, and images it contains. This action cannot be undone."
+                confirmDescription="If you delete this unit, it will be removed along with all the progress, sessions, paints, guides, and images it contains. This action cannot be undone."
                 deleteAction={deleteUnit}
               />
             </div>
@@ -1044,22 +1298,22 @@ const handleRemoveStagePhoto = (imageId: string) => {
       </section>
       ) : null}
 
-      <div className="mt-4 grid gap-5">
+    <div className="mt-4 grid gap-5">
   <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
     {[
-      { key: 'overview' as const, label: 'Overview', href: `/units/${unit.id}` },
+      { key: 'overview' as const, label: 'Overview' },
       {
         key: 'progress' as const,
         label: 'Progress',
-        href: `/units/${unit.id}?tab=progress`,
       },
     ].map((tab) => {
-      const isActive = activeTab === tab.key
+      const isActive = currentTab === tab.key
 
       return (
-        <Link
+        <button
           key={tab.key}
-          href={tab.href}
+          type="button"
+          onClick={() => handleTabChange(tab.key)}
           className={[
             'rounded-xl px-2 py-3 text-center text-xs font-black transition',
             isActive
@@ -1068,13 +1322,13 @@ const handleRemoveStagePhoto = (imageId: string) => {
           ].join(' ')}
         >
           {tab.label}
-        </Link>
+        </button>
       )
     })}
 </div>
 </div>
 
-      {activeTab === 'overview' && (
+      <div hidden={currentTab !== 'overview'} aria-hidden={currentTab !== 'overview'}>
         <div>
           <div
             id="unit-details-editor"
@@ -1293,9 +1547,12 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
           <LazyUnitSessionTracker
             unitId={unit.id}
-            activeSession={activeSession}
-            sessions={sessions}
-            totalLoggedSeconds={displayedLoggedSeconds}
+            activeSession={localActiveSessionState}
+            sessions={localSessionsState}
+            totalLoggedSeconds={localTotalLoggedSecondsState}
+            autoStart={autoStartSession}
+            onMutationCommitted={queueBackgroundRefresh}
+            onStateChange={handleSessionStateChange}
           />
 
           <section className="mt-6">
@@ -1352,446 +1609,46 @@ const handleRemoveStagePhoto = (imageId: string) => {
             onToggleFeatured={handleSetFeatured}
           />
         </div>
-      )}
-
-      {activeTab === 'progress' && (
-        <section className="mt-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-black">Progress Stages</h2>
-              <p className="text-sm text-white/45">
-                Track recipes, photos, and paints per stage.
-              </p>
-            </div>
-
-            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">
-              {completedCount}/{optimisticSteps.length}
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {sortedSteps.map((step) => {
-              const isDone = step.status === 'done'
-              const isOpen = openStageId === step.id
-              const stagePhoto = localImages.find(
-                (image) => image.alt_text === `stage:${step.step_key}`
-              )
-              const isStageUploading = uploadingStageId === step.id
-const paintsForStage = localStagePaints
-  .filter((paint) => paint.progress_step_id === step.id)
-  .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-              return (
-                <div
-                  key={step.id}
-                  className={`overflow-hidden rounded-2xl border transition ${
-                    isDone
-                      ? 'border-cyan-400/40 bg-cyan-400/[0.07]'
-                      : 'border-white/10 bg-white/[0.035]'
-                  }`}
-                >
-                  <div className="flex items-center gap-4 p-4">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleStep(step)}
-                      disabled={isPending || step.step_key === 'done'}
-                      className="tap-press tap-target shrink-0 disabled:opacity-80"
-                      aria-label={`Toggle ${step.step_label}`}
-                    >
-                      <StageIcon stepKey={step.step_key} isDone={isDone} />
-                    </button>
-
-                    <div className="min-w-0 flex-1">
-  <div
-    className={`text-base font-black ${
-      isDone ? 'text-white' : 'text-white/55'
-    }`}
-  >
-    {step.step_label}
-  </div>
-
-  <div className="mt-1 text-xs uppercase tracking-[0.16em] text-white/30">
-    {isDone ? 'Complete' : 'Not complete'}
-  </div>
-
-  {paintsForStage.length > 0 ? (
-    <div className="mt-2 grid w-28 grid-cols-3 gap-1.5">
-      {paintsForStage.slice(0, 6).map((paint) => {
-        const displayHex =
-          paint.paint_source === 'custom'
-            ? paint.custom_paint?.color_hex
-            : paint.catalog_paint?.hex_approx
-
-        const displayName =
-          paint.paint_source === 'custom'
-            ? paint.custom_paint?.name
-            : paint.catalog_paint?.name
-
-        const imageUrl =
-          paint.paint_source === 'custom'
-            ? null
-            : paint.catalog_paint?.swatch_image_url
-        const paintHref = getStagePaintHref(paint)
-
-        const swatch = imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={displayName || 'Paint swatch'}
-            width={32}
-            height={32}
-            sizes="32px"
-            className="h-8 w-8 rounded-lg border border-[#07111b] object-cover"
+      </div>
+      <div hidden={currentTab !== 'progress'} aria-hidden={currentTab !== 'progress'}>
+        {currentTab === 'progress' ? (
+          <UnitProgressTab
+            unitId={unit.id}
+            isPending={isPending}
+            completedCount={completedCount}
+            totalStepCount={optimisticSteps.length}
+            sortedSteps={sortedSteps}
+            localImages={localImages}
+            localStagePaints={localStagePaints}
+            openStageId={openStageId}
+            uploadingStageId={uploadingStageId}
+            onToggleStep={handleToggleStep}
+            onOpenStageChange={setOpenStageId}
+            onStageFileChange={handleStageFileChange}
+            onStagePaintAdded={handleStagePaintAdded}
+            onRemoveStagePaint={handleRemoveStagePaint}
+            onRemoveStagePhoto={handleRemoveStagePhoto}
           />
-        ) : (
-          <span
-            className="block h-8 w-8 rounded-lg border border-[#07111b]"
-            style={{ backgroundColor: displayHex || '#262626' }}
-          />
-        )
+        ) : null}
+      </div>
 
-        return paintHref ? (
-          <Link
-            key={paint.id}
-            href={paintHref}
-            className="tap-press rounded-lg hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-            aria-label={`Open ${displayName || 'paint'} details`}
-          >
-            {swatch}
-          </Link>
-        ) : (
-          <span key={paint.id}>{swatch}</span>
-        )
-      })}
-
-      {paintsForStage.length > 6 ? (
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#07111b] bg-white/10 text-[10px] font-black text-white/70">
-          +{paintsForStage.length - 6}
-        </div>
+      {isUnitComplete ? (
+        <UnitCompletedInlinePreview
+          unitName={unit.name || 'Untitled unit'}
+          completedAt={unit.completed_at}
+          images={localImages}
+          sessions={localSessionsState}
+          onShareClick={() => setIsShareModalOpen(true)}
+        />
       ) : null}
-    </div>
-  ) : null}
-</div>
 
-                    {isStageUploading ? (
-                      <div
-                        className="stage-photo-loading-pattern relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/30 bg-black/30"
-                        aria-label="Uploading stage photo"
-                      >
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-200 border-t-transparent" />
-                      </div>
-                    ) : stagePhoto ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedStagePhoto({
-                            id: stagePhoto.id,
-                            src: stagePhoto.image_url,
-                            alt: stagePhoto.alt_text || step.step_label,
-                            label: step.step_label,
-                          })
-                        }
-                        className="tap-press relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30 hover:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                        aria-label={`Expand ${step.step_label} photo`}
-                      >
-                        <Image
-                          src={stagePhoto.image_url}
-                          alt={stagePhoto.alt_text || step.step_label}
-                          fill
-                          sizes="48px"
-                          className="object-cover"
-                        />
-                      </button>
-                    ) : null}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenStageId(isOpen ? null : step.id)
-                      }
-                      className="tap-press tap-target flex items-center justify-center rounded-xl border border-cyan-400/30 bg-cyan-400/10 text-2xl font-light leading-none text-cyan-300"
-                      aria-label="Add stage details"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  {isOpen && (
-                    <div className="border-t border-white/10 bg-black/20 p-4">
-                      <div className="space-y-4">
-                        <div>
-  <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/40">
-    Paints Used
-  </label>
-
-  {localStagePaints.filter((paint) => paint.progress_step_id === step.id).length > 0 ? (
-    <div className="mt-2 grid grid-cols-3 gap-2">
-      {localStagePaints
-        .filter((paint) => paint.progress_step_id === step.id)
-        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        .map((paint) => {
-          const displayName =
-            paint.paint_source === 'custom'
-              ? paint.custom_paint?.name
-              : paint.catalog_paint?.name
-
-          const displayMeta =
-            paint.paint_source === 'custom'
-              ? [paint.custom_paint?.manufacturer, paint.custom_paint?.series]
-                  .filter(Boolean)
-                  .join(' · ')
-              : [paint.catalog_paint?.brand, paint.catalog_paint?.line]
-                  .filter(Boolean)
-                  .join(' · ')
-
-          const displayHex =
-            paint.paint_source === 'custom'
-              ? paint.custom_paint?.color_hex
-              : paint.catalog_paint?.hex_approx
-
-          const imageUrl =
-            paint.paint_source === 'custom'
-              ? null
-              : paint.catalog_paint?.swatch_image_url
-          const paintHref = getStagePaintHref(paint)
-
-          const swatch = imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={displayName || 'Paint swatch'}
-              width={160}
-              height={160}
-              sizes="(max-width: 430px) 30vw, 128px"
-              className="aspect-square w-full rounded-lg border border-white/10 object-cover"
-            />
-          ) : (
-            <div
-              className="aspect-square w-full rounded-lg border border-white/10"
-              style={{ backgroundColor: displayHex || '#262626' }}
-            />
-          )
-
-          return (
-            <div
-              key={paint.id}
-              className="relative min-w-0 rounded-xl border border-white/10 bg-black/25 p-2"
-            >
-              <button
-                type="button"
-                onClick={() => handleRemoveStagePaint(paint.id)}
-                disabled={isPending}
-                className="tap-press absolute right-1 top-1 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-[10px] font-black text-white/70"
-                aria-label="Remove paint"
-              >
-                ×
-              </button>
-
-              {paintHref ? (
-                <Link
-                  href={paintHref}
-                  className="tap-card block rounded-lg hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                  aria-label={`Open ${displayName || 'paint'} details`}
-                >
-                  {swatch}
-                </Link>
-              ) : (
-                swatch
-              )}
-
-              <div className="mt-1.5 truncate text-[11px] font-black leading-tight text-white">
-                {displayName || 'Unnamed paint'}
-              </div>
-
-              <div className="mt-0.5 truncate text-[10px] leading-tight text-white/35">
-                {displayMeta || paint.paint_source}
-              </div>
-            </div>
-          )
-        })}
-    </div>
-  ) : (
-    <p className="mt-2 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/35">
-      No paints added to this stage yet.
-    </p>
-  )}
-
-  <StagePaintPicker
-    unitId={unit.id}
-    progressStepId={step.id}
-    onPaintAdded={handleStagePaintAdded}
-  />
-</div>
-
-                        <div>
-                          <label className="text-xs font-bold uppercase tracking-[0.16em] text-white/40">
-                            Stage Photo
-                          </label>
-
-                          <input
-                            id={`stage-photo-${step.id}`}
-                            type="file"
-                            accept="image/*"
-                            disabled={isStageUploading}
-                            className="hidden"
-                            onChange={(event) =>
-                              handleStageFileChange(event, step)
-                            }
-                          />
-                          <input
-                            id={`stage-photo-camera-${step.id}`}
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            disabled={isStageUploading}
-                            className="hidden"
-                            onChange={(event) =>
-                              handleStageFileChange(event, step)
-                            }
-                          />
-
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <label
-                              htmlFor={`stage-photo-${step.id}`}
-                              className={`tap-press mobile-upload-action flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl border px-3 py-3 text-center text-xs font-semibold ${
-                                isStageUploading
-                                  ? 'stage-photo-loading-pattern cursor-wait border-cyan-300/35 bg-cyan-300/[0.08] text-cyan-100'
-                                  : 'border-white/15 bg-white/[0.03] text-white/60 hover:border-cyan-300/30 hover:text-white/80'
-                              }`}
-                            >
-                              {isStageUploading ? (
-                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                              ) : null}
-                              {isStageUploading
-                                ? 'Uploading...'
-                                : 'Upload from Gallery'}
-                            </label>
-
-                            <label
-                              htmlFor={`stage-photo-camera-${step.id}`}
-                              className={`tap-press mobile-upload-action flex cursor-pointer items-center justify-center rounded-xl px-3 py-3 text-center text-xs font-bold ${
-                                isStageUploading
-                                  ? 'stage-photo-loading-pattern cursor-wait bg-cyan-300/[0.08] text-cyan-100'
-                                  : 'bg-cyan-400 text-black hover:bg-cyan-300'
-                              }`}
-                            >
-                              {isStageUploading ? 'Uploading...' : 'Take Photo'}
-                            </label>
-                          </div>
-
-                          {isStageUploading ? (
-  <div className="mt-3 flex items-center gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-2 text-cyan-100">
-    <div
-      className="stage-photo-loading-pattern relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-black"
-      aria-hidden="true"
-    >
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-    </div>
-
-    <div className="min-w-0 flex-1">
-      <div className="text-sm font-bold">
-        Uploading photo
-      </div>
-      <div className="text-xs text-cyan-100/60">
-        This will appear in the stage card and unit gallery.
-      </div>
-    </div>
-  </div>
-) : stagePhoto ? (
-  <div className="mt-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-2">
-    <button
-      type="button"
-      onClick={() =>
-        setExpandedStagePhoto({
-          id: stagePhoto.id,
-          src: stagePhoto.image_url,
-          alt: stagePhoto.alt_text || step.step_label,
-          label: step.step_label,
-        })
-      }
-      className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-black transition hover:ring-2 hover:ring-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-      aria-label={`Expand ${step.step_label} photo`}
-    >
-      <Image
-        src={stagePhoto.image_url}
-        alt={stagePhoto.alt_text || step.step_label}
-        fill
-        sizes="56px"
-        className="object-cover"
+      <UnitCompletedShareModal
+        unitId={unit.id}
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
       />
-    </button>
-
-    <div className="min-w-0 flex-1">
-      <div className="text-sm font-bold text-white">
-        Stage photo added
-      </div>
-      <div className="text-xs text-white/40">
-        Also appears in the unit gallery.
-      </div>
-    </div>
-
-    <button
-      type="button"
-      onClick={() => handleRemoveStagePhoto(stagePhoto.id)}
-      disabled={isPending}
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 text-sm font-black text-white/70 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
-      aria-label="Remove stage photo"
-    >
-      ×
-    </button>
-  </div>
-) : null}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {expandedStagePhoto ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${expandedStagePhoto.label} photo`}
-          onClick={() => setExpandedStagePhoto(null)}
-        >
-          <div className="absolute left-4 top-4 z-10">
-            <SampleColorFromImageAction
-              imageSrc={expandedStagePhoto.src}
-              imageAlt={expandedStagePhoto.alt}
-              sourceType="unit_stage"
-              sourceId={expandedStagePhoto.id}
-              label="Match Paint"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setExpandedStagePhoto(null)}
-            className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/70 text-xl font-bold text-white/80 transition hover:border-white/35 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-            aria-label="Close expanded photo"
-          >
-            x
-          </button>
-
-          <div
-            className="relative h-full max-h-[88vh] w-full max-w-5xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Image
-              src={expandedStagePhoto.src}
-              alt={expandedStagePhoto.alt}
-              fill
-              sizes="100vw"
-              className="object-contain"
-              priority
-            />
-          </div>
-        </div>
-      ) : null}
 
     </div>
   )
 }
+

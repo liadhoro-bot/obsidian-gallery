@@ -12,17 +12,21 @@ type Props = {
   unitId: string
   progressStepId: string
   onPaintAdded?: (stagePaint: NonNullable<StagePaintResult>) => void
+  triggerClassName?: string
 }
 
 export default function StagePaintPicker({
   unitId,
   progressStepId,
   onPaintAdded,
+  triggerClassName,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const handleSelectPaint = (paint: PaintPickerPaint) => {
+    setIsOpen(false)
+
     startTransition(async () => {
       const formData = new FormData()
 
@@ -31,11 +35,14 @@ export default function StagePaintPicker({
       formData.set('paintSource', paint.source)
       formData.set('paintId', paint.id)
 
-      const stagePaint = await addPaintToStage(formData)
-
-      setIsOpen(false)
-      if (stagePaint) {
-        onPaintAdded?.(stagePaint)
+      try {
+        const stagePaint = await addPaintToStage(formData)
+        if (stagePaint) {
+          onPaintAdded?.(stagePaint)
+        }
+      } catch (error) {
+        setIsOpen(true)
+        throw error
       }
     })
   }
@@ -45,7 +52,10 @@ export default function StagePaintPicker({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="mt-2 flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-left text-sm text-white/70 transition hover:border-cyan-400/40 hover:bg-cyan-400/10"
+        className={
+          triggerClassName ||
+          'mt-2 flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-left text-sm text-white/70 transition hover:border-cyan-400/40 hover:bg-cyan-400/10'
+        }
       >
         <span>Pick from Paint Library</span>
         <span className="text-cyan-300">+</span>
