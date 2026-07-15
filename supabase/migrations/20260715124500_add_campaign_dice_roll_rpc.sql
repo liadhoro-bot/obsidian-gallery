@@ -64,15 +64,17 @@ returns table (
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $record_campaign_dice_roll$
 declare
   v_player_name text := regexp_replace(btrim(coalesce(p_player_name, '')), '\s+', ' ', 'g');
   v_roll_reason text := regexp_replace(btrim(coalesce(p_roll_reason, '')), '\s+', ' ', 'g');
   v_player_key text := lower(regexp_replace(btrim(coalesce(p_player_name, '')), '\s+', ' ', 'g'));
   v_reason_key text := lower(regexp_replace(btrim(coalesce(p_roll_reason, '')), '\s+', ' ', 'g'));
+  v_id uuid;
   v_die_one integer;
   v_die_two integer;
-  v_roll public.campaign_dice_rolls%rowtype;
+  v_total integer;
+  v_created_at timestamptz;
 begin
   if length(v_player_name) < 2 or length(v_player_name) > 80 then
     raise exception 'invalid_player_name';
@@ -82,8 +84,22 @@ begin
     raise exception 'invalid_roll_reason';
   end if;
 
-  select *
-  into v_roll
+  select
+    cdr.id,
+    cdr.player_name,
+    cdr.roll_reason,
+    cdr.die_one,
+    cdr.die_two,
+    cdr.total,
+    cdr.created_at
+  into
+    v_id,
+    v_player_name,
+    v_roll_reason,
+    v_die_one,
+    v_die_two,
+    v_total,
+    v_created_at
   from public.campaign_dice_rolls cdr
   where cdr.player_key = v_player_key
     and cdr.reason_key = v_reason_key
@@ -92,13 +108,13 @@ begin
   if found then
     return query
     select
-      v_roll.id,
-      v_roll.player_name,
-      v_roll.roll_reason,
-      v_roll.die_one,
-      v_roll.die_two,
-      v_roll.total,
-      v_roll.created_at,
+      v_id,
+      v_player_name,
+      v_roll_reason,
+      v_die_one,
+      v_die_two,
+      v_total,
+      v_created_at,
       true;
     return;
   end if;
@@ -129,12 +145,26 @@ begin
     p_user_agent
   )
   on conflict (player_key, reason_key) do nothing
-  returning *
-  into v_roll;
+  returning id, created_at
+  into v_id, v_created_at;
 
   if not found then
-    select *
-    into v_roll
+    select
+      cdr.id,
+      cdr.player_name,
+      cdr.roll_reason,
+      cdr.die_one,
+      cdr.die_two,
+      cdr.total,
+      cdr.created_at
+    into
+      v_id,
+      v_player_name,
+      v_roll_reason,
+      v_die_one,
+      v_die_two,
+      v_total,
+      v_created_at
     from public.campaign_dice_rolls cdr
     where cdr.player_key = v_player_key
       and cdr.reason_key = v_reason_key
@@ -142,29 +172,31 @@ begin
 
     return query
     select
-      v_roll.id,
-      v_roll.player_name,
-      v_roll.roll_reason,
-      v_roll.die_one,
-      v_roll.die_two,
-      v_roll.total,
-      v_roll.created_at,
+      v_id,
+      v_player_name,
+      v_roll_reason,
+      v_die_one,
+      v_die_two,
+      v_total,
+      v_created_at,
       true;
     return;
   end if;
 
+  v_total := v_die_one + v_die_two;
+
   return query
   select
-    v_roll.id,
-    v_roll.player_name,
-    v_roll.roll_reason,
-    v_roll.die_one,
-    v_roll.die_two,
-    v_roll.total,
-    v_roll.created_at,
+    v_id,
+    v_player_name,
+    v_roll_reason,
+    v_die_one,
+    v_die_two,
+    v_total,
+    v_created_at,
     false;
 end;
-$$;
+$record_campaign_dice_roll$;
 
 create or replace function public.mark_campaign_dice_roll_email_attempted(
   p_roll_id uuid,
@@ -174,13 +206,13 @@ returns void
 language sql
 security definer
 set search_path = public
-as $$
+as $mark_campaign_dice_roll_email_attempted$
   update public.campaign_dice_rolls
   set
     email_sent = p_email_sent,
     email_attempted_at = now()
   where id = p_roll_id;
-$$;
+$mark_campaign_dice_roll_email_attempted$;
 
 revoke all on function public.record_campaign_dice_roll(text, text, text, text) from public;
 grant execute on function public.record_campaign_dice_roll(text, text, text, text) to anon, authenticated, service_role;
