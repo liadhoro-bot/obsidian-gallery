@@ -112,7 +112,7 @@ export default function DiceRollForm() {
           maxLength={160}
           required
           className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-base font-bold text-white outline-none transition focus:border-cyan-300/70"
-          placeholder="Example: Unit X Veteran Abilities Roll +2XP"
+          placeholder="Example: Skeleton Chariots, veteran abilities roll +2XP"
         />
         <p className="mt-3 text-sm text-white/50">
           One saved 2d6 roll is allowed for each player name and reason. A new reason can be
