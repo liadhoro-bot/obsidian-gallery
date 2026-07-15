@@ -1,9 +1,8 @@
 'use server'
 
 import { headers } from 'next/headers'
-import { randomInt } from 'crypto'
 import { Resend } from 'resend'
-import { createServiceRoleClient } from '../../../utils/supabase/service-role'
+import { createClient } from '@supabase/supabase-js'
 
 export type DiceRollResult = {
   id: string
@@ -29,6 +28,7 @@ type DiceRollRow = {
   die_two: number
   total: number
   created_at: string
+  duplicate: boolean
 }
 
 function normalizePlayerName(name: string) {
@@ -39,15 +39,7 @@ function normalizeRollReason(reason: string) {
   return reason.trim().replace(/\s+/g, ' ')
 }
 
-function getPlayerKey(name: string) {
-  return normalizePlayerName(name).toLowerCase()
-}
-
-function getReasonKey(reason: string) {
-  return normalizeRollReason(reason).toLowerCase()
-}
-
-function toResult(row: DiceRollRow, duplicate: boolean): DiceRollResult {
+function toResult(row: DiceRollRow): DiceRollResult {
   return {
     id: row.id,
     playerName: row.player_name,
@@ -56,12 +48,24 @@ function toResult(row: DiceRollRow, duplicate: boolean): DiceRollResult {
     dieTwo: row.die_two,
     total: row.total,
     createdAt: row.created_at,
-    duplicate,
+    duplicate: row.duplicate,
   }
 }
 
-function rollD6() {
-  return randomInt(1, 7)
+function createDiceRollClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !anonKey) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are required')
+  }
+
+  return createClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
 }
 
 function getDatabaseErrorMessage(error: { code?: string; message?: string }) {
@@ -70,7 +74,8 @@ function getDatabaseErrorMessage(error: { code?: string; message?: string }) {
     error.code === 'PGRST204' ||
     error.code === '42P01' ||
     error.code === '42703' ||
-    error.message?.toLowerCase().includes('campaign_dice_rolls')
+    error.message?.toLowerCase().includes('campaign_dice_rolls') ||
+    error.message?.toLowerCase().includes('record_campaign_dice_roll')
   ) {
     return 'The dice-roll log table needs the latest database migration. Ask the organizer to run it, then try again.'
   }
@@ -82,10 +87,10 @@ function getSetupErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
 
   if (
-    message.includes('SUPABASE_SERVICE_ROLE_KEY') ||
-    message.includes('NEXT_PUBLIC_SUPABASE_URL')
+    message.includes('NEXT_PUBLIC_SUPABASE_URL') ||
+    message.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY')
   ) {
-    return 'The dice roller is missing production database configuration. Ask the organizer to set the Supabase service role environment variable, then try again.'
+    return 'The dice roller is missing production Supabase configuration. Ask the organizer to set the public Supabase environment variables, then try again.'
   }
 
   return 'The dice roller could not connect to the database. Please try again later.'
@@ -153,92 +158,54 @@ export async function rollCampaignDice(
     return { error: 'Roll reason must be 160 characters or fewer.', result: null }
   }
 
-  const playerKey = getPlayerKey(playerName)
-  const reasonKey = getReasonKey(rollReason)
-  let supabase: ReturnType<typeof createServiceRoleClient>
+  let supabase: ReturnType<typeof createDiceRollClient>
 
   try {
-    supabase = createServiceRoleClient()
+    supabase = createDiceRollClient()
   } catch (error) {
     console.error('Could not initialize campaign dice roll database client:', error)
     return { error: getSetupErrorMessage(error), result: null }
   }
 
-  const { data: existingRoll, error: existingError } = await supabase
-    .from('campaign_dice_rolls')
-    .select('id, player_name, roll_reason, die_one, die_two, total, created_at')
-    .eq('player_key', playerKey)
-    .eq('reason_key', reasonKey)
-    .maybeSingle<DiceRollRow>()
-
-  if (existingError) {
-    console.error('Could not check campaign dice roll:', existingError)
-    return {
-      error: getDatabaseErrorMessage(existingError) || 'Could not check your roll. Please try again.',
-      result: null,
-    }
-  }
-
-  if (existingRoll) {
-    return { error: null, result: toResult(existingRoll, true) }
-  }
-
   const headerStore = await headers()
   const forwardedFor = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const realIp = headerStore.get('x-real-ip')
-  const dieOne = rollD6()
-  const dieTwo = rollD6()
 
-  const { data: insertedRoll, error: insertError } = await supabase
-    .from('campaign_dice_rolls')
-    .insert({
-      player_name: playerName,
-      player_key: playerKey,
-      roll_reason: rollReason,
-      reason_key: reasonKey,
-      die_one: dieOne,
-      die_two: dieTwo,
-      total: dieOne + dieTwo,
-      ip_address: forwardedFor || realIp,
-      user_agent: headerStore.get('user-agent'),
-    })
-    .select('id, player_name, roll_reason, die_one, die_two, total, created_at')
-    .single<DiceRollRow>()
-
-  if (insertError) {
-    if (insertError.code === '23505') {
-      const { data: rollAfterRace } = await supabase
-        .from('campaign_dice_rolls')
-        .select('id, player_name, roll_reason, die_one, die_two, total, created_at')
-        .eq('player_key', playerKey)
-        .eq('reason_key', reasonKey)
-        .maybeSingle<DiceRollRow>()
-
-      if (rollAfterRace) {
-        return { error: null, result: toResult(rollAfterRace, true) }
-      }
-
-      return {
-        error: 'The dice-roll log table still allows only one roll per player. Ask the organizer to run the latest database migration, then try again.',
-        result: null,
-      }
+  const { data: rollRows, error: rollError } = await supabase.rpc(
+    'record_campaign_dice_roll',
+    {
+      p_player_name: playerName,
+      p_roll_reason: rollReason,
+      p_ip_address: forwardedFor || realIp,
+      p_user_agent: headerStore.get('user-agent'),
     }
+  )
 
-    console.error('Could not record campaign dice roll:', insertError)
+  if (rollError) {
+    console.error('Could not record campaign dice roll:', rollError)
     return {
       error:
-        getDatabaseErrorMessage(insertError) || 'Could not record your roll. Please try again.',
+        getDatabaseErrorMessage(rollError) || 'Could not record your roll. Please try again.',
       result: null,
     }
   }
 
-  const result = toResult(insertedRoll, false)
-  const emailSent = await sendDiceRollEmail(result)
+  const rollRow = Array.isArray(rollRows) ? (rollRows[0] as DiceRollRow | undefined) : null
 
-  await supabase
-    .from('campaign_dice_rolls')
-    .update({ email_sent: emailSent, email_attempted_at: new Date().toISOString() })
-    .eq('id', result.id)
+  if (!rollRow) {
+    return { error: 'Could not record your roll. Please try again.', result: null }
+  }
+
+  const result = toResult(rollRow)
+
+  if (!result.duplicate) {
+    const emailSent = await sendDiceRollEmail(result)
+
+    await supabase.rpc('mark_campaign_dice_roll_email_attempted', {
+      p_roll_id: result.id,
+      p_email_sent: emailSent,
+    })
+  }
 
   return { error: null, result }
 }
