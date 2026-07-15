@@ -140,3 +140,5 @@ grant execute on function public.record_campaign_dice_roll(text, text, text, tex
 
 revoke all on function public.mark_campaign_dice_roll_email_attempted(uuid, boolean) from public;
 grant execute on function public.mark_campaign_dice_roll_email_attempted(uuid, boolean) to anon, authenticated, service_role;
+
+notify pgrst, 'reload schema';
