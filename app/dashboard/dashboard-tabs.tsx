@@ -14,10 +14,10 @@ export default function DashboardTabs({
     label: string
     href: string
   }[] = [
-    { key: 'profile', label: 'My Stats', href: '/dashboard?tab=profile' },
+    { key: 'profile', label: 'My Progress', href: '/dashboard?tab=profile' },
     {
       key: 'painting-table',
-      label: 'Painting Table',
+      label: 'Active Units',
       href: '/dashboard?tab=painting-table',
     },
   ]

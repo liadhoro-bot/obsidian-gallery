@@ -15,10 +15,10 @@ const tabs: {
   key: ActiveTab
   label: string
 }[] = [
-  { key: 'profile', label: 'My Stats' },
+  { key: 'profile', label: 'My Progress' },
   {
     key: 'painting-table',
-    label: 'Painting Table',
+    label: 'Active Units',
   },
 ]
 
