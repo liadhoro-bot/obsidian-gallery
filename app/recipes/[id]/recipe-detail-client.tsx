@@ -158,9 +158,9 @@ export default function RecipeDetailClient({
           <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
             <div className="mb-5">
               <p className="text-sm uppercase tracking-wider text-cyan-400">
-                Edit Recipe
+                Edit Guide
               </p>
-              <h2 className="mt-1 text-xl font-semibold">Recipe Steps</h2>
+              <h2 className="mt-1 text-xl font-semibold">Guide Steps</h2>
             </div>
 
             <RecipeStepsTab

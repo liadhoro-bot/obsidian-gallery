@@ -29,7 +29,7 @@ export default async function RecipesStats() {
   return (
     <section className="grid gap-3 sm:grid-cols-2">
       <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-        <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Recipes</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Guides</p>
         <p className="mt-2 text-2xl font-bold text-white">{totalRecipes}</p>
       </div>
 

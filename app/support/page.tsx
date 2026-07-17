@@ -41,7 +41,7 @@ export default function SupportPage() {
               <p className="mt-3 text-sm leading-6 text-slate-300">
                 Obsidian Gallery is a passion project built by a miniature
                 painter and tabletop wargamer who wanted a better way to
-                organize projects, recipes, palettes, and hobby progress.
+                organize projects, guides, palettes, and hobby progress.
 
                 <span className="mt-3 block">
                   Every bit of support helps keep the app alive and growing -

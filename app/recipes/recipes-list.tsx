@@ -79,18 +79,18 @@ export default async function RecipesList({ q }: Props) {
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-white">Recipes</h2>
+          <h2 className="text-xl font-semibold text-white">Guides</h2>
           <p className="text-sm text-neutral-400">
-            Showing {recipeRows.length} recipe{recipeRows.length === 1 ? '' : 's'}
+            Showing {recipeRows.length} guide{recipeRows.length === 1 ? '' : 's'}
           </p>
         </div>
       </div>
 
       {recipeRows.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 p-8 text-center">
-          <p className="text-lg font-semibold text-white">No recipes yet</p>
+          <p className="text-lg font-semibold text-white">No guides yet</p>
           <p className="mt-2 text-sm text-neutral-400">
-            Create your first recipe to start building your library.
+            Create your first guide to start building your library.
           </p>
         </div>
       ) : (
@@ -108,7 +108,7 @@ export default async function RecipesList({ q }: Props) {
                   {featuredImage ? (
                     <Image
                       src={featuredImage.image_url}
-                      alt={featuredImage.alt_text || recipe.name || 'Recipe image'}
+                      alt={featuredImage.alt_text || recipe.name || 'Guide image'}
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
@@ -122,7 +122,7 @@ export default async function RecipesList({ q }: Props) {
 
                 <div className="p-4">
                   <h3 className="text-lg font-semibold text-white">
-                    {recipe.name || 'Untitled recipe'}
+                    {recipe.name || 'Untitled guide'}
                   </h3>
 
                   {recipe.description ? (

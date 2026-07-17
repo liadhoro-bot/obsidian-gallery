@@ -8,7 +8,7 @@ const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
   { name: 'Projects', href: '/projects', icon: '/icons/nav/projects.svg' },
   { name: 'Vault', href: '/vault', icon: '/icons/nav/vault.svg' },
-  { name: 'Recipes', href: '/recipes', icon: '/icons/nav/recipes.svg' },
+  { name: 'Guides', href: '/recipes', icon: '/icons/nav/recipes.svg' },
   { name: 'Themes', href: '/themes', icon: '/icons/nav/themes.svg' },
 ]
 

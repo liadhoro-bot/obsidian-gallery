@@ -320,7 +320,7 @@ export async function reportRecipe(
     .maybeSingle()
 
   if (recipeError) throw recipeError
-  if (!recipe) throw new Error('Recipe not found')
+  if (!recipe) throw new Error('Guide not found')
 
   const reportReason = normalizeReason(reason)
   const { error } = await supabase.from('recipe_reports').insert({

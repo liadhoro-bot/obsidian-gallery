@@ -76,7 +76,7 @@ export default function RecipeAddStepTab({
             <p className="text-sm uppercase tracking-wider text-cyan-400">
               Add Step
             </p>
-            <h2 className="mt-1 text-xl font-semibold">New Recipe Step</h2>
+            <h2 className="mt-1 text-xl font-semibold">New Guide Step</h2>
           </div>
         </div>
 

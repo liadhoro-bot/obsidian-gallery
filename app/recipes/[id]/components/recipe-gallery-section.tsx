@@ -459,7 +459,7 @@ export default function RecipeGallerySection({
                   if (!isEditingImages) setExpandedImage(image)
                 }}
                 className="tap-card block w-full"
-                aria-label="Expand recipe image"
+                aria-label="Expand guide image"
               >
                 <Image
                   src={image.image_url}
@@ -540,7 +540,7 @@ export default function RecipeGallerySection({
           </div>
         </>
       ) : (
-        <p className="mt-4 text-sm text-neutral-400">No recipe images yet.</p>
+        <p className="mt-4 text-sm text-neutral-400">No guide images yet.</p>
       )}
 
       {expandedImage ? (

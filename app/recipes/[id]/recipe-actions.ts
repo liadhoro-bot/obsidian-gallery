@@ -14,7 +14,7 @@ export async function updateRecipeVisibility(formData: FormData) {
   const recipeId = String(formData.get('recipeId') || '')
   const isPublic = String(formData.get('isPublic') || '') === 'true'
 
-  if (!recipeId) throw new Error('Missing recipe id')
+  if (!recipeId) throw new Error('Missing guide id')
 
   const { error } = await supabase
     .from('recipes')
@@ -41,7 +41,7 @@ export async function updateRecipeYoutubeUrl(formData: FormData) {
   const recipeId = String(formData.get('recipeId') || '')
   const youtubeUrl = String(formData.get('youtubeUrl') || '').trim()
 
-  if (!recipeId) throw new Error('Missing recipe id')
+  if (!recipeId) throw new Error('Missing guide id')
 
   const { error } = await supabase
     .from('recipes')

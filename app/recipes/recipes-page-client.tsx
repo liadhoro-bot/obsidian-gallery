@@ -78,18 +78,18 @@ export default function RecipesPageClient({
     <section className="space-y-5">
       <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
         <Link href="/recipes?tab=mine" className={tabClass(activeTab === 'mine')}>
-          My Recipes
+          My Guides
         </Link>
 
         <Link href="/recipes?tab=find" className={tabClass(activeTab === 'find')}>
-          Find Recipe
+          Find Guide
         </Link>
 
         <Link
           href="/recipes?tab=custom"
           className={tabClass(activeTab === 'custom')}
         >
-          Create Recipe
+          Create Guide
         </Link>
       </div>
 
@@ -98,11 +98,11 @@ export default function RecipesPageClient({
           <RecipeSearchBar
             value={findSearch}
             onChange={setFindSearch}
-            placeholder="Search recipes by name..."
+            placeholder="Search guides by name..."
           />
 
           <h2 className="text-sm font-bold tracking-[0.24em] text-white/80">
-            DISCOVER PUBLIC RECIPES
+            DISCOVER PUBLIC GUIDES
           </h2>
 
           <div className="grid grid-cols-2 gap-3">
@@ -123,7 +123,7 @@ export default function RecipesPageClient({
           <RecipeSearchBar
             value={mySearch}
             onChange={setMySearch}
-            placeholder="Search my recipes..."
+            placeholder="Search my guides..."
           />
 
           <h2 className="text-sm font-bold tracking-[0.24em] text-white/80">

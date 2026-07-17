@@ -30,7 +30,7 @@ export default function WelcomeScreen({ onNext }: Props) {
           </h1>
 
           <p className="max-w-sm text-base leading-7 text-white/80 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-            Track projects, manage paints, build recipes, create themes, and
+            Track projects, manage paints, build guides, create themes, and
             see your model progress come to life.
           </p>
 

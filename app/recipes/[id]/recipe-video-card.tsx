@@ -72,7 +72,7 @@ export default function RecipeVideoCard({
             </div>
 
             <p className="mt-4 text-lg leading-relaxed text-slate-300">
-              Enhance this recipe with a step-by-step video guide from your
+              Enhance this guide with a step-by-step video from your
               channel.
             </p>
           </div>
@@ -138,7 +138,7 @@ export default function RecipeVideoCard({
                   Preview ready
                 </p>
                 <p className="mt-1 text-xs text-slate-400">
-                  This thumbnail will become the embedded recipe video.
+                  This thumbnail will become the embedded guide video.
                 </p>
               </div>
             </div>
@@ -196,7 +196,7 @@ export default function RecipeVideoCard({
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
             <iframe
               src={embedUrl}
-              title="Recipe YouTube tutorial"
+              title="Guide YouTube tutorial"
               className="aspect-video w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen

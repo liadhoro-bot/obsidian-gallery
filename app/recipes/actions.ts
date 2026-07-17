@@ -18,7 +18,7 @@ export async function createRecipe(formData: FormData) {
   const description = String(formData.get('description') || '').trim()
   const coverImage = formData.get('coverImage')
 
-  if (!name) throw new Error('Recipe name is required')
+  if (!name) throw new Error('Guide name is required')
 
   let imageUrl: string | null = null
 
@@ -56,7 +56,7 @@ export async function createRecipe(formData: FormData) {
     .single()
 
   if (error || !recipe) {
-    throw new Error(error?.message || 'Could not create recipe')
+    throw new Error(error?.message || 'Could not create guide')
   }
 
   await captureServerEvent({
@@ -87,7 +87,7 @@ export async function saveRecipe(formData: FormData) {
 
   const recipeId = String(formData.get('recipeId') || '')
 
-  if (!recipeId) throw new Error('Missing recipe id')
+  if (!recipeId) throw new Error('Missing guide id')
 
   const { error } = await supabase.from('saved_recipes').upsert({
     user_id: user.id,
@@ -126,7 +126,7 @@ export async function unsaveRecipe(formData: FormData) {
 
   const recipeId = String(formData.get('recipeId') || '')
 
-  if (!recipeId) throw new Error('Missing recipe id')
+  if (!recipeId) throw new Error('Missing guide id')
 
   const { error } = await supabase
     .from('saved_recipes')

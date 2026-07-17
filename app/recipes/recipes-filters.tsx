@@ -11,7 +11,7 @@ export default async function RecipesFilters({ q }: Props) {
         <div>
           <h2 className="text-lg font-semibold text-white">Filters</h2>
           <p className="text-sm text-neutral-400">
-            Search recipes by name or description.
+            Search guides by name or description.
           </p>
         </div>
 
@@ -28,7 +28,7 @@ export default async function RecipesFilters({ q }: Props) {
           type="text"
           name="q"
           defaultValue={q}
-          placeholder="Search recipes"
+          placeholder="Search guides"
           className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none placeholder:text-neutral-500"
         />
 

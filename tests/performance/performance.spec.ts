@@ -366,20 +366,20 @@ test('vault search interaction stays responsive', async ({ page }, testInfo) => 
 test('recipes tabs and search stay responsive', async ({ page }, testInfo) => {
   test.skip(
     !hasPerfStorageState,
-    'Recipes interaction benchmark needs an authenticated Playwright storage state.'
+    'Guides interaction benchmark needs an authenticated Playwright storage state.'
   )
   await gotoMeasured(page, '/recipes')
   test.skip(
     await isLoginSurface(page),
-    'Recipes resolved to login; configure PERF_STORAGE_STATE.'
+    'Guides resolved to login; configure PERF_STORAGE_STATE.'
   )
 
   const findRecipeTab = page
-    .getByRole('button', { name: 'Find Recipe' })
-    .or(page.getByRole('link', { name: 'Find Recipe' }))
+    .getByRole('button', { name: 'Find Guide' })
+    .or(page.getByRole('link', { name: 'Find Guide' }))
   const createRecipeTab = page
-    .getByRole('button', { name: 'Create Recipe' })
-    .or(page.getByRole('link', { name: 'Create Recipe' }))
+    .getByRole('button', { name: 'Create Guide' })
+    .or(page.getByRole('link', { name: 'Create Guide' }))
 
   const tabMs = await expectInteractionWithinBudget('recipe tab switch', () =>
     createRecipeTab.click()
@@ -396,7 +396,7 @@ test('recipes tabs and search stay responsive', async ({ page }, testInfo) => {
     .poll(() => new URL(page.url()).searchParams.get('tab') ?? 'find')
     .toBe('find')
 
-  const search = page.getByPlaceholder('Search recipes by name...')
+  const search = page.getByPlaceholder('Search guides by name...')
   await expect(search).toBeVisible()
   const searchMs = await expectInteractionWithinBudget('recipe search input', () =>
     search.fill('red')

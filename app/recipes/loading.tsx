@@ -9,13 +9,13 @@ export default function RecipesLoading() {
             Paint Scheme Management
           </p>
           <h1 className="text-4xl font-black tracking-tight text-white">
-            The Recipe Library
+            The Guide Library
           </h1>
           <p className="text-sm font-medium text-neutral-200">
-            Record, share, and discover painting recipes.
+            Record, share, and discover painting guides.
           </p>
           <p className="text-base leading-7 text-neutral-400">
-            Browse community recipes for inspiration, or turn your techniques
+            Browse community guides for inspiration, or turn your techniques
             into step-by-step guides with paint combinations and progress photos.
             Learn from the community, preserve your knowledge, and make it easy
             to recreate successful paint schemes across projects.

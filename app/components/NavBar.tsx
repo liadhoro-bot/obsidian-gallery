@@ -28,7 +28,7 @@ export default function NavBar() {
         href="/recipes"
         className="rounded bg-neutral-800 px-3 py-2 text-sm text-white hover:bg-neutral-700"
       >
-        Recipes
+        Guides
       </Link>
 
       <Link

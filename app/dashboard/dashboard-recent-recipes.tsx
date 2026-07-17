@@ -27,8 +27,8 @@ export default async function DashboardRecentRecipes() {
   if (error) {
     return (
       <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <h2 className="text-lg font-semibold">Recent Recipes</h2>
-        <p className="mt-3 text-sm text-red-300">Could not load recipes.</p>
+        <h2 className="text-lg font-semibold">Recent Guides</h2>
+        <p className="mt-3 text-sm text-red-300">Could not load guides.</p>
       </section>
     )
   }
@@ -36,7 +36,7 @@ export default async function DashboardRecentRecipes() {
   return (
     <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Recent Recipes</h2>
+        <h2 className="text-lg font-semibold">Recent Guides</h2>
         <Link href="/recipes" className="text-sm text-white/70 hover:text-white">
           View all
         </Link>
@@ -58,7 +58,7 @@ export default async function DashboardRecentRecipes() {
             </PrefetchLink>
           ))
         ) : (
-          <p className="text-sm text-white/60">No recipes yet.</p>
+          <p className="text-sm text-white/60">No guides yet.</p>
         )}
       </div>
     </section>

@@ -38,7 +38,7 @@ export default function RecipeVisibilityPill({
           <input type="hidden" name="isPublic" value="true" />
 
           <p className="text-sm leading-relaxed text-slate-200">
-            Are you sure you would like to make this recipe public, and enable
+            Are you sure you would like to make this guide public, and enable
             other members to view it?
           </p>
 

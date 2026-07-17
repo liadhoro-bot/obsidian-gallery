@@ -21,7 +21,7 @@ export default function OfflinePage() {
             connection before it can safely show account data.
           </p>
           <p className="mt-4 text-sm leading-6 text-neutral-400">
-            Reconnect and refresh to pick up your latest projects, recipes,
+            Reconnect and refresh to pick up your latest projects, guides,
             themes, and paint vault changes.
           </p>
         </div>

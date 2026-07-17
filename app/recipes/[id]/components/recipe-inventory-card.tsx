@@ -132,7 +132,7 @@ export default function RecipeInventoryCard({
                       </p>
                       <p className="truncate text-xs text-neutral-500">
                         {[paint.brand, paint.line].filter(Boolean).join(' • ') ||
-                          'Paint used in recipe'}
+                          'Paint used in guide'}
                       </p>
                     </div>
                   </Link>

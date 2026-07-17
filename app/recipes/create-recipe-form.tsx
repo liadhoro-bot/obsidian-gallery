@@ -28,12 +28,12 @@ export default function CreateRecipeForm() {
     <form action={createRecipe} className="space-y-5">
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
         <h2 className="mb-5 text-sm font-bold tracking-[0.22em] text-cyan-300">
-          CREATE CUSTOM RECIPE
+          CREATE CUSTOM GUIDE
         </h2>
 
         <div className="space-y-4">
           <label className="grid gap-2 text-sm text-white">
-            Recipe Name
+            Guide Name
             <input
               name="name"
               value={name}
@@ -107,7 +107,7 @@ function ImageUploadField({
           <div className="relative aspect-video w-full">
             <Image
               src={previewImageUrl}
-              alt="Recipe cover preview"
+              alt="Guide cover preview"
               fill
               className={[
                 'object-cover transition',
@@ -157,7 +157,7 @@ function LivePreview({
           {previewImageUrl ? (
             <Image
               src={previewImageUrl}
-              alt="Recipe preview"
+              alt="Guide preview"
               fill
               className="object-cover"
               unoptimized
@@ -169,7 +169,7 @@ function LivePreview({
           <h3 className="text-lg font-bold text-white">{previewName}</h3>
 
           <p className="mt-1 text-xs font-bold tracking-wider text-cyan-300">
-            CUSTOM RECIPE
+            CUSTOM GUIDE
           </p>
 
           <span className="mt-3 inline-flex rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">
@@ -194,7 +194,7 @@ function CreateRecipeButton() {
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
       ) : null}
 
-      <span>{pending ? 'CREATING RECIPE...' : 'CREATE RECIPE'}</span>
+      <span>{pending ? 'CREATING GUIDE...' : 'CREATE GUIDE'}</span>
     </button>
   )
 }

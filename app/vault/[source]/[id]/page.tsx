@@ -144,7 +144,7 @@ export default async function PaintPage({ params }: PageProps) {
             title="Delete Custom Paint"
             buttonLabel="Delete Custom Paint"
             initialDescription="Permanently delete this custom paint from your vault."
-            confirmDescription="If you delete this custom paint, it will be removed from your vault and any recipe paint links that use it. This action cannot be undone."
+            confirmDescription="If you delete this custom paint, it will be removed from your vault and any guide paint links that use it. This action cannot be undone."
             deleteAction={deleteCustomPaintAction}
           />
         ) : null}

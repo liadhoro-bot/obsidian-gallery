@@ -27,7 +27,7 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
           {recipe.image_url ? (
             <Image
               src={recipe.image_url}
-              alt={recipe.name || 'Recipe image'}
+              alt={recipe.name || 'Guide image'}
               fill
               sizes="(max-width: 768px) 50vw, 240px"
               className="object-cover transition duration-[180ms] group-hover:scale-[1.025]"
@@ -43,7 +43,7 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
       <div className="flex flex-1 flex-col space-y-2 p-3">
         <PrefetchLink href={`/recipes/${recipe.id}`}>
           <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-5 text-white">
-            {recipe.name || 'Untitled Recipe'}
+            {recipe.name || 'Untitled Guide'}
           </h3>
         </PrefetchLink>
 
@@ -51,8 +51,8 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
           {mode === 'mine'
             ? 'by You'
             : mode === 'saved'
-              ? 'Saved recipe'
-              : 'Public recipe'}
+              ? 'Saved guide'
+              : 'Public guide'}
         </p>
 
         {mode === 'public' ? (

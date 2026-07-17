@@ -54,7 +54,7 @@ export default function TermsModal({ onClose }: Props) {
               Welcome to Obsidian Gallery. Obsidian Gallery is a miniature
               painting and hobby companion platform that allows users to manage
               painting projects, track paint collections, create and share paint
-              recipes, upload images, and participate in community features
+              guides, upload images, and participate in community features
               related to tabletop gaming and miniature painting.
             </p>
             <p>
@@ -82,7 +82,7 @@ export default function TermsModal({ onClose }: Props) {
               4. User Content
             </h4>
             <p>
-              You may upload images, project data, recipes, paint information,
+              You may upload images, project data, guides, paint information,
               profile details, and other hobby-related content. You retain
               ownership of your content, but grant Obsidian Gallery the right to
               store, process, display, and transmit it as needed to provide the
@@ -108,7 +108,7 @@ export default function TermsModal({ onClose }: Props) {
               6. Public Sharing
             </h4>
             <p>
-              Some features may allow you to publish recipes, themes, images, or
+              Some features may allow you to publish guides, themes, images, or
               other content publicly. Public content may be visible to other
               users. You are responsible for anything you choose to make public.
             </p>

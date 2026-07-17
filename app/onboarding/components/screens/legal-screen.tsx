@@ -52,7 +52,7 @@ export default function LegalScreen({ onEnter }: Props) {
           </p>
 
           <p className="mt-3">
-            Your project, paint, recipe, image, and profile data may be stored so
+            Your project, paint, guide, image, and profile data may be stored so
             the app can provide its core features. Public content may be visible
             to other users when you choose to publish it.
           </p>

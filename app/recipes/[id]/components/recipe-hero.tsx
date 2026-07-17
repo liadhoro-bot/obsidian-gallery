@@ -76,7 +76,7 @@ export default function RecipeHero({
 
         <div className="absolute inset-x-0 bottom-0 z-10 p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-orange-400">
-            Recipe
+            Guide
           </p>
 
           <h1 className="mt-2 text-4xl font-bold text-white">
@@ -98,7 +98,7 @@ export default function RecipeHero({
                 Edit Title and Description
               </p>
               <p className="mt-1 text-xs text-neutral-400">
-                This form updates both the recipe title and the description.
+                This form updates both the guide title and the description.
               </p>
             </div>
 
@@ -153,10 +153,10 @@ export default function RecipeHero({
           <DeleteConfirmationCard
             itemId={recipe.id}
             itemIdFieldName="recipeId"
-            title="Delete Recipe"
-            buttonLabel="Delete This Recipe"
-            initialDescription="Permanently delete this recipe from your gallery."
-            confirmDescription="If you delete this recipe, it will be removed along with all the steps, paints, gallery images, and saved copies attached to it. This action cannot be undone."
+            title="Delete Guide"
+            buttonLabel="Delete This Guide"
+            initialDescription="Permanently delete this guide from your gallery."
+            confirmDescription="If you delete this guide, it will be removed along with all the steps, paints, gallery images, and saved copies attached to it. This action cannot be undone."
             deleteAction={deleteRecipeAction}
           />
         </div>

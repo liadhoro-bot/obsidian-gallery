@@ -17,12 +17,12 @@ export default function RecipeDetailTabs({
     key: RecipeDetailTab
     label: string
   }[] = [
-    { key: 'details', label: 'Recipe Details' },
-    { key: 'steps', label: 'Recipe Cards' },
+    { key: 'details', label: 'Guide Details' },
+    { key: 'steps', label: 'Guide Cards' },
   ]
 
   if (isOwner) {
-    tabs.push({ key: 'edit', label: 'Edit Recipe' })
+    tabs.push({ key: 'edit', label: 'Edit Guide' })
   }
 
   return (

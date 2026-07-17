@@ -29,7 +29,7 @@ const painPoints: {
     id: 'schemes',
     number: '2',
     title: 'Scheme Loss',
-    text: 'My recipes are scattered and sometimes lost.',
+    text: 'My guides are scattered and sometimes lost.',
     image: '/onboarding/pains/scheme-loss.jpeg',
     glow: 'from-purple-300/25',
   },

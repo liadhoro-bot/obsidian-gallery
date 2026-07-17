@@ -22,11 +22,11 @@ const workflowItems = [
   },
   {
     id: 'recipes',
-    label: 'Recipes',
+    label: 'Guides',
     caption: 'Never lose a scheme again. Save mixes, techniques, and every step behind your best results.',
     icon: '/icons/nav/recipes.svg',
     mockTitle: 'Ice Blue Armor',
-    mockSubtitle: 'Recipe workflow',
+    mockSubtitle: 'Guide workflow',
     mockContent: 'recipes',
   },
   {

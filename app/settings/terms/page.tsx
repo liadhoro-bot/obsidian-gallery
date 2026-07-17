@@ -35,7 +35,7 @@ export default function TermsPage() {
           <p className="mt-2">
             Welcome to Obsidian Gallery. Obsidian Gallery is a miniature painting
             and hobby companion platform that allows users to manage painting
-            projects, track paint collections, create and share paint recipes,
+            projects, track paint collections, create and share paint guides,
             upload images, and participate in community features related to
             tabletop gaming and miniature painting.
           </p>
@@ -64,8 +64,8 @@ export default function TermsPage() {
           <h2 className="mt-6 text-lg font-bold text-white">4. Description of the Service</h2>
           <p className="mt-2">
             Obsidian Gallery provides tools for miniature painting project
-            tracking, paint collection management, custom paint creation, recipe
-            and workflow creation, image uploads, public and private recipe
+            tracking, paint collection management, custom paint creation, guide
+            and workflow creation, image uploads, public and private guide
             sharing, community discovery, analytics, progress tracking, and
             optional subscription or premium features.
           </p>
@@ -73,7 +73,7 @@ export default function TermsPage() {
           <h2 className="mt-6 text-lg font-bold text-white">5. User Content</h2>
           <p className="mt-2">
             You retain ownership of the content you create or upload, including
-            images, paint recipes, project information, comments, text, and other
+            images, paint guides, project information, comments, text, and other
             user-generated content.
           </p>
           <p className="mt-3">

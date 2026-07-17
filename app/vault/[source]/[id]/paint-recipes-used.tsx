@@ -261,14 +261,14 @@ export default async function PaintUsedIn({
       <div className="flex flex-col gap-4">
         {savedCount === 0 ? (
           <div className="rounded-2xl bg-slate-900/70 p-5 text-sm text-slate-400">
-            This paint is not used in any saved recipes or unit stages yet.
+            This paint is not used in any saved guides or unit stages yet.
           </div>
         ) : (
           <>
             {recipesWithImages.length > 0 ? (
               <div>
                 <div className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-500">
-                  Recipes
+                  Guides
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -283,7 +283,7 @@ export default async function PaintUsedIn({
                           {recipe.imageUrl ? (
                             <Image
                               src={recipe.imageUrl}
-                              alt={recipe.name || 'Recipe image'}
+                              alt={recipe.name || 'Guide image'}
                               fill
                               sizes="56px"
                               className="object-cover"
@@ -297,11 +297,11 @@ export default async function PaintUsedIn({
 
                         <div className="min-w-0 flex-1">
                           <h3 className="truncate text-base font-black text-white">
-                            {recipe.name || 'Untitled recipe'}
+                            {recipe.name || 'Untitled guide'}
                           </h3>
 
                           <div className="mt-0.5 truncate text-sm leading-5 text-slate-400">
-                            {recipe.stepLabel || 'Recipe step'}
+                            {recipe.stepLabel || 'Guide step'}
                           </div>
                         </div>
                       </div>
