@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import RecipesPageClient from './recipes-page-client'
 import { createPerfTimer } from '../../utils/perf/server'
@@ -39,46 +39,37 @@ async function RecipesContent({
   activeTab,
 }: {
   userId: string
-  activeTab: Extract<RecipesTab, 'find' | 'mine'>
+  activeTab: RecipesTab
 }) {
   const perf = createPerfTimer('/recipes:content')
   const supabase = await createClient()
 
   const [publicRecipes, myRecipesResult, savedRowsResult] = await Promise.all([
-    activeTab === 'find'
-      ? getCachedPublicRecipes()
-      : Promise.resolve([] as RecipeRow[]),
-    activeTab === 'mine'
-      ? supabase
-          .from('recipes')
-          .select(
-            'id, name, description, image_url, is_public, created_at, user_id'
-          )
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-      : Promise.resolve({ data: [] as RecipeRow[] }),
-    activeTab === 'mine'
-      ? supabase
-          .from('saved_recipes')
-          .select(
-            `
-            recipe_id,
-            recipes (
-              id,
-              name,
-              description,
-              image_url,
-              is_public,
-              created_at,
-              user_id
-            )
-          `
-          )
-          .eq('user_id', userId)
-      : supabase
-          .from('saved_recipes')
-          .select('recipe_id')
-          .eq('user_id', userId),
+    getCachedPublicRecipes(),
+    supabase
+      .from('recipes')
+      .select(
+        'id, name, description, image_url, is_public, created_at, user_id'
+      )
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('saved_recipes')
+      .select(
+        `
+        recipe_id,
+        recipes (
+          id,
+          name,
+          description,
+          image_url,
+          is_public,
+          created_at,
+          user_id
+        )
+      `
+      )
+      .eq('user_id', userId),
   ])
   perf.mark('main Supabase query')
 
@@ -178,9 +169,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const perf = createPerfTimer('/recipes')
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   if (!user) redirect('/login')
@@ -247,19 +236,9 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
           </p>
         </section>
 
-        {activeTab === 'custom' ? (
-          <RecipesPageClient
-            activeTab={activeTab}
-            publicRecipes={[]}
-            myRecipes={[]}
-            savedRecipes={[]}
-            savedRecipeIds={[]}
-          />
-        ) : (
-          <Suspense fallback={<RecipesContentSkeleton />}>
-            <RecipesContent userId={user.id} activeTab={activeTab} />
-          </Suspense>
-        )}
+        <Suspense fallback={<RecipesContentSkeleton />}>
+          <RecipesContent userId={user.id} activeTab={activeTab} />
+        </Suspense>
       </div>
     </main>
   )

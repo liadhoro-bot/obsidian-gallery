@@ -42,6 +42,15 @@ type VaultFiltersClientProps = {
   filterRows: { brand: string | null; line: string | null }[]
 }
 
+type VaultFilterPreview = {
+  q: string
+  brand: string
+  line: string
+  ownership: string
+  matchHex: string
+  tab: 'find' | 'collection'
+}
+
 export default function VaultFiltersClient({
   q,
   brand,
@@ -54,6 +63,8 @@ export default function VaultFiltersClient({
 }: VaultFiltersClientProps) {
   const router = useRouter()
   const [, startTransition] = useTransition()
+  const syncTimeoutRef = useRef<number | null>(null)
+  const committedHrefRef = useRef('')
 
   const [searchValue, setSearchValue] = useState(q)
   const searchValueRef = useRef(q)
@@ -81,16 +92,56 @@ export default function VaultFiltersClient({
   }, [filterRows, localBrand])
 
   useEffect(() => {
+    let cancelled = false
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+
+    const warmInteractions = () => {
+      if (cancelled) {
+        return
+      }
+
+      void import('./barcode-scanner-modal')
+      void import('./color-match-modal')
+    }
+
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(warmInteractions, { timeout: 1200 })
+    } else {
+      timeoutId = window.setTimeout(warmInteractions, 300)
+    }
+
+    return () => {
+      cancelled = true
+
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId)
+      }
+
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     searchValueRef.current = searchValue
   }, [searchValue])
 
-  const pushVaultParams = useCallback((nextValues?: {
+  const buildVaultHref = useCallback((nextValues?: {
     q?: string
     brand?: string
     line?: string
     ownership?: string
     matchHex?: string
-    searchRevision?: number
   }) => {
     const params = new URLSearchParams()
 
@@ -112,6 +163,92 @@ export default function VaultFiltersClient({
       params.set('ownership', nextOwnership)
     }
 
+    return `/vault?${params.toString()}`
+  }, [localBrand, localLine, localOwnership, matchHex, searchValue, tab])
+
+  useEffect(() => {
+    committedHrefRef.current = buildVaultHref({
+      q,
+      brand,
+      line,
+      ownership: tab === 'collection' ? 'owned' : ownership || 'all',
+      matchHex,
+    })
+  }, [brand, buildVaultHref, line, matchHex, ownership, q, tab])
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current !== null) {
+        window.clearTimeout(syncTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const broadcastFilterPreview = useCallback((preview: VaultFilterPreview) => {
+    window.dispatchEvent(
+      new CustomEvent<VaultFilterPreview>('vault:filters-preview', {
+        detail: preview,
+      })
+    )
+  }, [])
+
+  const queueRouterSync = useCallback((href: string, delay = 420) => {
+    if (syncTimeoutRef.current !== null) {
+      window.clearTimeout(syncTimeoutRef.current)
+    }
+
+    if (href === committedHrefRef.current) {
+      return
+    }
+
+    syncTimeoutRef.current = window.setTimeout(() => {
+      syncTimeoutRef.current = null
+      startTransition(() => {
+        router.replace(href, { scroll: false })
+      })
+    }, delay)
+  }, [router, startTransition])
+
+  const applyOptimisticLocation = useCallback((href: string) => {
+    if (`${window.location.pathname}${window.location.search}` === href) {
+      return
+    }
+
+    window.history.replaceState(null, '', href)
+  }, [])
+
+  const pushVaultParams = useCallback((nextValues?: {
+    q?: string
+    brand?: string
+    line?: string
+    ownership?: string
+    matchHex?: string
+    searchRevision?: number
+    syncDelayMs?: number
+  }) => {
+    const nextQ = nextValues?.q ?? searchValue
+    const nextBrand = nextValues?.brand ?? localBrand
+    const nextLine = nextValues?.line ?? localLine
+    const nextOwnership = nextValues?.ownership ?? localOwnership
+    const nextMatchHex =
+      nextValues && 'matchHex' in nextValues ? nextValues.matchHex : matchHex
+    const href = buildVaultHref({
+      q: nextQ,
+      brand: nextBrand,
+      line: nextLine,
+      ownership: nextOwnership,
+      matchHex: nextMatchHex,
+    })
+
+    broadcastFilterPreview({
+      q: nextQ,
+      brand: nextBrand,
+      line: nextLine,
+      ownership: nextOwnership,
+      matchHex: nextMatchHex || '',
+      tab,
+    })
+
     if (nextValues && 'q' in nextValues) {
       pendingSearchRef.current = {
         value: nextQ,
@@ -119,18 +256,19 @@ export default function VaultFiltersClient({
       }
     }
 
-    startTransition(() => {
-      router.replace(`/vault?${params.toString()}`, { scroll: false })
-    })
+    applyOptimisticLocation(href)
+    queueRouterSync(href, nextValues?.syncDelayMs ?? 420)
   }, [
+    applyOptimisticLocation,
+    buildVaultHref,
+    queueRouterSync,
     localBrand,
     localLine,
     localOwnership,
     matchHex,
-    router,
     searchValue,
-    startTransition,
     tab,
+    broadcastFilterPreview,
   ])
 
   const updateParam = useCallback(
@@ -164,6 +302,12 @@ export default function VaultFiltersClient({
   function updateSearchDraft(value: string) {
     searchRevisionRef.current += 1
     setSearchValue(value)
+    pushVaultParams({
+      q: value,
+      matchHex: '',
+      searchRevision: searchRevisionRef.current,
+      syncDelayMs: 520,
+    })
   }
 
   function handleBarcodeDetected(barcode: string) {
@@ -177,6 +321,7 @@ export default function VaultFiltersClient({
       q: cleanedBarcode,
       matchHex: '',
       searchRevision: searchRevisionRef.current,
+      syncDelayMs: 120,
     })
   }
 
@@ -188,10 +333,17 @@ export default function VaultFiltersClient({
     setLocalLine('')
     setLocalOwnership('all')
     setColorGroup('')
-
-    startTransition(() => {
-      router.replace('/vault?tab=find', { scroll: false })
+    broadcastFilterPreview({
+      q: '',
+      brand: '',
+      line: '',
+      ownership: 'all',
+      matchHex: '',
+      tab: 'find',
     })
+
+    applyOptimisticLocation('/vault?tab=find')
+    queueRouterSync('/vault?tab=find', 120)
   }
 
   function openScanner() {
@@ -258,6 +410,9 @@ export default function VaultFiltersClient({
         <button
           type="button"
           onClick={openScanner}
+          onPointerEnter={() => {
+            void import('./barcode-scanner-modal')
+          }}
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 text-cyan-100 shadow-[0_0_24px_rgba(34,211,238,0.12)] transition hover:border-cyan-200/60 hover:bg-cyan-300/15"
           aria-label="Scan barcode"
         >

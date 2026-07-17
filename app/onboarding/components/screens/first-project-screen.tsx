@@ -5,15 +5,17 @@ import { useMemo, useState, useTransition } from 'react'
 import { createFirstProjectUnitAction } from '../../actions'
 
 type FirstProjectScreenProps = {
-  onCreated: (unitId: string) => void
+  onCreated: (unitId: string | null) => void
   onBack: () => void
   onSkip: () => void
+  previewMode?: boolean
 }
 
 export default function FirstProjectScreen({
   onCreated,
   onBack,
   onSkip,
+  previewMode = false,
 }: FirstProjectScreenProps) {
 
   const [projectName, setProjectName] = useState('')
@@ -60,6 +62,11 @@ export default function FirstProjectScreen({
 
     const formData = new FormData(event.currentTarget)
     setError(null)
+
+    if (previewMode) {
+      onCreated(null)
+      return
+    }
 
     startTransition(async () => {
       const result = await createFirstProjectUnitAction(formData)
@@ -302,7 +309,11 @@ export default function FirstProjectScreen({
               className="group relative w-full overflow-hidden rounded-2xl bg-cyan-300 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-[#041016] shadow-xl shadow-cyan-500/25 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/30 disabled:shadow-none"
             >
               <span className="relative z-10">
-                {isPending ? 'Creating Workshop...' : 'Create My First Unit'}
+                {isPending
+                  ? 'Creating Workshop...'
+                  : previewMode
+                    ? 'Preview My First Unit'
+                    : 'Create My First Unit'}
               </span>
 
               <span className="relative z-10 ml-3 text-lg">→</span>

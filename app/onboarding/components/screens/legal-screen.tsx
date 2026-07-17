@@ -6,9 +6,10 @@ import { acceptTermsAction } from '../../actions'
 
 type Props = {
   onEnter: () => void
+  previewMode?: boolean
 }
 
-export default function LegalScreen({ onEnter }: Props) {
+export default function LegalScreen({ onEnter, previewMode = false }: Props) {
   const [accepted, setAccepted] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -94,6 +95,11 @@ export default function LegalScreen({ onEnter }: Props) {
 
   setIsSaving(true)
   setError(null)
+
+  if (previewMode) {
+    onEnter()
+    return
+  }
 
   const result = await acceptTermsAction()
 

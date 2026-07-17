@@ -1,19 +1,66 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Page, test, type TestInfo } from '@playwright/test'
 
-const ROUTES = [
+const EXPLICIT_DETAIL_ROUTES = {
+  unit: '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
+  paint: '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
+  recipe: '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
+  theme: '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+} as const
+
+const importantOnly = process.env.PERF_IMPORTANT_ONLY === '1'
+
+const IMPORTANT_ROUTES = [
+  { path: '/dashboard', requiresAuth: true },
+  { path: '/projects', requiresAuth: true },
+  { path: '/units', requiresAuth: true, expectedPathname: '/units' },
+  {
+    path: EXPLICIT_DETAIL_ROUTES.unit,
+    requiresAuth: true,
+    expectedPathname: EXPLICIT_DETAIL_ROUTES.unit,
+  },
+  { path: '/vault', requiresAuth: true },
+  {
+    path: EXPLICIT_DETAIL_ROUTES.paint,
+    requiresAuth: true,
+    expectedPathname: EXPLICIT_DETAIL_ROUTES.paint,
+  },
+  { path: '/recipes', requiresAuth: true },
+  {
+    path: EXPLICIT_DETAIL_ROUTES.recipe,
+    requiresAuth: true,
+    expectedPathname: EXPLICIT_DETAIL_ROUTES.recipe,
+  },
+  { path: '/themes', requiresAuth: true },
+  {
+    path: EXPLICIT_DETAIL_ROUTES.theme,
+    requiresAuth: true,
+    expectedPathname: EXPLICIT_DETAIL_ROUTES.theme,
+  },
+] as const
+
+const SECONDARY_ROUTES = [
   { path: '/', requiresAuth: true },
   { path: '/login', requiresAuth: false },
   { path: '/offline', requiresAuth: false },
   { path: '/support', requiresAuth: false },
   { path: '/settings/terms', requiresAuth: false },
-  { path: '/dashboard', requiresAuth: true },
-  { path: '/projects', requiresAuth: true },
-  { path: '/recipes', requiresAuth: true },
-  { path: '/themes', requiresAuth: true },
-  { path: '/vault', requiresAuth: true },
-  { path: '/units', requiresAuth: true },
+] as const
+
+const ROUTES = importantOnly ? IMPORTANT_ROUTES : [...IMPORTANT_ROUTES, ...SECONDARY_ROUTES]
+
+const REQUIRED_MAIN_PERFORMANCE_ROUTES = [
+  '/dashboard',
+  '/projects',
+  '/units',
+  EXPLICIT_DETAIL_ROUTES.unit,
+  '/vault',
+  EXPLICIT_DETAIL_ROUTES.paint,
+  '/recipes',
+  EXPLICIT_DETAIL_ROUTES.recipe,
+  '/themes',
+  EXPLICIT_DETAIL_ROUTES.theme,
 ] as const
 
 const BUDGETS = {
@@ -182,7 +229,8 @@ async function isLoginSurface(page: Page) {
 async function expectMeasuredRouteWithinBudget(
   page: Page,
   route: string,
-  testInfo: { annotations: Array<{ type: string; description: string }> }
+  testInfo: TestInfo,
+  expectedPathname?: string
 ) {
   const result = await gotoMeasured(page, route)
 
@@ -199,6 +247,11 @@ async function expectMeasuredRouteWithinBudget(
   expect(result.responseMs, `${route} response time`).toBeLessThanOrEqual(
     responseBudget
   )
+  if (expectedPathname) {
+    expect(new URL(page.url()).pathname, `${route} final pathname`).toBe(
+      expectedPathname
+    )
+  }
   expect(result.controlReadyMs, `${route} control readiness`).toBeLessThanOrEqual(
     BUDGETS.controlReadyMs
   )
@@ -262,19 +315,38 @@ test.beforeEach(async ({ page }) => {
   await installPerfObservers(page)
 })
 
+test('main page performance route matrix is complete', () => {
+  const measuredRoutes = new Set(ROUTES.map((route) => route.path))
+
+  expect(
+    Array.from(measuredRoutes).sort(),
+    'Performance route matrix should not contain duplicate paths.'
+  ).toHaveLength(ROUTES.length)
+
+  for (const route of REQUIRED_MAIN_PERFORMANCE_ROUTES) {
+    expect(measuredRoutes, `${route} is missing from performance route coverage`).toContain(
+      route
+    )
+  }
+})
+
 test.describe('route performance budgets', () => {
   for (const route of ROUTES) {
     test(`${route.path} meets page-level budgets`, async ({ page }, testInfo) => {
-      test.skip(
-        route.requiresAuth && !hasPerfStorageState,
-        `${route.path} needs PERF_STORAGE_STATE for a real authenticated benchmark.`
-      )
+      if (route.requiresAuth) {
+        expect(
+          hasPerfStorageState,
+          `${route.path} needs an authenticated PERF_STORAGE_STATE. Run via npm run perf:flows so it is generated automatically.`
+        ).toBeTruthy()
+      }
 
       const result = await gotoMeasured(page, route.path)
-      test.skip(
-        route.requiresAuth && (await isLoginSurface(page)),
-        `${route.path} resolved to login; configure PERF_STORAGE_STATE.`
-      )
+      if (route.requiresAuth) {
+        expect(
+          await isLoginSurface(page),
+          `${route.path} resolved to login; authenticated storage state is invalid.`
+        ).toBeFalsy()
+      }
 
       testInfo.annotations.push({
         type: 'perf',
@@ -289,6 +361,11 @@ test.describe('route performance budgets', () => {
       expect(result.responseMs, `${route.path} response time`).toBeLessThanOrEqual(
         responseBudget
       )
+      if ('expectedPathname' in route && route.expectedPathname) {
+        expect(new URL(page.url()).pathname, `${route.path} final pathname`).toBe(
+          route.expectedPathname
+        )
+      }
       expect(
         result.controlReadyMs,
         `${route.path} control readiness`
@@ -304,38 +381,31 @@ test.describe('route performance budgets', () => {
 })
 
 test('project detail route meets page-level budgets', async ({ page }, testInfo) => {
-  test.skip(
-    !hasPerfStorageState,
+  expect(
+    hasPerfStorageState,
     'Project detail benchmark needs an authenticated Playwright storage state.'
-  )
+  ).toBeTruthy()
 
   const { projectRoute } = await resolveProtectedDetailRoutes(page)
-  test.skip(!projectRoute, 'No project detail route available for performance measurement.')
-  test.skip(await isLoginSurface(page), 'Project detail resolved to login; configure PERF_STORAGE_STATE.')
+  expect(projectRoute, 'No project detail route available for performance measurement.').toBeTruthy()
+  expect(
+    await isLoginSurface(page),
+    'Project detail resolved to login; authenticated storage state is invalid.'
+  ).toBeFalsy()
 
   await expectMeasuredRouteWithinBudget(page, projectRoute!, testInfo)
 })
 
-test('unit detail route meets page-level budgets', async ({ page }, testInfo) => {
-  test.skip(
-    !hasPerfStorageState,
-    'Unit detail benchmark needs an authenticated Playwright storage state.'
-  )
-
-  const { unitRoute } = await resolveProtectedDetailRoutes(page)
-  test.skip(!unitRoute, 'No unit detail route available for performance measurement.')
-  test.skip(await isLoginSurface(page), 'Unit detail resolved to login; configure PERF_STORAGE_STATE.')
-
-  await expectMeasuredRouteWithinBudget(page, unitRoute!, testInfo)
-})
-
 test('vault search interaction stays responsive', async ({ page }, testInfo) => {
-  test.skip(
-    !hasPerfStorageState,
+  expect(
+    hasPerfStorageState,
     'Vault interaction benchmark needs an authenticated Playwright storage state.'
-  )
+  ).toBeTruthy()
   await gotoMeasured(page, '/vault')
-  test.skip(await isLoginSurface(page), 'Vault resolved to login; configure PERF_STORAGE_STATE.')
+  expect(
+    await isLoginSurface(page),
+    'Vault resolved to login; authenticated storage state is invalid.'
+  ).toBeFalsy()
 
   const search = page.getByPlaceholder('Search by name, brand, line, or barcode')
   await expect(search).toBeVisible()
@@ -369,10 +439,10 @@ test('recipes tabs and search stay responsive', async ({ page }, testInfo) => {
     'Guides interaction benchmark needs an authenticated Playwright storage state.'
   )
   await gotoMeasured(page, '/recipes')
-  test.skip(
+  expect(
     await isLoginSurface(page),
     'Guides resolved to login; configure PERF_STORAGE_STATE.'
-  )
+  ).toBeFalsy()
 
   const findRecipeTab = page
     .getByRole('button', { name: 'Find Guide' })

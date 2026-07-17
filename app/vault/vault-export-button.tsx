@@ -139,7 +139,7 @@ function getExportTitle({
   if (tab === 'collection') return 'My Paint Collection'
   if (ownership === 'wishlist') return 'Paint Wishlist'
   if (brand && line) return `${brand} ${line}`
-  return 'Vault Paint Export'
+  return 'Paints Export'
 }
 
 function getActiveFilters({
@@ -265,7 +265,7 @@ async function downloadPdf({
 
   doc.setProperties({
     title,
-    subject: 'Obsidian Gallery Paint Vault export',
+    subject: 'Obsidian Gallery Paints export',
     creator: 'Obsidian Gallery',
   })
   doc.setFont('helvetica', 'bold')
@@ -273,7 +273,7 @@ async function downloadPdf({
   doc.text(title, margin, 48)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text('Exported from Obsidian Gallery · The Paint Vault', margin, 68)
+  doc.text('Exported from Obsidian Gallery · Paints', margin, 68)
   doc.text(`Export date: ${exportDate}`, margin, 84)
   doc.text(`Total paints: ${rows.length}`, margin, 100)
 
@@ -373,7 +373,7 @@ async function downloadPdf({
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(8)
       doc.setTextColor(90, 90, 90)
-      doc.text('Obsidian Gallery · The Paint Vault', margin, pageHeight - 22)
+      doc.text('Obsidian Gallery · Paints', margin, pageHeight - 22)
       doc.text(
         `Page ${pageNumber}`,
         pageWidth - margin,

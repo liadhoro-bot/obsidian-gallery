@@ -47,13 +47,15 @@ export default function DownloadAppButton() {
       aria-label="Download app"
       aria-hidden={!installPrompt}
     >
-      <Image
-        src="/icon-192.png"
-        alt=""
-        width={22}
-        height={22}
-        className="rounded-md"
-      />
+      {installPrompt ? (
+        <Image
+          src="/icon-192.png"
+          alt=""
+          width={22}
+          height={22}
+          className="rounded-md"
+        />
+      ) : null}
 
       <span className="hidden sm:inline">Download</span>
     </button>

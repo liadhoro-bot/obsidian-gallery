@@ -2,10 +2,8 @@
 
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
+import MobileNav from '../components/MobileNav'
 
-const MobileNav = dynamic(() => import('../components/MobileNav'), {
-  ssr: false,
-})
 const ServiceWorkerRegistrar = dynamic(
   () => import('./service-worker-registrar'),
   { ssr: false }

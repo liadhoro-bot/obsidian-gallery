@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import ThemesPageClient from './themes-page-client'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import {
@@ -185,92 +185,79 @@ async function ThemesContent({
 
   const [publicThemes, myThemesResult, savedRowsResult, catalogPaints, customPaintsResult] =
     await Promise.all([
-      activeTab === 'find'
-        ? getCachedPublicThemes()
-        : Promise.resolve([] as ThemeSummary[]),
-      activeTab === 'mine'
-        ? supabase
-            .from('themes')
-            .select(
-              `
+      getCachedPublicThemes(),
+      supabase
+        .from('themes')
+        .select(
+          `
+          id,
+          user_id,
+          name,
+          description,
+          image_url,
+          is_public,
+          tags,
+          created_at,
+          theme_paints (
+            id,
+            sort_order,
+            paint_source,
+            paint_catalog_id,
+            custom_paint_id,
+            catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
               id,
-              user_id,
-              name,
-              description,
-              image_url,
-              is_public,
-              tags,
-              created_at,
-              theme_paints (
-                id,
-                sort_order,
-                paint_source,
-                paint_catalog_id,
-                custom_paint_id,
-                catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
-                  id,
-                  swatch_image_url,
-                  hex_approx
-                ),
-                custom_paint:paints!theme_paints_custom_paint_id_fkey (
-                  id,
-                  color_hex
-                )
-              )
-            `
+              swatch_image_url,
+              hex_approx
+            ),
+            custom_paint:paints!theme_paints_custom_paint_id_fkey (
+              id,
+              color_hex
             )
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-        : Promise.resolve({ data: [] as ThemeSummary[] }),
-      activeTab === 'mine'
-        ? supabase
-            .from('saved_themes')
-            .select(
-              `
-              theme_id,
-              themes (
+          )
+        `
+        )
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('saved_themes')
+        .select(
+          `
+          theme_id,
+          themes (
+            id,
+            user_id,
+            name,
+            description,
+            image_url,
+            is_public,
+            tags,
+            created_at,
+            theme_paints (
+              id,
+              sort_order,
+              paint_source,
+              paint_catalog_id,
+              custom_paint_id,
+              catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
                 id,
-                user_id,
-                name,
-                description,
-                image_url,
-                is_public,
-                tags,
-                created_at,
-                theme_paints (
-                  id,
-                  sort_order,
-                  paint_source,
-                  paint_catalog_id,
-                  custom_paint_id,
-                  catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
-                    id,
-                    swatch_image_url,
-                    hex_approx
-                  ),
-                  custom_paint:paints!theme_paints_custom_paint_id_fkey (
-                    id,
-                    color_hex
-                  )
-                )
+                swatch_image_url,
+                hex_approx
+              ),
+              custom_paint:paints!theme_paints_custom_paint_id_fkey (
+                id,
+                color_hex
               )
-            `
             )
-            .eq('user_id', userId)
-        : supabase
-            .from('saved_themes')
-            .select('theme_id')
-            .eq('user_id', userId),
-      activeTab === 'create'
-        ? getCachedCatalogPaintOptions()
-        : Promise.resolve([]),
-      activeTab === 'create'
-        ? supabase
-            .from('paints')
-            .select('id, name, manufacturer, series, color_hex')
-            .eq('user_id', userId)
-            .order('name', { ascending: true })
-        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+          )
+        `
+        )
+        .eq('user_id', userId),
+      getCachedCatalogPaintOptions(),
+      supabase
+        .from('paints')
+        .select('id, name, manufacturer, series, color_hex')
+        .eq('user_id', userId)
+        .order('name', { ascending: true }),
     ])
   perf.mark('main Supabase query')
 
@@ -360,9 +347,7 @@ export default async function ThemesPage({ searchParams }: Props) {
   const selectForProject = params?.selectForProject || null
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   if (!user) redirect('/login')

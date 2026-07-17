@@ -1,16 +1,29 @@
 import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { redirect } from 'next/navigation'
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
+import { TopBarSkeleton } from '../dashboard/dashboard-skeletons'
 import VaultFilters from './vault-filters'
 import VaultGrid from './vault-grid'
 import VaultSegmentedTabs from './vault-segmented-tabs'
-import CustomPaintForm from './custom-paint-form'
 import {
   VaultFiltersSkeleton,
   VaultGridSkeleton,
 } from './vault-skeletons'
 import { createPerfTimer } from '../../utils/perf/server'
+import { getDashboardProfile } from '../dashboard/dashboard-data'
+import VaultDiscoveryEmptyState from './vault-discovery-empty-state'
+
+const CustomPaintForm = dynamic(() => import('./custom-paint-form'), {
+  loading: () => (
+    <div className="rounded-3xl border border-white/10 bg-white/5 p-5 animate-pulse">
+      <div className="h-5 w-40 rounded bg-white/10" />
+      <div className="mt-4 h-12 rounded-2xl bg-white/10" />
+      <div className="mt-3 h-32 rounded-2xl bg-white/5" />
+    </div>
+  ),
+})
 
 type VaultTab = 'find' | 'collection' | 'custom'
 
@@ -32,37 +45,11 @@ function resolveVaultTab(tab?: string): VaultTab {
   return 'find'
 }
 
-async function userHasOwnedPaints(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string
-) {
-  const [{ data: ownedCatalogPaint }, { data: customPaint }] = await Promise.all([
-    supabase
-      .from('user_paint_ownership')
-      .select('paint_catalog_id')
-      .eq('user_id', userId)
-      .eq('is_owned', true)
-      .limit(1)
-      .maybeSingle(),
-
-    supabase
-      .from('paints')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle(),
-  ])
-
-  return Boolean(ownedCatalogPaint || customPaint)
-}
-
 export default async function VaultPage({ searchParams }: PageProps) {
   const perf = createPerfTimer('/vault')
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   if (!user) {
@@ -73,18 +60,11 @@ export default async function VaultPage({ searchParams }: PageProps) {
   perf.mark('search params')
 
   const requestedTab = resolveVaultTab(resolvedSearchParams.tab)
-  const activeTab = resolvedSearchParams.tab
-    ? requestedTab
-    : (await userHasOwnedPaints(supabase, user.id))
-      ? 'collection'
-      : 'find'
+  const activeTab = resolvedSearchParams.tab ? requestedTab : 'find'
 
-  const profilePromise = (async () =>
-    supabase
-      .from('profiles')
-      .select('avatar_url, level, username')
-      .eq('id', user.id)
-      .single())()
+  const profilePromise = (async () => ({
+    data: await getDashboardProfile(user.id),
+  }))()
 
   const q = resolvedSearchParams.q?.trim() || ''
   const brand = resolvedSearchParams.brand || ''
@@ -95,6 +75,13 @@ export default async function VaultPage({ searchParams }: PageProps) {
     activeTab === 'collection'
       ? 'owned'
       : resolvedSearchParams.ownership || 'all'
+  const shouldShowDiscoveryPrompt =
+    activeTab === 'find' &&
+    !q &&
+    !brand &&
+    !line &&
+    !matchHex &&
+    ownership === 'all'
 
   const limit = Math.max(24, Number(resolvedSearchParams.limit || 24))
   perf.total()
@@ -102,7 +89,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
   return (
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-        <Suspense fallback={null}>
+        <Suspense fallback={<TopBarSkeleton />}>
           <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
         </Suspense>
 
@@ -112,7 +99,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
           </p>
 
           <h1 className="mt-4 text-4xl font-black tracking-tight text-white">
-            The Paint Vault
+            Paints
           </h1>
 
           <p className="mt-4 text-sm font-medium text-neutral-200">
@@ -149,6 +136,8 @@ export default async function VaultPage({ searchParams }: PageProps) {
 
         {activeTab === 'custom' ? (
           <CustomPaintForm mode="create" />
+        ) : shouldShowDiscoveryPrompt ? (
+          <VaultDiscoveryEmptyState />
         ) : (
           <Suspense
             key={`${activeTab}-${q}-${brand}-${line}-${ownership}-${matchHex}-${limit}`}

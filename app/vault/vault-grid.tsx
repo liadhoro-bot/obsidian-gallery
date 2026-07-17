@@ -1,7 +1,7 @@
 import { createClient } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
 import VaultGridClient from './vault-grid-client'
-import VaultExportButton from './vault-export-button'
+import VaultGridToolbar from './vault-grid-toolbar'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { findClosestPaints, isUsableColorHex } from '../../utils/color-matching'
 
@@ -151,11 +151,11 @@ function renderGrid({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-0 text-sm font-black uppercase tracking-[0.22em] text-white/75">
           Showing: {totalCount} colors
         </p>
-        <VaultExportButton
+        <VaultGridToolbar
           tab={tab}
           q={q}
           brand={brand}
@@ -167,10 +167,12 @@ function renderGrid({
 
       <VaultGridClient
         initialPaints={visiblePaints}
+        tab={tab}
         q={q}
         brand={brand}
         line={line}
         ownership={ownership}
+        matchHex={matchHex}
         hasMore={visiblePaints.length < totalCount}
       />
     </div>
@@ -452,7 +454,7 @@ export default async function VaultGrid({
     perf.total()
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-sm font-black uppercase tracking-[0.22em] text-white/75">
               Closest matches to {matchHex.toUpperCase()}
@@ -468,22 +470,26 @@ export default async function VaultGrid({
               </p>
             </div>
           </div>
-          <VaultExportButton
-            tab={tab}
-            q={q}
-            brand={brand}
-            line={line}
-            ownership={ownership}
-            matchHex={matchHex}
-          />
+          <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row">
+            <VaultGridToolbar
+              tab={tab}
+              q={q}
+              brand={brand}
+              line={line}
+              ownership={ownership}
+              matchHex={matchHex}
+            />
+          </div>
         </div>
 
         <VaultGridClient
           initialPaints={matchedPaints}
+          tab={tab}
           q={q}
           brand={brand}
           line={line}
           ownership={ownership}
+          matchHex={matchHex}
           hasMore={false}
         />
       </div>

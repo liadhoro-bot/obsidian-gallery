@@ -17,6 +17,7 @@
 /.lighthouseci
 /.tmp
 /.perf
+/.qa
 
 # next.js
 /.next/

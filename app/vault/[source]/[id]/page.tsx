@@ -99,7 +99,7 @@ export default async function PaintPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-[#061012] pb-24 text-slate-100">
       <div className="mx-auto w-full max-w-md px-4">
-        <DashboardTopBar />
+        <DashboardTopBar userId={user.id} />
       </div>
 
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-5">
@@ -143,8 +143,8 @@ export default async function PaintPage({ params }: PageProps) {
             itemIdFieldName="paintId"
             title="Delete Custom Paint"
             buttonLabel="Delete Custom Paint"
-            initialDescription="Permanently delete this custom paint from your vault."
-            confirmDescription="If you delete this custom paint, it will be removed from your vault and any guide paint links that use it. This action cannot be undone."
+            initialDescription="Permanently delete this custom paint from your paints."
+            confirmDescription="If you delete this custom paint, it will be removed from your paints and any guide paint links that use it. This action cannot be undone."
             deleteAction={deleteCustomPaintAction}
           />
         ) : null}

@@ -1,23 +1,9 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
 import UnitListView from '../../components/units/unit-list-view'
-import { PrefetchButton } from '../components/prefetch-link'
-import { startDashboardUnitSession } from './actions'
-
-const DashboardBenchCards = dynamic(() => import('./dashboard-bench-cards'), {
-  loading: () => (
-    <div className="space-y-3">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div
-          key={index}
-          className="min-h-[110px] rounded-2xl border border-white/10 bg-white/[0.04]"
-        />
-      ))}
-    </div>
-  ),
-})
+import DashboardBenchCards from './dashboard-bench-cards'
+import DashboardStartPaintingButton from './dashboard-start-painting-button'
 
 export type UnitStatus = 'complete' | 'active' | 'bench' | 'pile' | 'other'
 
@@ -46,22 +32,6 @@ const STATUS_OPTIONS: StatusOption[] = [
   { value: 'other', label: 'Other', headingLabel: 'other' },
 ]
 
-function StartPaintingForm({ unitId }: { unitId: string }) {
-  return (
-    <form action={startDashboardUnitSession} className="relative z-20">
-      <input type="hidden" name="unitId" value={unitId} />
-      <PrefetchButton
-        type="submit"
-        prefetchHref={`/units/${unitId}`}
-        onClick={(event) => event.stopPropagation()}
-        className="rounded-xl border border-cyan-300/55 bg-black/55 px-2.5 py-1.5 text-[10px] font-black uppercase text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950"
-      >
-        Start Painting
-      </PrefetchButton>
-    </form>
-  )
-}
-
 export default function DashboardUnitStatusList({
   units,
 }: {
@@ -88,7 +58,7 @@ export default function DashboardUnitStatusList({
           id: unit.id,
           name: unit.name,
           imageUrl: unit.imageUrl,
-          action: <StartPaintingForm unitId={unit.id} />,
+          action: <DashboardStartPaintingButton unitId={unit.id} />,
         }))}
         renderCards={() => (
           <DashboardBenchCards units={displayUnits} emptyMessage={emptyMessage} />

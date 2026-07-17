@@ -120,12 +120,12 @@ function buildFilename({
   } else if (ownership === 'custom') {
     parts.push('custom-colors')
   } else if (brand || line) {
-    parts.push(brand ? slugPart(brand) : 'vault')
+    parts.push(brand ? slugPart(brand) : 'paints')
     if (line) parts.push(slugPart(line))
   } else if (q) {
     parts.push('search', slugPart(q).slice(0, 40))
   } else {
-    parts.push('vault-all-colors')
+    parts.push('paints-all-colors')
   }
 
   return `${parts.filter(Boolean).join('-')}.${format}`
@@ -469,7 +469,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : 'Could not export vault list',
+          error instanceof Error ? error.message : 'Could not export paints list',
       },
       { status: 500 }
     )

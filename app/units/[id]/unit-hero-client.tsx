@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useOptimistic, useTransition } from 'react'
 import BackButton from '../../components/back-button'
+import { getSupabaseImageUrl } from '../../../utils/images/supabase-image'
 import { setFeaturedUnit } from './actions'
 
 type Unit = {
@@ -51,13 +52,19 @@ export default function UnitHeroClient({
     window.dispatchEvent(new CustomEvent('unit-header:edit'))
   }
 
+  const heroImageUrl = getSupabaseImageUrl(featuredImage?.image_url, {
+    width: 840,
+    quality: 50,
+    resize: 'cover',
+  })
+
   return (
     <div className="relative">
       <div className="relative h-[260px] w-full overflow-hidden">
-        {featuredImage ? (
+        {heroImageUrl ? (
           <Image
-            src={featuredImage.image_url}
-            alt={featuredImage.alt_text || unit.name}
+            src={heroImageUrl}
+            alt={featuredImage?.alt_text || unit.name}
             fill
             priority
             sizes="(max-width: 768px) 100vw, 420px"

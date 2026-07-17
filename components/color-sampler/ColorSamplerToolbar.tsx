@@ -24,7 +24,7 @@ export default function ColorSamplerToolbar({
           disabled={!canReplace}
           className="tap-press tap-target rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white/65 transition hover:border-white/20 hover:text-white disabled:opacity-40"
         >
-          Replace
+          Change Image
         </button>
         <button
           type="button"

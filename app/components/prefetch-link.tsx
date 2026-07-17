@@ -26,8 +26,6 @@ type PrefetchButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 let visiblePrefetchCount = 0
 
-type Router = ReturnType<typeof useRouter>
-
 export function useRoutePrefetch(href: string) {
   const router = useRouter()
 
@@ -44,6 +42,8 @@ export default function PrefetchLink({
   viewportLimit = 2,
   onMouseEnter,
   onFocus,
+  onTouchStart,
+  onPointerDown,
   className,
   ...props
 }: PrefetchLinkProps) {
@@ -97,6 +97,18 @@ export default function PrefetchLink({
         prefetch(false)
         onFocus?.(event)
       }}
+      onTouchStart={(event) => {
+        if (isPrefetchableHref(prefetchHref)) {
+          prefetchRoute(router, prefetchHref, { priority: 'immediate' })
+        }
+        onTouchStart?.(event)
+      }}
+      onPointerDown={(event) => {
+        if (event.pointerType !== 'mouse' && isPrefetchableHref(prefetchHref)) {
+          prefetchRoute(router, prefetchHref, { priority: 'immediate' })
+        }
+        onPointerDown?.(event)
+      }}
       className={['tap-card', className].filter(Boolean).join(' ')}
       {...props}
     >
@@ -109,9 +121,12 @@ export function PrefetchButton({
   prefetchHref,
   onMouseEnter,
   onFocus,
+  onTouchStart,
+  onPointerDown,
   className,
   ...props
 }: PrefetchButtonProps) {
+  const router = useRouter()
   const prefetch = useRoutePrefetch(prefetchHref)
 
   return (
@@ -124,6 +139,16 @@ export function PrefetchButton({
       onFocus={(event) => {
         prefetch()
         onFocus?.(event)
+      }}
+      onTouchStart={(event) => {
+        prefetchRoute(router, prefetchHref, { priority: 'immediate' })
+        onTouchStart?.(event)
+      }}
+      onPointerDown={(event) => {
+        if (event.pointerType !== 'mouse') {
+          prefetchRoute(router, prefetchHref, { priority: 'immediate' })
+        }
+        onPointerDown?.(event)
       }}
       className={['tap-press tap-target', className].filter(Boolean).join(' ')}
     />

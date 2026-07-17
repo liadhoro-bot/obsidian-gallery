@@ -242,7 +242,7 @@ export default function ColorMatchModal({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
-                  Vault
+                  Paints
                 </p>
                 <h2
                   id="vault-color-match-title"

@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from 'react'
-import SamplingLoupe from './SamplingLoupe'
 import type { SampledImageColor } from './types'
 import {
   DEFAULT_SAMPLE_RADIUS,
@@ -32,8 +31,8 @@ type Props = {
 }
 
 const TOUCH_SAMPLE_TARGET_OFFSET = {
-  x: -44,
-  y: -58,
+  x: -30,
+  y: -42,
 }
 
 export default function ColorSamplerCanvas({
@@ -290,12 +289,6 @@ export default function ColorSamplerCanvas({
           <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/80" />
         </span>
       ) : null}
-
-      <SamplingLoupe
-        sample={visibleSample}
-        pointer={visiblePointer}
-        containerSize={canvasSize}
-      />
     </div>
   )
 }

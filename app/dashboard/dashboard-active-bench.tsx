@@ -1,22 +1,14 @@
-import {
-  getDashboardCurrentUser,
-  getDashboardPaintingTableFeed,
-} from './dashboard-data'
+import type { DashboardFeedUnit } from './dashboard-data'
 import DashboardUnitStatusList, {
   type DashboardStatusUnit,
   type UnitStatus,
 } from './dashboard-unit-status-list'
 
-export default async function DashboardActiveBench({
-  userId,
+export default function DashboardActiveBench({
+  units,
 }: {
-  userId?: string
+  units: DashboardFeedUnit[]
 }) {
-  const resolvedUserId = userId ?? (await getDashboardCurrentUser())?.id
-  if (!resolvedUserId) return null
-
-  const { units } = await getDashboardPaintingTableFeed(resolvedUserId)
-
   if (!units.length) {
     return <DashboardUnitStatusList units={[]} />
   }
@@ -64,12 +56,7 @@ export default async function DashboardActiveBench({
     }))
 
   return (
-    <section
-      style={{
-        contentVisibility: 'auto',
-        containIntrinsicSize: '920px',
-      }}
-    >
+    <section className="min-h-[188px]">
       <DashboardUnitStatusList units={displayUnits} />
     </section>
   )

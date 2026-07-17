@@ -8,6 +8,7 @@ const isWindows = process.platform === 'win32'
 const perfStorageStatePath = resolve(
   process.env.PERF_STORAGE_STATE ?? '.perf/perf-storage-state-flows.json'
 )
+const reusePerfStorageState = process.env.PERF_REUSE_STORAGE_STATE === '1'
 
 function bin(name: string) {
   return `node_modules${isWindows ? '\\' : '/'} .bin`
@@ -100,10 +101,12 @@ async function main() {
 
   try {
     await waitForServer(baseUrl)
-    await ensurePerfStorageState({
-      baseUrl,
-      storageStatePath: perfStorageStatePath,
-    })
+    if (!reusePerfStorageState) {
+      await ensurePerfStorageState({
+        baseUrl,
+        storageStatePath: perfStorageStatePath,
+      })
+    }
 
     const testProcess = spawnCommand(
       bin('playwright'),
@@ -131,5 +134,5 @@ async function main() {
 
 main().catch(async (error) => {
   console.error(error)
-  process.exitCode = 1
+  process.exit(1)
 })

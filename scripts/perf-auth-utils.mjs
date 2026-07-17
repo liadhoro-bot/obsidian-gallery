@@ -13,6 +13,10 @@ import { dirname, resolve } from 'node:path'
 const BENCHMARK_EMAIL =
   process.env.PERF_BENCHMARK_EMAIL ?? 'perf-benchmark@obsidian.gallery'
 const TERMS_VERSION = '2026-05-13'
+const BENCHMARK_UNIT_ID = 'e6463818-c5b1-40fd-9fa8-a82da330a557'
+const BENCHMARK_RECIPE_ID = 'f810a0ea-6b2d-4479-8b99-1309cd3511e7'
+const BENCHMARK_THEME_ID = 'a8755d20-3601-4b53-aa55-823f1224e4b3'
+const BENCHMARK_CUSTOM_PAINT_ID = 'ef6df4c6-3257-4de3-bc19-3c7c746db82f'
 
 export function loadLocalEnv() {
   const envPath = resolve('.env.local')
@@ -169,18 +173,35 @@ async function ensureUnit(supabase, userId, projectId) {
   const { data: existing, error } = await supabase
     .from('units')
     .select('id, project_id')
-    .eq('user_id', userId)
-    .eq('name', 'Perf Benchmark Unit')
+    .eq('id', BENCHMARK_UNIT_ID)
     .maybeSingle()
 
   if (error) throw error
 
   let unitId = existing?.id ?? null
 
+  if (unitId) {
+    const { error: updateError } = await supabase
+      .from('units')
+      .update({
+        user_id: userId,
+        project_id: projectId,
+        name: 'Perf Benchmark Unit',
+        model_count: 5,
+        notes: 'Seeded automatically for protected performance benchmarks.',
+        is_active: true,
+        is_featured: true,
+      })
+      .eq('id', unitId)
+
+    if (updateError) throw updateError
+  }
+
   if (!unitId) {
     const { data, error: insertError } = await supabase
       .from('units')
       .insert({
+        id: BENCHMARK_UNIT_ID,
         user_id: userId,
         project_id: projectId,
         name: 'Perf Benchmark Unit',
@@ -225,16 +246,29 @@ async function ensureRecipe(supabase, userId) {
   const { data: existing, error } = await supabase
     .from('recipes')
     .select('id')
-    .eq('user_id', userId)
-    .eq('name', 'Perf Benchmark Recipe')
+    .eq('id', BENCHMARK_RECIPE_ID)
     .maybeSingle()
 
   if (error) throw error
-  if (existing) return existing.id
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from('recipes')
+      .update({
+        user_id: userId,
+        name: 'Perf Benchmark Recipe',
+        description: 'Seeded automatically for protected performance benchmarks.',
+        is_public: false,
+      })
+      .eq('id', existing.id)
+
+    if (updateError) throw updateError
+    return existing.id
+  }
 
   const { data, error: insertError } = await supabase
     .from('recipes')
     .insert({
+      id: BENCHMARK_RECIPE_ID,
       user_id: userId,
       name: 'Perf Benchmark Recipe',
       description: 'Seeded automatically for protected performance benchmarks.',
@@ -254,16 +288,30 @@ async function ensureTheme(supabase, userId) {
   const { data: existing, error } = await supabase
     .from('themes')
     .select('id')
-    .eq('user_id', userId)
-    .eq('name', 'Perf Benchmark Theme')
+    .eq('id', BENCHMARK_THEME_ID)
     .maybeSingle()
 
   if (error) throw error
-  if (existing) return existing.id
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from('themes')
+      .update({
+        user_id: userId,
+        name: 'Perf Benchmark Theme',
+        description: 'Seeded automatically for protected performance benchmarks.',
+        tags: ['perf', 'benchmark'],
+        is_public: false,
+      })
+      .eq('id', existing.id)
+
+    if (updateError) throw updateError
+    return existing.id
+  }
 
   const { data, error: insertError } = await supabase
     .from('themes')
     .insert({
+      id: BENCHMARK_THEME_ID,
       user_id: userId,
       name: 'Perf Benchmark Theme',
       description: 'Seeded automatically for protected performance benchmarks.',
@@ -284,16 +332,31 @@ async function ensureCustomPaint(supabase, userId) {
   const { data: existing, error } = await supabase
     .from('paints')
     .select('id')
-    .eq('user_id', userId)
-    .eq('name', 'Perf Benchmark Paint')
+    .eq('id', BENCHMARK_CUSTOM_PAINT_ID)
     .maybeSingle()
 
   if (error) throw error
-  if (existing) return existing.id
+  if (existing) {
+    const { error: updateError } = await supabase
+      .from('paints')
+      .update({
+        user_id: userId,
+        name: 'Perf Benchmark Paint',
+        manufacturer: 'Custom',
+        series: 'Benchmark',
+        color_hex: '#4A4F57',
+        paint_type: 'custom',
+      })
+      .eq('id', existing.id)
+
+    if (updateError) throw updateError
+    return existing.id
+  }
 
   const { data, error: insertError } = await supabase
     .from('paints')
     .insert({
+      id: BENCHMARK_CUSTOM_PAINT_ID,
       user_id: userId,
       name: 'Perf Benchmark Paint',
       manufacturer: 'Custom',

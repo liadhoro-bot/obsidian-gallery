@@ -24,6 +24,11 @@ import {
   type GalleryUploadResult,
   validateGalleryImageFile,
 } from '../../../utils/images/gallery-upload'
+import NominateForContestCard from '../../../components/contests/nominate-for-contest-card'
+import { getEligibleContestsForSource } from '../../../lib/contests/queries'
+import { isCurrentUserAdmin } from '../../../lib/admin'
+import { TopBarSkeleton } from '../../dashboard/dashboard-skeletons'
+import { getDashboardProfile } from '../../dashboard/dashboard-data'
 
 function parsePaintSelection(rawValue: string) {
   if (!rawValue) {
@@ -1008,6 +1013,34 @@ async function getPrivateRecipeAssets(supabase: Awaited<ReturnType<typeof create
   }
 }
 
+async function RecipeContestCardGate({
+  userId,
+  recipeId,
+}: {
+  userId: string
+  recipeId: string
+}) {
+  const canSeeContestNominationCard = await isCurrentUserAdmin(userId)
+
+  if (!canSeeContestNominationCard) {
+    return null
+  }
+
+  const eligibleContests = await getEligibleContestsForSource(
+    userId,
+    'guide',
+    recipeId
+  )
+
+  return (
+    <NominateForContestCard
+      contests={eligibleContests}
+      sourceType="guide"
+      sourceId={recipeId}
+    />
+  )
+}
+
 export default async function RecipeDetailPage({
   params,
 }: {
@@ -1040,6 +1073,11 @@ if (!recipe) {
 }
 
 const isOwner = Boolean(user && recipe.user_id === user.id)
+  const profilePromise = user
+    ? (async () => ({
+        data: await getDashboardProfile(user.id),
+      }))()
+    : undefined
 
   const [
     recipeAssets,
@@ -1198,8 +1236,8 @@ const wishlistPaintIds = new Set(
   return (
   <main className="min-h-screen bg-[#081018] text-white">
     <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-      <Suspense fallback={null}>
-        <DashboardTopBar />
+      <Suspense fallback={<TopBarSkeleton />}>
+        <DashboardTopBar userId={user?.id} profilePromise={profilePromise} />
       </Suspense>
 
       <RecipeDetailClient
@@ -1223,6 +1261,12 @@ const wishlistPaintIds = new Set(
         updateRecipePaintOwnershipAction={updateRecipePaintOwnership}
         deleteRecipeAction={deleteRecipe}
         actionRow={
+          <>
+            {user && isOwner ? (
+              <Suspense fallback={null}>
+                <RecipeContestCardGate userId={user.id} recipeId={id} />
+              </Suspense>
+            ) : null}
           <ContentActionRow
             contentId={recipe.id}
             contentType="recipe"
@@ -1236,6 +1280,7 @@ const wishlistPaintIds = new Set(
             toggleSaveAction={toggleRecipeSave}
             reportAction={reportRecipe}
           />
+          </>
         }
       />
     </div>

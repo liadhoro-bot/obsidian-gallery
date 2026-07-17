@@ -2,11 +2,34 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+  const isOnboardingPreview =
+    pathname === '/onboarding' &&
+    ['1', 'true'].includes(request.nextUrl.searchParams.get('preview') ?? '')
+
+  const isPublicRoute =
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname === '/offline' ||
+    pathname === '/onboarding' ||
+    pathname === '/support' ||
+    pathname === '/settings/terms' ||
+    pathname === '/api/vault/paint-equivalencies' ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/legal') ||
+    pathname.includes('.')
+
+  const shouldCheckSession = !isPublicRoute || pathname === '/onboarding'
+
+  if (!shouldCheckSession) {
+    return NextResponse.next({
+      request,
+    })
+  }
+
   let response = NextResponse.next({
     request,
   })
-
-  const pathname = request.nextUrl.pathname
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,20 +57,9 @@ export default async function proxy(request: NextRequest) {
   )
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const isPublicRoute =
-    pathname === '/' ||
-    pathname === '/login' ||
-    pathname === '/offline' ||
-    pathname === '/onboarding' ||
-    pathname === '/support' ||
-    pathname === '/settings/terms' ||
-    pathname === '/api/vault/paint-equivalencies' ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/legal') ||
-    pathname.includes('.')
+    data: { session },
+  } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   if (!user) {
     if (!isPublicRoute) {
@@ -71,7 +83,7 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/onboarding', request.url))
   }
 
-  if (hasAcceptedTerms && pathname === '/onboarding') {
+  if (hasAcceptedTerms && pathname === '/onboarding' && !isOnboardingPreview) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

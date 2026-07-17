@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import PrefetchLink from '../components/prefetch-link'
 
@@ -18,6 +18,31 @@ function getBrandAbbreviation(brand?: string | null) {
   return (brand || 'UNK').slice(0, 3).toUpperCase()
 }
 
+function isUsableColorHex(hex: string | null | undefined): hex is string {
+  return Boolean(hex && /^#[0-9A-Fa-f]{6}$/.test(hex))
+}
+
+function colorDistance(hexA: string, hexB: string) {
+  const cleanA = hexA.replace('#', '')
+  const cleanB = hexB.replace('#', '')
+  const a = {
+    r: parseInt(cleanA.slice(0, 2), 16),
+    g: parseInt(cleanA.slice(2, 4), 16),
+    b: parseInt(cleanA.slice(4, 6), 16),
+  }
+  const b = {
+    r: parseInt(cleanB.slice(0, 2), 16),
+    g: parseInt(cleanB.slice(2, 4), 16),
+    b: parseInt(cleanB.slice(4, 6), 16),
+  }
+
+  return Math.sqrt(
+    Math.pow(a.r - b.r, 2) +
+      Math.pow(a.g - b.g, 2) +
+      Math.pow(a.b - b.b, 2)
+  )
+}
+
 type VaultPaint = {
   id: string
   source: 'catalog' | 'custom'
@@ -32,24 +57,110 @@ type VaultPaint = {
   is_wishlist: boolean
 }
 
-export default function VaultGridClient({
-  initialPaints,
-  q,
-  brand,
-  line,
-  ownership,
-  hasMore,
-}: {
-  initialPaints: VaultPaint[]
+type VaultFilterPreview = {
   q: string
   brand: string
   line: string
   ownership: string
+  matchHex: string
+  tab: 'find' | 'collection'
+}
+
+function shouldKeepVisible({
+  nextPaint,
+  tab,
+  ownership,
+}: {
+  nextPaint: VaultPaint
+  tab: 'find' | 'collection'
+  ownership: string
+}) {
+  if (nextPaint.source === 'custom') {
+    return tab === 'collection' || ownership === 'all' || ownership === 'custom'
+  }
+
+  if (tab === 'collection') {
+    return nextPaint.is_owned
+  }
+
+  if (ownership === 'owned') {
+    return nextPaint.is_owned
+  }
+
+  if (ownership === 'wishlist') {
+    return nextPaint.is_wishlist
+  }
+
+  if (ownership === 'unowned') {
+    return !nextPaint.is_owned
+  }
+
+  if (ownership === 'custom') {
+    return false
+  }
+
+  return true
+}
+
+export default function VaultGridClient({
+  initialPaints,
+  tab,
+  q,
+  brand,
+  line,
+  ownership,
+  matchHex,
+  hasMore,
+}: {
+  initialPaints: VaultPaint[]
+  tab: 'find' | 'collection'
+  q: string
+  brand: string
+  line: string
+  ownership: string
+  matchHex: string
   hasMore: boolean
 }) {
   const [paints, setPaints] = useState(initialPaints)
   const [loading, setLoading] = useState(false)
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+  const [optimisticPreview, setOptimisticPreview] = useState<VaultFilterPreview>({
+    q,
+    brand,
+    line,
+    ownership,
+    matchHex,
+    tab,
+  })
+
+  useEffect(() => {
+    setPaints(initialPaints)
+    setPendingIds(new Set())
+    setLoading(false)
+    setOptimisticPreview({
+      q,
+      brand,
+      line,
+      ownership,
+      matchHex,
+      tab,
+    })
+  }, [brand, initialPaints, line, matchHex, ownership, q, tab])
+
+  useEffect(() => {
+    function handleFilterPreview(event: Event) {
+      const detail = (event as CustomEvent<VaultFilterPreview>).detail
+      if (!detail) return
+
+      setOptimisticPreview(detail)
+    }
+
+    window.addEventListener('vault:filters-preview', handleFilterPreview)
+
+    return () => {
+      window.removeEventListener('vault:filters-preview', handleFilterPreview)
+    }
+  }, [])
 
   async function loadMore() {
     setLoading(true)
@@ -59,6 +170,8 @@ export default function VaultGridClient({
     params.set('brand', brand)
     params.set('line', line)
     params.set('ownership', ownership)
+    params.set('tab', tab)
+    params.set('matchHex', matchHex)
     params.set('from', String(paints.length))
     params.set('to', String(paints.length + PAGE_SIZE - 1))
 
@@ -72,9 +185,141 @@ export default function VaultGridClient({
     }
   }
 
+  useEffect(() => {
+    function handleBatchUpdate(event: Event) {
+      const detail = (event as CustomEvent<{
+        paintIds?: string[]
+        mode?: 'owned' | 'wishlist' | 'remove-owned'
+      }>).detail
+      const paintIds = new Set(detail?.paintIds ?? [])
+
+      if (!paintIds.size || !detail?.mode) return
+
+      setPaints((prev) =>
+        prev
+          .map((paint) => {
+          if (paint.source !== 'catalog' || !paintIds.has(paint.id)) {
+            return paint
+          }
+
+          if (detail.mode === 'wishlist') {
+            return { ...paint, is_wishlist: true }
+          }
+
+          if (detail.mode === 'remove-owned') {
+            return { ...paint, is_owned: false }
+          }
+
+          return { ...paint, is_owned: true, is_wishlist: false }
+          })
+          .filter((paint) =>
+            shouldKeepVisible({
+              nextPaint: paint,
+              tab,
+              ownership,
+            })
+          )
+      )
+    }
+
+    window.addEventListener('vault:batch-ownership-updated', handleBatchUpdate)
+
+    return () => {
+      window.removeEventListener(
+        'vault:batch-ownership-updated',
+        handleBatchUpdate
+      )
+    }
+  }, [ownership, tab])
+
+  const isReconciling =
+    optimisticPreview.q !== q ||
+    optimisticPreview.brand !== brand ||
+    optimisticPreview.line !== line ||
+    optimisticPreview.ownership !== ownership ||
+    optimisticPreview.matchHex !== matchHex ||
+    optimisticPreview.tab !== tab
+
+  const visiblePaints = useMemo(() => {
+    const basePaints = paints.filter((paint) => {
+      if (
+        optimisticPreview.tab === 'collection' &&
+        !shouldKeepVisible({
+          nextPaint: paint,
+          tab: 'collection',
+          ownership: 'owned',
+        })
+      ) {
+        return false
+      }
+
+      if (
+        optimisticPreview.tab === 'find' &&
+        !shouldKeepVisible({
+          nextPaint: paint,
+          tab: 'find',
+          ownership: optimisticPreview.ownership,
+        })
+      ) {
+        return false
+      }
+
+      if (
+        optimisticPreview.brand &&
+        (paint.brand || '') !== optimisticPreview.brand
+      ) {
+        return false
+      }
+
+      if (
+        optimisticPreview.line &&
+        (paint.line || '') !== optimisticPreview.line
+      ) {
+        return false
+      }
+
+      const query = optimisticPreview.q.trim().toLowerCase()
+      if (query) {
+        const haystack = [
+          paint.name,
+          paint.brand,
+          paint.line,
+          paint.sku,
+          paint.hex_approx,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        if (!haystack.includes(query)) {
+          return false
+        }
+      }
+
+      return true
+    })
+
+    if (!isUsableColorHex(optimisticPreview.matchHex)) {
+      return basePaints
+    }
+
+    return [...basePaints]
+      .filter(
+        (paint): paint is VaultPaint & { source: 'catalog'; hex_approx: string } =>
+          paint.source === 'catalog' && isUsableColorHex(paint.hex_approx)
+      )
+      .sort(
+        (a, b) =>
+          colorDistance(optimisticPreview.matchHex, a.hex_approx) -
+          colorDistance(optimisticPreview.matchHex, b.hex_approx)
+      )
+      .slice(0, 24)
+  }, [optimisticPreview, paints])
+
   function toggleOwnership(paintId: string, action: 'owned' | 'wishlist') {
     const paint = paints.find((p) => p.id === paintId)
     if (!paint) return
+    const previousPaints = paints
 
     const previous = {
       is_owned: paint.is_owned,
@@ -87,7 +332,8 @@ export default function VaultGridClient({
     setPendingIds((prev) => new Set(prev).add(paintId))
 
     setPaints((prev) =>
-      prev.map((p) => {
+      prev
+        .map((p) => {
         if (p.id !== paintId) return p
 
         if (action === 'owned') {
@@ -95,7 +341,14 @@ export default function VaultGridClient({
         }
 
         return { ...p, is_wishlist: !p.is_wishlist }
-      })
+        })
+        .filter((paint) =>
+          shouldKeepVisible({
+            nextPaint: paint,
+            tab,
+            ownership,
+          })
+        )
     )
 
     ;(async () => {
@@ -112,16 +365,16 @@ export default function VaultGridClient({
 
         if (!res.ok) throw new Error('Failed to update ownership')
       } catch {
-        setPaints((prev) =>
-          prev.map((p) => {
-            if (p.id !== paintId) return p
-
-            return {
-              ...p,
-              is_owned: previous.is_owned,
-              is_wishlist: previous.is_wishlist,
-            }
-          })
+        setPaints(
+          previousPaints.map((p) =>
+            p.id !== paintId
+              ? p
+              : {
+                  ...p,
+                  is_owned: previous.is_owned,
+                  is_wishlist: previous.is_wishlist,
+                }
+          )
         )
       } finally {
         setPendingIds((prev) => {
@@ -136,7 +389,7 @@ export default function VaultGridClient({
   return (
     <section className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
-        {paints.map((paint) => {
+        {visiblePaints.map((paint) => {
           const href =
             paint.source === 'custom'
               ? `/vault/custom/${paint.id}`
@@ -219,7 +472,7 @@ export default function VaultGridClient({
         })}
       </div>
 
-      {hasMore ? (
+      {hasMore && !isReconciling ? (
       <div className="flex justify-center pt-2">
         <button
           type="button"

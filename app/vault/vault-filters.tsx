@@ -1,5 +1,7 @@
+import { unstable_cache } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
+import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import VaultFiltersClient from './vault-filters-client'
 
 type VaultFiltersProps = {
@@ -28,7 +30,22 @@ function isPresentText(value: string | null): value is string {
   return Boolean(value)
 }
 
-async function getCatalogFilterRows(supabase: SupabaseClient) {
+const getCachedCatalogFilterRows = unstable_cache(
+  async () => {
+    const supabase = createServiceRoleClient()
+    const { data, error } = await supabase.rpc('get_vault_catalog_filter_rows')
+
+    if (error) throw error
+
+    return (data ?? []) as CatalogFilterRow[]
+  },
+  ['vault-catalog-filter-rows-v1'],
+  {
+    revalidate: 60 * 60,
+  }
+)
+
+async function getCatalogFilterRowsFallback(supabase: SupabaseClient) {
   const pageSize = 1000
   let from = 0
   let allRows: CatalogFilterRow[] = []
@@ -57,10 +74,16 @@ async function getCatalogFilterRows(supabase: SupabaseClient) {
 
 async function safelyGetCatalogFilterRows(supabase: SupabaseClient) {
   try {
-    return await getCatalogFilterRows(supabase)
+    return await getCachedCatalogFilterRows()
   } catch (error) {
-    console.error('Vault catalog filters failed:', error)
-    return [] as CatalogFilterRow[]
+    console.error('Vault catalog filter RPC failed, using fallback query:', error)
+
+    try {
+      return await getCatalogFilterRowsFallback(supabase)
+    } catch (fallbackError) {
+      console.error('Vault catalog filters fallback failed:', fallbackError)
+      return [] as CatalogFilterRow[]
+    }
   }
 }
 

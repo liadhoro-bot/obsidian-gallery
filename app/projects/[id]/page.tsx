@@ -1,4 +1,4 @@
-import { createClient } from '../../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import ProjectDetailClient, { type ProjectDetailTab } from './project-detail-client'
@@ -12,9 +12,46 @@ import {
   type GalleryUploadResult,
   validateGalleryImageFile,
 } from '../../../utils/images/gallery-upload'
+import NominateForContestCard from '../../../components/contests/nominate-for-contest-card'
+import { getEligibleContestsForSource } from '../../../lib/contests/queries'
+import { isCurrentUserAdmin } from '../../../lib/admin'
 
 function firstRelation<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+async function ProjectContestCard({
+  userId,
+  projectId,
+}: {
+  userId: string
+  projectId: string
+}) {
+  const eligibleContests = await getEligibleContestsForSource(
+    userId,
+    'project',
+    projectId
+  )
+
+  return (
+    <NominateForContestCard
+      contests={eligibleContests}
+      sourceType="project"
+      sourceId={projectId}
+    />
+  )
+}
+
+function ProjectContestCardSkeleton() {
+  return (
+    <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4 animate-pulse">
+      <div className="h-6 w-44 rounded bg-white/10" />
+      <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
+        <div className="h-4 w-40 rounded bg-white/10" />
+        <div className="mt-3 h-4 w-32 rounded bg-white/10" />
+      </div>
+    </section>
+  )
 }
 
 async function addUnit(formData: FormData) {
@@ -754,9 +791,7 @@ export default async function ProjectDetailPage({
 }) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     redirect('/login')
@@ -781,13 +816,20 @@ export default async function ProjectDetailPage({
     userId: user.id,
     activeTab,
   })
+  const canSeeContestNominationCard = await isCurrentUserAdmin(user.id)
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={null}>
-          <DashboardTopBar />
+          <DashboardTopBar userId={user.id} />
         </Suspense>
+
+        {data.project && canSeeContestNominationCard ? (
+          <Suspense fallback={<ProjectContestCardSkeleton />}>
+            <ProjectContestCard userId={user.id} projectId={id} />
+          </Suspense>
+        ) : null}
 
         <ProjectDetailClient
           activeTab={activeTab}

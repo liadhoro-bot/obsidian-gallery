@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import RecipeHero from './components/recipe-hero'
@@ -12,10 +13,25 @@ import {
 } from './components/types'
 import RecipeDetailTabs, { RecipeDetailTab } from './recipe-detail-tabs'
 import RecipeDetailsTab from './recipe-details-tab'
-import RecipeAddStepTab from './recipe-add-step-tab'
-import RecipeGuideDialog from './recipe-guide-dialog'
-import RecipeStepsTab from './recipe-steps-tab'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+
+const RecipeGuideDialog = dynamic(() => import('./recipe-guide-dialog'))
+const RecipeStepsTab = dynamic(() => import('./recipe-steps-tab'), {
+  loading: () => (
+    <div className="rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-neutral-400">
+      Loading guide steps...
+    </div>
+  ),
+})
+const RecipeAddStepTab = dynamic(() => import('./recipe-add-step-tab'), {
+  loading: () => (
+    <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm animate-pulse">
+      <div className="h-5 w-32 rounded bg-white/10" />
+      <div className="mt-4 h-12 rounded-xl bg-white/10" />
+      <div className="mt-3 h-32 rounded-xl bg-white/5" />
+    </section>
+  ),
+})
 
 type Props = {
   recipe: Recipe

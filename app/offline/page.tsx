@@ -22,7 +22,7 @@ export default function OfflinePage() {
           </p>
           <p className="mt-4 text-sm leading-6 text-neutral-400">
             Reconnect and refresh to pick up your latest projects, guides,
-            themes, and paint vault changes.
+            themes, and paints changes.
           </p>
         </div>
 

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 
 const isWindows = process.platform === 'win32'
+const importantOnly = process.argv.includes('--important')
 
 const steps = [
   ['build', ['run', 'build']],
@@ -10,16 +11,22 @@ const steps = [
 
 function runStep(name: string, args: readonly string[]) {
   console.log(`\n=== performance audit: ${name} ===`)
+  const env = importantOnly
+    ? {
+        ...process.env,
+        PERF_IMPORTANT_ONLY: '1',
+      }
+    : process.env
 
   const child = isWindows
     ? spawn('cmd.exe', ['/d', '/s', '/c', `npm ${args.join(' ')}`], {
         cwd: process.cwd(),
-        env: process.env,
+        env,
         stdio: 'inherit',
       })
     : spawn('npm', [...args], {
         cwd: process.cwd(),
-        env: process.env,
+        env,
         stdio: 'inherit',
       })
 

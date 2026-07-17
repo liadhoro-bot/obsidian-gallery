@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import PrefetchLink from '../components/prefetch-link'
+import Link from 'next/link'
 import SubmitButton from '../components/SubmitButton'
 import { saveRecipe, unsaveRecipe } from './actions'
 
@@ -22,7 +22,7 @@ type Props = {
 export default function RecipeCard({ recipe, mode, isSaved }: Props) {
   return (
     <div className="tap-card group flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] shadow-lg hover:border-cyan-400/40 hover:bg-white/[0.06]">
-      <PrefetchLink href={`/recipes/${recipe.id}`}>
+      <Link href={`/recipes/${recipe.id}`}>
         <div className="relative aspect-square bg-white/5">
           {recipe.image_url ? (
             <Image
@@ -38,14 +38,14 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
             </div>
           )}
         </div>
-      </PrefetchLink>
+      </Link>
 
       <div className="flex flex-1 flex-col space-y-2 p-3">
-        <PrefetchLink href={`/recipes/${recipe.id}`}>
+        <Link href={`/recipes/${recipe.id}`}>
           <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-5 text-white">
             {recipe.name || 'Untitled Guide'}
           </h3>
-        </PrefetchLink>
+        </Link>
 
         <p className="line-clamp-1 text-xs text-white/55">
           {mode === 'mine'

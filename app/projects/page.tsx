@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import ProjectsTabs from './projects-tabs'
 import { addProject } from './actions'
 import { ProjectWithImage } from './project-library'
@@ -147,9 +147,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const resolvedSearchParams = await searchParams
   const activeTab = resolvedSearchParams.tab === 'create' ? 'create' : 'mine'
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   if (!user) {

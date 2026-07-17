@@ -1,6 +1,11 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { createClient } from '../../utils/supabase/server'
+import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
+import { createPerfTimer } from '../../utils/perf/server'
+import {
+  getDashboardCurrentUser,
+  getDashboardProfile,
+} from './dashboard-data'
 import SupportButton from '../components/SupportButton'
 import DownloadAppButton from '../components/download-app-button'
 
@@ -29,36 +34,35 @@ export default async function DashboardTopBar({
   userId,
   profilePromise,
 }: DashboardTopBarProps) {
+  const perf = createPerfTimer('/dashboard:topbar')
   let profile: ProfileResult['data'] = null
 
   if (profilePromise) {
-    const result = await profilePromise
+    const result = await perf.measure('profile promise', async () => profilePromise)
     profile = result.data
   } else {
-    const supabase = await createClient()
-
     let resolvedUserId = userId
 
     if (!resolvedUserId) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      resolvedUserId = user?.id
+      resolvedUserId = (await perf.measure('current user', async () =>
+        getDashboardCurrentUser()
+      ))?.id
     }
 
     if (resolvedUserId) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('avatar_url, level, username')
-        .eq('id', resolvedUserId)
-        .single()
-
-      profile = data
+      profile = await perf.measure('profile fetch', async () =>
+        getDashboardProfile(resolvedUserId)
+      )
     }
   }
+  perf.total()
 
-  const avatarUrl = profile?.avatar_url || null
+  const avatarUrl = getSupabaseImageUrl(profile?.avatar_url, {
+    width: 96,
+    height: 96,
+    quality: 60,
+    resize: 'cover',
+  })
   const level = profile?.level ?? 0
   const avatarInitials = getAvatarInitials(profile?.username)
 
@@ -78,7 +82,6 @@ export default async function DashboardTopBar({
                 fill
                 className="object-cover"
                 sizes="48px"
-                priority
               />
             </div>
           ) : (

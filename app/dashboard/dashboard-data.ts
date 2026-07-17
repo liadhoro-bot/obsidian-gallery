@@ -1,5 +1,12 @@
+import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
-import { createClient } from '../../utils/supabase/server'
+import { createAuthenticatedServerClient } from '../../utils/supabase/authenticated-server-client'
+import { createPerfTimer } from '../../utils/perf/server'
+import {
+  createClient,
+  getSessionAccessToken,
+  getSessionUser,
+} from '../../utils/supabase/server'
 
 export type DashboardProfile = {
   avatar_url: string | null
@@ -97,6 +104,11 @@ type DashboardMetadataSummary = {
   weeklySessions: string
   timeSinceLastSession: string
   paintStreak: string
+  totalLoggedSeconds: number
+  averageSessionSeconds: number
+  completedSessionsCount: number
+  lastSessionAt: string | null
+  paintStreakDays: number
 }
 
 type DashboardMetricsRow = {
@@ -119,6 +131,17 @@ const UNIT_STATUSES: DashboardStatus[] = [
 ]
 
 const DASHBOARD_TIMEZONE = 'Asia/Jerusalem'
+const DASHBOARD_SHARED_CACHE_VERSION = 'v1'
+const DASHBOARD_PROFILE_REVALIDATE_SECONDS = 60
+const DASHBOARD_FEED_SELECT =
+  'unit_id, user_id, status, is_featured, name, deadline, created_at, updated_at, primary_image_url, last_session_at, progress_percent, parent_project_names'
+const DASHBOARD_PROGRESS_STEP_KEYS = [
+  'assembled',
+  'primed',
+  'initial_paints',
+  'fine_details',
+  'base_rim',
+] as const
 
 function formatDuration(totalSeconds: number) {
   const totalHours = Math.floor(totalSeconds / 3600)
@@ -219,24 +242,68 @@ function getPaintStreak(
   return `${streak}d`
 }
 
+function getDashboardProgressPercent(
+  status: DashboardStatus,
+  stageRows: DashboardStageProgressRow[]
+) {
+  const stageDoneMap = new Map<string, boolean>()
+
+  for (const stage of stageRows) {
+    const key = stage.stage_key ?? stage.step_key
+    if (!key) continue
+
+    const isDone = stage.is_done === true || stage.status === 'done'
+
+    if (isDone) {
+      stageDoneMap.set(key, true)
+    } else if (!stageDoneMap.has(key)) {
+      stageDoneMap.set(key, false)
+    }
+  }
+
+  return status === 'complete' || stageDoneMap.get('done') === true
+    ? 100
+    : DASHBOARD_PROGRESS_STEP_KEYS.filter((key) => stageDoneMap.get(key) === true)
+        .length * 20
+}
+
 export const getDashboardCurrentUser = cache(async () => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  return user
+  return getSessionUser(supabase)
 })
+
+function getCachedDashboardProfile(
+  userId: string,
+  accessToken: string
+) {
+  return unstable_cache(
+    async () => {
+      const supabase = createAuthenticatedServerClient(accessToken)
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, level, username, xp')
+        .eq('id', userId)
+        .maybeSingle()
+
+      return (data ?? null) as DashboardProfile | null
+    },
+    [DASHBOARD_SHARED_CACHE_VERSION, 'dashboard-profile', userId],
+    {
+      tags: ['profiles'],
+      revalidate: DASHBOARD_PROFILE_REVALIDATE_SECONDS,
+    }
+  )()
+}
 
 export const getDashboardProfile = cache(async (userId: string) => {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('profiles')
-    .select('avatar_url, level, username, xp')
-    .eq('id', userId)
-    .single()
+  const accessToken = await getSessionAccessToken(supabase)
 
-  return (data ?? null) as DashboardProfile | null
+  if (!accessToken) {
+    return null
+  }
+
+  return getCachedDashboardProfile(userId, accessToken)
 })
 
 export const getDashboardXpState = cache(async (userId: string) => {
@@ -460,14 +527,79 @@ export const getDashboardHeroSnapshot = cache(async (userId: string) => {
   } satisfies DashboardHeroSnapshot
 })
 
-export const getDashboardPaintingTableFeed = cache(async (userId: string) => {
+export const getDashboardHeroUnit = cache(async (userId: string) => {
   const supabase = await createClient()
-  const { data, error } = await supabase
+
+  const featuredResult = await supabase
     .from('dashboard_unit_feed')
-    .select(
-      'unit_id, user_id, status, is_featured, name, deadline, created_at, updated_at, primary_image_url, last_session_at, progress_percent, parent_project_names'
-    )
+    .select(DASHBOARD_FEED_SELECT)
     .eq('user_id', userId)
+    .eq('is_featured', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!featuredResult.error && featuredResult.data) {
+    return featuredResult.data as DashboardFeedUnit
+  }
+
+  const inProgressResult = await supabase
+    .from('dashboard_unit_feed')
+    .select(DASHBOARD_FEED_SELECT)
+    .eq('user_id', userId)
+    .neq('status', 'complete')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!inProgressResult.error && inProgressResult.data) {
+    return inProgressResult.data as DashboardFeedUnit
+  }
+
+  const heroSnapshot = await getDashboardHeroSnapshot(userId)
+
+  if (!heroSnapshot.unit) {
+    return null
+  }
+
+  const heroProjectNames = heroSnapshot.unitProjectRows
+    .filter((row) => row.unit_id === heroSnapshot.unit?.id)
+    .map((row) =>
+      Array.isArray(row.project) ? row.project[0] ?? null : row.project ?? null
+    )
+    .filter((project): project is { id: string; name: string | null } =>
+      Boolean(project?.id)
+    )
+    .map((project) => project.name || 'Untitled project')
+
+  return {
+    unit_id: heroSnapshot.unit.id,
+    user_id: userId,
+    status: heroSnapshot.unit.status,
+    is_featured: heroSnapshot.unit.is_featured,
+    name: heroSnapshot.unit.name,
+    deadline: heroSnapshot.unit.deadline,
+    created_at: heroSnapshot.unit.created_at,
+    updated_at: heroSnapshot.unit.updated_at,
+    primary_image_url: heroSnapshot.imageUrl,
+    last_session_at: null,
+    progress_percent: getDashboardProgressPercent(
+      heroSnapshot.unit.status,
+      heroSnapshot.progressRows
+    ),
+    parent_project_names: heroProjectNames,
+  } satisfies DashboardFeedUnit
+})
+
+export const getDashboardPaintingTableFeed = cache(async (userId: string) => {
+  const perf = createPerfTimer('/dashboard:data')
+  const supabase = await createClient()
+  const { data, error } = await perf.measure('dashboard_unit_feed query', async () =>
+    supabase
+      .from('dashboard_unit_feed')
+      .select(DASHBOARD_FEED_SELECT)
+      .eq('user_id', userId)
+  )
 
   if (!error && data) {
     const feedUnits = data as DashboardFeedUnit[]
@@ -481,19 +613,21 @@ export const getDashboardPaintingTableFeed = cache(async (userId: string) => {
         )[0] ??
       null
 
+    perf.total()
     return {
       heroUnit,
       units: feedUnits,
     } satisfies DashboardPaintingTableFeed
   }
 
-  const [
-    heroSnapshot,
-    unitsSnapshot,
-  ] = await Promise.all([
-    getDashboardHeroSnapshot(userId),
-    getDashboardUnitsSnapshot(userId),
-  ])
+  const [heroSnapshot, unitsSnapshot] = await perf.measure(
+    'fallback snapshots',
+    async () =>
+      Promise.all([
+        getDashboardHeroSnapshot(userId),
+        getDashboardUnitsSnapshot(userId),
+      ])
+  )
 
   const heroProjectNames =
     heroSnapshot.unitProjectRows
@@ -535,52 +669,43 @@ export const getDashboardPaintingTableFeed = cache(async (userId: string) => {
     }
 
     const stageRows = unitsSnapshot.progressRowsByUnitId[unit.unit_id] ?? []
-    const stageDoneMap = new Map<string, boolean>()
-
-    for (const stage of stageRows) {
-      const key = stage.stage_key ?? stage.step_key
-      if (!key) continue
-
-      const isDone = stage.is_done === true || stage.status === 'done'
-
-      if (isDone) {
-        stageDoneMap.set(key, true)
-      } else if (!stageDoneMap.has(key)) {
-        stageDoneMap.set(key, false)
-      }
-    }
-
-    const progress =
-      unit.status === 'complete' || stageDoneMap.get('done') === true
-        ? 100
-        : ['assembled', 'primed', 'initial_paints', 'fine_details', 'base_rim']
-            .filter((key) => stageDoneMap.get(key) === true)
-            .length * 20
 
     return {
       ...unit,
-      progress_percent: progress,
+      progress_percent: getDashboardProgressPercent(unit.status, stageRows),
     }
   })
 
   const fallbackHeroUnit =
     normalizedUnits.find((unit) => unit.unit_id === heroSnapshot.unit?.id) ?? null
 
-  return {
+  const fallbackFeed = {
     heroUnit: fallbackHeroUnit,
     units: normalizedUnits,
   } satisfies DashboardPaintingTableFeed
+
+  perf.total()
+  return fallbackFeed
 })
 
 export const getDashboardMetadataSummary = cache(async (userId: string) => {
   const supabase = await createClient()
-  const { data: metricsRow } = await supabase
-    .from('dashboard_user_metrics')
-    .select(
-      'total_units, recent_units, owned_colors, total_logged_seconds, average_session_seconds, average_sessions_per_week, last_session_at, paint_streak_days'
-    )
-    .eq('user_id', userId)
-    .maybeSingle<DashboardMetricsRow>()
+  const [metricsResult, completedSessionsResult] = await Promise.all([
+    supabase
+      .from('dashboard_user_metrics')
+      .select(
+        'total_units, recent_units, owned_colors, total_logged_seconds, average_session_seconds, average_sessions_per_week, last_session_at, paint_streak_days'
+      )
+      .eq('user_id', userId)
+      .maybeSingle<DashboardMetricsRow>(),
+    supabase
+      .from('unit_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gt('duration_seconds', 0),
+  ])
+  const metricsRow = metricsResult.data
+  const completedSessionsCount = completedSessionsResult.count ?? 0
 
   if (metricsRow) {
     return {
@@ -596,6 +721,11 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
       ),
       timeSinceLastSession: formatTimeSince(metricsRow.last_session_at),
       paintStreak: `${metricsRow.paint_streak_days ?? 0}d`,
+      totalLoggedSeconds: metricsRow.total_logged_seconds ?? 0,
+      averageSessionSeconds: metricsRow.average_session_seconds ?? 0,
+      completedSessionsCount,
+      lastSessionAt: metricsRow.last_session_at,
+      paintStreakDays: metricsRow.paint_streak_days ?? 0,
     } satisfies DashboardMetadataSummary
   }
 
@@ -675,5 +805,11 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
     weeklySessions: formatWeeklySessions(averageSessionsPerWeek),
     timeSinceLastSession: formatTimeSince(lastSessionAt),
     paintStreak: getPaintStreak(sessions, DASHBOARD_TIMEZONE),
+    totalLoggedSeconds: totalSeconds,
+    averageSessionSeconds,
+    completedSessionsCount: completedSessions.length,
+    lastSessionAt,
+    paintStreakDays:
+      Number.parseInt(getPaintStreak(sessions, DASHBOARD_TIMEZONE), 10) || 0,
   } satisfies DashboardMetadataSummary
 })

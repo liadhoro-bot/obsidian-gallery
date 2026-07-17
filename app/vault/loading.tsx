@@ -11,7 +11,7 @@ export default function VaultLoading() {
             Inventory Management
           </p>
           <h1 className="mt-4 text-4xl font-black tracking-tight text-white">
-            The Paint Vault
+            Paints
           </h1>
           <p className="mt-4 text-sm font-medium text-neutral-200">
             Your personal paint inventory

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "perf:audit": "tsx scripts/run-performance-audit.ts",
+    "perf:audit:important": "tsx scripts/run-performance-audit.ts --important",
     "perf:lighthouse": "node scripts/run-lighthouse-ci.mjs",
     "perf:flows": "tsx scripts/run-performance-flows.ts",
     "perf:install-browsers": "playwright install chromium",

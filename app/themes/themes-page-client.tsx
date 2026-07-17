@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ThemeCard from './theme-card'
 import ThemeForm from './theme-form'
 
@@ -94,7 +94,43 @@ export default function ThemesPageClient({
   selectForProject = null,
   attachThemeToProjectAction,
 }: Props) {
+  const searchParams = useSearchParams()
   const [findSearch, setFindSearch] = useState(initialSearch)
+
+  const requestedTab = searchParams.get('tab')
+  const currentTab =
+    requestedTab === 'mine' ||
+    requestedTab === 'find' ||
+    requestedTab === 'create'
+      ? requestedTab
+      : activeTab
+
+  const buildHref = useCallback((tab: Tab, search: string) => {
+    const params = new URLSearchParams()
+    params.set('tab', tab)
+
+    const trimmedSearch = search.trim()
+    if (tab === 'find' && trimmedSearch) {
+      params.set('q', trimmedSearch)
+    }
+    if (selectForProject) {
+      params.set('selectForProject', selectForProject)
+    }
+
+    return `/themes?${params.toString()}`
+  }, [selectForProject])
+
+  const syncUrl = useCallback((tab: Tab, search: string) => {
+    window.history.replaceState(null, '', buildHref(tab, search))
+  }, [buildHref])
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      syncUrl(currentTab, findSearch)
+    }, 180)
+
+    return () => window.clearTimeout(timeout)
+  }, [currentTab, findSearch, syncUrl])
 
   const savedThemeSet = useMemo(() => new Set(savedThemeIds), [savedThemeIds])
   const filteredPublicThemes = useMemo(
@@ -112,36 +148,29 @@ export default function ThemesPageClient({
     [findSearch, myAndSavedThemes]
   )
 
-  function buildHref(tab: Tab) {
-    const params = new URLSearchParams()
-    params.set('tab', tab)
-
-    const trimmedSearch = findSearch.trim()
-    if (tab === 'find' && trimmedSearch) {
-      params.set('q', trimmedSearch)
+  function setTab(tab: Tab) {
+    if (tab === currentTab) {
+      return
     }
-    if (selectForProject) {
-      params.set('selectForProject', selectForProject)
-    }
-
-    return `/themes?${params.toString()}`
+    syncUrl(tab, findSearch)
   }
 
   return (
     <section className="space-y-5">
       <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
         {tabs.map((tab) => (
-          <Link
+          <button
             key={tab.key}
-            href={buildHref(tab.key)}
-            className={tabClass(activeTab === tab.key)}
+            type="button"
+            onClick={() => setTab(tab.key)}
+            className={tabClass(currentTab === tab.key)}
           >
             {tab.label}
-          </Link>
+          </button>
         ))}
       </div>
 
-      {activeTab !== 'create' ? (
+      {currentTab !== 'create' ? (
         <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
           <input
             type="search"
@@ -153,7 +182,7 @@ export default function ThemesPageClient({
         </div>
       ) : null}
 
-      {activeTab === 'find' ? (
+      <div hidden={currentTab !== 'find'} aria-hidden={currentTab !== 'find'}>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             {filteredPublicThemes.length > 0 ? (
@@ -176,9 +205,9 @@ export default function ThemesPageClient({
             )}
           </div>
         </div>
-      ) : null}
+      </div>
 
-      {activeTab === 'mine' ? (
+      <div hidden={currentTab !== 'mine'} aria-hidden={currentTab !== 'mine'}>
         <div className="grid grid-cols-2 gap-3">
           {filteredMyAndSavedThemes.length > 0 ? (
             filteredMyAndSavedThemes.map((theme) => (
@@ -199,9 +228,11 @@ export default function ThemesPageClient({
             </div>
           )}
         </div>
-      ) : null}
+      </div>
 
-      {activeTab === 'create' ? <ThemeForm paints={paintOptions} /> : null}
+      <div hidden={currentTab !== 'create'} aria-hidden={currentTab !== 'create'}>
+        <ThemeForm paints={paintOptions} />
+      </div>
     </section>
   )
 }

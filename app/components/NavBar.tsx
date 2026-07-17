@@ -21,7 +21,7 @@ export default function NavBar() {
         href="/vault"
         className="rounded bg-neutral-800 px-3 py-2 text-sm text-white hover:bg-neutral-700"
       >
-        Paint Vault
+        Paints
       </Link>
 
       <Link

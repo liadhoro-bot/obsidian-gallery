@@ -13,6 +13,7 @@ type UnitImage = {
   alt_text: string | null
   storage_bucket: string | null
   storage_path: string | null
+  is_optimistic?: boolean
 }
 
 type GalleryPreview = {
@@ -267,7 +268,7 @@ export default function UnitGallerySection({
 
             <GalleryImageCard
               image={image}
-              canEdit={true}
+              canEdit={!image.is_optimistic}
               samplerSourceType="unit_gallery"
               onToggleFeatured={async (imageId) => {
                 onToggleFeatured(imageId)

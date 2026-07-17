@@ -1,0 +1,70 @@
+name: Weekly Functional QA
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Friday night after midnight in Israel is early Saturday local time.
+    # GitHub cron is UTC, so these two candidates cover Israel standard time
+    # and daylight saving time. The first job step gates the real QA run to
+    # Saturday 00:xx in Asia/Jerusalem.
+    - cron: '30 21 * * 5'
+    - cron: '30 22 * * 5'
+
+concurrency:
+  group: weekly-functional-qa
+  cancel-in-progress: false
+
+jobs:
+  functional-qa:
+    name: Functional QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check Israel local time
+        id: israel_time
+        shell: bash
+        run: |
+          node -e "const fs=require('fs'); const now=new Date(); const parts=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Jerusalem',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(now).filter((part)=>part.type!=='literal').map((part)=>[part.type,part.value])); const shouldRun=parts.weekday==='Sat'&&parts.hour==='00'; fs.appendFileSync(process.env.GITHUB_OUTPUT, 'should_run='+shouldRun+'\nlocal_time='+parts.weekday+' '+parts.hour+':'+parts.minute+' Asia/Jerusalem\n');"
+
+      - name: Skip off-window scheduled run
+        if: github.event_name == 'schedule' && steps.israel_time.outputs.should_run != 'true'
+        run: echo "Skipping; local time is ${{ steps.israel_time.outputs.local_time }}."
+
+      - name: Checkout
+        if: github.event_name != 'schedule' || steps.israel_time.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: github.event_name != 'schedule' || steps.israel_time.outputs.should_run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: github.event_name != 'schedule' || steps.israel_time.outputs.should_run == 'true'
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        if: github.event_name != 'schedule' || steps.israel_time.outputs.should_run == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run functional QA
+        id: qa
+        if: github.event_name != 'schedule' || steps.israel_time.outputs.should_run == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run qa:functional
+
+      - name: Upload QA report
+        if: always() && (github.event_name != 'schedule' || steps.israel_time.outputs.should_run == 'true')
+        uses: actions/upload-artifact@v4
+        with:
+          name: functional-qa-report
+          path: |
+            playwright-report/functional
+            test-results/functional-results.json
+          if-no-files-found: ignore

@@ -31,10 +31,10 @@ const workflowItems = [
   },
   {
     id: 'vault',
-    label: 'Vault',
+    label: 'Paints',
     caption: 'Track your entire paint collection, wishlist missing colors, and finally organize paint chaos.',
     icon: '/icons/nav/vault.svg',
-    mockTitle: 'Vault',
+    mockTitle: 'Paints',
     mockSubtitle: 'Your paint collection',
     mockContent: 'vault',
   },

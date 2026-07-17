@@ -1,7 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { headers } from 'next/headers'
 import { createClient } from '../../utils/supabase/server'
 
@@ -62,6 +62,7 @@ export async function updateAvatar(formData: FormData) {
 
   revalidatePath('/settings')
   revalidatePath('/dashboard')
+  revalidateTag('profiles', 'max')
 }
 export async function updateUsername(formData: FormData) {
   return updateProfileAction(null, formData)
@@ -139,6 +140,7 @@ export async function updateProfileAction(
 
   revalidatePath('/settings')
   revalidatePath('/dashboard')
+  revalidateTag('profiles', 'max')
 
   return {
     error: null,

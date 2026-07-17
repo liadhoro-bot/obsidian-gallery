@@ -1,14 +1,12 @@
+import { Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '../../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import SubmitButton from '../../components/SubmitButton'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import ThemeDetailHero from './theme-detail-hero'
-import ThemeImageGallery from './theme-image-gallery'
-import ThemePaletteEditor from './theme-palette-editor'
-import ThemeAssignmentPanel from './theme-assignment-panel'
-import DeleteConfirmationCard from '../../components/delete-confirmation-card'
 import {
   calculateThemePaletteAction,
   deleteTheme,
@@ -23,6 +21,33 @@ import {
   toggleThemeSave,
 } from '../../components/social/actions'
 import { getThemeSocialState } from '../../components/social/data'
+import { TopBarSkeleton } from '../../dashboard/dashboard-skeletons'
+import { getDashboardProfile } from '../../dashboard/dashboard-data'
+
+const ThemeImageGallery = dynamic(() => import('./theme-image-gallery'))
+const ThemePaletteEditor = dynamic(() => import('./theme-palette-editor'), {
+  loading: () => (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 animate-pulse">
+      <div className="h-4 w-24 rounded bg-white/10" />
+      <div className="mt-4 grid grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="aspect-square rounded-2xl bg-white/[0.05]" />
+        ))}
+      </div>
+    </div>
+  ),
+})
+const ThemeAssignmentPanel = dynamic(() => import('./theme-assignment-panel'), {
+  loading: () => (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 animate-pulse">
+      <div className="h-4 w-28 rounded bg-white/10" />
+      <div className="mt-4 h-24 rounded-2xl bg-white/[0.05]" />
+    </div>
+  ),
+})
+const DeleteConfirmationCard = dynamic(
+  () => import('../../components/delete-confirmation-card')
+)
 
 type Props = {
   params: Promise<{
@@ -229,15 +254,300 @@ async function getHydratedThemePaints(
   return data as unknown as ThemePaint[]
 }
 
+function ThemeOwnerPanelsSkeleton() {
+  return (
+    <div className="px-4 pt-6 space-y-4 animate-pulse">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="h-4 w-28 rounded bg-white/10" />
+        <div className="mt-4 h-24 rounded-2xl bg-white/[0.05]" />
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="h-4 w-32 rounded bg-white/10" />
+        <div className="mt-4 h-20 rounded-2xl bg-white/[0.05]" />
+      </div>
+    </div>
+  )
+}
+
+async function ThemeOwnerPanels({
+  userId,
+  themeId,
+  themeDescription,
+  heroUrl,
+  themeName,
+}: {
+  userId: string
+  themeId: string
+  themeDescription: string | null
+  heroUrl: string | null
+  themeName: string | null
+}) {
+  const supabase = await createClient()
+  const markedUnitIds = unitThemeIdsFromDescription(themeDescription)
+
+  const projectsUsingThemePromise = supabase
+    .from('projects')
+    .select('id, name')
+    .eq('user_id', userId)
+    .eq('theme_id', themeId)
+    .order('name', { ascending: true })
+
+  const unitsUsingThemePromise = supabase
+    .from('units')
+    .select('id, name')
+    .eq('user_id', userId)
+    .eq('theme_id', themeId)
+    .order('name', { ascending: true })
+
+  const markedUnitsPromise =
+    markedUnitIds.length > 0
+      ? supabase
+          .from('units')
+          .select('id, name')
+          .eq('user_id', userId)
+          .in('id', markedUnitIds)
+      : Promise.resolve({ data: [], error: null })
+
+  const [
+    projectsUsingThemeResult,
+    unitsUsingThemeResult,
+    markedUnitsResult,
+    assignableProjectsResult,
+    unitRowsResult,
+    unitProjectRowsResult,
+    userThemesResult,
+    unitThemeRowsResult,
+  ] = await Promise.all([
+    projectsUsingThemePromise,
+    unitsUsingThemePromise,
+    markedUnitsPromise,
+    supabase
+      .from('projects')
+      .select('id, name, theme_id')
+      .eq('user_id', userId)
+      .order('name', { ascending: true }),
+    supabase
+      .from('units')
+      .select('id, name, project_id')
+      .eq('user_id', userId)
+      .order('name', { ascending: true }),
+    supabase
+      .from('unit_projects')
+      .select('unit_id, project_id')
+      .eq('user_id', userId),
+    supabase
+      .from('themes')
+      .select('id, description')
+      .eq('user_id', userId),
+    supabase
+      .from('units')
+      .select('id, theme_id')
+      .eq('user_id', userId),
+  ])
+
+  if (projectsUsingThemeResult.error) {
+    throw new Error(projectsUsingThemeResult.error.message)
+  }
+
+  if (assignableProjectsResult.error) {
+    throw new Error(assignableProjectsResult.error.message)
+  }
+
+  if (unitRowsResult.error) {
+    throw new Error(unitRowsResult.error.message)
+  }
+
+  if (unitProjectRowsResult.error) {
+    throw new Error(unitProjectRowsResult.error.message)
+  }
+
+  if (userThemesResult.error) {
+    throw new Error(userThemesResult.error.message)
+  }
+
+  const unitsUsingTheme = unitsUsingThemeResult.error
+    ? []
+    : unitsUsingThemeResult.data ?? []
+
+  const unitsById = new Map<string, { id: string; name: string | null }>()
+
+  for (const unit of unitsUsingTheme) {
+    unitsById.set(unit.id, unit)
+  }
+
+  for (const unit of markedUnitsResult.data ?? []) {
+    unitsById.set(unit.id, unit)
+  }
+
+  const projectsUsingTheme = projectsUsingThemeResult.data ?? []
+  const projectIds = projectsUsingTheme.map((project) => project.id)
+  const unitIds = Array.from(unitsById.keys())
+  const usageEntityIds = [...projectIds, ...unitIds]
+
+  const { data: usageImages, error: usageImagesError } =
+    usageEntityIds.length > 0
+      ? await supabase
+          .from('image_assets')
+          .select('entity_type, entity_id, image_url, is_featured, sort_order, created_at')
+          .in('entity_id', usageEntityIds)
+          .in('entity_type', ['project', 'unit'])
+          .eq('user_id', userId)
+          .order('is_featured', { ascending: false })
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: false })
+      : { data: [], error: null }
+
+  if (usageImagesError) {
+    throw new Error(usageImagesError.message)
+  }
+
+  const featuredImageByEntity = new Map<string, string>()
+
+  for (const image of usageImages ?? []) {
+    const key = `${image.entity_type}:${image.entity_id}`
+    if (!featuredImageByEntity.has(key)) {
+      featuredImageByEntity.set(key, image.image_url)
+    }
+  }
+
+  const usageItems: ThemeUsageItem[] = [
+    ...projectsUsingTheme.map((project) => ({
+      id: project.id,
+      type: 'project' as const,
+      name: project.name || 'Untitled Project',
+      href: `/projects/${project.id}`,
+      imageUrl: safeImageUrl(featuredImageByEntity.get(`project:${project.id}`)),
+    })),
+    ...unitIds.map((unitId) => {
+      const unit = unitsById.get(unitId)
+
+      return {
+        id: unitId,
+        type: 'unit' as const,
+        name: unit?.name || 'Untitled Unit',
+        href: `/units/${unitId}`,
+        imageUrl: safeImageUrl(featuredImageByEntity.get(`unit:${unitId}`)),
+      }
+    }),
+  ]
+
+  const assignableProjects: AssignableProject[] = (
+    assignableProjectsResult.data ?? []
+  ).map((project) => ({
+    id: project.id,
+    name: project.name || 'Untitled Project',
+    themeId: project.theme_id ?? null,
+  }))
+
+  const unitThemeById = new Map<string, string>()
+
+  if (!unitThemeRowsResult.error) {
+    for (const unitThemeRow of unitThemeRowsResult.data ?? []) {
+      if (unitThemeRow.theme_id) {
+        unitThemeById.set(unitThemeRow.id, unitThemeRow.theme_id)
+      }
+    }
+  }
+
+  for (const userTheme of userThemesResult.data ?? []) {
+    for (const unitId of unitThemeIdsFromDescription(userTheme.description)) {
+      if (!unitThemeById.has(unitId)) {
+        unitThemeById.set(unitId, userTheme.id)
+      }
+    }
+  }
+
+  const unitsByProjectId = new Map<
+    string,
+    Map<string, { id: string; name: string; currentThemeId: string | null }>
+  >()
+  const unitRowsById = new Map(
+    (unitRowsResult.data ?? []).map((unit) => [unit.id, unit])
+  )
+
+  for (const project of assignableProjects) {
+    unitsByProjectId.set(project.id, new Map())
+  }
+
+  for (const link of unitProjectRowsResult.data ?? []) {
+    const unit = unitRowsById.get(link.unit_id)
+    const projectUnits = unitsByProjectId.get(link.project_id)
+
+    if (!unit || !projectUnits) continue
+
+    projectUnits.set(unit.id, {
+      id: unit.id,
+      name: unit.name || 'Untitled Unit',
+      currentThemeId: unitThemeById.get(unit.id) ?? null,
+    })
+  }
+
+  for (const unit of unitRowsResult.data ?? []) {
+    if (!unit.project_id) continue
+
+    const projectUnits = unitsByProjectId.get(unit.project_id)
+    if (!projectUnits || projectUnits.has(unit.id)) continue
+
+    projectUnits.set(unit.id, {
+      id: unit.id,
+      name: unit.name || 'Untitled Unit',
+      currentThemeId: unitThemeById.get(unit.id) ?? null,
+    })
+  }
+
+  const projectUnitGroups: ProjectUnitGroup[] = assignableProjects.map(
+    (project) => ({
+      projectId: project.id,
+      projectName: project.name,
+      units: Array.from(unitsByProjectId.get(project.id)?.values() ?? []).sort(
+        (a, b) => a.name.localeCompare(b.name)
+      ),
+    })
+  )
+
+  return (
+    <>
+      <ThemeImageGallery
+        themeId={themeId}
+        heroUrl={heroUrl}
+        themeName={themeName || 'Theme image'}
+        deleteThemeImageAction={deleteThemeImage}
+      />
+
+      <section className="px-4 pt-6">
+        <ThemeAssignmentPanel
+          themeId={themeId}
+          projects={assignableProjects}
+          projectUnitGroups={projectUnitGroups}
+        />
+
+        <div className="mt-4">
+          <ThemeUsageCard items={usageItems} />
+        </div>
+      </section>
+
+      <section className="px-4 pt-6">
+        <DeleteConfirmationCard
+          itemId={themeId}
+          itemIdFieldName="themeId"
+          title="Delete Theme"
+          buttonLabel="Delete This Theme"
+          initialDescription="Permanently delete this theme from your gallery."
+          confirmDescription="If you delete this theme, it will be removed along with its palette, saved copies, and project links. This action cannot be undone."
+          deleteAction={deleteTheme}
+        />
+      </section>
+    </>
+  )
+}
+
 export default async function ThemeDetailPage({ params }: Props) {
   const perf = createPerfTimer('/themes/[id]')
   const { id } = await params
 
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   const cachedPublicTheme = await getCachedPublicTheme(id)
@@ -298,41 +608,15 @@ export default async function ThemeDetailPage({ params }: Props) {
 
   const isOwner = Boolean(user && user.id === theme.user_id)
   const heroUrl = safeImageUrl(theme.image_url)
-  const markedUnitIds = unitThemeIdsFromDescription(theme.description)
-
-  const projectsUsingThemePromise = user
-    ? supabase
-        .from('projects')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .eq('theme_id', theme.id)
-        .order('name', { ascending: true })
-    : Promise.resolve({ data: [], error: null })
-
-  const unitsUsingThemePromise = user
-    ? supabase
-        .from('units')
-        .select('id, name')
-        .eq('user_id', user.id)
-        .eq('theme_id', theme.id)
-        .order('name', { ascending: true })
-    : Promise.resolve({ data: [], error: null })
-
-  const markedUnitsPromise =
-    user && markedUnitIds.length > 0
-      ? supabase
-          .from('units')
-          .select('id, name')
-          .eq('user_id', user.id)
-          .in('id', markedUnitIds)
-      : Promise.resolve({ data: [], error: null })
+  const profilePromise = user
+    ? (async () => ({
+        data: await getDashboardProfile(user.id),
+      }))()
+    : undefined
 
   const [
     hydratedThemePaintRows,
     socialState,
-    projectsUsingThemeResult,
-    unitsUsingThemeResult,
-    markedUnitsResult,
   ] = await Promise.all([
     getHydratedThemePaints(
       supabase,
@@ -340,212 +624,8 @@ export default async function ThemeDetailPage({ params }: Props) {
       (theme.theme_paints || []) as unknown as ThemePaint[]
     ),
     getThemeSocialState(supabase, theme.id, user?.id),
-    projectsUsingThemePromise,
-    unitsUsingThemePromise,
-    markedUnitsPromise,
   ])
   perf.mark('secondary Supabase queries')
-
-  if (projectsUsingThemeResult.error) {
-    throw new Error(projectsUsingThemeResult.error.message)
-  }
-
-  const unitsUsingTheme = unitsUsingThemeResult.error
-    ? []
-    : unitsUsingThemeResult.data ?? []
-
-  const unitsById = new Map<string, { id: string; name: string | null }>()
-
-  for (const unit of unitsUsingTheme) {
-    unitsById.set(unit.id, unit)
-  }
-
-  for (const unit of markedUnitsResult.data ?? []) {
-    unitsById.set(unit.id, unit)
-  }
-
-  const projectsUsingTheme = projectsUsingThemeResult.data ?? []
-  const projectIds = projectsUsingTheme.map((project) => project.id)
-  const unitIds = Array.from(unitsById.keys())
-  const usageEntityIds = [...projectIds, ...unitIds]
-
-  const { data: usageImages, error: usageImagesError } =
-    usageEntityIds.length > 0
-      ? await supabase
-          .from('image_assets')
-          .select('entity_type, entity_id, image_url, is_featured, sort_order, created_at')
-          .in('entity_id', usageEntityIds)
-          .in('entity_type', ['project', 'unit'])
-          .eq('user_id', user?.id ?? '')
-          .order('is_featured', { ascending: false })
-          .order('sort_order', { ascending: true })
-          .order('created_at', { ascending: false })
-      : { data: [], error: null }
-
-  if (usageImagesError) {
-    throw new Error(usageImagesError.message)
-  }
-
-  const featuredImageByEntity = new Map<string, string>()
-
-  for (const image of usageImages ?? []) {
-    const key = `${image.entity_type}:${image.entity_id}`
-
-    if (!featuredImageByEntity.has(key)) {
-      featuredImageByEntity.set(key, image.image_url)
-    }
-  }
-
-  const usageItems: ThemeUsageItem[] = [
-    ...projectsUsingTheme.map((project) => ({
-      id: project.id,
-      type: 'project' as const,
-      name: project.name || 'Untitled Project',
-      href: `/projects/${project.id}`,
-      imageUrl: safeImageUrl(featuredImageByEntity.get(`project:${project.id}`)),
-    })),
-    ...unitIds.map((unitId) => {
-      const unit = unitsById.get(unitId)
-
-      return {
-        id: unitId,
-        type: 'unit' as const,
-        name: unit?.name || 'Untitled Unit',
-        href: `/units/${unitId}`,
-        imageUrl: safeImageUrl(featuredImageByEntity.get(`unit:${unitId}`)),
-      }
-    }),
-  ]
-
-  const [
-    { data: assignableProjectRows, error: assignableProjectsError },
-    { data: unitRows, error: unitRowsError },
-    { data: unitProjectRows, error: unitProjectRowsError },
-    { data: userThemeRows, error: userThemesError },
-    unitThemeRowsResult,
-  ] = user
-    ? await Promise.all([
-        supabase
-          .from('projects')
-          .select('id, name, theme_id')
-          .eq('user_id', user.id)
-          .order('name', { ascending: true }),
-        supabase
-          .from('units')
-          .select('id, name, project_id')
-          .eq('user_id', user.id)
-          .order('name', { ascending: true }),
-        supabase
-          .from('unit_projects')
-          .select('unit_id, project_id')
-          .eq('user_id', user.id),
-        supabase
-          .from('themes')
-          .select('id, description')
-          .eq('user_id', user.id),
-        supabase
-          .from('units')
-          .select('id, theme_id')
-          .eq('user_id', user.id),
-      ])
-    : [
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-        { data: [], error: null },
-      ]
-
-  if (assignableProjectsError) {
-    throw new Error(assignableProjectsError.message)
-  }
-
-  if (unitRowsError) {
-    throw new Error(unitRowsError.message)
-  }
-
-  if (unitProjectRowsError) {
-    throw new Error(unitProjectRowsError.message)
-  }
-
-  if (userThemesError) {
-    throw new Error(userThemesError.message)
-  }
-
-  const assignableProjects: AssignableProject[] = (
-    assignableProjectRows ?? []
-  ).map((project) => ({
-    id: project.id,
-    name: project.name || 'Untitled Project',
-    themeId: project.theme_id ?? null,
-  }))
-
-  const unitThemeById = new Map<string, string>()
-
-  if (!unitThemeRowsResult.error) {
-    for (const unitThemeRow of unitThemeRowsResult.data ?? []) {
-      if (unitThemeRow.theme_id) {
-        unitThemeById.set(unitThemeRow.id, unitThemeRow.theme_id)
-      }
-    }
-  }
-
-  for (const userTheme of userThemeRows ?? []) {
-    for (const unitId of unitThemeIdsFromDescription(userTheme.description)) {
-      if (!unitThemeById.has(unitId)) {
-        unitThemeById.set(unitId, userTheme.id)
-      }
-    }
-  }
-
-  const unitsByProjectId = new Map<
-    string,
-    Map<string, { id: string; name: string; currentThemeId: string | null }>
-  >()
-  const unitRowsById = new Map(
-    (unitRows ?? []).map((unit) => [unit.id, unit])
-  )
-
-  for (const project of assignableProjects) {
-    unitsByProjectId.set(project.id, new Map())
-  }
-
-  for (const link of unitProjectRows ?? []) {
-    const unit = unitRowsById.get(link.unit_id)
-    const projectUnits = unitsByProjectId.get(link.project_id)
-
-    if (!unit || !projectUnits) continue
-
-    projectUnits.set(unit.id, {
-      id: unit.id,
-      name: unit.name || 'Untitled Unit',
-      currentThemeId: unitThemeById.get(unit.id) ?? null,
-    })
-  }
-
-  for (const unit of unitRows ?? []) {
-    if (!unit.project_id) continue
-
-    const projectUnits = unitsByProjectId.get(unit.project_id)
-
-    if (!projectUnits || projectUnits.has(unit.id)) continue
-
-    projectUnits.set(unit.id, {
-      id: unit.id,
-      name: unit.name || 'Untitled Unit',
-      currentThemeId: unitThemeById.get(unit.id) ?? null,
-    })
-  }
-
-  const projectUnitGroups: ProjectUnitGroup[] = assignableProjects.map(
-    (project) => ({
-      projectId: project.id,
-      projectName: project.name,
-      units: Array.from(unitsByProjectId.get(project.id)?.values() ?? []).sort(
-        (a, b) => a.name.localeCompare(b.name)
-      ),
-    })
-  )
 
   const themePaints = hydratedThemePaintRows
     .map((paint) => {
@@ -605,7 +685,12 @@ export default async function ThemeDetailPage({ params }: Props) {
     <main className="min-h-screen bg-[#07090d] text-white">
       <div className="mx-auto max-w-md pb-28">
         <div className="px-4 pt-4">
-          <DashboardTopBar />
+          <Suspense fallback={<TopBarSkeleton />}>
+            <DashboardTopBar
+              userId={user?.id}
+              profilePromise={profilePromise}
+            />
+          </Suspense>
         </div>
 
         <ThemeDetailHero
@@ -630,15 +715,6 @@ export default async function ThemeDetailPage({ params }: Props) {
           toggleSaveAction={toggleThemeSave}
           reportAction={reportTheme}
         />
-
-        {isOwner ? (
-          <ThemeImageGallery
-            themeId={theme.id}
-            heroUrl={heroUrl}
-            themeName={theme.name || 'Theme image'}
-            deleteThemeImageAction={deleteThemeImage}
-          />
-        ) : null}
 
         <section className="px-4 pt-6">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/45">
@@ -666,33 +742,17 @@ export default async function ThemeDetailPage({ params }: Props) {
           )}
         </section>
 
-        <section className="px-4 pt-6">
-          <ThemeAssignmentPanel
-            themeId={theme.id}
-            projects={assignableProjects}
-            projectUnitGroups={projectUnitGroups}
-          />
-
-          {isOwner ? (
-            <div className="mt-4">
-              <ThemeUsageCard items={usageItems} />
-            </div>
-          ) : null}
-        </section>
-
-        {isOwner && (
-          <section className="px-4 pt-6">
-            <DeleteConfirmationCard
-              itemId={theme.id}
-              itemIdFieldName="themeId"
-              title="Delete Theme"
-              buttonLabel="Delete This Theme"
-              initialDescription="Permanently delete this theme from your gallery."
-              confirmDescription="If you delete this theme, it will be removed along with its palette, saved copies, and project links. This action cannot be undone."
-              deleteAction={deleteTheme}
+        {isOwner && user ? (
+          <Suspense fallback={<ThemeOwnerPanelsSkeleton />}>
+            <ThemeOwnerPanels
+              userId={user.id}
+              themeId={theme.id}
+              themeDescription={theme.description}
+              heroUrl={heroUrl}
+              themeName={theme.name}
             />
-          </section>
-        )}
+          </Suspense>
+        ) : null}
       </div>
     </main>
   )

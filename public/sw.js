@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-pwa-v2.8.6'
+const CACHE_VERSION = 'obsidian-gallery-pwa-v2.8.9-dev-bypass'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'
@@ -10,8 +10,11 @@ const PRECACHE_URLS = [
   '/favicon-32x32.png',
   '/apple-touch-icon.png',
   '/icon-192.png',
+  '/icon-192-v4.png',
   '/icon-512.png',
+  '/icon-512-v4.png',
   '/maskable-icon-512.png',
+  '/maskable-icon-512-v4.png',
   '/bookmark.svg',
   '/icons/nav/dashboard.svg',
   '/icons/nav/projects.svg',
@@ -104,6 +107,15 @@ self.addEventListener('fetch', (event) => {
 function shouldBypassServiceWorker(url, request) {
   const isSameOrigin = url.origin === self.location.origin
   const pathname = url.pathname
+
+  if (
+    isSameOrigin &&
+    (self.location.hostname === 'localhost' ||
+      self.location.hostname === '127.0.0.1' ||
+      self.location.hostname === '[::1]')
+  ) {
+    return true
+  }
 
   // Never cache Supabase auth/session refresh, direct database calls, or storage
   // responses. Some storage URLs can contain user uploads that are technically

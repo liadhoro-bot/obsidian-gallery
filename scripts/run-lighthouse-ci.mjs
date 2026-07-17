@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import net from 'node:net'
 import { resolve } from 'node:path'
 import lighthouse from 'lighthouse'
@@ -9,18 +9,59 @@ import {
   ensurePerfStorageState,
 } from './perf-auth-utils.mjs'
 
-const routes = [
+const importantOnly = process.env.PERF_IMPORTANT_ONLY === '1'
+
+const importantRoutes = [
+  { path: '/dashboard', requiresAuth: true },
+  { path: '/projects', requiresAuth: true },
+  { path: '/units', requiresAuth: true, expectedPathname: '/units' },
+  {
+    path: '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
+    requiresAuth: true,
+    expectedPathname: '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
+  },
+  { path: '/vault', requiresAuth: true },
+  {
+    path: '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
+    requiresAuth: true,
+    expectedPathname: '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
+  },
+  { path: '/recipes', requiresAuth: true },
+  {
+    path: '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
+    requiresAuth: true,
+    expectedPathname: '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
+  },
+  { path: '/themes', requiresAuth: true },
+  {
+    path: '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+    requiresAuth: true,
+    expectedPathname: '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+  },
+]
+
+const secondaryRoutes = [
+  { path: '/', requiresAuth: true, expectedPathname: '/dashboard' },
   { path: '/login', requiresAuth: false },
   { path: '/offline', requiresAuth: false },
   { path: '/support', requiresAuth: false },
   { path: '/settings/terms', requiresAuth: false },
-  { path: '/dashboard', requiresAuth: true },
-  { path: '/projects', requiresAuth: true },
-  { path: '/recipes', requiresAuth: true },
-  { path: '/themes', requiresAuth: true },
-  { path: '/vault', requiresAuth: true },
-  { path: '/units', requiresAuth: true },
-] 
+]
+
+const routes = importantOnly ? importantRoutes : [...importantRoutes, ...secondaryRoutes]
+
+const requiredMainPerformanceRoutes = [
+  '/dashboard',
+  '/projects',
+  '/units',
+  '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
+  '/vault',
+  '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
+  '/recipes',
+  '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
+  '/themes',
+  '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+]
 
 const budgets = {
   largestContentfulPaint: 2500,
@@ -38,9 +79,7 @@ const outputDir = resolve('.lighthouseci')
 const perfStorageStatePath = resolve(
   process.env.PERF_STORAGE_STATE ?? '.perf/perf-storage-state-lighthouse.json'
 )
-const hasPerfStorageState = Boolean(
-  perfStorageStatePath && existsSync(perfStorageStatePath)
-)
+const reusePerfStorageState = process.env.PERF_REUSE_STORAGE_STATE === '1'
 const chromeUserDataDir = resolve('.perf/lighthouse-browser-profile')
 
 function bin(name) {
@@ -140,6 +179,24 @@ function assertBudget(failures, route, metric, actual, budget, unit = 'ms') {
   })
 }
 
+function assertRouteCoverage() {
+  const measuredRoutes = new Set(routes.map((route) => route.path))
+
+  if (measuredRoutes.size !== routes.length) {
+    throw new Error('Lighthouse performance route matrix contains duplicate paths.')
+  }
+
+  const missingRoutes = requiredMainPerformanceRoutes.filter(
+    (route) => !measuredRoutes.has(route)
+  )
+
+  if (missingRoutes.length) {
+    throw new Error(
+      `Lighthouse performance route matrix is missing: ${missingRoutes.join(', ')}`
+    )
+  }
+}
+
 function formatMetricLine(route, score, lcp, tbt, cls, scriptKb, imageKb, totalKb) {
   return [
     route.padEnd(16),
@@ -153,7 +210,7 @@ function formatMetricLine(route, score, lcp, tbt, cls, scriptKb, imageKb, totalK
   ].join('  ')
 }
 
-async function resolveProtectedDetailRoutes(context, baseUrl) {
+async function resolveProtectedProjectDetailRoute(context, baseUrl) {
   const page = await context.newPage()
 
   try {
@@ -168,31 +225,34 @@ async function resolveProtectedDetailRoutes(context, baseUrl) {
       return match ?? null
     })
 
-    if (!projectRoute) {
-      return []
-    }
+    return projectRoute
+  } finally {
+    await page.close()
+  }
+}
 
-    await page.goto(`${baseUrl}${projectRoute}`, { waitUntil: 'networkidle' })
+async function assertAuthenticatedBenchmarkReady(context, baseUrl) {
+  const page = await context.newPage()
 
-    const unitRoute = await page.evaluate(() => {
-      const links = Array.from(document.querySelectorAll('a[href]'))
-      const match = links
-        .map((link) => link.getAttribute('href'))
-        .find((href) => typeof href === 'string' && /^\/units\/[^/?#]+$/.test(href))
-
-      return match ?? null
+  try {
+    await page.goto(`${baseUrl}/dashboard`, {
+      waitUntil: 'networkidle',
+      timeout: 60_000,
     })
 
-    return [
-      { path: projectRoute, requiresAuth: true },
-      ...(unitRoute ? [{ path: unitRoute, requiresAuth: true }] : []),
-    ]
+    const finalPathname = new URL(page.url()).pathname
+    if (finalPathname === '/login' || finalPathname === '/auth') {
+      throw new Error(
+        'Authenticated performance storage state did not unlock /dashboard.'
+      )
+    }
   } finally {
     await page.close()
   }
 }
 
 async function main() {
+  assertRouteCoverage()
   mkdirSync(outputDir, { recursive: true })
 
   const appPort = await findAvailablePort(requestedAppPort)
@@ -205,7 +265,7 @@ async function main() {
   try {
     await waitForServer(baseUrl)
 
-    if (!hasPerfStorageState) {
+    if (!reusePerfStorageState || !existsSync(perfStorageStatePath)) {
       await ensurePerfStorageState({
         baseUrl,
         storageStatePath: perfStorageStatePath,
@@ -223,16 +283,23 @@ async function main() {
         storageStatePath: perfStorageStatePath,
         baseUrl,
       })
+      await assertAuthenticatedBenchmarkReady(context, baseUrl)
 
-      const detailRoutes = await resolveProtectedDetailRoutes(context, baseUrl)
+      const resolvedProjectDetailRoute = await resolveProtectedProjectDetailRoute(
+        context,
+        baseUrl
+      )
+      const detailRoutes = resolvedProjectDetailRoute
+        ? [
+            {
+              path: resolvedProjectDetailRoute,
+              requiresAuth: true,
+              expectedPathname: resolvedProjectDetailRoute,
+            },
+          ]
+        : []
 
       for (const route of [...routes, ...detailRoutes]) {
-        if (route.requiresAuth && !existsSync(perfStorageStatePath)) {
-          skippedRoutes.push(route.path)
-          console.log(`${route.path.padEnd(16)} skipped  missing PERF_STORAGE_STATE`)
-          continue
-        }
-
         const url = `${baseUrl}${route.path}`
         const result = await lighthouse(url, {
           port: chromePort,
@@ -275,10 +342,22 @@ async function main() {
 
         const finalPathname = new URL(lhr.finalUrl).pathname
         if (route.requiresAuth && finalPathname === '/login') {
-          skippedRoutes.push(route.path)
-          console.log(
-            `${route.path.padEnd(16)} skipped  redirected to /login; configure PERF_STORAGE_STATE`
-          )
+          failures.push({
+            route: route.path,
+            metric: 'authenticated route',
+            actual: finalPathname,
+            budget: route.expectedPathname ?? route.path,
+          })
+          continue
+        }
+
+        if (route.expectedPathname && finalPathname !== route.expectedPathname) {
+          failures.push({
+            route: route.path,
+            metric: 'final pathname',
+            actual: finalPathname,
+            budget: route.expectedPathname,
+          })
           continue
         }
 

@@ -23,7 +23,13 @@ const painToWorkflowScreen: Record<PainId, WorkflowScreenId> = {
   choices: 'themes',
 }
 
-export default function OnboardingShell() {
+type OnboardingShellProps = {
+  previewMode?: boolean
+}
+
+export default function OnboardingShell({
+  previewMode = false,
+}: OnboardingShellProps) {
   const router = useRouter()
 
   const [currentStep, setCurrentStep] = useState(0)
@@ -82,6 +88,7 @@ export default function OnboardingShell() {
           }}
           onBack={() => setCurrentStep((step) => Math.max(0, step - 1))}
           onSkip={() => setCurrentStep((step) => step + 1)}
+          previewMode={previewMode}
         />
       ),
     },
@@ -90,6 +97,7 @@ export default function OnboardingShell() {
       label: 'Legal',
       component: (
         <LegalScreen
+          previewMode={previewMode}
           onEnter={() => {
             if (createdUnitId) {
               router.push(`/units/${createdUnitId}`)

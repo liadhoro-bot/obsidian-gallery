@@ -2,6 +2,8 @@ type RouterWithPrefetch = {
   prefetch: (href: string) => void
 }
 
+type PrefetchPriority = 'idle' | 'immediate'
+
 const prefetched = new Set<string>()
 const queue: (() => void)[] = []
 let scheduled = false
@@ -50,13 +52,26 @@ export function isPrefetchableHref(href: string) {
   return href.startsWith('/') && !href.startsWith('//')
 }
 
-export function prefetchRoute(router: RouterWithPrefetch, href: string) {
+export function prefetchRoute(
+  router: RouterWithPrefetch,
+  href: string,
+  options?: {
+    priority?: PrefetchPriority
+  }
+) {
   if (!isPrefetchableHref(href) || prefetched.has(href)) return false
 
   prefetched.add(href)
-  schedule(() => {
+  const runPrefetch = () => {
     router.prefetch(href)
-  })
+  }
+
+  if (options?.priority === 'immediate') {
+    runPrefetch()
+    return true
+  }
+
+  schedule(runPrefetch)
 
   return true
 }
