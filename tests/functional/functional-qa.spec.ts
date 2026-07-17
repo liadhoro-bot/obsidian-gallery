@@ -157,14 +157,14 @@ test('theme tabs, search, and create form work', async ({ page }) => {
   await expectHealthyPage(page, '/themes')
   await expectAuthenticated(page)
 
-  await page.getByRole('link', { name: 'Find Theme' }).click()
+  await page.getByRole('link', { name: 'Discover' }).click()
   await expect(page).toHaveURL(/tab=find/)
   await page.getByPlaceholder('Search themes by name or tags...').fill('spectral')
   await expect(page.getByPlaceholder('Search themes by name or tags...')).toHaveValue(
     'spectral'
   )
 
-  await page.getByRole('link', { name: 'Create Theme' }).click()
+  await page.getByRole('link', { name: 'Create' }).click()
   await expect(page).toHaveURL(/tab=create/)
   await page.getByPlaceholder('Ghostly Ether').fill('QA Theme Draft')
   await expect(page.getByText('QA Theme Draft')).toBeVisible()

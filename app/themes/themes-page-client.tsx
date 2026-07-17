@@ -68,8 +68,8 @@ type Props = {
 
 const tabs: { key: Tab; label: string }[] = [
   { key: 'mine', label: 'My Themes' },
-  { key: 'find', label: 'Find Theme' },
-  { key: 'create', label: 'Create Theme' },
+  { key: 'find', label: 'Discover' },
+  { key: 'create', label: 'Create' },
 ]
 
 function themeMatchesSearch(theme: Theme, query: string) {
