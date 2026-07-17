@@ -114,14 +114,14 @@ test('recipe tabs, search, and create form work', async ({ page }) => {
   await expectHealthyPage(page, '/recipes')
   await expectAuthenticated(page)
 
-  await page.getByRole('button', { name: 'Create Guide' }).click()
+  await page.getByRole('button', { name: 'Create' }).click()
   await expect(page).toHaveURL(/tab=custom/)
   await expect(page.getByPlaceholder('e.g. Shadow Knight Armor')).toBeVisible()
 
   await page.getByPlaceholder('e.g. Shadow Knight Armor').fill('QA Guide Draft')
   await expect(page.getByText('QA Guide Draft')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Find Guide' }).click()
+  await page.getByRole('button', { name: 'Discover' }).click()
   await expect(page).toHaveURL(/tab=find/)
   await page.getByPlaceholder('Search guides by name...').fill('red')
   await expect(page.getByPlaceholder('Search guides by name...')).toHaveValue('red')

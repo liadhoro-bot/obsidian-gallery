@@ -445,11 +445,11 @@ test('recipes tabs and search stay responsive', async ({ page }, testInfo) => {
   ).toBeFalsy()
 
   const findRecipeTab = page
-    .getByRole('button', { name: 'Find Guide' })
-    .or(page.getByRole('link', { name: 'Find Guide' }))
+    .getByRole('button', { name: 'Discover' })
+    .or(page.getByRole('link', { name: 'Discover' }))
   const createRecipeTab = page
-    .getByRole('button', { name: 'Create Guide' })
-    .or(page.getByRole('link', { name: 'Create Guide' }))
+    .getByRole('button', { name: 'Create' })
+    .or(page.getByRole('link', { name: 'Create' }))
 
   const tabMs = await expectInteractionWithinBudget('recipe tab switch', () =>
     createRecipeTab.click()

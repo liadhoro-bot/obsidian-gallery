@@ -118,7 +118,7 @@ export default function RecipesPageClient({
           onClick={() => setTab('find')}
           className={tabClass(currentTab === 'find')}
         >
-          Find Guide
+          Discover
         </button>
 
         <button
@@ -126,7 +126,7 @@ export default function RecipesPageClient({
           onClick={() => setTab('custom')}
           className={tabClass(currentTab === 'custom')}
         >
-          Create Guide
+          Create
         </button>
       </div>
 
