@@ -143,7 +143,7 @@ test('paints tabs, search, and custom paint form work', async ({ page }) => {
   ).toHaveValue('red')
   await expect(page).toHaveURL(/q=red/)
 
-  await page.getByRole('link', { name: 'Create Custom' }).click()
+  await page.getByRole('link', { name: 'Custom Mix' }).click()
   await expect(page).toHaveURL(/tab=custom/)
   await page.getByPlaceholder('e.g. Void Stalker Grey').fill('QA Custom Grey')
   await expect(page.getByText('QA Custom Grey')).toBeVisible()

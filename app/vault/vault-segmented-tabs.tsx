@@ -27,9 +27,9 @@ const tabs: {
   key: VaultTab
   label: string
 }[] = [
-  { key: 'collection', label: 'My Collection' },
+  { key: 'collection', label: 'My Paints' },
   { key: 'find', label: 'Find Paint' },
-  { key: 'custom', label: 'Create Custom' },
+  { key: 'custom', label: 'Custom Mix' },
 ]
 
 function buildHref(tab: VaultTab) {

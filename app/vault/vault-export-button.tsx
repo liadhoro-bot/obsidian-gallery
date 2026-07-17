@@ -156,7 +156,7 @@ function getActiveFilters({
   ownership: string
 }) {
   const filters = [
-    `Tab: ${tab === 'collection' ? 'My Collection' : 'Find Paints'}`,
+    `Tab: ${tab === 'collection' ? 'My Paints' : 'Find Paints'}`,
   ]
 
   if (q) filters.push(`Search: ${q}`)
