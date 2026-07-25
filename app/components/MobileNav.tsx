@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useSyncExternalStore, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { prefetchRoute } from './route-prefetch'
 
@@ -12,11 +12,33 @@ const navItems = [
   { name: 'Themes', href: '/themes', icon: '/icons/nav/themes.svg' },
 ]
 
+function subscribeToUrlChanges(callback: () => void) {
+  window.addEventListener('popstate', callback)
+
+  return () => {
+    window.removeEventListener('popstate', callback)
+  }
+}
+
+function getPreviewSnapshot() {
+  return ['1', 'true'].includes(
+    new URLSearchParams(window.location.search).get('preview') ?? ''
+  )
+}
+
+function getPreviewServerSnapshot() {
+  return false
+}
+
 export default function MobileNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [optimisticHref, setOptimisticHref] = useState(pathname)
+  const isPreview = useSyncExternalStore(
+    subscribeToUrlChanges,
+    getPreviewSnapshot,
+    getPreviewServerSnapshot
+  )
   const shouldHide =
     pathname === '/' ||
     pathname.startsWith('/login') ||
@@ -26,9 +48,10 @@ export default function MobileNav() {
     pathname.startsWith('/support') ||
     pathname.startsWith('/settings/terms')
 
-  useEffect(() => {
-    setOptimisticHref(pathname)
-  }, [pathname])
+  const getNavHref = useCallback(
+    (href: string) => (isPreview ? `${href}?preview=1` : href),
+    [isPreview]
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -47,7 +70,7 @@ export default function MobileNav() {
 
       for (const item of navItems) {
         if (item.href !== pathname) {
-          prefetchRoute(router, item.href)
+          prefetchRoute(router, getNavHref(item.href))
         }
       }
     }
@@ -72,11 +95,11 @@ export default function MobileNav() {
         window.clearTimeout(timeoutId)
       }
     }
-  }, [pathname, router])
+  }, [getNavHref, pathname, router])
 
   function prefetchNavHref(href: string, priority: 'idle' | 'immediate' = 'idle') {
     if (href !== pathname) {
-      prefetchRoute(router, href, { priority })
+      prefetchRoute(router, getNavHref(href), { priority })
     }
   }
 
@@ -85,10 +108,9 @@ export default function MobileNav() {
       return
     }
 
-    setOptimisticHref(href)
     prefetchNavHref(href, 'immediate')
     startTransition(() => {
-      router.push(href)
+      router.push(getNavHref(href))
     })
   }
 
@@ -101,8 +123,7 @@ export default function MobileNav() {
       <div className="mx-auto flex min-h-16 max-w-md items-center justify-around px-2">
         {navItems.map((item) => {
           const isActive =
-            optimisticHref === item.href ||
-            optimisticHref.startsWith(`${item.href}/`)
+            pathname === item.href || pathname.startsWith(`${item.href}/`)
 
           return (
             <button

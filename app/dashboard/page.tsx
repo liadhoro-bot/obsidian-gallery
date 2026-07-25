@@ -2,8 +2,8 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
-import V3PreviewPage from '../components/v3-preview-page'
 
+import DashboardV3Preview from './dashboard-v3-preview'
 import DashboardTabSwitcher from './dashboard-tab-switcher'
 import DashboardTopBar from './dashboard-top-bar'
 import DashboardWelcome from './dashboard-welcome'
@@ -137,40 +137,6 @@ export default async function DashboardPage({
 }
 
 function DashboardPreview() {
-  return (
-    <V3PreviewPage
-      active="dashboard"
-      eyebrow="Dashboard"
-      title="One place for the next model, guide, and paint decision."
-      text="You arrive here only after the curator bridge. From here, the v3 mirror connects to the rest of the app structure using the new naming."
-      primary={{
-        href: '/projects?preview=1',
-        label: 'Open Projects',
-        text: 'Plan what belongs on the painting table.',
-      }}
-      panels={[
-        {
-          href: '/projects?preview=1',
-          label: 'Projects',
-          text: 'Organize units, deadlines, and progress.',
-        },
-        {
-          href: '/paints?preview=1',
-          label: 'Paints',
-          text: 'Track owned colors, wishlists, and missing supplies.',
-        },
-        {
-          href: '/guides?preview=1',
-          label: 'Guides',
-          text: 'Build and collect painting processes and tutorials.',
-        },
-        {
-          href: '/themes?preview=1',
-          label: 'Themes',
-          text: 'Capture palettes and visual direction before painting.',
-        },
-      ]}
-    />
-  )
+  return <DashboardV3Preview />
 }
 
