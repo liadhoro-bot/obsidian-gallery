@@ -6,9 +6,6 @@ export default async function proxy(request: NextRequest) {
   const isInspectionPreview = ['1', 'true'].includes(
     request.nextUrl.searchParams.get('preview') ?? ''
   )
-  const isOnboardingPreview =
-    pathname === '/onboarding' &&
-    isInspectionPreview
 
   const isInspectionPreviewRoute =
     pathname === '/onboarding' ||
@@ -106,10 +103,6 @@ export default async function proxy(request: NextRequest) {
 
   if (!hasAcceptedTerms && !isPublicRoute) {
     return NextResponse.redirect(new URL('/onboarding', request.url))
-  }
-
-  if (hasAcceptedTerms && pathname === '/onboarding' && !isOnboardingPreview) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return response

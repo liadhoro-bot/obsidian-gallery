@@ -32,10 +32,12 @@ export default function LoginForm({
   )
   const [loading, setLoading] = useState(false)
   const effectiveNextPath = audience === 'new' ? '/onboarding' : nextPath
-  const previewNextPath = '/onboarding?preview=1'
 
   function continuePreviewFlow() {
-    window.location.assign(previewNextPath)
+    const onboardingUrl = new URL('/onboarding', window.location.origin)
+    onboardingUrl.searchParams.set('preview', '1')
+    onboardingUrl.searchParams.set('reset', Date.now().toString())
+    window.location.assign(onboardingUrl.toString())
   }
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
