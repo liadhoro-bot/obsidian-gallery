@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { prefetchRoute } from './route-prefetch'
 
 const navItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
+  { name: 'Home', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
   { name: 'Projects', href: '/projects', icon: '/icons/nav/projects.svg' },
   { name: 'Paints', href: '/paints', icon: '/icons/nav/vault.svg' },
   { name: 'Guides', href: '/guides', icon: '/icons/nav/recipes.svg' },

@@ -7,7 +7,7 @@ import { addProject } from './actions'
 import { ProjectWithImage } from './project-library'
 import { createPerfTimer } from '../../utils/perf/server'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
-import V3PreviewPage from '../components/v3-preview-page'
+import ProjectsV3Preview from './projects-v3-preview'
 
 type ProjectsPageProps = {
   searchParams: Promise<{
@@ -145,7 +145,6 @@ function ProjectsTabsSkeleton() {
 
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
   const perf = createPerfTimer('/projects')
-  const supabase = await createClient()
   const resolvedSearchParams = await searchParams
   const isPreview = ['1', 'true'].includes(
     resolvedSearchParams.preview ?? ''
@@ -153,38 +152,10 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   if (isPreview) {
     perf.total()
-    return (
-      <V3PreviewPage
-        active="projects"
-        eyebrow="Projects"
-        title="Campaigns, units, and next actions in one working view."
-        text="Projects remains the planning center in v3, but this mirror keeps the inspection flow away from the current authenticated implementation."
-        primary={{
-          href: '/paints?preview=1',
-          label: 'Open Paints',
-          text: 'Check the colors needed for the next unit.',
-        }}
-        panels={[
-          {
-            href: '/projects?preview=1',
-            label: 'Active bench',
-            text: 'Units in progress, blockers, deadlines, and quick resumes.',
-          },
-          {
-            href: '/themes?preview=1',
-            label: 'Theme assignment',
-            text: 'Attach a visual direction before work starts.',
-          },
-          {
-            href: '/guides?preview=1',
-            label: 'Guide assignment',
-            text: 'Connect projects to painting steps and tutorial plans.',
-          },
-        ]}
-      />
-    )
+    return <ProjectsV3Preview />
   }
 
+  const supabase = await createClient()
   const activeTab = resolvedSearchParams.tab === 'create' ? 'create' : 'mine'
 
   const user = await getSessionUser(supabase)
