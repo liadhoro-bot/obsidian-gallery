@@ -4,20 +4,42 @@ import dynamic from 'next/dynamic'
 import { useState } from 'react'
 const GoogleLoginButton = dynamic(() => import('./google-login-button'))
 
-export default function LoginForm({ nextPath }: { nextPath: string }) {
+type LoginAudience = 'new' | 'returning'
+
+type LoginMessage = {
+  kind: 'error' | 'success'
+  text: string
+}
+
+export default function LoginForm({
+  audience,
+  authError,
+  nextPath,
+  onAudienceChange,
+  onBack,
+}: {
+  audience: LoginAudience
+  authError?: string | null
+  nextPath: string
+  onAudienceChange: (audience: LoginAudience) => void
+  onBack: () => void
+}) {
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState<LoginMessage | null>(
+    authError ? { kind: 'error', text: authError } : null
+  )
   const [loading, setLoading] = useState(false)
+  const effectiveNextPath = audience === 'new' ? '/onboarding' : nextPath
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setLoading(true)
-    setMessage('')
+    setMessage(null)
 
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
     const callbackUrl = new URL('/auth/callback', window.location.origin)
-    callbackUrl.searchParams.set('next', nextPath)
+    callbackUrl.searchParams.set('next', effectiveNextPath)
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -27,32 +49,56 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
     })
 
     if (error) {
-      setMessage(error.message)
+      setMessage({
+        kind: 'error',
+        text: 'That magic link did not send. Check the address and try again.',
+      })
       setLoading(false)
       return
     }
 
-    setMessage('Magic link sent. Check your email.')
+    setMessage({ kind: 'success', text: 'Magic link sent. Check your email.' })
     setLoading(false)
   }
 
   return (
-    <>
-      <form onSubmit={handleLogin} className="mt-6 space-y-4">
-        <div>
-          <label className="mb-2 block text-sm text-neutral-300">Email</label>
+    <section className="w-full max-w-md rounded-3xl border border-white/10 bg-[#06090d]/92 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+      <div className="px-1 pb-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
+          Obsidian Gallery
+        </p>
+        <h1 className="mt-2 text-2xl font-black leading-tight text-white">
+          Your miniature workspace. Organized to perfection.
+        </h1>
+      </div>
 
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            className="min-h-11 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-            placeholder="you@example.com"
-          />
-        </div>
+      <div className="mt-4 grid grid-cols-2 rounded-2xl bg-white/[0.08] p-1">
+        {[
+          { key: 'new' as const, label: 'New painter' },
+          { key: 'returning' as const, label: 'Returning' },
+        ].map((option) => {
+          const isActive = audience === option.key
 
-        <GoogleLoginButton nextPath={nextPath} />
+          return (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => onAudienceChange(option.key)}
+              className={[
+                'h-10 rounded-xl text-xs font-black transition',
+                isActive
+                  ? 'bg-[#101722] text-white shadow-sm'
+                  : 'text-white/38 hover:text-white/70',
+              ].join(' ')}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+
+      <form onSubmit={handleLogin} className="mt-4 space-y-4">
+        <GoogleLoginButton nextPath={effectiveNextPath} />
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
@@ -62,10 +108,24 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
+        <label className="block">
+          <span className="sr-only">Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            autoComplete="email"
+            inputMode="email"
+            className="min-h-12 w-full rounded-2xl border border-white/10 bg-[#101722] px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/28 focus:border-cyan-300/55 focus:bg-[#121c29]"
+            placeholder="you@example.com"
+          />
+        </label>
+
         <button
           type="submit"
           disabled={loading}
-          className="tap-press tap-target inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+          className="tap-press tap-target inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-4 py-4 text-sm font-black text-black shadow-[0_0_28px_rgba(34,211,238,0.26)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:shadow-none"
         >
           {loading ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -74,7 +134,31 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
         </button>
       </form>
 
-      {message ? <p className="mt-4 text-sm text-neutral-300">{message}</p> : null}
-    </>
+      <p className="mt-4 text-center text-[11px] font-bold leading-5 text-white/38">
+        {audience === 'new'
+          ? "First time? You'll be guided through setup after signing in."
+          : 'Welcome back. We will take you where you were headed.'}
+      </p>
+
+      {message ? (
+        <p
+          className={`mt-4 rounded-2xl border px-3 py-2 text-sm ${
+            message.kind === 'error'
+              ? 'border-red-400/25 bg-red-500/10 text-red-100'
+              : 'border-cyan-400/25 bg-cyan-500/10 text-cyan-100'
+          }`}
+        >
+          {message.text}
+        </p>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={onBack}
+        className="tap-target mx-auto mt-4 block rounded-full px-4 py-2 text-sm font-bold text-white/40 transition hover:bg-white/5 hover:text-white/70"
+      >
+        &larr; Back
+      </button>
+    </section>
   )
 }

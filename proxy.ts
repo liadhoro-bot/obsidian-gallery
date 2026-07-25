@@ -3,9 +3,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const isInspectionPreview = ['1', 'true'].includes(
+    request.nextUrl.searchParams.get('preview') ?? ''
+  )
   const isOnboardingPreview =
     pathname === '/onboarding' &&
-    ['1', 'true'].includes(request.nextUrl.searchParams.get('preview') ?? '')
+    isInspectionPreview
+
+  if (isInspectionPreview && (pathname === '/onboarding' || pathname === '/dashboard')) {
+    return NextResponse.next({
+      request,
+    })
+  }
 
   const isPublicRoute =
     pathname === '/' ||
@@ -14,6 +23,10 @@ export default async function proxy(request: NextRequest) {
     pathname === '/onboarding' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
+    pathname === '/recipes' ||
+    pathname.startsWith('/recipes/') ||
+    pathname === '/themes' ||
+    pathname.startsWith('/themes/') ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||

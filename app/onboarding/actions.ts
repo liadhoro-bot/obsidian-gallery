@@ -1,10 +1,89 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { createPerfTimer } from '../../utils/perf/server'
+import {
+  getSafeImageExtension,
+  validateGalleryImageFile,
+} from '../../utils/images/gallery-upload'
 
 const IMAGE_BUCKET = 'obsidian-images'
+
+export type OnboardingGoal =
+  | 'paint_miniature'
+  | 'organize_hobby'
+  | 'create_content'
+  | 'look_around'
+
+export type OnboardingExperience =
+  | 'just_starting'
+  | 'know_basics'
+  | 'experienced'
+  | 'professional'
+
+const goalFlowMap: Record<OnboardingGoal, string | null> = {
+  paint_miniature: 'paint_miniature',
+  organize_hobby: 'organize_hobby',
+  create_content: 'create_content',
+  look_around: null,
+}
+
+export async function saveOnboardingGoalAction(
+  goal: OnboardingGoal,
+  experienceLevel: OnboardingExperience | null
+) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: 'You must be logged in to save onboarding preferences.',
+    }
+  }
+
+  const flowName = goalFlowMap[goal]
+  const now = new Date().toISOString()
+  const { error } = await supabase.from('user_onboarding_flows').upsert(
+    {
+      user_id: user.id,
+      goal_key: goal,
+      flow_name: flowName,
+      experience_level: experienceLevel,
+      started_at: now,
+      completed_at: null,
+      dismissed_at: flowName ? null : now,
+      updated_at: now,
+    },
+    { onConflict: 'user_id' }
+  )
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message,
+    }
+  }
+
+  const { error: completionError } = await supabase
+    .from('user_onboarding_action_completions')
+    .delete()
+    .eq('user_id', user.id)
+
+  if (completionError) {
+    return {
+      ok: false,
+      error: completionError.message,
+    }
+  }
+
+  return { ok: true }
+}
 
 export type CreateOnboardingProjectState = {
   success: boolean
@@ -110,15 +189,28 @@ export async function createFirstProjectUnitAction(
     }
   }
 
-  const projectName = String(formData.get('projectName') || '').trim()
+  const rawProjectName = String(formData.get('projectName') || '').trim()
   const unitName = String(formData.get('unitName') || '').trim()
-  const deadline = String(formData.get('deadline') || '').trim()
+  const deadline = String(formData.get('deadline') || '').trim() || null
   const image = formData.get('image')
 
-  if (!projectName || !unitName || !deadline) {
+  if (!unitName) {
     return {
       ok: false,
-      error: 'Project name, unit name, and deadline are required.',
+      error: 'Miniature name is required.',
+    }
+  }
+
+  const projectName = rawProjectName || 'Onboarding Bench'
+
+  if (image instanceof File && image.size > 0) {
+    const validationError = validateGalleryImageFile(image)
+
+    if (validationError) {
+      return {
+        ok: false,
+        error: validationError,
+      }
     }
   }
 
@@ -149,6 +241,7 @@ export async function createFirstProjectUnitAction(
       project_id: project.id,
       name: unitName,
       deadline,
+      is_active: true,
       is_featured: true,
     })
     .select('id')
@@ -164,17 +257,32 @@ export async function createFirstProjectUnitAction(
   }
   perf.mark('unit Supabase mutation')
 
-await captureServerEvent({
-  distinctId: user.id,
-  event: 'unit_created',
-  properties: {
-    unit_id: unit.id,
-    unit_name: unitName,
-    project_id: project.id,
-    has_deadline: Boolean(deadline),
-    source: 'onboarding',
-  },
-})
+  const { error: unitProjectsError } = await supabase
+    .from('unit_projects')
+    .insert({
+      unit_id: unit.id,
+      project_id: project.id,
+      user_id: user.id,
+    })
+
+  if (unitProjectsError) {
+    return {
+      ok: false,
+      error: unitProjectsError.message,
+    }
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_created',
+    properties: {
+      unit_id: unit.id,
+      unit_name: unitName,
+      project_id: project.id,
+      has_deadline: Boolean(deadline),
+      source: 'onboarding',
+    },
+  })
   perf.mark('analytics event')
 
   if (image instanceof File && image.size > 0) {
@@ -186,7 +294,7 @@ await captureServerEvent({
     const maxSize = 8 * 1024 * 1024
 
     if (isAllowedImage && image.size <= maxSize) {
-      const extension = getFileExtension(image)
+      const extension = getSafeImageExtension(image.name || getFileExtension(image))
       const safeProjectName = slugify(projectName) || 'project'
       const safeUnitName = slugify(unitName) || 'unit'
 
@@ -224,7 +332,9 @@ await captureServerEvent({
             storage_path: storagePath,
             alt_text: unitName,
             is_featured: true,
+            is_primary: true,
             sort_order: 0,
+            storage_bucket: IMAGE_BUCKET,
           })
 
         if (imageAssetError) {
@@ -239,10 +349,134 @@ await captureServerEvent({
   }
 
   perf.total()
+  revalidatePath('/dashboard')
+  revalidatePath('/projects')
+  revalidatePath(`/projects/${project.id}`)
+  revalidatePath(`/units/${unit.id}`)
+
   return {
     ok: true,
     projectId: project.id,
     unitId: unit.id,
+  }
+}
+
+export type CreateOnboardingGuideResult =
+  | {
+      ok: true
+      guideId: string
+    }
+  | {
+      ok: false
+      error: string
+    }
+
+export async function createOnboardingGuideAction(
+  formData: FormData
+): Promise<CreateOnboardingGuideResult> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: 'You must be logged in to create a guide.',
+    }
+  }
+
+  const name = String(formData.get('name') || '').trim()
+  const description = String(formData.get('description') || '').trim()
+  const coverImage = formData.get('coverImage')
+
+  if (!name) {
+    return {
+      ok: false,
+      error: 'Guide name is required.',
+    }
+  }
+
+  if (coverImage instanceof File && coverImage.size > 0) {
+    const validationError = validateGalleryImageFile(coverImage)
+
+    if (validationError) {
+      return {
+        ok: false,
+        error: validationError,
+      }
+    }
+  }
+
+  let imageUrl: string | null = null
+  let storagePath: string | null = null
+
+  if (coverImage instanceof File && coverImage.size > 0) {
+    const fileExt = getSafeImageExtension(coverImage.name)
+    storagePath = `recipe-covers/${user.id}/onboarding-${crypto.randomUUID()}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from(IMAGE_BUCKET)
+      .upload(storagePath, coverImage, {
+        contentType: coverImage.type || 'image/jpeg',
+        upsert: false,
+      })
+
+    if (uploadError) {
+      return {
+        ok: false,
+        error: uploadError.message,
+      }
+    }
+
+    const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(storagePath)
+    imageUrl = data.publicUrl
+  }
+
+  const { data: guide, error } = await supabase
+    .from('recipes')
+    .insert({
+      user_id: user.id,
+      name,
+      description: description || null,
+      image_url: imageUrl,
+      is_public: false,
+    })
+    .select('id, name, description, image_url, is_public')
+    .single()
+
+  if (error || !guide) {
+    if (storagePath) {
+      await supabase.storage.from(IMAGE_BUCKET).remove([storagePath])
+    }
+
+    return {
+      ok: false,
+      error: error?.message || 'Could not create guide.',
+    }
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'recipe_created',
+    properties: {
+      recipe_id: guide.id,
+      recipe_name: guide.name,
+      is_public: guide.is_public,
+      has_description: Boolean(guide.description),
+      has_image: Boolean(guide.image_url),
+      source: 'onboarding',
+    },
+  })
+
+  revalidatePath('/dashboard')
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${guide.id}`)
+
+  return {
+    ok: true,
+    guideId: guide.id,
   }
 }
 export async function acceptTermsAction() {

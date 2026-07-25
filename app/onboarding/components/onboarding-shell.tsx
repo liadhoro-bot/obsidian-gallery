@@ -1,164 +1,82 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import WelcomeScreen from './screens/welcome-screen'
-import ProblemScreen, { type PainId } from './screens/problem-screen'
-import WorkflowScreen from './screens/workflow-screen'
+import CuratorBridgeScreen from './screens/curator-bridge-screen'
 import FirstProjectScreen from './screens/first-project-screen'
+import GoalScreen from './screens/goal-screen'
+import GuideCreationScreen from './screens/guide-creation-screen'
 import LegalScreen from './screens/legal-screen'
-
-type WorkflowScreenId =
-  | 'themes'
-  | 'recipes'
-  | 'vault'
-  | 'projects'
-  | 'dashboard'
-
-const painToWorkflowScreen: Record<PainId, WorkflowScreenId> = {
-  pile: 'projects',
-  schemes: 'recipes',
-  paints: 'vault',
-  fragmentation: 'dashboard',
-  choices: 'themes',
-}
+import type { OnboardingGoal } from '../actions'
 
 type OnboardingShellProps = {
   previewMode?: boolean
 }
 
+type OnboardingStep = 'terms' | 'persona' | 'creation' | 'curator'
+
 export default function OnboardingShell({
   previewMode = false,
 }: OnboardingShellProps) {
   const router = useRouter()
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>('terms')
+  const [selectedGoal, setSelectedGoal] =
+    useState<OnboardingGoal>('paint_miniature')
 
-  const [currentStep, setCurrentStep] = useState(0)
-  const [createdUnitId, setCreatedUnitId] = useState<string | null>(null)
-  const [selectedPains, setSelectedPains] = useState<PainId[]>([])
-  const [initialWorkflowScreen, setInitialWorkflowScreen] =
-    useState<WorkflowScreenId>('projects')
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [currentStep])
 
-  const steps = [
-    {
-      id: 'welcome',
-      label: 'Welcome',
-      component: <WelcomeScreen onNext={() => setCurrentStep(1)} />,
-    },
-    {
-      id: 'problem',
-      label: 'Problem',
-      component: (
-        <ProblemScreen
-          selectedPains={selectedPains}
-          onSelectedPainsChange={setSelectedPains}
-          onBack={() => setCurrentStep((step) => Math.max(0, step - 1))}
-          onSkip={() => setCurrentStep((step) => step + 1)}
-          onContinue={() => {
-            const firstSelectedPain = selectedPains[0]
+  function continueFromPersona(goal: OnboardingGoal) {
+    setSelectedGoal(goal)
 
-            setInitialWorkflowScreen(
-              firstSelectedPain
-                ? painToWorkflowScreen[firstSelectedPain]
-                : 'projects'
-            )
+    if (goal === 'look_around') {
+      setCurrentStep('curator')
+      return
+    }
 
-            setCurrentStep((step) => step + 1)
-          }}
-        />
-      ),
-    },
-    {
-      id: 'workflow',
-      label: 'Workflow',
-      component: (
-        <WorkflowScreen
-          key={initialWorkflowScreen}
-          initialScreen={initialWorkflowScreen}
-        />
-      ),
-    },
-    {
-      id: 'project',
-      label: 'Project',
-      component: (
-        <FirstProjectScreen
-          onCreated={(unitId) => {
-            setCreatedUnitId(unitId)
-            setCurrentStep((step) => step + 1)
-          }}
-          onBack={() => setCurrentStep((step) => Math.max(0, step - 1))}
-          onSkip={() => setCurrentStep((step) => step + 1)}
-          previewMode={previewMode}
-        />
-      ),
-    },
-    {
-      id: 'legal',
-      label: 'Legal',
-      component: (
-        <LegalScreen
-          previewMode={previewMode}
-          onEnter={() => {
-            if (createdUnitId) {
-              router.push(`/units/${createdUnitId}`)
-              return
-            }
-
-            router.push('/dashboard')
-          }}
-        />
-      ),
-    },
-  ] as const
-
-  const activeStep = steps[currentStep]
-  const isFirstStep = currentStep === 0
-  const isLastStep = currentStep === steps.length - 1
-
-  const nextLabel = useMemo(() => {
-    if (isLastStep) return 'Finish'
-    if (currentStep === 0) return 'Start Your Workshop'
-    if (currentStep === 1) return 'Show Me How'
-    return 'Next'
-  }, [currentStep, isLastStep])
-
-  function goNext() {
-    if (isLastStep) return
-    setCurrentStep((step) => Math.min(steps.length - 1, step + 1))
+    setCurrentStep('creation')
   }
 
-  function goBack() {
-    if (isFirstStep) return
-    setCurrentStep((step) => Math.max(0, step - 1))
+  function enterDashboard() {
+    router.push('/dashboard?preview=1')
   }
-
-  const shouldShowFooter =
-    !isFirstStep && !['problem', 'project', 'legal'].includes(activeStep.id)
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col">
-        <div className="flex-1">{activeStep.component}</div>
+      <div className="mx-auto min-h-screen w-full max-w-md">
+        {currentStep === 'terms' ? (
+          <LegalScreen
+            previewMode={previewMode}
+            onAccepted={() => setCurrentStep('persona')}
+          />
+        ) : null}
 
-        {shouldShowFooter ? (
-          <footer className="mt-5 grid grid-cols-[1fr_1.4fr] gap-3 px-5 pb-6">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={isFirstStep}
-              className="h-12 rounded-2xl border border-white/10 bg-slate-950/70 text-sm font-black text-white/60 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              Back
-            </button>
+        {currentStep === 'persona' ? (
+          <GoalScreen
+            previewMode={previewMode}
+            onContinue={continueFromPersona}
+          />
+        ) : null}
 
-            <button
-              type="button"
-              onClick={goNext}
-              className="h-12 rounded-2xl border border-cyan-400/30 bg-cyan-400/15 text-sm font-black text-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.18)] transition hover:bg-cyan-400/20"
-            >
-              {nextLabel}
-            </button>
-          </footer>
+        {currentStep === 'creation' && selectedGoal !== 'create_content' ? (
+          <FirstProjectScreen
+            previewMode={previewMode}
+            onCreated={() => setCurrentStep('curator')}
+            onSkip={() => setCurrentStep('curator')}
+          />
+        ) : null}
+
+        {currentStep === 'creation' && selectedGoal === 'create_content' ? (
+          <GuideCreationScreen
+            previewMode={previewMode}
+            onCreated={() => setCurrentStep('curator')}
+            onSkip={() => setCurrentStep('curator')}
+          />
+        ) : null}
+
+        {currentStep === 'curator' ? (
+          <CuratorBridgeScreen onEnter={enterDashboard} />
         ) : null}
       </div>
     </main>
