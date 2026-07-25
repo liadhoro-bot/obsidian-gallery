@@ -9,17 +9,18 @@ type LoginAudience = 'new' | 'returning'
 type LoginExperienceProps = {
   authError?: string | null
   nextPath: string
+  previewMode?: boolean
 }
 
 export default function LoginExperience({
   authError,
   nextPath,
+  previewMode = false,
 }: LoginExperienceProps) {
   const [showSignIn, setShowSignIn] = useState(Boolean(authError))
   const [audience, setAudience] = useState<LoginAudience>('new')
 
   function openSignIn(nextAudience: LoginAudience) {
-    window.location.assign('/onboarding?preview=1')
     setAudience(nextAudience)
     setShowSignIn(true)
   }
@@ -84,6 +85,7 @@ export default function LoginExperience({
               audience={audience}
               authError={authError}
               nextPath={nextPath}
+              previewMode={previewMode}
               onAudienceChange={setAudience}
               onBack={() => setShowSignIn(false)}
             />

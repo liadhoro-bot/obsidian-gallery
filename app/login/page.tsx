@@ -4,6 +4,7 @@ type LoginPageProps = {
   searchParams?: Promise<{
     error?: string
     next?: string
+    preview?: string
   }>
 }
 
@@ -15,6 +16,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       : null
   const requestedNext = resolvedSearchParams?.next ?? '/dashboard'
   const nextPath = requestedNext.startsWith('/') ? requestedNext : '/dashboard'
+  const previewMode = ['1', 'true'].includes(
+    resolvedSearchParams?.preview ?? ''
+  )
 
-  return <LoginExperience nextPath={nextPath} authError={authError} />
+  return (
+    <LoginExperience
+      nextPath={nextPath}
+      authError={authError}
+      previewMode={previewMode}
+    />
+  )
 }
