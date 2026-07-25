@@ -9,7 +9,7 @@ import {
 } from '../../lib/public-cache'
 import { createPerfTimer } from '../../utils/perf/server'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
-import V3PreviewPage from '../components/v3-preview-page'
+import ThemesV3Preview from './themes-v3-preview'
 
 type Props = {
   searchParams?: Promise<{
@@ -415,36 +415,7 @@ export default async function ThemesPage({ searchParams }: Props) {
 
   if (isPreview) {
     perf.total()
-    return (
-      <V3PreviewPage
-        active="themes"
-        eyebrow="Themes"
-        title="Palettes, references, and visual direction before paint hits plastic."
-        text="Themes keeps the same route name, but this mirror page shows the v3 relationship to Projects, Paints, and Guides."
-        primary={{
-          href: '/projects?preview=1',
-          label: 'Open Projects',
-          text: 'Apply a theme to a working project.',
-        }}
-        panels={[
-          {
-            href: '/themes?preview=1',
-            label: 'Palette builder',
-            text: 'Compose colors, references, and finish notes.',
-          },
-          {
-            href: '/paints?preview=1',
-            label: 'Paint source',
-            text: 'Pull real owned paints into theme planning.',
-          },
-          {
-            href: '/guides?preview=1',
-            label: 'Guide source',
-            text: 'Turn a palette into a repeatable painting guide.',
-          },
-        ]}
-      />
-    )
+    return <ThemesV3Preview />
   }
 
   const themeSearch = params?.q?.trim() || ''
