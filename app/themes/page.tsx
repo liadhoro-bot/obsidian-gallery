@@ -9,9 +9,11 @@ import {
 } from '../../lib/public-cache'
 import { createPerfTimer } from '../../utils/perf/server'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
+import V3PreviewPage from '../components/v3-preview-page'
 
 type Props = {
   searchParams?: Promise<{
+    preview?: string
     tab?: string
     q?: string
     selectForProject?: string
@@ -51,6 +53,7 @@ type ThemeSummary = {
   description: string | null
   image_url: string | null
   is_public: boolean | null
+  created_at?: string | null
   tags?: string[] | null
   theme_paints?: ThemePaintSummary[] | null
 }
@@ -175,7 +178,7 @@ async function ThemesContent({
   initialSearch,
   selectForProject,
 }: {
-  userId: string
+  userId: string | null
   activeTab: ThemesTab
   initialSearch: string
   selectForProject: string | null
@@ -183,7 +186,14 @@ async function ThemesContent({
   const perf = createPerfTimer('/themes:content')
   const supabase = await createClient()
 
-  const [publicThemes, myThemesResult, savedRowsResult, catalogPaints, customPaintsResult] =
+  const [
+    cachedPublicThemes,
+    livePublicThemesResult,
+    myThemesResult,
+    savedRowsResult,
+    catalogPaints,
+    customPaintsResult,
+  ] =
     await Promise.all([
       getCachedPublicThemes(),
       supabase
@@ -216,53 +226,111 @@ async function ThemesContent({
           )
         `
         )
-        .eq('user_id', userId)
+        .eq('is_public', true)
         .order('created_at', { ascending: false }),
-      supabase
-        .from('saved_themes')
-        .select(
-          `
-          theme_id,
-          themes (
-            id,
-            user_id,
-            name,
-            description,
-            image_url,
-            is_public,
-            tags,
-            created_at,
-            theme_paints (
+      userId
+        ? supabase
+            .from('themes')
+            .select(
+              `
               id,
-              sort_order,
-              paint_source,
-              paint_catalog_id,
-              custom_paint_id,
-              catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+              user_id,
+              name,
+              description,
+              image_url,
+              is_public,
+              tags,
+              created_at,
+              theme_paints (
                 id,
-                swatch_image_url,
-                hex_approx
-              ),
-              custom_paint:paints!theme_paints_custom_paint_id_fkey (
-                id,
-                color_hex
+                sort_order,
+                paint_source,
+                paint_catalog_id,
+                custom_paint_id,
+                catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+                  id,
+                  swatch_image_url,
+                  hex_approx
+                ),
+                custom_paint:paints!theme_paints_custom_paint_id_fkey (
+                  id,
+                  color_hex
+                )
               )
+            `
             )
-          )
-        `
-        )
-        .eq('user_id', userId),
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+      userId
+        ? supabase
+            .from('saved_themes')
+            .select(
+              `
+              theme_id,
+              themes (
+                id,
+                user_id,
+                name,
+                description,
+                image_url,
+                is_public,
+                tags,
+                created_at,
+                theme_paints (
+                  id,
+                  sort_order,
+                  paint_source,
+                  paint_catalog_id,
+                  custom_paint_id,
+                  catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+                    id,
+                    swatch_image_url,
+                    hex_approx
+                  ),
+                  custom_paint:paints!theme_paints_custom_paint_id_fkey (
+                    id,
+                    color_hex
+                  )
+                )
+              )
+            `
+            )
+            .eq('user_id', userId)
+        : Promise.resolve({ data: [], error: null }),
       getCachedCatalogPaintOptions(),
-      supabase
-        .from('paints')
-        .select('id, name, manufacturer, series, color_hex')
-        .eq('user_id', userId)
-        .order('name', { ascending: true }),
+      userId
+        ? supabase
+            .from('paints')
+            .select('id, name, manufacturer, series, color_hex')
+            .eq('user_id', userId)
+            .order('name', { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
     ])
   perf.mark('main Supabase query')
 
-  const rawPublicThemeRows = (publicThemes ?? []) as ThemeSummary[]
   const rawMyThemeRows = (myThemesResult.data ?? []) as ThemeSummary[]
+  const publicThemeMap = new Map<string, ThemeSummary>()
+
+  for (const theme of (cachedPublicThemes ?? []) as ThemeSummary[]) {
+    publicThemeMap.set(theme.id, theme)
+  }
+
+  for (const theme of (livePublicThemesResult.data ?? []) as ThemeSummary[]) {
+    publicThemeMap.set(theme.id, theme)
+  }
+
+  for (const theme of rawMyThemeRows) {
+    if (theme.is_public) {
+      publicThemeMap.set(theme.id, theme)
+    }
+  }
+
+  const rawPublicThemeRows = Array.from(publicThemeMap.values()).sort(
+    (a, b) =>
+      new Date(b.created_at || 0).getTime() -
+      new Date(a.created_at || 0).getTime()
+  )
   const savedThemeRows = (savedRowsResult.data ?? []) as SavedThemeRow[]
   const rawSavedThemes = savedThemeRows
     .map((row) => firstValue(row.themes))
@@ -343,6 +411,42 @@ async function ThemesContent({
 export default async function ThemesPage({ searchParams }: Props) {
   const perf = createPerfTimer('/themes')
   const params = searchParams ? await searchParams : undefined
+  const isPreview = ['1', 'true'].includes(params?.preview ?? '')
+
+  if (isPreview) {
+    perf.total()
+    return (
+      <V3PreviewPage
+        active="themes"
+        eyebrow="Themes"
+        title="Palettes, references, and visual direction before paint hits plastic."
+        text="Themes keeps the same route name, but this mirror page shows the v3 relationship to Projects, Paints, and Guides."
+        primary={{
+          href: '/projects?preview=1',
+          label: 'Open Projects',
+          text: 'Apply a theme to a working project.',
+        }}
+        panels={[
+          {
+            href: '/themes?preview=1',
+            label: 'Palette builder',
+            text: 'Compose colors, references, and finish notes.',
+          },
+          {
+            href: '/paints?preview=1',
+            label: 'Paint source',
+            text: 'Pull real owned paints into theme planning.',
+          },
+          {
+            href: '/guides?preview=1',
+            label: 'Guide source',
+            text: 'Turn a palette into a repeatable painting guide.',
+          },
+        ]}
+      />
+    )
+  }
+
   const themeSearch = params?.q?.trim() || ''
   const selectForProject = params?.selectForProject || null
   const supabase = await createClient()
@@ -350,15 +454,15 @@ export default async function ThemesPage({ searchParams }: Props) {
   const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
-  if (!user) redirect('/login')
-
   const requestedTab =
     params?.tab === 'mine' || params?.tab === 'create' || params?.tab === 'find'
       ? params.tab
       : null
 
   let activeTab: ThemesTab
-  if (requestedTab) {
+  if (!user) {
+    activeTab = 'find'
+  } else if (requestedTab) {
     activeTab = requestedTab
   } else {
     const [{ data: myTheme }, { data: savedTheme }] = await Promise.all([
@@ -379,16 +483,20 @@ export default async function ThemesPage({ searchParams }: Props) {
     activeTab = myTheme || savedTheme ? 'mine' : 'find'
   }
 
-  const profilePromise = (async () => ({
-    data: await getDashboardProfile(user.id),
-  }))()
+  const profilePromise = user
+    ? (async () => ({
+        data: await getDashboardProfile(user.id),
+      }))()
+    : undefined
   perf.total()
 
   return (
     <main className="min-h-screen bg-[#03070b] pb-24 text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={null}>
-          <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
+          {user ? (
+            <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
+          ) : null}
         </Suspense>
 
         <div>
@@ -406,10 +514,10 @@ export default async function ThemesPage({ searchParams }: Props) {
         </div>
 
         <ThemesContent
-          userId={user.id}
+          userId={user?.id ?? null}
           activeTab={activeTab}
           initialSearch={themeSearch}
-          selectForProject={selectForProject}
+          selectForProject={user ? selectForProject : null}
         />
       </div>
     </main>

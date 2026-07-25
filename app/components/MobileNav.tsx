@@ -7,8 +7,8 @@ import { prefetchRoute } from './route-prefetch'
 const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
   { name: 'Projects', href: '/projects', icon: '/icons/nav/projects.svg' },
-  { name: 'Paints', href: '/vault', icon: '/icons/nav/vault.svg' },
-  { name: 'Guides', href: '/recipes', icon: '/icons/nav/recipes.svg' },
+  { name: 'Paints', href: '/paints', icon: '/icons/nav/vault.svg' },
+  { name: 'Guides', href: '/guides', icon: '/icons/nav/recipes.svg' },
   { name: 'Themes', href: '/themes', icon: '/icons/nav/themes.svg' },
 ]
 
@@ -88,7 +88,7 @@ export default function MobileNav() {
     setOptimisticHref(href)
     prefetchNavHref(href, 'immediate')
     startTransition(() => {
-      router.push(href, { scroll: false })
+      router.push(href)
     })
   }
 

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
+import V3PreviewPage from '../components/v3-preview-page'
 
 import DashboardTabSwitcher from './dashboard-tab-switcher'
 import DashboardTopBar from './dashboard-top-bar'
@@ -137,58 +138,39 @@ export default async function DashboardPage({
 
 function DashboardPreview() {
   return (
-    <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-        <header className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
-              Obsidian Gallery
-            </p>
-            <h1 className="mt-1 text-xl font-black">Your dashboard</h1>
-          </div>
-          <span className="rounded-full bg-cyan-300 px-3 py-1 text-xs font-black text-black">
-            Preview
-          </span>
-        </header>
-
-        <section className="space-y-2">
-          <h2 className="text-3xl font-black leading-tight">
-            One place for the next model, guide, and paint decision.
-          </h2>
-          <p className="text-sm font-medium leading-6 text-white/55">
-            This temporary branch shows the complete v3 onboarding path without
-            creating an account or writing onboarding records.
-          </p>
-        </section>
-
-        <section className="grid gap-3">
-          {[
-            ['Next action', 'Prime and block in the largest color area.'],
-            ['Active miniature', 'Your first onboarding model appears here.'],
-            ['Guide workspace', 'Drafts and published recipes sit beside projects.'],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-2xl border border-white/10 bg-white/[0.045] p-4"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300/80">
-                {label}
-              </p>
-              <p className="mt-2 text-base font-bold leading-6 text-white">
-                {value}
-              </p>
-            </div>
-          ))}
-        </section>
-
-        <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4">
-          <p className="text-sm font-bold leading-6 text-cyan-50">
-            Preview complete. Auth, terms persistence, and real unit/guide
-            mutations are intentionally bypassed on this inspection path.
-          </p>
-        </section>
-      </div>
-    </main>
+    <V3PreviewPage
+      active="dashboard"
+      eyebrow="Dashboard"
+      title="One place for the next model, guide, and paint decision."
+      text="You arrive here only after the curator bridge. From here, the v3 mirror connects to the rest of the app structure using the new naming."
+      primary={{
+        href: '/projects?preview=1',
+        label: 'Open Projects',
+        text: 'Plan what belongs on the painting table.',
+      }}
+      panels={[
+        {
+          href: '/projects?preview=1',
+          label: 'Projects',
+          text: 'Organize units, deadlines, and progress.',
+        },
+        {
+          href: '/paints?preview=1',
+          label: 'Paints',
+          text: 'Track owned colors, wishlists, and missing supplies.',
+        },
+        {
+          href: '/guides?preview=1',
+          label: 'Guides',
+          text: 'Build and collect painting processes and tutorials.',
+        },
+        {
+          href: '/themes?preview=1',
+          label: 'Themes',
+          text: 'Capture palettes and visual direction before painting.',
+        },
+      ]}
+    />
   )
 }
 

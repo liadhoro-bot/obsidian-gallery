@@ -10,7 +10,15 @@ export default async function proxy(request: NextRequest) {
     pathname === '/onboarding' &&
     isInspectionPreview
 
-  if (isInspectionPreview && (pathname === '/onboarding' || pathname === '/dashboard')) {
+  const isInspectionPreviewRoute =
+    pathname === '/onboarding' ||
+    pathname === '/dashboard' ||
+    pathname === '/projects' ||
+    pathname === '/paints' ||
+    pathname === '/guides' ||
+    pathname === '/themes'
+
+  if (isInspectionPreview && isInspectionPreviewRoute) {
     return NextResponse.next({
       request,
     })
@@ -23,8 +31,12 @@ export default async function proxy(request: NextRequest) {
     pathname === '/onboarding' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
+    pathname === '/guides' ||
+    pathname.startsWith('/guides/') ||
     pathname === '/recipes' ||
     pathname.startsWith('/recipes/') ||
+    pathname === '/paints' ||
+    pathname.startsWith('/paints/') ||
     pathname === '/themes' ||
     pathname.startsWith('/themes/') ||
     pathname === '/api/vault/paint-equivalencies' ||
