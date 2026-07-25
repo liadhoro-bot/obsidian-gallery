@@ -42,27 +42,17 @@ export default function GoogleLoginButton({ nextPath }: { nextPath: string }) {
     const callbackUrl = new URL('/auth/callback', window.location.origin)
     callbackUrl.searchParams.set('next', nextPath)
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: callbackUrl.toString(),
-        skipBrowserRedirect: true,
       },
     })
 
     if (error) {
       setErrorMessage(error.message)
       setIsLoading(false)
-      return
     }
-
-    if (!data.url) {
-      setErrorMessage('Google sign-in did not return a redirect URL.')
-      setIsLoading(false)
-      return
-    }
-
-    window.location.assign(data.url)
   }
 
   return (
