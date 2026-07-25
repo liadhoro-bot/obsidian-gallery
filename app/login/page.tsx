@@ -14,11 +14,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     resolvedSearchParams?.error === 'auth-callback'
       ? 'That magic link expired or was opened somewhere else. Send yourself a new one to get back in.'
       : null
-  const requestedNext = resolvedSearchParams?.next ?? '/dashboard'
-  const nextPath = requestedNext.startsWith('/') ? requestedNext : '/dashboard'
   const previewMode = ['1', 'true'].includes(
     resolvedSearchParams?.preview ?? ''
   )
+  const requestedNext =
+    resolvedSearchParams?.next ??
+    (previewMode ? '/dashboard?preview=1' : '/dashboard')
+  const nextPath = requestedNext.startsWith('/') ? requestedNext : '/dashboard'
 
   return (
     <LoginExperience
