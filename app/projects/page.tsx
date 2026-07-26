@@ -8,6 +8,7 @@ import { ProjectWithImage } from './project-library'
 import { createPerfTimer } from '../../utils/perf/server'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
 import ProjectsV3Preview from './projects-v3-preview'
+import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 
 type ProjectsPageProps = {
   searchParams: Promise<{
@@ -146,9 +147,7 @@ function ProjectsTabsSkeleton() {
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
   const perf = createPerfTimer('/projects')
   const resolvedSearchParams = await searchParams
-  const isPreview = ['1', 'true'].includes(
-    resolvedSearchParams.preview ?? ''
-  )
+  const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
 
   if (isPreview) {
     perf.total()

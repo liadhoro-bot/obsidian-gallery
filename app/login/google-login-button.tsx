@@ -29,13 +29,26 @@ function GoogleIcon() {
   )
 }
 
-export default function GoogleLoginButton({ nextPath }: { nextPath: string }) {
+export default function GoogleLoginButton({
+  nextPath,
+  previewMode = false,
+  onPreviewContinue,
+}: {
+  nextPath: string
+  previewMode?: boolean
+  onPreviewContinue?: () => void
+}) {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   async function handleGoogleLogin() {
     setIsLoading(true)
     setErrorMessage(null)
+
+    if (previewMode) {
+      onPreviewContinue?.()
+      return
+    }
 
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()

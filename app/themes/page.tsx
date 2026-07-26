@@ -8,6 +8,7 @@ import {
   getCachedPublicThemes,
 } from '../../lib/public-cache'
 import { createPerfTimer } from '../../utils/perf/server'
+import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
 import ThemesV3Preview from './themes-v3-preview'
 
@@ -411,7 +412,7 @@ async function ThemesContent({
 export default async function ThemesPage({ searchParams }: Props) {
   const perf = createPerfTimer('/themes')
   const params = searchParams ? await searchParams : undefined
-  const isPreview = ['1', 'true'].includes(params?.preview ?? '')
+  const isPreview = await hasV3PreviewSession(params?.preview)
 
   if (isPreview) {
     perf.total()

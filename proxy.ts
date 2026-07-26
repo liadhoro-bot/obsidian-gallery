@@ -1,11 +1,20 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  V3_PREVIEW_COOKIE,
+  V3_PREVIEW_COOKIE_MAX_AGE,
+  isV3PreviewValue,
+} from './lib/v3-preview'
 
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-  const isInspectionPreview = ['1', 'true'].includes(
-    request.nextUrl.searchParams.get('preview') ?? ''
+  const hasInspectionPreviewCookie =
+    request.cookies.get(V3_PREVIEW_COOKIE)?.value === '1'
+  const hasInspectionPreviewParam = isV3PreviewValue(
+    request.nextUrl.searchParams.get('preview')
   )
+  const isInspectionPreview =
+    hasInspectionPreviewParam || hasInspectionPreviewCookie
 
   const isInspectionPreviewRoute =
     pathname === '/onboarding' ||
@@ -16,9 +25,19 @@ export default async function proxy(request: NextRequest) {
     pathname === '/themes'
 
   if (isInspectionPreview && isInspectionPreviewRoute) {
-    return NextResponse.next({
+    const response = NextResponse.next({
       request,
     })
+
+    if (hasInspectionPreviewParam && !hasInspectionPreviewCookie) {
+      response.cookies.set(V3_PREVIEW_COOKIE, '1', {
+        maxAge: V3_PREVIEW_COOKIE_MAX_AGE,
+        path: '/',
+        sameSite: 'lax',
+      })
+    }
+
+    return response
   }
 
   const isPublicRoute =

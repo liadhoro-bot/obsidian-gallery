@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useSyncExternalStore, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { hasV3PreviewDocumentCookie, isV3PreviewValue } from '../../lib/v3-preview'
 import { prefetchRoute } from './route-prefetch'
 
 const navItems = [
@@ -21,8 +22,9 @@ function subscribeToUrlChanges(callback: () => void) {
 }
 
 function getPreviewSnapshot() {
-  return ['1', 'true'].includes(
-    new URLSearchParams(window.location.search).get('preview') ?? ''
+  return (
+    isV3PreviewValue(new URLSearchParams(window.location.search).get('preview')) ||
+    hasV3PreviewDocumentCookie(document.cookie)
   )
 }
 

@@ -2,6 +2,7 @@
 
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
+import { isV3PreviewValue } from '../../../lib/v3-preview'
 
 const emailOtpTypes = new Set<EmailOtpType>([
   'signup',
@@ -34,6 +35,16 @@ function getLoginErrorUrl(reason: string | null, next: string) {
 
   if (next !== '/dashboard') {
     loginUrl.searchParams.set('next', next)
+  }
+
+  try {
+    const nextUrl = new URL(next, window.location.origin)
+
+    if (isV3PreviewValue(nextUrl.searchParams.get('preview'))) {
+      loginUrl.searchParams.set('preview', '1')
+    }
+  } catch {
+    // Keep the generic login fallback if the next value cannot be parsed.
   }
 
   if (reason) {

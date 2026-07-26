@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState } from 'react'
+import { getV3PreviewCookie } from '../../lib/v3-preview'
 const GoogleLoginButton = dynamic(() => import('./google-login-button'))
 
 type LoginAudience = 'new' | 'returning'
@@ -36,15 +37,26 @@ export default function LoginForm({
     previewMode
   )
 
-  function continuePreviewFlow() {
-    const onboardingUrl = new URL('/onboarding', window.location.origin)
-    onboardingUrl.searchParams.set('preview', '1')
-    onboardingUrl.searchParams.set('reset', Date.now().toString())
-    window.location.assign(onboardingUrl.toString())
+  function continuePreviewFlow(destination = '/onboarding') {
+    document.cookie = getV3PreviewCookie()
+
+    const previewUrl = new URL(destination, window.location.origin)
+    previewUrl.searchParams.set('preview', '1')
+
+    if (previewUrl.pathname === '/onboarding') {
+      previewUrl.searchParams.set('reset', Date.now().toString())
+    }
+
+    window.location.assign(previewUrl.toString())
   }
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (previewMode) {
+      continuePreviewFlow(audience === 'new' ? '/onboarding' : nextPath)
+      return
+    }
 
     setLoading(true)
     setMessage(null)
@@ -111,7 +123,13 @@ export default function LoginForm({
       </div>
 
       <form onSubmit={handleLogin} className="mt-4 space-y-4">
-        <GoogleLoginButton nextPath={effectiveNextPath} />
+        <GoogleLoginButton
+          nextPath={effectiveNextPath}
+          previewMode={previewMode}
+          onPreviewContinue={() =>
+            continuePreviewFlow(audience === 'new' ? '/onboarding' : nextPath)
+          }
+        />
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
@@ -143,7 +161,13 @@ export default function LoginForm({
           {loading ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : null}
-          <span>{loading ? 'Sending...' : 'Send Magic Link'}</span>
+          <span>
+            {loading
+              ? 'Sending...'
+              : previewMode
+                ? 'Continue to setup'
+                : 'Send Magic Link'}
+          </span>
         </button>
       </form>
 
@@ -158,10 +182,10 @@ export default function LoginForm({
       {previewMode ? (
         <button
           type="button"
-          onClick={continuePreviewFlow}
+          onClick={() => continuePreviewFlow()}
           className="tap-target mx-auto mt-3 block rounded-full px-4 py-2 text-xs font-black text-cyan-300/80 transition hover:bg-cyan-300/10 hover:text-cyan-200"
         >
-          Continue without login
+          Continue as V3 test user
         </button>
       ) : null}
 

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
+import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 
 import DashboardV3Preview from './dashboard-v3-preview'
 import DashboardTabSwitcher from './dashboard-tab-switcher'
@@ -33,7 +34,7 @@ export default async function DashboardPage({
 }: DashboardPageProps) {
   const perf = createPerfTimer('/dashboard')
   const resolvedSearchParams = searchParams ? await searchParams : undefined
-  const isPreview = ['1', 'true'].includes(resolvedSearchParams?.preview ?? '')
+  const isPreview = await hasV3PreviewSession(resolvedSearchParams?.preview)
 
   if (isPreview) {
     perf.total()
