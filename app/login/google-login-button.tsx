@@ -39,7 +39,7 @@ export default function GoogleLoginButton({ nextPath }: { nextPath: string }) {
 
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
-    const callbackUrl = new URL('/auth/callback', window.location.origin)
+    const callbackUrl = new URL('/auth/confirm', window.location.origin)
     callbackUrl.searchParams.set('next', nextPath)
 
     const { error } = await supabase.auth.signInWithOAuth({

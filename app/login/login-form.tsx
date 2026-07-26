@@ -51,7 +51,7 @@ export default function LoginForm({
 
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
-    const callbackUrl = new URL('/auth/callback', window.location.origin)
+    const callbackUrl = new URL('/auth/confirm', window.location.origin)
     callbackUrl.searchParams.set('next', effectiveNextPath)
 
     const { error } = await supabase.auth.signInWithOtp({
