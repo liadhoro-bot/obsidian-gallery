@@ -10,10 +10,10 @@
 
 .appHeader {
   position: relative;
-  display: grid;
+  display: flex;
   min-height: 62px;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
+  justify-content: space-between;
   gap: var(--og-space-2);
   overflow: hidden;
   border-block-end: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950));
@@ -48,9 +48,11 @@
 }
 
 .appTitle {
-  position: relative;
+  position: absolute;
+  inset-inline-start: 50%;
   z-index: 1;
   margin: 0;
+  transform: translateX(-50%);
   color: var(--og-paper-50);
   font-family: var(--og-font-display);
   font-size: 1.76rem;
@@ -58,6 +60,7 @@
   letter-spacing: 0;
   line-height: var(--og-leading-title);
   text-align: center;
+  white-space: nowrap;
   text-shadow: 0 2px 2px color-mix(in srgb, var(--og-walnut-950) 76%, transparent);
 }
 
@@ -234,6 +237,10 @@
   background-image: var(--og-material-parchment-panel);
   background-repeat: no-repeat, repeat, no-repeat;
   background-size: 100% 100%, 260px auto, 100% 100%;
+}
+
+.nextActionObject::before {
+  display: none;
 }
 
 .nextActionSummary {
@@ -420,10 +427,10 @@
 
 .featuredPanel {
   display: grid;
-  height: 238px;
+  min-height: 238px;
   grid-template-columns: 144px minmax(0, 1fr);
   gap: 12px;
-  padding: 33px 12px 10px;
+  padding: 33px 12px 12px;
 }
 
 .panelPlaque {
