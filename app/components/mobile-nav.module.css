@@ -10,8 +10,8 @@
   background-color: var(--og-leather-700);
   background-image: var(--og-material-leather);
   background-position: center;
-  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 100% 100%, 280px auto, 100% 100%;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 240px auto, 100% 100%;
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--og-brass-500) 22%, transparent), inset 0 7px 12px color-mix(in srgb, var(--og-paper-50) 5%, transparent), 0 -8px 20px color-mix(in srgb, var(--og-leather-700) 64%, transparent);
   padding-block-end: env(safe-area-inset-bottom);
 }
@@ -67,7 +67,7 @@
   background-image: var(--og-material-brass), var(--og-material-ebonized-control);
   background-position: center;
   background-repeat: no-repeat, repeat, no-repeat, no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 24px auto, 100% 100%, 100% 100%, 150px auto, 100% 100%;
+  background-size: 100% 100%, 36px auto, 100% 100%, 100% 100%, 150px auto, 100% 100%;
   color: var(--og-paper-50);
   box-shadow: var(--og-shadow-control-built);
 }

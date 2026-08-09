@@ -22,16 +22,16 @@
   --og-walnut-800: #403025;
   --og-walnut-700: #5c4434;
 
-  --og-parchment-50: #d9c39a;
-  --og-parchment-100: #c2a274;
-  --og-parchment-200: #a37f56;
+  --og-parchment-50: #ecdac2;
+  --og-parchment-100: #d9c09e;
+  --og-parchment-200: #bfa07a;
 
-  --og-paper-50: #dbc59c;
-  --og-paper-100: #c5a679;
-  --og-paper-200: #a5855a;
+  --og-paper-50: #eddbc3;
+  --og-paper-100: #dac2a0;
+  --og-paper-200: #c0a37c;
 
-  --og-brass-500: #a17c40;
-  --og-brass-700: #6d4c28;
+  --og-brass-500: #855e2d;
+  --og-brass-700: #61411c;
   --og-steel-500: #85817D;
   --og-steel-700: #474541;
   --og-leather-500: #5C3121;
@@ -68,6 +68,7 @@
   --og-asset-ebonized: url('/og-v3/materials/ebonized-control.png');
   --og-asset-rivet: url('/og-v3/hardware/brass-rivet.png');
   --og-asset-brass-worn: url('/og-v3/materials/brass-worn.png');
+  --og-asset-leather-grain: url('/og-v3/materials/leather-grain.png');
 
   /* Material composites - CALIBRATED from approved V3 raster references */
   --og-material-walnut-board: linear-gradient(90deg, color-mix(in srgb, var(--og-walnut-950) 40%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--og-walnut-950) 42%, transparent)), linear-gradient(180deg, color-mix(in srgb, var(--og-walnut-700) 10%, transparent), color-mix(in srgb, var(--og-walnut-950) 22%, transparent)), var(--og-asset-walnut), linear-gradient(180deg, var(--og-walnut-800), var(--og-walnut-950));
@@ -80,7 +81,7 @@
   --og-material-progress-fill: linear-gradient(90deg, color-mix(in srgb, var(--og-status-info) 72%, var(--og-ink-950)), color-mix(in srgb, var(--og-status-info) 64%, var(--og-paper-50))), url('/v3-raster/progress-paint.webp?v=20260807-clean3');
   --og-material-dark-inset: linear-gradient(180deg, color-mix(in srgb, var(--og-ink-800) 48%, var(--og-walnut-950)), color-mix(in srgb, var(--og-walnut-950) 88%, black)), var(--og-asset-ebonized), linear-gradient(180deg, var(--og-walnut-950), color-mix(in srgb, var(--og-walnut-950) 88%, black));
   --og-material-ebonized-control: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 5%, transparent), color-mix(in srgb, var(--og-ink-950) 42%, transparent)), var(--og-asset-ebonized), linear-gradient(180deg, var(--og-walnut-950), color-mix(in srgb, var(--og-walnut-950) 90%, black));
-  --og-material-leather: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 6%, transparent), color-mix(in srgb, var(--og-leather-700) 34%, transparent)), linear-gradient(90deg, color-mix(in srgb, var(--og-leather-700) 20%, transparent), transparent 20%, transparent 80%, color-mix(in srgb, var(--og-leather-700) 24%, transparent)), var(--og-asset-ebonized), linear-gradient(180deg, var(--og-leather-500), var(--og-leather-700));
+  --og-material-leather: linear-gradient(160deg, color-mix(in srgb, var(--og-paper-50) 16%, transparent) 0%, transparent 42%, color-mix(in srgb, var(--og-ink-950) 30%, transparent) 100%), var(--og-asset-leather-grain), linear-gradient(180deg, var(--og-leather-500), var(--og-leather-700));
   --og-text-primary: var(--og-ink-950);
   --og-text-secondary: var(--og-ink-650);
   --og-text-muted: var(--og-ink-500);
