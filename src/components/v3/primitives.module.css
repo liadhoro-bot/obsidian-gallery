@@ -546,20 +546,20 @@
   position: relative;
   display: inline-flex;
   max-width: 100%;
-  min-height: 25px;
+  min-height: 32px;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
-  border-radius: calc(var(--og-radius-s) - 2px);
-  padding: 2px 22px;
+  border: calc(var(--og-border-width) * 2) solid color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
+  border-radius: calc(var(--og-radius-s) - 1px);
+  padding: 5px 30px;
   font-family: var(--og-font-display);
-  font-size: 0.8rem;
+  font-size: 0.94rem;
   font-weight: 700;
   line-height: 1;
   letter-spacing: var(--og-tracking-label);
   text-transform: uppercase;
-  box-shadow: var(--og-shadow-brass-plate);
+  box-shadow: var(--og-shadow-brass-plate), 0 0 0 1px color-mix(in srgb, var(--og-ink-950) 42%, transparent);
 }
 
 .plaque::before,
@@ -567,25 +567,25 @@
   content: '';
   position: absolute;
   top: 50%;
-  width: 7px;
-  height: 7px;
+  width: 10px;
+  height: 10px;
   border: 0;
   border-radius: var(--og-radius-round);
   background-color: var(--og-brass-500);
   background-image: var(--og-asset-rivet), var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
-  background-size: cover, 100% 100%, 80px auto, 100% 100%;
+  background-size: cover, 100% 100%, 20px auto, 100% 100%;
   box-shadow: var(--og-shadow-hardware-pin);
   transform: translateY(-50%);
 }
 
 .plaque::before {
-  left: 8px;
+  left: 10px;
 }
 
 .plaque::after {
-  right: 8px;
+  right: 10px;
 }
 
 .plaque[data-tone="paper"]::before,
@@ -598,7 +598,7 @@
   background-image: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 12%, transparent), color-mix(in srgb, var(--og-ink-950) 16%, transparent)), var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 100% 100%, 80px auto, 100% 100%;
+  background-size: 100% 100%, 100% 100%, 28px auto, 100% 100%;
   color: var(--og-ink-950);
   text-shadow: 0 1px 0 color-mix(in srgb, var(--og-paper-50) 22%, transparent);
 }

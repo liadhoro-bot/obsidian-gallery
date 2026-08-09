@@ -49,10 +49,10 @@
 
 .appTitle {
   position: absolute;
-  inset-inline-start: 50%;
+  inset-inline: 0;
   z-index: 1;
-  margin: 0;
-  transform: translateX(-50%);
+  width: fit-content;
+  margin: 0 auto;
   color: var(--og-paper-50);
   font-family: var(--og-font-display);
   font-size: 1.76rem;
@@ -107,7 +107,7 @@
   background-image: var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 40px auto, 100% 100%;
+  background-size: 100% 100%, 16px auto, 100% 100%;
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 14%, transparent);
@@ -272,7 +272,7 @@
   background-image: radial-gradient(circle at 42% 30%, color-mix(in srgb, var(--og-paper-50) 30%, transparent), transparent 36%), var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 100% 100%, 60px auto, 100% 100%;
+  background-size: 100% 100%, 100% 100%, 24px auto, 100% 100%;
   color: var(--og-ink-950);
   box-shadow: var(--og-shadow-brass-plate);
 }
@@ -435,7 +435,7 @@
   min-height: 238px;
   grid-template-columns: minmax(0, 1fr) 144px;
   gap: 12px;
-  padding: 33px 12px 12px;
+  padding: 40px 12px 12px;
 }
 
 .panelPlaque {
@@ -489,7 +489,7 @@
   background-image: var(--og-asset-rivet), var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
-  background-size: cover, 100% 100%, 80px auto, 100% 100%;
+  background-size: cover, 100% 100%, 20px auto, 100% 100%;
   box-shadow: var(--og-shadow-hardware-pin);
   transform: translateX(50%);
 }
@@ -750,7 +750,7 @@
   background-image: var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 80px auto, 100% 100%;
+  background-size: 100% 100%, 20px auto, 100% 100%;
   color: var(--og-ink-950);
   box-shadow: var(--og-shadow-brass-plate);
 }
