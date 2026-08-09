@@ -483,8 +483,8 @@
   border-radius: var(--og-radius-round);
   background-image: var(--og-asset-rivet), var(--og-material-brass);
   background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover, 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: cover, 100% 100%, 80px auto, 100% 100%;
   box-shadow: var(--og-shadow-hardware-pin);
   transform: translateX(50%);
 }
@@ -742,8 +742,8 @@
   background-color: var(--og-brass-500);
   background-image: var(--og-material-brass);
   background-position: center;
-  background-repeat: no-repeat, no-repeat, no-repeat;
-  background-size: 100% 100%, 100% 100%, 100% 100%;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 80px auto, 100% 100%;
   color: var(--og-ink-950);
   box-shadow: var(--og-shadow-brass-plate);
 }

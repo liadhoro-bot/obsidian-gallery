@@ -84,6 +84,31 @@ export async function makeSeamlessTile({ src, out, outSize = 700, seamBlur = 18,
   return out;
 }
 
+// Worn/aged metal texture: layers a coarse low-frequency "patina blotch" noise
+// under a fine high-frequency "brushed/scratched" noise, both tinted toward
+// the target metal color. Meant to sit UNDER a plain base-color gradient in a
+// material composite so the metal reads as hand-finished/tarnished rather
+// than a smooth, glossy, digital-looking gradient. Output has alpha, so it
+// modulates whatever's beneath it rather than fully replacing the color.
+export async function wornMetalTexture({ out, size = 384, seed = 11, patinaRgb, grainRgb, patinaAlpha = 0.3, grainAlpha = 0.32 }) {
+  const [pr, pg, pb] = patinaRgb; // darker/desaturated tarnish tone, 0-1 floats
+  const [gr, gg, gb] = grainRgb; // base metal tone for fine grain, 0-1 floats
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+    <filter id="patina">
+      <feTurbulence type="turbulence" baseFrequency="0.045" numOctaves="2" seed="${seed}" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 ${pr}  0 0 0 0 ${pg}  0 0 0 0 ${pb}  0 0 0 ${patinaAlpha} 0"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="${seed + 5}" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 ${gr}  0 0 0 0 ${gg}  0 0 0 0 ${gb}  0 0 0 ${grainAlpha} 0"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#patina)"/>
+    <rect width="100%" height="100%" filter="url(#grain)"/>
+  </svg>`;
+  await sharp(Buffer.from(svg)).png().toFile(out);
+  return out;
+}
+
 // Fallback only: use when no source crop yields usable grain. baseFrequency
 // ~0.7-1.1 gives fine paper/wood-scale grain; lower values look coarser/blotchy.
 export async function noiseGrain({ out, size = 512, baseFrequency = 0.9, seed = 7, rgb, alpha = 0.22 }) {
@@ -101,7 +126,7 @@ export async function noiseGrain({ out, size = 512, baseFrequency = 0.9, seed = 
 
 async function main() {
   const [, , command, argsJson] = process.argv;
-  const fns = { cropTile, isolateCircleIcon, noiseGrain, makeSeamlessTile };
+  const fns = { cropTile, isolateCircleIcon, noiseGrain, makeSeamlessTile, wornMetalTexture };
   if (!command || !fns[command]) {
     console.error('Usage: node crop-tileable-asset.mjs <cropTile|isolateCircleIcon|noiseGrain> \'<json-args>\'');
     process.exit(1);

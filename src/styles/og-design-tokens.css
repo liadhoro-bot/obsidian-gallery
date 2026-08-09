@@ -22,16 +22,16 @@
   --og-walnut-800: #403025;
   --og-walnut-700: #5c4434;
 
-  --og-parchment-50: #f0e4d1;
-  --og-parchment-100: #e6d2b6;
-  --og-parchment-200: #d8bd98;
+  --og-parchment-50: #e9dcc3;
+  --og-parchment-100: #dcc6a2;
+  --og-parchment-200: #c8a97e;
 
-  --og-paper-50: #f3eadc;
-  --og-paper-100: #e3d5c0;
-  --og-paper-200: #d2bfaa;
+  --og-paper-50: #ecdfc8;
+  --og-paper-100: #d8c4a3;
+  --og-paper-200: #c3a984;
 
-  --og-brass-500: #ba8c48;
-  --og-brass-700: #715029;
+  --og-brass-500: #ab8148;
+  --og-brass-700: #6b4c28;
   --og-steel-500: #85817D;
   --og-steel-700: #474541;
   --og-leather-500: #5C3121;
@@ -67,6 +67,7 @@
   --og-asset-parchment-fiber: url('/og-v3/materials/parchment-fiber.png');
   --og-asset-ebonized: url('/og-v3/materials/ebonized-control.png');
   --og-asset-rivet: url('/og-v3/hardware/brass-rivet.png');
+  --og-asset-brass-worn: url('/og-v3/materials/brass-worn.png');
 
   /* Material composites - CALIBRATED from approved V3 raster references */
   --og-material-walnut-board: linear-gradient(90deg, color-mix(in srgb, var(--og-walnut-950) 40%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--og-walnut-950) 42%, transparent)), linear-gradient(180deg, color-mix(in srgb, var(--og-walnut-700) 10%, transparent), color-mix(in srgb, var(--og-walnut-950) 22%, transparent)), var(--og-asset-walnut), linear-gradient(180deg, var(--og-walnut-800), var(--og-walnut-950));
@@ -74,7 +75,7 @@
   --og-material-parchment-panel: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 10%, transparent), color-mix(in srgb, var(--og-walnut-700) 8%, transparent)), var(--og-asset-parchment-fiber), linear-gradient(180deg, var(--og-parchment-50), var(--og-parchment-100));
   --og-material-paper-card: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 12%, transparent), color-mix(in srgb, var(--og-walnut-700) 7%, transparent)), var(--og-asset-parchment-fiber), linear-gradient(180deg, var(--og-paper-50), var(--og-paper-100));
   --og-material-photo-mount: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 14%, transparent), color-mix(in srgb, var(--og-walnut-700) 16%, transparent)), var(--og-asset-parchment-fiber), linear-gradient(180deg, var(--og-paper-200), color-mix(in srgb, var(--og-paper-200) 82%, var(--og-walnut-700)));
-  --og-material-brass: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 16%, transparent), transparent 40%, color-mix(in srgb, var(--og-ink-950) 18%, transparent)), linear-gradient(115deg, transparent 28%, color-mix(in srgb, var(--og-paper-50) 46%, transparent) 42%, color-mix(in srgb, white 68%, var(--og-paper-50)) 50%, color-mix(in srgb, var(--og-paper-50) 46%, transparent) 58%, transparent 72%), linear-gradient(90deg, color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950)), var(--og-brass-500) 50%, color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950)));
+  --og-material-brass: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 10%, transparent), transparent 42%, color-mix(in srgb, var(--og-ink-950) 24%, transparent)), var(--og-asset-brass-worn), linear-gradient(90deg, color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950)), var(--og-brass-500) 50%, color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950)));
   --og-material-progress-track: linear-gradient(180deg, rgb(255 239 203 / 0.18), color-mix(in srgb, var(--og-ink-800) 18%, transparent)), var(--og-asset-parchment-fiber);
   --og-material-progress-fill: linear-gradient(90deg, color-mix(in srgb, var(--og-status-info) 72%, var(--og-ink-950)), color-mix(in srgb, var(--og-status-info) 64%, var(--og-paper-50))), url('/v3-raster/progress-paint.webp?v=20260807-clean3');
   --og-material-dark-inset: linear-gradient(180deg, color-mix(in srgb, var(--og-ink-800) 48%, var(--og-walnut-950)), color-mix(in srgb, var(--og-walnut-950) 88%, black)), var(--og-asset-ebonized), linear-gradient(180deg, var(--og-walnut-950), color-mix(in srgb, var(--og-walnut-950) 88%, black));
