@@ -1,5 +1,4 @@
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import RecipesPageClient from './recipes-page-client'
@@ -38,49 +37,70 @@ async function RecipesContent({
   userId,
   activeTab,
 }: {
-  userId: string
+  userId: string | null
   activeTab: RecipesTab
 }) {
   const perf = createPerfTimer('/recipes:content')
   const supabase = await createClient()
 
-  const [publicRecipes, myRecipesResult, savedRowsResult] = await Promise.all([
+  const [
+    cachedPublicRecipes,
+    livePublicRecipesResult,
+    myRecipesResult,
+    savedRowsResult,
+  ] = await Promise.all([
     getCachedPublicRecipes(),
     supabase
       .from('recipes')
       .select(
         'id, name, description, image_url, is_public, created_at, user_id'
       )
-      .eq('user_id', userId)
+      .eq('is_public', true)
       .order('created_at', { ascending: false }),
-    supabase
-      .from('saved_recipes')
-      .select(
-        `
-        recipe_id,
-        recipes (
-          id,
-          name,
-          description,
-          image_url,
-          is_public,
-          created_at,
-          user_id
-        )
-      `
-      )
-      .eq('user_id', userId),
+    userId
+      ? supabase
+          .from('recipes')
+          .select(
+            'id, name, description, image_url, is_public, created_at, user_id'
+          )
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    userId
+      ? supabase
+          .from('saved_recipes')
+          .select(
+            `
+            recipe_id,
+            recipes (
+              id,
+              name,
+              description,
+              image_url,
+              is_public,
+              created_at,
+              user_id
+            )
+          `
+          )
+          .eq('user_id', userId)
+      : Promise.resolve({ data: [], error: null }),
   ])
   perf.mark('main Supabase query')
 
   const myRecipes = (myRecipesResult.data ?? []) as RecipeRow[]
+  const livePublicRecipes = (livePublicRecipesResult.data ?? []) as RecipeRow[]
   const typedSavedRows = (savedRowsResult.data ?? []) as SavedRecipeRow[]
   const savedRecipes = typedSavedRows
     .map((row) => firstValue(row.recipes))
     .filter((recipe): recipe is RecipeRow => Boolean(recipe))
 
   const publicRecipeMap = new Map<string, RecipeRow>()
-  for (const recipe of publicRecipes) {
+  for (const recipe of cachedPublicRecipes) {
+    publicRecipeMap.set(recipe.id, recipe)
+  }
+
+  for (const recipe of livePublicRecipes) {
     publicRecipeMap.set(recipe.id, recipe)
   }
 
@@ -130,6 +150,7 @@ async function RecipesContent({
       myRecipes={withRecipeImages(myRecipes)}
       savedRecipes={withRecipeImages(savedRecipes)}
       savedRecipeIds={typedSavedRows.map((row) => row.recipe_id)}
+      isAuthenticated={Boolean(userId)}
     />
   )
 }
@@ -172,8 +193,6 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
-  if (!user) redirect('/login')
-
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const requestedTab =
     resolvedSearchParams?.tab === 'find' ||
@@ -183,7 +202,9 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       : null
 
   let activeTab: RecipesTab
-  if (requestedTab) {
+  if (!user) {
+    activeTab = 'find'
+  } else if (requestedTab) {
     activeTab = requestedTab
   } else {
     const [{ data: myRecipe }, { data: savedRecipe }] = await Promise.all([
@@ -204,16 +225,20 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
     activeTab = myRecipe || savedRecipe ? 'mine' : 'find'
   }
 
-  const profilePromise = (async () => ({
-    data: await getDashboardProfile(user.id),
-  }))()
+  const profilePromise = user
+    ? (async () => ({
+        data: await getDashboardProfile(user.id),
+      }))()
+    : undefined
   perf.total()
 
   return (
     <main className="min-h-screen bg-[#03070b] pb-24 text-white">
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <Suspense fallback={null}>
-          <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
+          {user ? (
+            <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
+          ) : null}
         </Suspense>
 
         <section className="space-y-4">
@@ -237,7 +262,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
         </section>
 
         <Suspense fallback={<RecipesContentSkeleton />}>
-          <RecipesContent userId={user.id} activeTab={activeTab} />
+          <RecipesContent userId={user?.id ?? null} activeTab={activeTab} />
         </Suspense>
       </div>
     </main>

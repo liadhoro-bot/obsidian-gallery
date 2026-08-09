@@ -31,29 +31,24 @@ function GoogleIcon() {
 
 export default function GoogleLoginButton({
   nextPath,
-  previewMode = false,
-  onPreviewContinue,
 }: {
   nextPath: string
-  previewMode?: boolean
-  onPreviewContinue?: () => void
 }) {
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   async function handleGoogleLogin() {
+    performance.mark('v3-login-google-submit')
     setIsLoading(true)
     setErrorMessage(null)
 
-    if (previewMode) {
-      onPreviewContinue?.()
-      return
-    }
-
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
-    const callbackUrl = new URL('/auth/confirm', window.location.origin)
+    const callbackUrl = new URL('/auth/callback', window.location.origin)
     callbackUrl.searchParams.set('next', nextPath)
+    if (isPreviewNextPath(nextPath)) {
+      callbackUrl.searchParams.set('preview', '1')
+    }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -110,4 +105,13 @@ export default function GoogleLoginButton({
       )}
     </div>
   )
+}
+
+function isPreviewNextPath(nextPath: string) {
+  try {
+    const url = new URL(nextPath, 'https://obsidian-gallery-v3.vercel.app')
+    return url.searchParams.get('preview') === '1'
+  } catch {
+    return false
+  }
 }

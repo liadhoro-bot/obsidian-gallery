@@ -1,0 +1,392 @@
+{
+  "$schemaVersion": 1,
+  "system": "OG-WDS",
+  "components": {
+    "SurfacePanel": {
+      "role": "Primary workspace container",
+      "physicality": 2,
+      "materials": [
+        "parchment",
+        "paper",
+        "walnut-inset-rare"
+      ],
+      "radius": "m",
+      "shadows": [
+        "none",
+        "contact"
+      ],
+      "source": "docs/design/reference/surfaces/panel.webp",
+      "never": [
+        "heavy-wood-frame",
+        "distressed-edges",
+        "nested-borders",
+        "strong-drop-shadow",
+        "decorative-hardware-default"
+      ]
+    },
+    "EntityCard": {
+      "role": "One discrete entity",
+      "physicality": 2,
+      "materials": [
+        "paper",
+        "parchment-important"
+      ],
+      "radius": "m",
+      "shadows": [
+        "contact",
+        "medium-when-important"
+      ],
+      "source": "docs/design/reference/surfaces/card.webp",
+      "never": [
+        "pin-or-screw",
+        "decorative-frame-default",
+        "excessive-texture",
+        "antique-document-every-card"
+      ]
+    },
+    "Tray": {
+      "role": "Physical grouping of related objects",
+      "physicality": 4,
+      "materials": [
+        "walnut",
+        "cork-bed-optional",
+        "paper-bed-optional"
+      ],
+      "radius": "l",
+      "shadows": [
+        "medium",
+        "large-when-depth-structural"
+      ],
+      "source": "docs/design/reference/surfaces/tray.webp",
+      "never": [
+        "empty-tray",
+        "arbitrary-ui-border",
+        "deep-container-without-need",
+        "ornate-handles"
+      ]
+    },
+    "Drawer": {
+      "role": "Reveal/hide secondary information",
+      "physicality": 3,
+      "materials": [
+        "walnut-structure",
+        "paper-or-parchment-content"
+      ],
+      "radius": "m",
+      "shadows": [
+        "large-when-open-structural"
+      ],
+      "source": "docs/design/reference/surfaces/drawer.webp",
+      "never": [
+        "always-visible",
+        "competes-with-primary",
+        "complex-inner-decoration"
+      ]
+    },
+    "Shelf": {
+      "role": "Presentation/showcase",
+      "physicality": 4,
+      "materials": [
+        "walnut"
+      ],
+      "radius": "l",
+      "shadows": [
+        "large"
+      ],
+      "source": "docs/design/reference/surfaces/shelf.webp",
+      "never": [
+        "general-page-layout",
+        "every-screen",
+        "visible-brackets",
+        "ornate-detail"
+      ]
+    },
+    "PaperSheet": {
+      "role": "Freeform notes/guides/recipes/documentation",
+      "physicality": 3,
+      "materials": [
+        "paper",
+        "parchment"
+      ],
+      "radius": "s-to-m",
+      "shadows": [
+        "floating-paper",
+        "contact"
+      ],
+      "source": "docs/design/reference/surfaces/paper-as-surface-object.webp",
+      "never": [
+        "glossy",
+        "grungy",
+        "heavy-stain",
+        "decorative-frame"
+      ]
+    },
+    "StickyNote": {
+      "role": "Temporary/personal/contextual information",
+      "physicality": 4,
+      "materials": [
+        "lightweight-paper"
+      ],
+      "radius": "s-to-m",
+      "shadows": [
+        "floating-paper",
+        "medium"
+      ],
+      "source": "docs/design/reference/surfaces/sticky-note.webp",
+      "never": [
+        "permanent-critical-info",
+        "office-postit-yellow",
+        "many-scattered-notes",
+        "grunge"
+      ]
+    },
+    "ImageMount": {
+      "role": "Present visual documentation",
+      "physicality": 2,
+      "materials": [
+        "paper",
+        "parchment",
+        "card-inset"
+      ],
+      "radius": "s-to-m",
+      "shadows": [
+        "contact",
+        "medium-prominent"
+      ],
+      "source": "docs/design/reference/surfaces/image-mount-photo-mount.webp",
+      "never": [
+        "image-effects",
+        "heavy-stains",
+        "decorative-frame",
+        "inconsistent-treatment",
+        "tape-pin-sticker-default"
+      ]
+    },
+    "Plaque": {
+      "role": "Permanent identity of a place/object",
+      "physicality": 3,
+      "materials": [
+        "paper",
+        "parchment",
+        "brass-rare",
+        "painted-metal-rare"
+      ],
+      "radius": "s-to-m",
+      "shadows": [
+        "contact",
+        "medium"
+      ],
+      "source": "docs/design/reference/surfaces/plaque-nameplate.webp",
+      "never": [
+        "ordinary-label",
+        "button",
+        "overly-decorative",
+        "floating-decoration"
+      ]
+    },
+    "Label": {
+      "role": "Classification/identification",
+      "physicality": 2,
+      "materials": [
+        "ui-native",
+        "paper-contextual"
+      ],
+      "radius": "s",
+      "shadows": [
+        "none",
+        "contact-contextual-paper"
+      ],
+      "source": "docs/design/reference/surfaces/label.webp",
+      "never": [
+        "small-card",
+        "heavy-texture",
+        "ornamental-border",
+        "excess-padding",
+        "long-sentence"
+      ]
+    },
+    "Divider": {
+      "role": "Separation without containment",
+      "physicality": 1,
+      "materials": [
+        "printed-rule",
+        "engraved-line",
+        "paper-rule",
+        "seam"
+      ],
+      "radius": "none",
+      "shadows": [
+        "none"
+      ],
+      "source": "docs/design/reference/surfaces/divider.webp",
+      "never": [
+        "heavy",
+        "container-border",
+        "hierarchy-by-itself",
+        "dark-high-contrast"
+      ]
+    },
+    "Button": {
+      "role": "Action",
+      "physicality": 2,
+      "materials": [
+        "ui-native",
+        "restrained-walnut-primary"
+      ],
+      "radius": "s-to-m",
+      "shadows": [
+        "contact",
+        "pressed"
+      ],
+      "source": "docs/design/reference/surfaces/button.webp",
+      "never": [
+        "heavy-bevel",
+        "ornamental-border",
+        "metal-plate-ordinary",
+        "screws",
+        "huge-shadow"
+      ]
+    },
+    "ProgressTrack": {
+      "role": "Measurable completion",
+      "physicality": 3,
+      "materials": [
+        "recessed-track",
+        "printed-low-relief",
+        "inlaid-fill"
+      ],
+      "radius": "pill-internal-only",
+      "shadows": [
+        "inset-only"
+      ],
+      "source": "docs/design/reference/surfaces/progress-track.webp",
+      "never": [
+        "glossy-modern-bar",
+        "neon-fill",
+        "thick-bulky-bar",
+        "floating-track",
+        "ornate-frame"
+      ]
+    },
+    "PaintSwatch": {
+      "role": "Honest paint/color sample",
+      "physicality": 3,
+      "materials": [
+        "paint"
+      ],
+      "radius": "context-dependent",
+      "shadows": [
+        "none",
+        "contact-if-mounted"
+      ],
+      "source": "docs/design/reference/surfaces/swatch.webp",
+      "never": [
+        "gradient",
+        "glossy-color-bubble",
+        "decorative-bevel",
+        "color-distortion",
+        "inconsistent-art-treatment"
+      ]
+    },
+    "Badge": {
+      "role": "Compact high-salience information",
+      "physicality": 2,
+      "materials": [
+        "ui-native",
+        "paper",
+        "parchment"
+      ],
+      "radius": "s-or-round",
+      "shadows": [
+        "contact"
+      ],
+      "source": "docs/design/reference/surfaces/badge-medallion.webp",
+      "never": [
+        "metal-for-every-badge",
+        "overly-decorative",
+        "too-much-text"
+      ]
+    },
+    "Medallion": {
+      "role": "Special recognition",
+      "physicality": 3,
+      "materials": [
+        "brass",
+        "metal",
+        "enamel"
+      ],
+      "radius": "round-or-specific",
+      "shadows": [
+        "medium"
+      ],
+      "source": "docs/design/reference/surfaces/badge-medallion.webp",
+      "never": [
+        "ordinary-status",
+        "metal-for-routine-info"
+      ]
+    },
+    "Stamp": {
+      "role": "Clear state/validation",
+      "physicality": 3,
+      "materials": [
+        "ink-on-paper"
+      ],
+      "radius": "shape-specific",
+      "shadows": [
+        "none"
+      ],
+      "source": "docs/design/reference/surfaces/stamp.webp",
+      "never": [
+        "decoration",
+        "ambiguous-meaning",
+        "too-many-colors",
+        "inconsistent-style"
+      ]
+    },
+    "Pin": {
+      "role": "Physically attach one object to another",
+      "physicality": 5,
+      "materials": [
+        "brass"
+      ],
+      "radius": "round",
+      "shadows": [
+        "contact"
+      ],
+      "source": "docs/design/reference/surfaces/pin.webp",
+      "never": [
+        "decoration",
+        "every-corner",
+        "not-pinning-anything",
+        "mixed-angles-without-reason",
+        "oversized"
+      ]
+    },
+    "StructuralHardware": {
+      "role": "Believable construction between rigid materials",
+      "physicality": 5,
+      "materials": [
+        "brass-default",
+        "steel-utility"
+      ],
+      "radius": "n/a",
+      "shadows": [
+        "contact"
+      ],
+      "source": "docs/design/reference/hardware/screws-structural-hardware.webp",
+      "screenHardwareBudget": {
+        "recommendedMax": 4,
+        "hardMax": 6,
+        "sharedWith": [
+          "Pin"
+        ]
+      },
+      "never": [
+        "decorative-only",
+        "simple-cards",
+        "mixed-heads-without-reason",
+        "every-corner"
+      ]
+    }
+  }
+}

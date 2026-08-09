@@ -551,55 +551,67 @@ export default async function ThemeDetailPage({ params }: Props) {
   perf.mark('auth/session fetch')
 
   const cachedPublicTheme = await getCachedPublicTheme(id)
-  const { data: privateTheme, error: themeError } = cachedPublicTheme
+  const publicThemeSelect = `
+    id,
+    user_id,
+    name,
+    description,
+    image_url,
+    is_public,
+    tags,
+    created_at,
+    theme_paints (
+      id,
+      sort_order,
+      paint_source,
+      paint_catalog_id,
+      custom_paint_id,
+      catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+        id,
+        name,
+        brand,
+        line,
+        swatch_image_url,
+        hex_approx
+      ),
+      custom_paint:paints!theme_paints_custom_paint_id_fkey (
+        id,
+        name,
+        manufacturer,
+        series,
+        color_hex
+      )
+    )
+  `
+  const { data: livePublicTheme, error: publicThemeError } = cachedPublicTheme
+    ? { data: null, error: null }
+    : await supabase
+        .from('themes')
+        .select(publicThemeSelect)
+        .eq('id', id)
+        .eq('is_public', true)
+        .maybeSingle()
+  const { data: privateTheme, error: themeError } =
+    cachedPublicTheme || livePublicTheme
     ? { data: null, error: null }
     : user
       ? await supabase
           .from('themes')
-          .select(
-            `
-            id,
-            user_id,
-            name,
-            description,
-            image_url,
-            is_public,
-            tags,
-            created_at,
-            theme_paints (
-              id,
-              sort_order,
-              paint_source,
-              paint_catalog_id,
-              custom_paint_id,
-              catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
-                id,
-                name,
-                brand,
-                line,
-                swatch_image_url,
-                hex_approx
-              ),
-              custom_paint:paints!theme_paints_custom_paint_id_fkey (
-                id,
-                name,
-                manufacturer,
-                series,
-                color_hex
-              )
-            )
-          `
-          )
+          .select(publicThemeSelect)
           .eq('id', id)
           .eq('user_id', user.id)
           .maybeSingle()
       : { data: null, error: null }
 
+  if (publicThemeError) {
+    throw new Error(publicThemeError.message)
+  }
+
   if (themeError) {
     throw new Error(themeError.message)
   }
 
-  const theme = cachedPublicTheme || privateTheme
+  const theme = cachedPublicTheme || livePublicTheme || privateTheme
   perf.mark('main Supabase query')
 
   if (!theme) {

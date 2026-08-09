@@ -6,11 +6,13 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Obsidian',
     description: 'Miniature painting and hobby companion',
     id: '/',
-    start_url: '/',
+    start_url: '/dashboard?preview=1',
     scope: '/',
     display: 'standalone',
+    orientation: 'portrait',
     background_color: '#081018',
     theme_color: '#081018',
+    categories: ['productivity', 'lifestyle'],
     icons: [
       {
         src: '/icon-192-v4.png',

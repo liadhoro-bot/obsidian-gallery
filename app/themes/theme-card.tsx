@@ -41,7 +41,7 @@ type Theme = {
 
 type Props = {
   theme: Theme
-  currentUserId: string
+  currentUserId: string | null
   isSaved?: boolean
   selectForProject?: string | null
   attachThemeToProjectAction?: (formData: FormData) => Promise<void>
@@ -158,7 +158,7 @@ export default function ThemeCard({
       )}
 
       <div className="space-y-2 p-3">
-        {isSelectingForProject && attachThemeToProjectAction ? (
+        {currentUserId && isSelectingForProject && attachThemeToProjectAction ? (
           <form action={attachThemeToProjectAction}>
             <input type="hidden" name="projectId" value={selectForProject ?? ''} />
             <input type="hidden" name="themeId" value={theme.id} />
@@ -169,7 +169,7 @@ export default function ThemeCard({
               className="w-full rounded-xl bg-cyan-400 px-3 py-2 text-xs font-semibold text-neutral-950"
             />
           </form>
-        ) : !isOwner ? (
+        ) : currentUserId && !isOwner ? (
           <form action={isSaved ? unsaveTheme : saveTheme}>
             <input type="hidden" name="themeId" value={theme.id} />
 
@@ -179,7 +179,7 @@ export default function ThemeCard({
               className="w-full rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-300 hover:bg-cyan-400/20"
             />
           </form>
-        ) : (
+        ) : currentUserId ? (
           <button
             type="button"
             className="w-full rounded-xl border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-300"
@@ -187,7 +187,7 @@ export default function ThemeCard({
           >
             Saved
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   )

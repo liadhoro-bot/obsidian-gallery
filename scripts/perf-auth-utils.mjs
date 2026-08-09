@@ -13,10 +13,12 @@ import { dirname, resolve } from 'node:path'
 const BENCHMARK_EMAIL =
   process.env.PERF_BENCHMARK_EMAIL ?? 'perf-benchmark@obsidian.gallery'
 const TERMS_VERSION = '2026-05-13'
-const BENCHMARK_UNIT_ID = 'e6463818-c5b1-40fd-9fa8-a82da330a557'
-const BENCHMARK_RECIPE_ID = 'f810a0ea-6b2d-4479-8b99-1309cd3511e7'
-const BENCHMARK_THEME_ID = 'a8755d20-3601-4b53-aa55-823f1224e4b3'
-const BENCHMARK_CUSTOM_PAINT_ID = 'ef6df4c6-3257-4de3-bc19-3c7c746db82f'
+export const BENCHMARK_UNIT_ID = '9c0f9a84-c6bd-4e46-9ef7-41de27535071'
+export const BENCHMARK_RECIPE_ID = '7a09f402-87d7-4a4f-b87f-c279490c3a31'
+export const BENCHMARK_THEME_ID = 'f083f8ac-dfc3-49d7-9261-7f278766689a'
+export const BENCHMARK_CUSTOM_PAINT_ID = '1f0ce574-bbd7-4042-8bc3-376d1df5376f'
+const BENCHMARK_DESCRIPTION =
+  'Seeded automatically for protected performance benchmarks.'
 
 export function loadLocalEnv() {
   const envPath = resolve('.env.local')
@@ -172,7 +174,7 @@ async function ensureProject(supabase, userId) {
 async function ensureUnit(supabase, userId, projectId) {
   const { data: existing, error } = await supabase
     .from('units')
-    .select('id, project_id')
+    .select('id, name, notes')
     .eq('id', BENCHMARK_UNIT_ID)
     .maybeSingle()
 
@@ -181,6 +183,16 @@ async function ensureUnit(supabase, userId, projectId) {
   let unitId = existing?.id ?? null
 
   if (unitId) {
+    const isSeededBenchmarkUnit =
+      existing.name === 'Perf Benchmark Unit' ||
+      existing.notes === BENCHMARK_DESCRIPTION
+
+    if (!isSeededBenchmarkUnit) {
+      throw new Error(
+        `Refusing to overwrite non-benchmark unit ${BENCHMARK_UNIT_ID}. Choose a new BENCHMARK_UNIT_ID.`
+      )
+    }
+
     const { error: updateError } = await supabase
       .from('units')
       .update({
@@ -188,7 +200,7 @@ async function ensureUnit(supabase, userId, projectId) {
         project_id: projectId,
         name: 'Perf Benchmark Unit',
         model_count: 5,
-        notes: 'Seeded automatically for protected performance benchmarks.',
+        notes: BENCHMARK_DESCRIPTION,
         is_active: true,
         is_featured: true,
       })
@@ -206,7 +218,7 @@ async function ensureUnit(supabase, userId, projectId) {
         project_id: projectId,
         name: 'Perf Benchmark Unit',
         model_count: 5,
-        notes: 'Seeded automatically for protected performance benchmarks.',
+        notes: BENCHMARK_DESCRIPTION,
         is_active: true,
         is_featured: true,
       })
@@ -245,23 +257,34 @@ async function ensureUnit(supabase, userId, projectId) {
 async function ensureRecipe(supabase, userId) {
   const { data: existing, error } = await supabase
     .from('recipes')
-    .select('id')
+    .select('id, name, description')
     .eq('id', BENCHMARK_RECIPE_ID)
     .maybeSingle()
 
   if (error) throw error
   if (existing) {
+    const isSeededBenchmarkRecipe =
+      existing.name === 'Perf Benchmark Recipe' ||
+      existing.description === BENCHMARK_DESCRIPTION
+
+    if (!isSeededBenchmarkRecipe) {
+      throw new Error(
+        `Refusing to overwrite non-benchmark guide ${BENCHMARK_RECIPE_ID}. Choose a new BENCHMARK_RECIPE_ID.`
+      )
+    }
+
     const { error: updateError } = await supabase
       .from('recipes')
       .update({
         user_id: userId,
         name: 'Perf Benchmark Recipe',
-        description: 'Seeded automatically for protected performance benchmarks.',
+        description: BENCHMARK_DESCRIPTION,
         is_public: false,
       })
       .eq('id', existing.id)
 
     if (updateError) throw updateError
+
     return existing.id
   }
 
@@ -271,7 +294,7 @@ async function ensureRecipe(supabase, userId) {
       id: BENCHMARK_RECIPE_ID,
       user_id: userId,
       name: 'Perf Benchmark Recipe',
-      description: 'Seeded automatically for protected performance benchmarks.',
+      description: BENCHMARK_DESCRIPTION,
       is_public: false,
     })
     .select('id')
@@ -287,18 +310,28 @@ async function ensureRecipe(supabase, userId) {
 async function ensureTheme(supabase, userId) {
   const { data: existing, error } = await supabase
     .from('themes')
-    .select('id')
+    .select('id, name, description')
     .eq('id', BENCHMARK_THEME_ID)
     .maybeSingle()
 
   if (error) throw error
   if (existing) {
+    const isSeededBenchmarkTheme =
+      existing.name === 'Perf Benchmark Theme' ||
+      existing.description === BENCHMARK_DESCRIPTION
+
+    if (!isSeededBenchmarkTheme) {
+      throw new Error(
+        `Refusing to overwrite non-benchmark theme ${BENCHMARK_THEME_ID}. Choose a new BENCHMARK_THEME_ID.`
+      )
+    }
+
     const { error: updateError } = await supabase
       .from('themes')
       .update({
         user_id: userId,
         name: 'Perf Benchmark Theme',
-        description: 'Seeded automatically for protected performance benchmarks.',
+        description: BENCHMARK_DESCRIPTION,
         tags: ['perf', 'benchmark'],
         is_public: false,
       })
@@ -314,7 +347,7 @@ async function ensureTheme(supabase, userId) {
       id: BENCHMARK_THEME_ID,
       user_id: userId,
       name: 'Perf Benchmark Theme',
-      description: 'Seeded automatically for protected performance benchmarks.',
+      description: BENCHMARK_DESCRIPTION,
       tags: ['perf', 'benchmark'],
       is_public: false,
     })
@@ -331,12 +364,23 @@ async function ensureTheme(supabase, userId) {
 async function ensureCustomPaint(supabase, userId) {
   const { data: existing, error } = await supabase
     .from('paints')
-    .select('id')
+    .select('id, name, manufacturer, series')
     .eq('id', BENCHMARK_CUSTOM_PAINT_ID)
     .maybeSingle()
 
   if (error) throw error
   if (existing) {
+    const isSeededBenchmarkPaint =
+      existing.name === 'Perf Benchmark Paint' &&
+      existing.manufacturer === 'Custom' &&
+      existing.series === 'Benchmark'
+
+    if (!isSeededBenchmarkPaint) {
+      throw new Error(
+        `Refusing to overwrite non-benchmark custom paint ${BENCHMARK_CUSTOM_PAINT_ID}. Choose a new BENCHMARK_CUSTOM_PAINT_ID.`
+      )
+    }
+
     const { error: updateError } = await supabase
       .from('paints')
       .update({

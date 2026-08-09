@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { FormEvent, useMemo, useState } from 'react'
+import V3PerfIndicator from '../components/v3-perf-indicator'
 
 type PreviewTheme = {
   id: string
@@ -111,6 +112,7 @@ export default function ThemesV3Preview() {
 
   return (
     <main className="min-h-screen bg-[#05090b] text-white">
+      <V3PerfIndicator surface="themes" detail={activeTab} />
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-3 pb-28 pt-8">
         <TopNav />
 

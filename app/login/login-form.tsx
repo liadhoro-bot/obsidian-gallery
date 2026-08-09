@@ -1,8 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useState } from 'react'
-import { getV3PreviewCookie } from '../../lib/v3-preview'
+import { useEffect, useState } from 'react'
 const GoogleLoginButton = dynamic(() => import('./google-login-button'))
 
 type LoginAudience = 'new' | 'returning'
@@ -17,6 +16,7 @@ export default function LoginForm({
   authError,
   nextPath,
   previewMode = false,
+  useLocalPreviewAuth = false,
   onAudienceChange,
   onBack,
 }: {
@@ -24,6 +24,7 @@ export default function LoginForm({
   authError?: string | null
   nextPath: string
   previewMode?: boolean
+  useLocalPreviewAuth?: boolean
   onAudienceChange: (audience: LoginAudience) => void
   onBack: () => void
 }) {
@@ -37,34 +38,55 @@ export default function LoginForm({
     previewMode
   )
 
-  function continuePreviewFlow(destination = '/onboarding') {
-    document.cookie = getV3PreviewCookie()
-
-    const previewUrl = new URL(destination, window.location.origin)
-    previewUrl.searchParams.set('preview', '1')
-
-    if (previewUrl.pathname === '/onboarding') {
-      previewUrl.searchParams.set('reset', Date.now().toString())
-    }
-
-    window.location.assign(previewUrl.toString())
-  }
+  useEffect(() => {
+    performance.mark('v3-login-form-hydrated')
+  }, [])
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-
-    if (previewMode) {
-      continuePreviewFlow(audience === 'new' ? '/onboarding' : nextPath)
-      return
-    }
+    performance.mark('v3-login-submit')
 
     setLoading(true)
     setMessage(null)
 
+    if (useLocalPreviewAuth) {
+      const response = await fetch('/auth/dev-preview-session?preview=1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          next: effectiveNextPath,
+        }),
+      })
+      const result = (await response.json().catch(() => null)) as {
+        error?: string
+        redirectTo?: string
+      } | null
+
+      if (!response.ok || !result?.redirectTo) {
+        setMessage({
+          kind: 'error',
+          text:
+            result?.error ??
+            'Local preview sign-in did not complete. Check the email and try again.',
+        })
+        setLoading(false)
+        return
+      }
+
+      window.location.assign(result.redirectTo)
+      return
+    }
+
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
-    const callbackUrl = new URL('/auth/confirm', window.location.origin)
+    const callbackUrl = new URL('/auth/callback', window.location.origin)
     callbackUrl.searchParams.set('next', effectiveNextPath)
+    if (previewMode) {
+      callbackUrl.searchParams.set('preview', '1')
+    }
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -76,7 +98,7 @@ export default function LoginForm({
     if (error) {
       setMessage({
         kind: 'error',
-        text: 'That magic link did not send. Check the address and try again.',
+        text: error.message,
       })
       setLoading(false)
       return
@@ -87,7 +109,17 @@ export default function LoginForm({
   }
 
   return (
-    <section className="w-full max-w-md rounded-3xl border border-white/10 bg-[#06090d]/92 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)] backdrop-blur-xl">
+    <section
+      className="w-full max-w-md rounded-3xl border border-white/10 bg-[#06090d]/96 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)] backdrop-blur-xl"
+      data-v3-login-indicator="form"
+      data-v3-login-mode={
+        useLocalPreviewAuth
+          ? 'local-preview-auth'
+          : previewMode
+            ? 'v3-supabase-auth'
+            : 'production-auth'
+      }
+    >
       <div className="px-1 pb-2">
         <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
           Obsidian Gallery
@@ -123,13 +155,7 @@ export default function LoginForm({
       </div>
 
       <form onSubmit={handleLogin} className="mt-4 space-y-4">
-        <GoogleLoginButton
-          nextPath={effectiveNextPath}
-          previewMode={previewMode}
-          onPreviewContinue={() =>
-            continuePreviewFlow(audience === 'new' ? '/onboarding' : nextPath)
-          }
-        />
+        <GoogleLoginButton nextPath={effectiveNextPath} />
 
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
@@ -163,31 +189,19 @@ export default function LoginForm({
           ) : null}
           <span>
             {loading
-              ? 'Sending...'
-              : previewMode
-                ? 'Continue to setup'
-                : 'Send Magic Link'}
+              ? useLocalPreviewAuth
+                ? 'Signing in...'
+                : 'Sending...'
+              : 'Send Magic Link'}
           </span>
         </button>
       </form>
 
       <p className="mt-4 text-center text-[11px] font-bold leading-5 text-white/38">
-        {previewMode
-          ? 'Preview mode: no login required.'
-          : audience === 'new'
+        {audience === 'new'
             ? "First time? You'll be guided through setup after signing in."
             : 'Welcome back. We will take you where you were headed.'}
       </p>
-
-      {previewMode ? (
-        <button
-          type="button"
-          onClick={() => continuePreviewFlow()}
-          className="tap-target mx-auto mt-3 block rounded-full px-4 py-2 text-xs font-black text-cyan-300/80 transition hover:bg-cyan-300/10 hover:text-cyan-200"
-        >
-          Continue as V3 test user
-        </button>
-      ) : null}
 
       {message ? (
         <p

@@ -100,12 +100,12 @@ export default function ProblemScreen({
       <div className="relative z-10 flex min-h-dvh flex-col px-5 pb-8 pt-5">
         <div className="space-y-5">
           <div className="relative z-10 flex justify-center gap-2">
-            {[0, 1, 2, 3].map((dot) => (
+            {[0, 1, 2, 3, 4].map((dot) => (
               <span
                 key={dot}
                 className={[
                   'h-2 rounded-full transition-all',
-                  dot === 1 ? 'w-8 bg-cyan-300' : 'w-2 bg-white/20',
+                  dot === 2 ? 'w-8 bg-cyan-300' : 'w-2 bg-white/20',
                 ].join(' ')}
               />
             ))}

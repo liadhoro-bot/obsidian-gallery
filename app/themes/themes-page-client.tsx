@@ -56,7 +56,7 @@ type Tab = 'find' | 'mine' | 'create'
 
 type Props = {
   activeTab: Tab
-  currentUserId: string
+  currentUserId: string | null
   publicThemes: Theme[]
   myAndSavedThemes: Theme[]
   savedThemeIds: string[]
@@ -99,11 +99,13 @@ export default function ThemesPageClient({
 
   const requestedTab = searchParams.get('tab')
   const currentTab =
-    requestedTab === 'mine' ||
-    requestedTab === 'find' ||
-    requestedTab === 'create'
-      ? requestedTab
-      : activeTab
+    !currentUserId
+      ? 'find'
+      : requestedTab === 'mine' ||
+          requestedTab === 'find' ||
+          requestedTab === 'create'
+        ? requestedTab
+        : activeTab
 
   const buildHref = useCallback((tab: Tab, search: string) => {
     const params = new URLSearchParams()
@@ -149,6 +151,10 @@ export default function ThemesPageClient({
   )
 
   function setTab(tab: Tab) {
+    if (!currentUserId && tab !== 'find') {
+      return
+    }
+
     if (tab === currentTab) {
       return
     }
@@ -157,17 +163,23 @@ export default function ThemesPageClient({
 
   return (
     <section className="space-y-5">
-      <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setTab(tab.key)}
-            className={tabClass(currentTab === tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div
+        className={`grid ${
+          currentUserId ? 'grid-cols-3' : 'grid-cols-1'
+        } overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1`}
+      >
+        {tabs
+          .filter((tab) => currentUserId || tab.key === 'find')
+          .map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setTab(tab.key)}
+              className={tabClass(currentTab === tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
       </div>
 
       {currentTab !== 'create' ? (

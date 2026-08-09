@@ -88,6 +88,298 @@ test('login form accepts an email and keeps the user on the auth surface', async
   expect(errors, 'login browser errors').toEqual([])
 })
 
+test.describe('auth callback routing', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('missing auth payload returns to preview login with context', async ({
+    page,
+  }) => {
+    const errors = registerPageFailureGuards(page)
+
+    await page.goto('/auth/callback?next=%2Fdashboard%3Fpreview%3D1', {
+      waitUntil: 'domcontentloaded',
+    })
+
+    await expect(page).toHaveURL(/\/login/)
+    await expect(page).toHaveURL(/preview=1/)
+    await expect(page).toHaveURL(/next=%2Fdashboard%3Fpreview%3D1/)
+    await expect(page.getByText(/No auth code or token was returned/i)).toBeVisible()
+
+    expect(errors, 'auth callback browser errors').toEqual([])
+  })
+})
+
+test.describe('v3 login and dashboard wiring', () => {
+  test.describe('unauthenticated preview visitor', () => {
+    test.use({ storageState: { cookies: [], origins: [] } })
+
+    test('dashboard preview redirects to preview login auth form', async ({ page }) => {
+      const errors = registerPageFailureGuards(page)
+
+      await page.goto('/dashboard?preview=1', { waitUntil: 'domcontentloaded' })
+      await expect(page).toHaveURL(/\/login/)
+      await expect(page).toHaveURL(/preview=1/)
+      await expect(page).toHaveURL(/next=/)
+
+      await expect(page.locator('[data-v3-login-indicator="form"]')).toBeVisible()
+      await expect(page.locator('[data-v3-login-mode="preview-auth"]')).toBeVisible()
+      await expect(page.getByRole('button', { name: /open v3 preview/i })).toBeEnabled()
+      await expect(page.getByRole('button', { name: /continue with google/i })).toHaveCount(0)
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => performance.getEntriesByName('v3-login-form-hydrated').length
+          )
+        )
+        .toBeGreaterThan(0)
+
+      expect(errors, 'v3 preview login browser errors').toEqual([])
+    })
+
+    test('preview login uses the local dev session endpoint', async ({
+      page,
+    }) => {
+      const errors = registerPageFailureGuards(page)
+      let requestBody: { email?: string; next?: string } | null = null
+
+      await page.route('**/auth/dev-preview-session?preview=1', async (route) => {
+        requestBody = route.request().postDataJSON()
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ redirectTo: '/dashboard?preview=1' }),
+        })
+      })
+
+      await page.goto('/login?next=%2Fdashboard%3Fpreview%3D1&preview=1', {
+        waitUntil: 'domcontentloaded',
+      })
+      await page.getByPlaceholder('you@example.com').fill('qa-check@example.com')
+      await page.getByRole('button', { name: /open v3 preview/i }).click()
+
+      await expect
+        .poll(() => page.url())
+        .toContain('/dashboard?preview=1')
+      expect(requestBody).toEqual({
+        email: 'qa-check@example.com',
+        next: '/dashboard?preview=1',
+      })
+
+      expect(errors, 'v3 local preview auth browser errors').toEqual([])
+    })
+  })
+
+  test('authenticated dashboard preview renders data indicators', async ({ page }) => {
+    const errors = registerPageFailureGuards(page)
+
+    await expectHealthyPage(page, '/dashboard?preview=1')
+    await expectAuthenticated(page)
+    await expect(page.locator('[data-v3-dashboard-indicator="root"]')).toBeVisible()
+    await expect(page.locator('[data-v3-dashboard-feed="live"]')).toBeVisible()
+    await expect(
+      page.locator(
+        '[data-v3-dashboard-indicator="featured-unit"], [data-v3-dashboard-indicator="featured-unit-empty"]'
+      )
+    ).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'Perf Benchmark Unit' })
+    ).toBeVisible()
+    await expect(
+      page.locator('[data-v3-dashboard-indicator="active-unit"]').first()
+    ).toBeVisible()
+    await expect(
+      page.locator('[data-v3-dashboard-active-units-layout="grid"]')
+    ).toBeVisible()
+    await expect
+      .poll(() =>
+        page.locator('[data-v3-dashboard-indicator="active-unit"]').count()
+      )
+      .toBeLessThanOrEqual(4)
+    await page.getByRole('button', { name: /show units as cards/i }).click()
+    await expect(
+      page.locator('[data-v3-dashboard-active-units-layout="cards"]')
+    ).toBeVisible()
+    await expect
+      .poll(() =>
+        page.locator('[data-v3-dashboard-indicator="active-unit"]').count()
+      )
+      .toBeLessThanOrEqual(2)
+    await expect(
+      page.getByRole('button', {
+        name: /currently showing active units/i,
+      })
+    ).toBeVisible()
+    await page
+      .getByRole('button', { name: /currently showing active units/i })
+      .click()
+    await page.getByRole('menuitemradio', { name: /pile of shame/i }).click()
+    await expect(
+      page.getByRole('button', {
+        name: /currently showing pile of shame units/i,
+      })
+    ).toBeVisible()
+    await expect(page.locator('[data-v3-dashboard-indicator="next-actions"]')).toBeVisible()
+    await page.getByRole('tab', { name: /my progress/i }).click()
+    await expect(page.locator('[data-v3-dashboard-indicator="my-progress"]')).toBeVisible()
+    await expect(page.locator('[data-v3-dashboard-indicator="xp-card"]')).toBeVisible()
+    await expect(
+      page.locator(
+        '[data-v3-dashboard-indicator="badge-earned"], [data-v3-dashboard-indicator="badge-locked"]'
+      ).first()
+    ).toBeVisible()
+    await expect(page.getByText(/Total Units/i)).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => performance.getEntriesByName('v3-dashboard-hydrated').length
+        )
+      )
+      .toBeGreaterThan(0)
+
+    expect(errors, 'v3 dashboard browser errors').toEqual([])
+  })
+
+  test('authenticated unit preview renders a live-backed hero image source', async ({
+    page,
+  }) => {
+    const errors = registerPageFailureGuards(page)
+
+    await expectHealthyPage(page, '/dashboard?preview=1')
+    await expectAuthenticated(page)
+
+    const resumeHref = await page
+      .getByRole('link', { name: /resume/i })
+      .first()
+      .getAttribute('href')
+
+    expect(resumeHref).toMatch(/\/units\/.+preview=1/)
+    await expectHealthyPage(page, resumeHref!)
+
+    const hero = page.locator('[data-v3-unit-indicator="hero"]')
+    await expect(hero).toBeVisible()
+    await expect(page.locator('[data-v3-unit-source="live"]')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Perf Benchmark Unit' })).toBeVisible()
+
+    const heroImage = await hero.getAttribute('data-v3-unit-hero-image')
+    expect(heroImage).toBeTruthy()
+
+    await page.getByRole('tab', { name: /^paint$/i }).click()
+    const calendarMonth = page.locator('[data-v3-unit-calendar-month]')
+    await expect(calendarMonth).toBeVisible()
+    const initialMonth = await calendarMonth.getAttribute(
+      'data-v3-unit-calendar-month'
+    )
+
+    await page.getByRole('button', { name: /next month/i }).click()
+    await expect
+      .poll(() => calendarMonth.getAttribute('data-v3-unit-calendar-month'))
+      .not.toBe(initialMonth)
+
+    await page.getByRole('button', { name: /previous month/i }).click()
+    await expect
+      .poll(() => calendarMonth.getAttribute('data-v3-unit-calendar-month'))
+      .toBe(initialMonth)
+
+    expect(errors, 'v3 unit preview browser errors').toEqual([])
+  })
+
+  test('authenticated projects preview renders live projects and units tabs', async ({
+    page,
+  }) => {
+    const errors = registerPageFailureGuards(page)
+
+    await expectHealthyPage(page, '/projects?preview=1')
+    await expectAuthenticated(page)
+    await expect(page.locator('[data-v3-projects-indicator="root"]')).toBeVisible()
+    await expect(page.locator('[data-v3-projects-source="live"]')).toBeVisible()
+    await expect(page.locator('[data-v3-projects-indicator="projects-list"]')).toBeVisible()
+    await expect(page.getByText('Perf Benchmark Project')).toBeVisible()
+
+    await page.getByRole('tab', { name: /^units$/i }).click()
+    await expect(page.locator('[data-v3-projects-indicator="unit-card"]').first()).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: /Perf Benchmark Unit/ }).first()
+    ).toBeVisible()
+
+    expect(errors, 'v3 projects browser errors').toEqual([])
+  })
+
+  test('authenticated paints preview renders live collection and library tabs', async ({
+    page,
+  }) => {
+    const errors = registerPageFailureGuards(page)
+
+    await expectHealthyPage(page, '/paints?preview=1')
+    await expectAuthenticated(page)
+    await expect(page.locator('[data-v3-paints-indicator="root"]')).toBeVisible()
+    await expect(page.locator('[data-v3-paints-source="live"]')).toBeVisible()
+    await expect(
+      page.locator(
+        '[data-v3-paints-indicator="my-paints-grid"], [data-v3-paints-indicator="my-paints-empty"]'
+      )
+    ).toBeVisible()
+
+    await page.getByRole('tab', { name: /paint library/i }).click()
+    await expect(
+      page.locator(
+        '[data-v3-paints-indicator="library-grid"], [data-v3-paints-indicator="library-empty"]'
+      )
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: /export/i })).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => performance.getEntriesByName('v3-paints-hydrated').length
+        )
+      )
+      .toBeGreaterThan(0)
+
+    expect(errors, 'v3 paints browser errors').toEqual([])
+  })
+
+  test('authenticated guides preview maps recipes into decks', async ({
+    page,
+  }) => {
+    const errors = registerPageFailureGuards(page)
+
+    await expectHealthyPage(page, '/guides?preview=1')
+    await expectAuthenticated(page)
+    await expect(page.locator('[data-v3-guides-indicator="root"]')).toBeVisible()
+    await expect(page.locator('[data-v3-guides-source="live"]')).toBeVisible()
+    await expect(page.locator('[data-v3-guides-indicator="guides-list"]')).toBeVisible()
+
+    await page.locator('a[href^="/guides/"]:not([href^="/guides/decks/"])').first().click()
+    await expect(page).toHaveURL(/\/guides\/[^/]+\?preview=1/)
+    await expect(page.getByText(/Guide Detail/i)).toBeVisible()
+    await page.getByRole('link', { name: /back to guides/i }).click()
+    await expect(page).toHaveURL(/\/guides\?preview=1/)
+
+    await page.getByRole('tab', { name: /^decks$/i }).click()
+    await expect(page.locator('[data-v3-guides-indicator="decks-list"]')).toBeVisible()
+    await expect(page.getByText(/Deck Library/i)).toBeVisible()
+    await page.locator('a[href^="/guides/decks/"]').first().click()
+    await expect(page).toHaveURL(/\/guides\/decks\/[^/]+\?preview=1/)
+    await expect(page.getByText(/Deck Detail/i)).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Cards$/i })).toBeVisible()
+    await page.getByRole('link', { name: /back to guides/i }).click()
+
+    await page.getByRole('tab', { name: /^library$/i }).click()
+    await expect(
+      page.locator('[data-v3-guides-indicator="library-decks-list"]')
+    ).toBeVisible()
+    await expect(page.getByPlaceholder(/search guides and decks/i)).toBeVisible()
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => performance.getEntriesByName('v3-guides-hydrated').length
+        )
+      )
+      .toBeGreaterThan(0)
+
+    expect(errors, 'v3 guides browser errors').toEqual([])
+  })
+})
+
 test('project library tabs and create form work', async ({ page }) => {
   const errors = registerPageFailureGuards(page)
 

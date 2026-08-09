@@ -295,12 +295,12 @@ export default function WorkflowScreen({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_35%),radial-gradient(circle_at_bottom,rgba(14,165,233,0.12),transparent_35%)]" />
 
       <div className="relative z-10 flex justify-center gap-2">
-        {[0, 1, 2, 3].map((dot) => (
+        {[0, 1, 2, 3, 4].map((dot) => (
           <span
             key={dot}
             className={[
               'h-2 rounded-full transition-all',
-              dot === 2 ? 'w-7 bg-cyan-300' : 'w-2 bg-white/20',
+              dot === 3 ? 'w-7 bg-cyan-300' : 'w-2 bg-white/20',
             ].join(' ')}
           />
         ))}

@@ -10,6 +10,9 @@ import NominateForContestCard from '../../../components/contests/nominate-for-co
 import { getEligibleContestsForSource } from '../../../lib/contests/queries'
 import { isCurrentUserAdmin } from '../../../lib/admin'
 import { TopBarSkeleton } from '../../dashboard/dashboard-skeletons'
+import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
+import { getSupabaseImageUrl } from '../../../utils/images/supabase-image'
+import UnitV3Preview, { type UnitV3LiveUnit } from './unit-v3-preview'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -17,6 +20,7 @@ type PageProps = {
     session?: string
     tab?: string
     autostart?: string
+    preview?: string
   }>
 }
 
@@ -47,6 +51,16 @@ function isMissingUnitColumn(
   return error?.code === '42703' && error.message?.includes(column)
 }
 
+function isMissingScheduledSessionsTable(
+  error: UnitQueryError | null | undefined
+) {
+  return (
+    error?.code === '42P01' ||
+    error?.code === 'PGRST205' ||
+    Boolean(error?.message?.includes('unit_scheduled_sessions'))
+  )
+}
+
 type ParentProject = {
   id: string
   name: string | null
@@ -55,6 +69,29 @@ type ParentProject = {
 type UnitProjectRaw = {
   project_id: string
   project?: ParentProject[] | ParentProject | null
+}
+
+type UnitV3ImageRow = {
+  id: string
+  image_url: string | null
+  is_featured: boolean | null
+  alt_text: string | null
+}
+
+type UnitV3SessionRow = {
+  id: string
+  started_at: string
+  duration_seconds: number | null
+  notes: string | null
+  entry_source: string | null
+}
+
+type UnitV3ScheduledSessionRow = {
+  id: string
+  scheduled_start_at: string
+  focus: string
+  notify: boolean
+  status: string
 }
 
 type ProjectThemePaintRaw = {
@@ -87,6 +124,263 @@ const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
 
 function firstRelation<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+function formatUnitV3Deadline(deadline: string | null) {
+  if (!deadline) {
+    return 'No deadline'
+  }
+
+  const date = new Date(`${deadline}T00:00:00`)
+  if (Number.isNaN(date.getTime())) {
+    return deadline
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
+}
+
+function formatUnitV3DateKey(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 10)
+  }
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((accumulator, part) => {
+      accumulator[part.type] = part.value
+      return accumulator
+    }, {})
+
+  return `${parts.year}-${parts.month}-${parts.day}`
+}
+
+function formatUnitV3Time(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return '19:30'
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
+}
+
+function formatUnitV3Duration(totalSeconds: number | null | undefined) {
+  const seconds = Math.max(0, totalSeconds ?? 0)
+  const totalMinutes = Math.round(seconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours === 0) {
+    return `${minutes}m`
+  }
+
+  if (minutes === 0) {
+    return `${hours}h`
+  }
+
+  return `${hours}h ${minutes}m`
+}
+
+function getUnitV3SessionTitle(session: UnitV3SessionRow) {
+  if (session.notes?.trim()) {
+    return session.notes.trim().split('\n')[0] || 'Painting session'
+  }
+
+  if (session.entry_source === 'manual') {
+    return 'Manual painting log'
+  }
+
+  return 'Painting session'
+}
+
+function formatUnitV3Status(status: UnitDetailUnit['status']) {
+  if (status === 'bench') return 'Bench'
+  if (status === 'pile') return 'Pile of shame'
+  if (status === 'other') return 'Other'
+  if (status === 'complete') return 'Complete'
+  return 'Active'
+}
+
+async function getUnitV3PreviewUnit(id: string) {
+  const supabase = await createClient()
+  const user = await getSessionUser(supabase)
+
+  if (!user) {
+    return null
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select(
+      'id, name, complexity, unit_size, deadline, is_featured, status, project_id'
+    )
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (unitError) {
+    throw new Error(unitError.message)
+  }
+
+  if (!unit) {
+    return null
+  }
+
+  const [
+    imagesResult,
+    linkedProjectsResult,
+    directProjectResult,
+    sessionsResult,
+    scheduledSessionsResult,
+  ] =
+    await Promise.all([
+      supabase
+        .from('image_assets')
+        .select('id, image_url, is_featured, alt_text')
+        .eq('entity_type', 'unit')
+        .eq('entity_id', id)
+        .eq('user_id', user.id)
+        .order('is_featured', { ascending: false })
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('unit_projects')
+        .select(
+          `
+          project_id,
+          project:projects (
+            id,
+            name
+          )
+        `
+        )
+        .eq('unit_id', id)
+        .eq('user_id', user.id)
+        .limit(1),
+      unit.project_id
+        ? supabase
+            .from('projects')
+            .select('id, name')
+            .eq('id', unit.project_id)
+            .eq('user_id', user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from('unit_sessions')
+        .select('id, started_at, duration_seconds, notes, entry_source')
+        .eq('unit_id', id)
+        .eq('user_id', user.id)
+        .gt('duration_seconds', 0)
+        .order('started_at', { ascending: false })
+        .limit(500),
+      supabase
+        .from('unit_scheduled_sessions')
+        .select('id, scheduled_start_at, focus, notify, status')
+        .eq('unit_id', id)
+        .eq('user_id', user.id)
+        .eq('status', 'scheduled')
+        .order('scheduled_start_at', { ascending: true })
+        .limit(250),
+    ])
+
+  if (imagesResult.error) {
+    throw new Error(imagesResult.error.message)
+  }
+  if (sessionsResult.error) {
+    throw new Error(sessionsResult.error.message)
+  }
+  if (
+    scheduledSessionsResult.error &&
+    !isMissingScheduledSessionsTable(
+      scheduledSessionsResult.error as UnitQueryError
+    )
+  ) {
+    throw new Error(scheduledSessionsResult.error.message)
+  }
+
+  const linkedProject = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
+    .map((row) => firstRelation(row.project))
+    .find((project): project is ParentProject => Boolean(project?.id))
+  const directProject = directProjectResult.data as ParentProject | null
+  const projectName =
+    linkedProject?.name ?? directProject?.name ?? 'Standalone unit'
+  const galleryImages = ((imagesResult.data ?? []) as UnitV3ImageRow[])
+    .filter((image) => Boolean(image.image_url))
+    .map((image) => ({
+      id: image.id,
+      image:
+        getSupabaseImageUrl(image.image_url, {
+          width: 640,
+          height: 420,
+          resize: 'cover',
+          quality: 76,
+        }) ?? image.image_url!,
+      alt: image.alt_text || unit.name || 'Unit image',
+      isFeatured: image.is_featured === true,
+    }))
+  const featuredImage =
+    galleryImages.find((image) => image.isFeatured) ?? galleryImages[0]
+  const status = formatUnitV3Status(unit.status)
+  const sessions = (sessionsResult.data ?? []) as UnitV3SessionRow[]
+  const totalLoggedSeconds = sessions.reduce(
+    (sum, session) => sum + (session.duration_seconds ?? 0),
+    0
+  )
+  const paintSessions = sessions.map((session) => ({
+    id: session.id,
+    dateKey: formatUnitV3DateKey(session.started_at),
+    startedAt: session.started_at,
+    title: getUnitV3SessionTitle(session),
+    duration: formatUnitV3Duration(session.duration_seconds),
+    notes: session.notes?.trim() || '',
+  }))
+  const scheduledSessions = scheduledSessionsResult.error
+    ? []
+    : ((scheduledSessionsResult.data ?? []) as UnitV3ScheduledSessionRow[]).map(
+        (session) => ({
+          id: session.id,
+          dateKey: formatUnitV3DateKey(session.scheduled_start_at),
+          time: formatUnitV3Time(session.scheduled_start_at),
+          duration: '60',
+          focus: session.focus || 'Focused painting session',
+          notes: '',
+          notify: session.notify,
+        })
+      )
+
+  return {
+    id: unit.id,
+    name: unit.name || 'Untitled Unit',
+    label: unit.is_featured ? 'Featured' : status,
+    image: featuredImage?.image ?? '/onboarding/first-project-bg.jpeg',
+    galleryImages,
+    project: projectName,
+    deadline: formatUnitV3Deadline(unit.deadline),
+    status,
+    progress: unit.status === 'complete' ? 100 : 0,
+    stage: unit.status === 'complete' ? 'Stage 6/6' : 'Stage 1/6',
+    logged: formatUnitV3Duration(totalLoggedSeconds),
+    lastPainted: paintSessions[0]?.dateKey ?? null,
+    paintSessions,
+    scheduledSessions,
+    complexity: Math.max(1, Math.min(5, unit.complexity ?? 1)),
+    modelCount: Math.max(1, unit.unit_size ?? 1),
+    palette: ['#a92322', '#d6b84d', '#171821', '#e1c58d', '#72c888'],
+  } satisfies UnitV3LiveUnit
 }
 
 async function UnitDetailBody({
@@ -152,6 +446,7 @@ async function UnitDetailBody({
   const [
     imageResult,
     sessionsResult,
+    scheduledSessionsResult,
     projectResult,
     unitThemeResult,
     linkedProjectsResult,
@@ -174,6 +469,23 @@ async function UnitDetailBody({
       .eq('unit_id', id)
       .eq('user_id', userId)
       .order('started_at', { ascending: false }),
+    supabase
+      .from('unit_scheduled_sessions')
+      .select(`
+        id,
+        unit_id,
+        user_id,
+        scheduled_start_at,
+        focus,
+        notify,
+        status,
+        created_at,
+        updated_at
+      `)
+      .eq('unit_id', id)
+      .eq('user_id', userId)
+      .eq('status', 'scheduled')
+      .order('scheduled_start_at', { ascending: true }),
     unit.project_id
       ? supabase
           .from('projects')
@@ -265,7 +577,11 @@ async function UnitDetailBody({
     linkedProjectsResult.error ||
     allProjectsResult.error ||
     initialStepsResult.error ||
-    stagePaintsResult.error
+    stagePaintsResult.error ||
+    (scheduledSessionsResult.error &&
+      !isMissingScheduledSessionsTable(
+        scheduledSessionsResult.error as UnitQueryError
+      ))
   ) {
     throw new Error(
       projectResult.error?.message ||
@@ -274,11 +590,15 @@ async function UnitDetailBody({
         allProjectsResult.error?.message ||
         initialStepsResult.error?.message ||
         stagePaintsResult.error?.message ||
+        scheduledSessionsResult.error?.message ||
         'Could not load unit detail data.'
     )
   }
 
   const sessions = sessionsResult.data ?? []
+  const scheduledSessions = scheduledSessionsResult.error
+    ? []
+    : (scheduledSessionsResult.data ?? [])
   const totalLoggedSeconds = sessions.reduce(
     (sum, session) => sum + (session.duration_seconds ?? 0),
     0
@@ -401,6 +721,7 @@ async function UnitDetailBody({
       totalLoggedSeconds={totalLoggedSeconds}
       activeSession={activeSession}
       sessions={sessions}
+      scheduledSessions={scheduledSessions}
       stagePaints={stagePaints}
       parentProjects={parentProjects}
       availableProjects={availableProjects}
@@ -483,6 +804,20 @@ function UnitContestCardSkeleton() {
 export default async function UnitDetailPage({ params, searchParams }: PageProps) {
   const perf = createPerfTimer('/units/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
+  const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
+
+  if (isPreview) {
+    const previewTab =
+      resolvedSearchParams.tab === 'paint' ||
+      resolvedSearchParams.tab === 'progress'
+        ? resolvedSearchParams.tab
+        : 'details'
+    const liveUnit = await getUnitV3PreviewUnit(id)
+
+    perf.total()
+    return <UnitV3Preview id={id} initialTab={previewTab} liveUnit={liveUnit} />
+  }
+
   const showSessionStartedNotice = resolvedSearchParams.session === 'started'
   const autoStartSession = resolvedSearchParams.autostart === '1'
   const initialTab =

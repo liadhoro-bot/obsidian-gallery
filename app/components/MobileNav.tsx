@@ -1,16 +1,18 @@
 'use client'
 
 import { useCallback, useEffect, useSyncExternalStore, useTransition } from 'react'
+import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { hasV3PreviewDocumentCookie, isV3PreviewValue } from '../../lib/v3-preview'
 import { prefetchRoute } from './route-prefetch'
+import styles from './mobile-nav.module.css'
 
 const navItems = [
-  { name: 'Home', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
+  { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
   { name: 'Projects', href: '/projects', icon: '/icons/nav/projects.svg' },
   { name: 'Paints', href: '/paints', icon: '/icons/nav/vault.svg' },
   { name: 'Guides', href: '/guides', icon: '/icons/nav/recipes.svg' },
-  { name: 'Themes', href: '/themes', icon: '/icons/nav/themes.svg' },
+  { name: 'Community', href: '/community', icon: '/icons/nav/community.svg' },
 ]
 
 function subscribeToUrlChanges(callback: () => void) {
@@ -121,8 +123,8 @@ export default function MobileNav() {
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#061018]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-      <div className="mx-auto flex min-h-16 max-w-md items-center justify-around px-2">
+    <nav className={styles.nav} aria-label="Primary navigation">
+      <div className={styles.inner}>
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -139,27 +141,15 @@ export default function MobileNav() {
               data-active={isActive}
               aria-current={isActive ? 'page' : undefined}
               disabled={isPending && isActive}
-              className={`nav-pill tap-press tap-target flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl ${
-                isActive ? 'text-cyan-400' : 'text-slate-500'
-              } ${isPending && isActive ? 'opacity-100' : ''}`}
+              className={styles.item}
             >
               <span
-                className="nav-pill-icon h-6 w-6 bg-current"
-                style={{
-                  maskImage: `url(${item.icon})`,
-                  WebkitMaskImage: `url(${item.icon})`,
-                  maskRepeat: 'no-repeat',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskPosition: 'center',
-                  WebkitMaskPosition: 'center',
-                  maskSize: 'contain',
-                  WebkitMaskSize: 'contain',
-                }}
+                className={styles.icon}
+                style={{ '--nav-icon': `url(${item.icon})` } as CSSProperties}
+                aria-hidden="true"
               />
 
-              <span className="text-[8px] font-bold uppercase tracking-[0.14em]">
-                {item.name}
-              </span>
+              <span className={styles.label}>{item.name}</span>
             </button>
           )
         })}

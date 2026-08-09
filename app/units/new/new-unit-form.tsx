@@ -90,7 +90,7 @@ export default function NewUnitForm({ projects }: NewUnitFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form id="new-unit-form" onSubmit={handleSubmit} className="space-y-4">
       <section className="rounded-2xl border border-cyan-300/25 bg-black/40 p-4 shadow-[0_0_22px_rgba(34,211,238,0.12)]">
         <div className="space-y-4">
           <input type="hidden" name="projectMode" value={projectMode} />

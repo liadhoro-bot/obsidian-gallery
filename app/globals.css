@@ -1,8 +1,10 @@
 @import "tailwindcss";
+@import "../src/styles/og-design-tokens.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --foreground: #ededed;
   --font-geist-sans: Arial, Helvetica, sans-serif;
   --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
@@ -12,13 +14,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -54,6 +49,12 @@ body {
 :where(input, textarea, select, [contenteditable="true"]) {
   user-select: text;
   -webkit-user-select: text;
+}
+
+@media (pointer: coarse) {
+  :where(input:not([type="hidden"]), textarea, select) {
+    font-size: 16px;
+  }
 }
 
 button {
@@ -667,3 +668,213 @@ button:disabled {
   font-size: clamp(0.88rem, 3.65cqw, 1.22rem);
   line-height: 1.23;
 }
+.v3-material-walnut {
+  background-color: #1a0f08;
+  background-image:
+    radial-gradient(circle at 50% -8%, rgba(130, 82, 42, 0.22), transparent 34%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.46), transparent 22%, transparent 78%, rgba(0, 0, 0, 0.5)),
+    url('/v3-raster/walnut-board.webp?v=20260807-clean3');
+  background-position: center top, center, center top;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: 820px 560px, 100% 100%, cover;
+}
+
+.v3-dashboard-shell {
+  position: relative;
+  isolation: isolate;
+  background-color: #27170d;
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 16%, transparent 84%, rgba(0, 0, 0, 0.34)),
+    linear-gradient(180deg, rgba(255, 228, 184, 0.08), transparent 18%, transparent 84%, rgba(0, 0, 0, 0.24)),
+    url('/v3-raster/walnut-board.webp?v=20260807-clean3');
+  background-position: center, center, center top;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, 100% 100%, cover;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 232, 189, 0.1),
+    inset 0 -30px 52px rgba(0, 0, 0, 0.3);
+}
+
+.v3-dashboard-shell::before {
+  pointer-events: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 226, 176, 0.05), transparent 20%),
+    radial-gradient(circle at 50% 44%, transparent 42%, rgba(0, 0, 0, 0.18) 100%);
+}
+
+@media (min-width: 640px) {
+  .v3-dashboard-shell {
+    border: 1px solid rgba(119, 74, 38, 0.48);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 232, 189, 0.12),
+      inset 0 -34px 58px rgba(0, 0, 0, 0.32),
+      0 22px 70px rgba(0, 0, 0, 0.52);
+  }
+}
+
+.v3-walnut-header,
+.v3-bottom-nav {
+  background-color: #24150b;
+  background-image:
+    linear-gradient(180deg, rgba(255, 229, 184, 0.14), rgba(0, 0, 0, 0.36)),
+    url('/v3-raster/walnut-control.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
+  border-color: rgba(91, 57, 30, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 232, 189, 0.18),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.54),
+    0 12px 28px rgba(0, 0, 0, 0.42);
+}
+
+.v3-bottom-nav {
+  position: fixed;
+  right: auto;
+  left: 50%;
+  width: min(100%, 520px);
+  transform: translateX(-50%);
+  border-color: rgba(126, 81, 42, 0.58);
+  border-radius: 18px 18px 0 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 232, 189, 0.16),
+    inset 0 8px 18px rgba(255, 213, 153, 0.05),
+    0 -10px 24px rgba(0, 0, 0, 0.38);
+}
+
+.v3-parchment-panel,
+.v3-paper-card,
+.v3-photo-mount,
+.v3-walnut-header,
+.v3-walnut-button,
+.v3-walnut-control,
+.v3-brass-plaque,
+.v3-brass-button,
+.v3-pin,
+.v3-progress-track,
+.v3-progress-fill {
+  position: relative;
+  background-clip: padding-box;
+}
+
+.v3-parchment-panel,
+.v3-paper-card,
+.v3-photo-mount {
+  overflow: hidden;
+}
+
+.v3-parchment-panel {
+  background-color: #e6d2aa;
+  background-image:
+    linear-gradient(180deg, rgba(255, 251, 232, 0.24), rgba(116, 74, 33, 0.08)),
+    linear-gradient(90deg, rgba(109, 72, 35, 0.14), transparent 6%, transparent 94%, rgba(109, 72, 35, 0.14)),
+    url('/v3-raster/parchment-panel.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, 100% 100%, cover;
+  border-color: rgba(107, 72, 36, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.56),
+    inset 0 0 0 1px rgba(255, 247, 224, 0.2),
+    inset 0 -2px 0 rgba(92, 59, 27, 0.2),
+    0 3px 0 rgba(69, 42, 19, 0.34),
+    0 12px 24px rgba(0, 0, 0, 0.36);
+}
+
+.v3-parchment-panel::after,
+.v3-paper-card::after,
+.v3-photo-mount::after {
+  pointer-events: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 248, 225, 0.2),
+    inset 0 -1px 0 rgba(67, 42, 20, 0.16);
+}
+
+.v3-paper-card {
+  background-color: #ead7b5;
+  background-image:
+    linear-gradient(180deg, rgba(255, 251, 234, 0.18), rgba(122, 80, 38, 0.06)),
+    url('/v3-raster/paper-card.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.44),
+    inset 0 -1px 0 rgba(95, 61, 30, 0.13),
+    0 2px 5px rgba(67, 43, 23, 0.24);
+}
+
+.v3-photo-mount {
+  background-color: #c9aa78;
+  background-image:
+    linear-gradient(180deg, rgba(255, 248, 222, 0.18), rgba(86, 56, 29, 0.14)),
+    url('/v3-raster/photo-mount.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(75, 47, 22, 0.18),
+    0 4px 10px rgba(69, 45, 24, 0.38);
+}
+
+.v3-brass-plaque,
+.v3-brass-button,
+.v3-pin {
+  background-color: #9d7436;
+  background-image:
+    radial-gradient(circle at 28% 16%, rgba(255, 244, 196, 0.28), transparent 24%),
+    linear-gradient(90deg, rgba(71, 43, 16, 0.24), transparent 18%, rgba(255, 238, 180, 0.24) 48%, transparent 76%, rgba(67, 42, 16, 0.22)),
+    url('/v3-raster/brass.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, 100% 100%, cover;
+}
+
+.v3-walnut-button,
+.v3-walnut-control {
+  background-color: #21140b;
+  background-image:
+    linear-gradient(180deg, rgba(255, 231, 186, 0.12), rgba(0, 0, 0, 0.34)),
+    url('/v3-raster/walnut-control.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
+}
+
+.v3-progress-track {
+  background-color: rgba(116, 96, 68, 0.52);
+  background-image:
+    linear-gradient(180deg, rgba(255, 239, 203, 0.2), rgba(75, 57, 35, 0.24)),
+    url('/v3-raster/paper-card.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
+  box-shadow:
+    inset 0 1px 2px rgba(59, 42, 24, 0.36),
+    inset 0 -1px 0 rgba(255, 244, 218, 0.14);
+}
+
+.v3-progress-fill {
+  background-color: #203a5e;
+  background-image:
+    linear-gradient(90deg, rgba(18, 35, 59, 0.4), rgba(55, 88, 129, 0.2)),
+    url('/v3-raster/progress-paint.webp?v=20260807-clean3');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
+  clip-path: polygon(0 24%, 7% 13%, 18% 27%, 30% 16%, 43% 26%, 60% 13%, 76% 24%, 92% 16%, 100% 31%, 100% 76%, 88% 85%, 74% 75%, 58% 88%, 42% 73%, 27% 84%, 13% 73%, 0 82%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 1px 2px rgba(20, 32, 50, 0.24);
+}
+

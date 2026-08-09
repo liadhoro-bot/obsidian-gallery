@@ -1,0 +1,450 @@
+{
+  "$meta": {
+    "name": "OG-WDS",
+    "note": "Values tagged SOURCE are explicitly specified by the supplied Design DNA. Values tagged CALIBRATED are browser implementation defaults sampled/derived from the supplied references and should be tuned globally, not per-screen."
+  },
+  "fonts": {
+    "display": {
+      "value": "\"Cormorant Garamond\", Georgia, serif",
+      "provenance": "SOURCE"
+    },
+    "ui": {
+      "value": "\"Source Sans 3\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "provenance": "SOURCE"
+    },
+    "mono": {
+      "value": "\"IBM Plex Mono\", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      "provenance": "SOURCE"
+    }
+  },
+  "radii": {
+    "s": {
+      "value": "6px",
+      "provenance": "SOURCE",
+      "role": "functional"
+    },
+    "m": {
+      "value": "12px",
+      "provenance": "SOURCE",
+      "role": "surface/default"
+    },
+    "l": {
+      "value": "18px",
+      "provenance": "SOURCE",
+      "role": "physical structure"
+    },
+    "round": {
+      "value": "999px",
+      "provenance": "CALIBRATED",
+      "role": "circular compact controls and swatches"
+    }
+  },
+  "colors": {
+    "walnut950": {
+      "value": "#201713",
+      "provenance": "CALIBRATED",
+      "role": "quiet dark walnut base"
+    },
+    "walnut900": {
+      "value": "#2d211a",
+      "provenance": "CALIBRATED",
+      "role": "quiet walnut grain shadow"
+    },
+    "walnut800": {
+      "value": "#403025",
+      "provenance": "CALIBRATED",
+      "role": "subtle walnut body tone"
+    },
+    "walnut700": {
+      "value": "#5c4434",
+      "provenance": "CALIBRATED",
+      "role": "restrained walnut highlight"
+    },
+    "parchment50": {
+      "value": "#f0e4d1",
+      "provenance": "CALIBRATED",
+      "role": "warm light paper highlight"
+    },
+    "parchment100": {
+      "value": "#e6d2b6",
+      "provenance": "CALIBRATED",
+      "role": "premium hobby notebook stock"
+    },
+    "parchment200": {
+      "value": "#d8bd98",
+      "provenance": "CALIBRATED",
+      "role": "warm parchment edge and stronger surface"
+    },
+    "paper50": {
+      "value": "#f3eadc",
+      "provenance": "CALIBRATED",
+      "role": "warm archival paper highlight"
+    },
+    "paper100": {
+      "value": "#e3d5c0",
+      "provenance": "CALIBRATED",
+      "role": "supporting paper card"
+    },
+    "paper200": {
+      "value": "#d2bfaa",
+      "provenance": "CALIBRATED",
+      "role": "paper/photo mount stock"
+    },
+    "brass500": {
+      "value": "#a97c3e",
+      "provenance": "CALIBRATED",
+      "role": "aged brass center face"
+    },
+    "brass700": {
+      "value": "#654421",
+      "provenance": "CALIBRATED",
+      "role": "aged brass perimeter and border"
+    },
+    "steel500": {
+      "value": "#85817D",
+      "provenance": "CALIBRATED_SAMPLED"
+    },
+    "steel700": {
+      "value": "#474541",
+      "provenance": "CALIBRATED_SAMPLED"
+    },
+    "leather500": {
+      "value": "#5C3121",
+      "provenance": "CALIBRATED_SAMPLED"
+    },
+    "leather700": {
+      "value": "#412A1D",
+      "provenance": "CALIBRATED_SAMPLED"
+    },
+    "ink950": {
+      "value": "#241B15",
+      "provenance": "CALIBRATED"
+    },
+    "ink800": {
+      "value": "#3A2D23",
+      "provenance": "CALIBRATED"
+    },
+    "ink650": {
+      "value": "#5D5043",
+      "provenance": "CALIBRATED"
+    },
+    "ink500": {
+      "value": "#776B5D",
+      "provenance": "CALIBRATED"
+    },
+    "statusInfo": {
+      "value": "#365A72",
+      "provenance": "CALIBRATED"
+    },
+    "statusSuccess": {
+      "value": "#5F6F48",
+      "provenance": "CALIBRATED"
+    },
+    "statusWarning": {
+      "value": "#A1702F",
+      "provenance": "CALIBRATED"
+    },
+    "statusDanger": {
+      "value": "#9C4938",
+      "provenance": "CALIBRATED"
+    },
+    "statusSpecial": {
+      "value": "#6F5576",
+      "provenance": "CALIBRATED"
+    },
+    "statusNeutral": {
+      "value": "#726A60",
+      "provenance": "CALIBRATED"
+    },
+    "focus": {
+      "value": "#315D7B",
+      "provenance": "CALIBRATED"
+    }
+  },
+  "spacing": {
+    "1": {
+      "value": "4px",
+      "provenance": "CALIBRATED"
+    },
+    "2": {
+      "value": "8px",
+      "provenance": "CALIBRATED"
+    },
+    "3": {
+      "value": "12px",
+      "provenance": "CALIBRATED"
+    },
+    "4": {
+      "value": "16px",
+      "provenance": "CALIBRATED"
+    },
+    "5": {
+      "value": "20px",
+      "provenance": "CALIBRATED"
+    },
+    "6": {
+      "value": "24px",
+      "provenance": "CALIBRATED"
+    },
+    "8": {
+      "value": "32px",
+      "provenance": "CALIBRATED"
+    },
+    "10": {
+      "value": "40px",
+      "provenance": "CALIBRATED"
+    },
+    "12": {
+      "value": "48px",
+      "provenance": "CALIBRATED"
+    },
+    "16": {
+      "value": "64px",
+      "provenance": "CALIBRATED"
+    }
+  },
+  "shadows": {
+    "contact": {
+      "value": "0 1px 2px rgb(36 27 21 / 0.16), 0 1px 0 rgb(255 255 255 / 0.16) inset",
+      "provenance": "CALIBRATED",
+      "meaning": "contact, almost no elevation"
+    },
+    "medium": {
+      "value": "1px 5px 12px rgb(36 24 16 / 0.20)",
+      "provenance": "CALIBRATED",
+      "meaning": "physical object above surface"
+    },
+    "large": {
+      "value": "2px 14px 30px rgb(28 18 12 / 0.28)",
+      "provenance": "CALIBRATED",
+      "meaning": "structural/environmental depth"
+    },
+    "pressed": {
+      "value": "inset 0 2px 3px rgb(36 24 16 / 0.22)",
+      "provenance": "CALIBRATED",
+      "meaning": "depth change on press"
+    },
+    "floatingPaper": {
+      "value": "2px 7px 14px -6px rgb(36 24 16 / 0.28)",
+      "provenance": "CALIBRATED_FALLBACK",
+      "meaning": "fallback only; preferred implementation follows lifted edge"
+    },
+    "physicalPanel": {
+      "value": "softer inset highlights plus reduced object shadow",
+      "provenance": "CALIBRATED",
+      "meaning": "restrained premium paper panel separation"
+    },
+    "photoMount": {
+      "value": "short mount lift with fine inset edge",
+      "provenance": "CALIBRATED",
+      "meaning": "miniature image emphasis without ornate framing"
+    },
+    "walnutControl": {
+      "value": "compact inset/pressed depth",
+      "provenance": "CALIBRATED",
+      "meaning": "dark controls and navigation without fantasy framing"
+    }
+  },
+  "type": {
+    "titleXl": {
+      "value": "clamp(2.5rem, 5vw, 3.5rem)",
+      "family": "display",
+      "weight": 600,
+      "provenance": "CALIBRATED"
+    },
+    "titleLg": {
+      "value": "clamp(2.125rem, 4vw, 2.75rem)",
+      "family": "display",
+      "weight": 600,
+      "provenance": "CALIBRATED"
+    },
+    "subtitleLg": {
+      "value": "clamp(1.375rem, 2vw, 1.625rem)",
+      "family": "ui",
+      "weight": 400,
+      "provenance": "CALIBRATED"
+    },
+    "section": {
+      "value": "clamp(1.125rem, 1.5vw, 1.25rem)",
+      "family": "display",
+      "weight": 600,
+      "tracking": "0.12em",
+      "provenance": "CALIBRATED"
+    },
+    "bodyLg": {
+      "value": "clamp(1.0625rem, 1vw, 1.125rem)",
+      "family": "ui",
+      "weight": 400,
+      "provenance": "CALIBRATED"
+    },
+    "body": {
+      "value": "1rem",
+      "family": "ui",
+      "weight": 400,
+      "provenance": "CALIBRATED"
+    },
+    "caption": {
+      "value": "0.875rem",
+      "family": "ui",
+      "weight": 400,
+      "provenance": "CALIBRATED"
+    },
+    "label": {
+      "value": "0.75rem",
+      "family": "ui",
+      "weight": 600,
+      "tracking": "0.06em",
+      "provenance": "CALIBRATED"
+    },
+    "mono": {
+      "value": "0.8125rem",
+      "family": "mono",
+      "weight": 400,
+      "provenance": "CALIBRATED"
+    },
+    "leadingSection": {
+      "value": "1.15",
+      "provenance": "CALIBRATED",
+      "role": "section heading rhythm"
+    }
+  },
+  "controls": {
+    "touchTargetMin": {
+      "value": "44px",
+      "provenance": "CALIBRATED_ACCESSIBILITY"
+    },
+    "heightDefault": {
+      "value": "44px",
+      "provenance": "CALIBRATED"
+    },
+    "heightLarge": {
+      "value": "52px",
+      "provenance": "CALIBRATED"
+    },
+    "heightCompact": {
+      "value": "36px",
+      "provenance": "CALIBRATED"
+    }
+  },
+  "motion": {
+    "fast": {
+      "value": "120ms",
+      "provenance": "CALIBRATED"
+    },
+    "medium": {
+      "value": "220ms",
+      "provenance": "CALIBRATED"
+    },
+    "slow": {
+      "value": "320ms",
+      "provenance": "CALIBRATED"
+    },
+    "easePhysical": {
+      "value": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+      "provenance": "CALIBRATED"
+    },
+    "pressDepth": {
+      "value": "1px",
+      "provenance": "CALIBRATED",
+      "role": "physical control press translation"
+    }
+  },
+  "layout": {
+    "gutterFluid": {
+      "value": "3vw",
+      "provenance": "CALIBRATED",
+      "role": "responsive default shell gutter midpoint"
+    },
+    "gutterFluidComfortable": {
+      "value": "4vw",
+      "provenance": "CALIBRATED",
+      "role": "responsive comfortable shell gutter midpoint"
+    },
+    "shellMaxWidth": {
+      "value": "72rem",
+      "provenance": "CALIBRATED",
+      "role": "default constrained workbench width"
+    },
+    "workbenchFadeStop": {
+      "value": "34%",
+      "provenance": "CALIBRATED",
+      "role": "walnut workbench ambient fade stop"
+    },
+    "workbenchCompactMaxWidth": {
+      "value": "390px",
+      "provenance": "CALIBRATED",
+      "role": "canonical phone-format app viewport width for compact workbench routes"
+    }
+  },
+  "borders": {
+    "width": {
+      "value": "1px",
+      "provenance": "CALIBRATED",
+      "role": "default primitive rule and border width"
+    }
+  },
+  "focus": {
+    "width": {
+      "value": "3px",
+      "provenance": "CALIBRATED_ACCESSIBILITY",
+      "role": "visible keyboard focus ring"
+    },
+    "offset": {
+      "value": "2px",
+      "provenance": "CALIBRATED_ACCESSIBILITY",
+      "role": "keyboard focus ring offset"
+    }
+  },
+  "materials": {
+    "walnutBoard": {
+      "value": "public/og-v3/materials/walnut-seamless.png plus restrained overlays; visible dark walnut grain, content-subordinate contrast",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "quiet environmental workbench; texture subordinate to content"
+    },
+    "walnutControl": {
+      "value": "low-contrast dark walnut control grain",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "compact structural controls when walnut is appropriate"
+    },
+    "parchmentPanel": {
+      "value": "public/og-v3/panels/parchment-panel-shell.png and public/og-v3/materials/parchment-fiber.png; premium warm paper panel with framed edge construction",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "primary information panels and featured work surfaces"
+    },
+    "paperCard": {
+      "value": "public/og-v3/materials/parchment-fiber.png and public/og-v3/cards/unit-card-shell.png where card shelling is needed",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "secondary cards and unit tiles"
+    },
+    "photoMount": {
+      "value": "linear-gradient plus /v3-raster/photo-mount.webp",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "mounted miniature and documentation images"
+    },
+    "brass": {
+      "value": "public/og-v3/materials/brass-aged.png plus public/og-v3/panels/brass-plaque-shell.png; aged workshop brass with raster micro-surface",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "scarce plaques and compact accents"
+    },
+    "progressFill": {
+      "value": "linear-gradient plus /v3-raster/progress-paint.webp",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "paint-like progress fill"
+    },
+    "ebonizedControl": {
+      "value": "public/og-v3/materials/ebonized-control.png plus public/og-v3/controls/ebonized-control-shell.png; constructed dark control material",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "Resume, filters, segmented wells, nav selected surrounds, and dark controls"
+    },
+    "assetKit": {
+      "value": "public/og-v3 raster asset kit installed from the approved Dashboard Golden asset references",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "canonical asset-backed material and shell source for Dashboard Golden Candidate presentation"
+    },
+    "hardware": {
+      "value": "public/og-v3/hardware/brass-rivet.png",
+      "provenance": "CALIBRATED_REFERENCE_ASSET",
+      "role": "small dimensional rivets/pins/fasteners"
+    }
+  }
+}

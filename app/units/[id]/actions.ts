@@ -1459,6 +1459,161 @@ export async function deleteUnitSession(formData: FormData) {
 
   return { sessionId }
 }
+
+function getScheduledSessionInput(formData: FormData) {
+  const unitId = String(formData.get('unitId') || '')
+  const scheduledStartAtRaw = String(formData.get('scheduledStartAt') || '')
+  const focus = String(formData.get('focus') || '').trim()
+  const notifyRaw = formData.get('notify')
+  const notify = notifyRaw === 'on' || notifyRaw === 'true'
+  const scheduledStartAt = new Date(scheduledStartAtRaw)
+
+  if (!unitId || !scheduledStartAtRaw) {
+    throw new Error('Missing scheduled session details')
+  }
+
+  if (Number.isNaN(scheduledStartAt.getTime())) {
+    throw new Error('Enter a valid scheduled session date and time')
+  }
+
+  return {
+    unitId,
+    scheduledStartAt,
+    focus: focus || 'Focused painting session',
+    notify,
+  }
+}
+
+async function verifyUserOwnsUnit(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  unitId: string,
+  userId: string
+) {
+  const { data: unit, error } = await supabase
+    .from('units')
+    .select('id, name, project_id')
+    .eq('id', unitId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
+
+  return unit
+}
+
+export async function scheduleUnitSession(formData: FormData) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+  const { unitId, scheduledStartAt, focus, notify } =
+    getScheduledSessionInput(formData)
+
+  await verifyUserOwnsUnit(supabase, unitId, user.id)
+
+  const { data: session, error } = await supabase
+    .from('unit_scheduled_sessions')
+    .insert({
+      unit_id: unitId,
+      user_id: user.id,
+      scheduled_start_at: scheduledStartAt.toISOString(),
+      focus,
+      notify,
+      status: 'scheduled',
+    })
+    .select(
+      'id, unit_id, user_id, scheduled_start_at, focus, notify, status, created_at, updated_at'
+    )
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_session_scheduled',
+    properties: {
+      unit_id: unitId,
+      scheduled_start_at: scheduledStartAt.toISOString(),
+      notify,
+      has_focus: Boolean(focus),
+    },
+  })
+
+  revalidatePath(`/units/${unitId}`)
+
+  return session
+}
+
+export async function updateUnitScheduledSession(formData: FormData) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+  const scheduledSessionId = String(formData.get('scheduledSessionId') || '')
+  const { unitId, scheduledStartAt, focus, notify } =
+    getScheduledSessionInput(formData)
+
+  if (!scheduledSessionId) {
+    throw new Error('Missing scheduled session id')
+  }
+
+  await verifyUserOwnsUnit(supabase, unitId, user.id)
+
+  const { data: session, error } = await supabase
+    .from('unit_scheduled_sessions')
+    .update({
+      scheduled_start_at: scheduledStartAt.toISOString(),
+      focus,
+      notify,
+    })
+    .eq('id', scheduledSessionId)
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+    .select(
+      'id, unit_id, user_id, scheduled_start_at, focus, notify, status, created_at, updated_at'
+    )
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+
+  return session
+}
+
+export async function deleteUnitScheduledSession(formData: FormData) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+  const unitId = String(formData.get('unitId') || '')
+  const scheduledSessionId = String(formData.get('scheduledSessionId') || '')
+
+  if (!unitId || !scheduledSessionId) {
+    throw new Error('Missing scheduled session details')
+  }
+
+  await verifyUserOwnsUnit(supabase, unitId, user.id)
+
+  const { error } = await supabase
+    .from('unit_scheduled_sessions')
+    .delete()
+    .eq('id', scheduledSessionId)
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+
+  return { scheduledSessionId }
+}
 export async function assignRecipeToStage(formData: FormData) {
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)

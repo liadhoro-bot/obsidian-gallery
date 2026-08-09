@@ -93,7 +93,7 @@ export default async function VaultPage({ searchParams }: PageProps) {
           <DashboardTopBar userId={user.id} profilePromise={profilePromise} />
         </Suspense>
 
-        <section>
+        <section id="paint-vault">
           <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-400">
             Inventory Management
           </p>

@@ -128,7 +128,7 @@ export async function updateProfileAction(
       { email },
       origin
         ? {
-            emailRedirectTo: `${origin}/auth/confirm?next=/settings`,
+            emailRedirectTo: `${origin}/auth/callback?next=/settings`,
           }
         : undefined
     )

@@ -1,0 +1,137 @@
+.nav {
+  position: fixed;
+  inset-block-end: 0;
+  inset-inline-start: 50%;
+  z-index: 50;
+  width: min(100%, var(--og-workbench-compact-max-width));
+  transform: translateX(-50%);
+  border-block-start: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 78%, var(--og-ink-950));
+  border-radius: var(--og-radius-l) var(--og-radius-l) 0 0;
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-walnut-control);
+  background-position: center;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, 280px auto, 100% 100%;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--og-brass-500) 22%, transparent), inset 0 7px 12px color-mix(in srgb, var(--og-paper-50) 5%, transparent), 0 -8px 20px color-mix(in srgb, var(--og-walnut-950) 64%, transparent);
+  padding-block-end: env(safe-area-inset-bottom);
+}
+
+.inner {
+  display: flex;
+  min-height: 69px;
+  align-items: center;
+  justify-content: space-around;
+  gap: var(--og-space-1);
+  padding: 5px var(--og-space-2) 6px;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 50px;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+  border: var(--og-border-width) solid transparent;
+  border-radius: var(--og-radius-s);
+  background: transparent;
+  color: color-mix(in srgb, var(--og-paper-100) 72%, transparent);
+  font-family: var(--og-font-ui);
+  padding: 5px 3px;
+  transition: color var(--og-motion-fast) var(--og-ease-physical), transform var(--og-motion-fast) var(--og-ease-physical), border-color var(--og-motion-fast) var(--og-ease-physical), background-color var(--og-motion-fast) var(--og-ease-physical), box-shadow var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.item::after {
+  pointer-events: none;
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: calc(var(--og-radius-s) - 1px);
+}
+
+.item:hover {
+  color: var(--og-paper-50);
+}
+
+.item:active {
+  transform: translateY(var(--og-press-depth));
+}
+
+.item[data-active='true'] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-brass), var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 150px auto, 100% 100%;
+  color: var(--og-paper-50);
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.item[data-active='true']::after {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-500) 26%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 10%, transparent);
+}
+
+.icon {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  color: currentColor;
+  background: none;
+  transition: transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.icon::before,
+.icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  mask-image: var(--nav-icon);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-image: var(--nav-icon);
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
+.icon::before {
+  background: color-mix(in srgb, var(--og-ink-950) 72%, transparent);
+  transform: translateY(1px);
+}
+
+.icon::after {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 38%, currentColor), currentColor 68%, color-mix(in srgb, var(--og-ink-950) 22%, currentColor));
+  filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--og-ink-950) 62%, transparent));
+}
+
+.item[data-active='true'] .icon {
+  color: var(--og-brass-500);
+  transform: translateY(-1px);
+}
+
+.label {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--og-ink-950) 66%, transparent);
+}
+
+.item:focus-visible {
+  outline: var(--og-focus-width) solid color-mix(in srgb, var(--og-focus) 82%, white);
+  outline-offset: var(--og-focus-offset);
+}

@@ -130,7 +130,9 @@ export default function AuthConfirmClient() {
       }
 
       const message = error instanceof Error ? error.message : 'Auth failed.'
-      window.location.replace(getLoginErrorUrl(getSafeReason(message), '/dashboard'))
+      window.location.replace(
+        getLoginErrorUrl(getSafeReason(message), safeNextPath(params.get('next')))
+      )
     })
 
     return () => {

@@ -90,12 +90,12 @@ type DashboardHeroSnapshot = {
   unitProjectRows: DashboardUnitProjectRow[]
 }
 
-type DashboardPaintingTableFeed = {
+export type DashboardPaintingTableFeed = {
   heroUnit: DashboardFeedUnit | null
   units: DashboardFeedUnit[]
 }
 
-type DashboardMetadataSummary = {
+export type DashboardMetadataSummary = {
   totalUnits: number
   recentUnits: number
   ownedColors: number
@@ -111,6 +111,14 @@ type DashboardMetadataSummary = {
   paintStreakDays: number
 }
 
+export type DashboardXpState = {
+  currentLevel: number
+  xpIntoLevel: number
+  xpNeededForLevel: number
+  xpToNextLevel: number
+  progressPercent: number
+}
+
 type DashboardMetricsRow = {
   total_units: number | null
   recent_units: number | null
@@ -120,6 +128,46 @@ type DashboardMetricsRow = {
   average_sessions_per_week: number | null
   last_session_at: string | null
   paint_streak_days: number | null
+}
+
+type UserOnboardingFlowRow = {
+  flow_name: string | null
+  completed_at: string | null
+  dismissed_at: string | null
+}
+
+type OnboardingActionFlowRow = {
+  title: string | null
+}
+
+type OnboardingFlowActionRow = {
+  id: string
+  action_label: string | null
+  action_order: number | null
+  breadcrumb: string | null
+  ref_page: string | null
+  ref_component: string | null
+}
+
+type OnboardingActionCompletionRow = {
+  flow_action_id: string
+  completed_at: string
+}
+
+export type DashboardNextActionItem = {
+  id: string
+  label: string
+  order: number
+  breadcrumb: string
+  href: string
+  completedAt: string | null
+}
+
+export type DashboardNextActionsState = {
+  title: string
+  totalCount: number
+  completedCount: number
+  actions: DashboardNextActionItem[]
 }
 
 const UNIT_STATUSES: DashboardStatus[] = [
@@ -338,7 +386,7 @@ export const getDashboardXpState = cache(async (userId: string) => {
     xpNeededForLevel,
     xpToNextLevel,
     progressPercent,
-  }
+  } satisfies DashboardXpState
 })
 
 export const getDashboardUnitsSnapshot = cache(async (userId: string) => {
@@ -812,4 +860,84 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
     paintStreakDays:
       Number.parseInt(getPaintStreak(sessions, DASHBOARD_TIMEZONE), 10) || 0,
   } satisfies DashboardMetadataSummary
+})
+
+export const getDashboardNextActions = cache(async (userId: string) => {
+  const supabase = await createClient()
+
+  const userFlowResult = await supabase
+    .from('user_onboarding_flows')
+    .select('flow_name, completed_at, dismissed_at')
+    .eq('user_id', userId)
+    .maybeSingle<UserOnboardingFlowRow>()
+
+  if (userFlowResult.error || !userFlowResult.data?.flow_name) {
+    return null
+  }
+
+  const userFlow = userFlowResult.data
+
+  if (userFlow.dismissed_at || userFlow.completed_at) {
+    return null
+  }
+
+  const [flowResult, actionsResult] = await Promise.all([
+    supabase
+      .from('onboarding_action_flows')
+      .select('title')
+      .eq('name', userFlow.flow_name)
+      .maybeSingle<OnboardingActionFlowRow>(),
+    supabase
+      .from('onboarding_flow_actions')
+      .select('id, action_label, action_order, breadcrumb, ref_page, ref_component')
+      .eq('flow_name', userFlow.flow_name)
+      .order('action_order', { ascending: true })
+      .limit(3),
+  ])
+
+  if (flowResult.error || actionsResult.error || !actionsResult.data?.length) {
+    return null
+  }
+
+  const actionRows = actionsResult.data as OnboardingFlowActionRow[]
+  const actionIds = actionRows.map((action) => action.id)
+
+  const completionResult = await supabase
+    .from('user_onboarding_action_completions')
+    .select('flow_action_id, completed_at')
+    .eq('user_id', userId)
+    .in('flow_action_id', actionIds)
+
+  if (completionResult.error) {
+    return null
+  }
+
+  const completions = new Map(
+    ((completionResult.data ?? []) as OnboardingActionCompletionRow[]).map(
+      (completion) => [completion.flow_action_id, completion.completed_at]
+    )
+  )
+
+  const actions = actionRows.map((action) => {
+    const refPage = action.ref_page || '/dashboard'
+    const href = action.ref_component
+      ? `${refPage}#${action.ref_component}`
+      : refPage
+
+    return {
+      id: action.id,
+      label: action.action_label || 'Next action',
+      order: action.action_order ?? 1,
+      breadcrumb: action.breadcrumb || 'Dashboard',
+      href,
+      completedAt: completions.get(action.id) ?? null,
+    } satisfies DashboardNextActionItem
+  })
+
+  return {
+    title: flowResult.data?.title || 'Next actions',
+    totalCount: actions.length,
+    completedCount: actions.filter((action) => action.completedAt).length,
+    actions,
+  } satisfies DashboardNextActionsState
 })

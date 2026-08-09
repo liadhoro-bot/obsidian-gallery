@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import {
   V3_PREVIEW_COOKIE,
   V3_PREVIEW_COOKIE_MAX_AGE,
+  isV3DeploymentHost,
   isV3PreviewValue,
 } from './lib/v3-preview'
 
@@ -13,23 +14,42 @@ export default async function proxy(request: NextRequest) {
   const hasInspectionPreviewParam = isV3PreviewValue(
     request.nextUrl.searchParams.get('preview')
   )
+  const hasInspectionPreviewHost = isV3DeploymentHost(request.nextUrl.host)
   const isInspectionPreview =
-    hasInspectionPreviewParam || hasInspectionPreviewCookie
+    hasInspectionPreviewParam ||
+    hasInspectionPreviewCookie ||
+    hasInspectionPreviewHost
+
+  const isGoldenDashboardFixture =
+    process.env.NODE_ENV !== 'production' &&
+    pathname === '/dashboard' &&
+    request.nextUrl.searchParams.get('golden') === 'dashboard-active-units'
+
+  if (isGoldenDashboardFixture) {
+    return NextResponse.next({
+      request,
+    })
+  }
 
   const isInspectionPreviewRoute =
     pathname === '/onboarding' ||
-    pathname === '/dashboard' ||
     pathname === '/projects' ||
+    pathname.startsWith('/projects/') ||
     pathname === '/paints' ||
     pathname === '/guides' ||
-    pathname === '/themes'
+    pathname === '/community' ||
+    pathname === '/settings' ||
+    pathname.startsWith('/units/')
 
   if (isInspectionPreview && isInspectionPreviewRoute) {
     const response = NextResponse.next({
       request,
     })
 
-    if (hasInspectionPreviewParam && !hasInspectionPreviewCookie) {
+    if (
+      (hasInspectionPreviewParam || hasInspectionPreviewHost) &&
+      !hasInspectionPreviewCookie
+    ) {
       response.cookies.set(V3_PREVIEW_COOKIE, '1', {
         maxAge: V3_PREVIEW_COOKIE_MAX_AGE,
         path: '/',
@@ -105,7 +125,10 @@ export default async function proxy(request: NextRequest) {
   if (!user) {
     if (!isPublicRoute) {
       const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('next', pathname)
+      loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+      if (isInspectionPreview) {
+        loginUrl.searchParams.set('preview', '1')
+      }
       return NextResponse.redirect(loginUrl)
     }
 

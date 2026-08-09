@@ -72,16 +72,49 @@ function revalidateRecipeCaches(recipeId: string) {
   revalidateTag('public-recipes', 'max')
 }
 
+type RecipeSupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+async function requireOwnedRecipe(
+  supabase: RecipeSupabaseClient,
+  recipeId: string,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('id', recipeId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  if (!data) {
+    throw new Error('Guide not found')
+  }
+
+  return data
+}
+
 async function updateRecipeHeader(formData: FormData) {
   'use server'
 
   const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
 
   const recipeId = formData.get('recipeId')?.toString()
   const name = formData.get('name')?.toString().trim()
   const description = formData.get('description')?.toString().trim() || null
 
   if (!recipeId || !name) return
+
+  await requireOwnedRecipe(supabase, recipeId, user.id)
 
   const { error } = await supabase
     .from('recipes')
@@ -90,6 +123,7 @@ async function updateRecipeHeader(formData: FormData) {
       description,
     })
     .eq('id', recipeId)
+    .eq('user_id', user.id)
 
   if (error) {
     console.error('Error updating recipe header:', error)
@@ -104,11 +138,19 @@ async function updateRecipeInventory(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
   const recipeId = formData.get('recipeId')?.toString()
   const inventoryRequired =
     formData.get('inventoryRequired')?.toString().trim() || null
 
   if (!recipeId) return
+
+  await requireOwnedRecipe(supabase, recipeId, user.id)
 
   const { error } = await supabase
     .from('recipes')
@@ -116,6 +158,7 @@ async function updateRecipeInventory(formData: FormData) {
       inventory_required: inventoryRequired,
     })
     .eq('id', recipeId)
+    .eq('user_id', user.id)
 
   if (error) {
     console.error('Error updating recipe inventory:', error)
@@ -159,10 +202,18 @@ async function updateRecipeTips(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
   const recipeId = formData.get('recipeId')?.toString()
   const expertTips = formData.get('expertTips')?.toString().trim() || null
 
   if (!recipeId) return
+
+  await requireOwnedRecipe(supabase, recipeId, user.id)
 
   const { error } = await supabase
     .from('recipes')
@@ -170,6 +221,7 @@ async function updateRecipeTips(formData: FormData) {
       expert_tips: expertTips,
     })
     .eq('id', recipeId)
+    .eq('user_id', user.id)
 
   if (error) {
     console.error('Error updating recipe tips:', error)
@@ -183,14 +235,14 @@ async function addRecipeStep(formData: FormData) {
   'use server'
 
   const supabase = await createClient()
-const {
-  data: { user },
-} = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-if (!user) return
+  if (!user) return
   const recipeId = formData.get('recipeId')?.toString()
   const title = formData.get('title')?.toString().trim()
-const instructions = formData.get('instructions')?.toString().trim() || null
+  const instructions = formData.get('instructions')?.toString().trim() || null
 
   const paintId1 = formData.get('paintId1')?.toString() || ''
   const ratio1 = formData.get('ratio1')?.toString().trim() || null
@@ -201,11 +253,14 @@ const instructions = formData.get('instructions')?.toString().trim() || null
   const paintId3 = formData.get('paintId3')?.toString() || ''
   const ratio3 = formData.get('ratio3')?.toString().trim() || null
 
-if (!recipeId || !title) return
+  if (!recipeId || !title) return
+  await requireOwnedRecipe(supabase, recipeId, user.id)
+
   const { data: existingSteps, error: fetchError } = await supabase
     .from('recipe_steps')
     .select('step_number')
     .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
     .order('step_number', { ascending: false })
     .limit(1)
 
@@ -321,6 +376,8 @@ async function updateRecipeStep(formData: FormData) {
 
   if (!recipeId || !stepId || !title) return
 
+  await requireOwnedRecipe(supabase, recipeId, user.id)
+
   let imageUrl: string | null = null
 
   if (stepImage && stepImage.size > 0) {
@@ -363,6 +420,8 @@ async function updateRecipeStep(formData: FormData) {
     .from('recipe_steps')
     .update(updatePayload)
     .eq('id', stepId)
+    .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
 
   if (stepUpdateError) {
     console.error('Error updating recipe step:', stepUpdateError)
@@ -373,6 +432,7 @@ async function updateRecipeStep(formData: FormData) {
     .from('recipe_step_paints')
     .delete()
     .eq('recipe_step_id', stepId)
+    .eq('user_id', user.id)
 
   if (deletePaintLinksError) {
     console.error('Error clearing recipe step paints:', deletePaintLinksError)
@@ -440,15 +500,25 @@ async function deleteRecipeStep(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
   const recipeId = formData.get('recipeId')?.toString()
   const stepId = formData.get('stepId')?.toString()
 
   if (!recipeId || !stepId) return
 
+  await requireOwnedRecipe(supabase, recipeId, user.id)
+
   const { error: deleteError } = await supabase
     .from('recipe_steps')
     .delete()
     .eq('id', stepId)
+    .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
 
   if (deleteError) {
     console.error('Error deleting recipe step:', deleteError)
@@ -459,6 +529,7 @@ async function deleteRecipeStep(formData: FormData) {
     .from('recipe_steps')
     .select('id, step_number')
     .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
     .order('step_number', { ascending: true })
 
   if (fetchError) {
@@ -475,6 +546,8 @@ async function deleteRecipeStep(formData: FormData) {
         .from('recipe_steps')
         .update({ step_number: newStepNumber })
         .eq('id', step.id)
+        .eq('recipe_id', recipeId)
+        .eq('user_id', user.id)
 
       if (updateError) {
         console.error('Error resequencing recipe step:', updateError)
@@ -491,16 +564,26 @@ async function moveRecipeStep(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
   const recipeId = formData.get('recipeId')?.toString()
   const stepId = formData.get('stepId')?.toString()
   const direction = formData.get('direction')?.toString()
 
   if (!recipeId || !stepId || !direction) return
 
+  await requireOwnedRecipe(supabase, recipeId, user.id)
+
   const { data: currentStep, error: currentStepError } = await supabase
     .from('recipe_steps')
     .select('id, step_number')
     .eq('id', stepId)
+    .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
     .single()
 
   if (currentStepError || !currentStep) {
@@ -519,6 +602,7 @@ async function moveRecipeStep(formData: FormData) {
     .from('recipe_steps')
     .select('id, step_number')
     .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
     .eq('step_number', targetStepNumber)
     .single()
 
@@ -530,6 +614,8 @@ async function moveRecipeStep(formData: FormData) {
     .from('recipe_steps')
     .update({ step_number: 9999 })
     .eq('id', currentStep.id)
+    .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
 
   if (firstUpdateError) {
     console.error('Error temporarily moving current step:', firstUpdateError)
@@ -540,6 +626,8 @@ async function moveRecipeStep(formData: FormData) {
     .from('recipe_steps')
     .update({ step_number: currentStep.step_number })
     .eq('id', otherStep.id)
+    .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
 
   if (secondUpdateError) {
     console.error('Error moving adjacent recipe step:', secondUpdateError)
@@ -550,6 +638,8 @@ async function moveRecipeStep(formData: FormData) {
     .from('recipe_steps')
     .update({ step_number: targetStepNumber })
     .eq('id', currentStep.id)
+    .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
 
   if (thirdUpdateError) {
     console.error('Error finalizing recipe step move:', thirdUpdateError)
@@ -560,6 +650,7 @@ async function moveRecipeStep(formData: FormData) {
     .from('recipe_steps')
     .select('id, step_number')
     .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
     .order('step_number', { ascending: true })
 
   if (orderedStepsError) {
@@ -576,6 +667,8 @@ async function moveRecipeStep(formData: FormData) {
         .from('recipe_steps')
         .update({ step_number: expectedStepNumber })
         .eq('id', step.id)
+        .eq('recipe_id', recipeId)
+        .eq('user_id', user.id)
 
       if (resequenceError) {
         console.error('Error resequencing recipe steps:', resequenceError)
@@ -610,11 +703,14 @@ async function uploadRecipeImage(formData: FormData) {
 
   if (!recipeId || files.length === 0) return
 
+  await requireOwnedRecipe(supabase, recipeId, user.id)
+
   const { data: existingFeatured } = await supabase
     .from('image_assets')
     .select('id')
     .eq('entity_type', 'recipe')
     .eq('entity_id', recipeId)
+    .eq('user_id', user.id)
     .eq('is_featured', true)
     .limit(1)
 
@@ -707,16 +803,25 @@ async function setFeaturedRecipeImage(formData: FormData) {
 
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
   const recipeId = formData.get('recipeId')?.toString()
   const imageId = formData.get('imageId')?.toString()
 
   if (!recipeId || !imageId) return
+
+  await requireOwnedRecipe(supabase, recipeId, user.id)
 
   const { error: clearError } = await supabase
     .from('image_assets')
     .update({ is_featured: false })
     .eq('entity_type', 'recipe')
     .eq('entity_id', recipeId)
+    .eq('user_id', user.id)
 
   if (clearError) {
     console.error('Error clearing featured recipe image:', clearError)
@@ -727,6 +832,9 @@ async function setFeaturedRecipeImage(formData: FormData) {
     .from('image_assets')
     .update({ is_featured: true })
     .eq('id', imageId)
+    .eq('entity_type', 'recipe')
+    .eq('entity_id', recipeId)
+    .eq('user_id', user.id)
 
   if (setError) {
     console.error('Error setting featured recipe image:', setError)
@@ -758,6 +866,8 @@ async function deleteRecipeImage(formData: FormData) {
   const targetImageIds = imageIds.length > 0 ? imageIds : imageId ? [imageId] : []
 
   if (!recipeId || targetImageIds.length === 0) return
+
+  await requireOwnedRecipe(supabase, recipeId, user.id)
 
   const { data: images, error: fetchError } = await supabase
     .from('image_assets')
@@ -814,6 +924,7 @@ async function deleteRecipeImage(formData: FormData) {
       .select('id')
       .eq('entity_type', 'recipe')
       .eq('entity_id', recipeId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(1)
 
@@ -822,6 +933,9 @@ async function deleteRecipeImage(formData: FormData) {
         .from('image_assets')
         .update({ is_featured: true })
         .eq('id', remainingImages[0].id)
+        .eq('entity_type', 'recipe')
+        .eq('entity_id', recipeId)
+        .eq('user_id', user.id)
     }
   }
 
@@ -863,6 +977,7 @@ async function deleteRecipe(formData: FormData) {
     .from('recipe_steps')
     .select('id')
     .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
 
   if (stepsError) {
     console.error('Error fetching recipe steps for delete:', stepsError)
@@ -876,6 +991,7 @@ async function deleteRecipe(formData: FormData) {
       .from('recipe_step_paints')
       .delete()
       .in('recipe_step_id', stepIds)
+      .eq('user_id', user.id)
 
     if (stepPaintsError) {
       console.error('Error deleting recipe step paints:', stepPaintsError)
@@ -908,6 +1024,7 @@ async function deleteRecipe(formData: FormData) {
     .delete()
     .eq('entity_type', 'recipe')
     .eq('entity_id', recipeId)
+    .eq('user_id', user.id)
 
   if (imageAssetsError) {
     console.error('Error deleting recipe images:', imageAssetsError)
@@ -918,6 +1035,7 @@ async function deleteRecipe(formData: FormData) {
     .from('recipe_steps')
     .delete()
     .eq('recipe_id', recipeId)
+    .eq('user_id', user.id)
 
   if (recipeStepsError) {
     console.error('Error deleting recipe steps:', recipeStepsError)
@@ -1054,7 +1172,15 @@ export default async function RecipeDetailPage({
   perf.mark('auth/session fetch')
 
   const cachedPublicRecipe = await getCachedPublicRecipe(id)
-  const { data: privateRecipe } = cachedPublicRecipe
+  const { data: livePublicRecipe } = cachedPublicRecipe
+    ? { data: null }
+    : await supabase
+        .from('recipes')
+        .select('id, name, description, inventory_required, expert_tips, youtube_url, is_public, user_id')
+        .eq('id', id)
+        .eq('is_public', true)
+        .maybeSingle()
+  const { data: privateRecipe } = cachedPublicRecipe || livePublicRecipe
     ? { data: null }
     : user
       ? await supabase
@@ -1065,14 +1191,14 @@ export default async function RecipeDetailPage({
           .maybeSingle()
       : { data: null }
 
-  const recipe = cachedPublicRecipe || privateRecipe
+  const recipe = cachedPublicRecipe || livePublicRecipe || privateRecipe
   perf.mark('main Supabase query')
 
-if (!recipe) {
-  notFound()
-}
+  if (!recipe) {
+    notFound()
+  }
 
-const isOwner = Boolean(user && recipe.user_id === user.id)
+  const isOwner = Boolean(user && recipe.user_id === user.id)
   const profilePromise = user
     ? (async () => ({
         data: await getDashboardProfile(user.id),
@@ -1086,7 +1212,7 @@ const isOwner = Boolean(user && recipe.user_id === user.id)
     { data: customPaintRows, error: customPaintRowsError },
     socialState,
   ] = await Promise.all([
-    cachedPublicRecipe
+    recipe.is_public
       ? getCachedPublicRecipeAssets(id)
       : getPrivateRecipeAssets(supabase, id),
     getCachedCatalogPaintOptions(),

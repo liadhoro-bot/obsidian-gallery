@@ -11,6 +11,8 @@
     "perf:audit:important": "tsx scripts/run-performance-audit.ts --important",
     "perf:lighthouse": "node scripts/run-lighthouse-ci.mjs",
     "perf:flows": "tsx scripts/run-performance-flows.ts",
+    "perf:v3": "tsx scripts/run-v3-performance-test.ts",
+    "perf:v3:benchmark": "tsx scripts/run-v3-benchmark.ts",
     "perf:install-browsers": "playwright install chromium",
     "qa": "npm run qa:functional",
     "qa:functional": "tsx scripts/run-functional-qa.ts",
@@ -19,7 +21,6 @@
     "fix:paint-swatches": "tsx scripts/audit-paint-swatches.ts --apply"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^1.0.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.101.1",
     "@vercel/analytics": "^2.0.1",
@@ -31,7 +32,6 @@
     "jszip": "^3.10.1",
     "next": "^16.2.4",
     "node-vibrant": "^4.0.4",
-    "pdfjs-dist": "^6.0.227",
     "posthog-js": "^1.372.5",
     "posthog-node": "^5.33.4",
     "react": "19.2.4",
@@ -40,6 +40,7 @@
     "resend": "^6.12.3"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.0.0",
     "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -48,6 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "lighthouse": "^13.4.0",
+    "pdfjs-dist": "^6.0.227",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
     "typescript": "^5"

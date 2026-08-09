@@ -18,7 +18,7 @@ type CustomFilterRow = {
 
 const EMPTY_ID = '00000000-0000-0000-0000-000000000000'
 const CUSTOM_BRAND_LABEL = 'Custom'
-const CUSTOM_LINE_LABEL = 'Custom Color'
+const CUSTOM_LINE_LABEL = 'Custom Paint'
 
 function uniqueSorted(values: (string | null | undefined)[]) {
   return Array.from(new Set(values.filter(Boolean) as string[])).sort((a, b) =>

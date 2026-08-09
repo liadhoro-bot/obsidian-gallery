@@ -37,6 +37,7 @@ yarn-error.log*
 .pnpm-debug.log*
 .codex-*.log
 .codex-remote-attachments/
+downloads/
 .tmp-perf-server*.log
 debug.log
 

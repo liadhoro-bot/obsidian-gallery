@@ -479,7 +479,14 @@ export async function createOnboardingGuideAction(
     guideId: guide.id,
   }
 }
-export async function acceptTermsAction() {
+const TERMS_VERSION = '2026-05-13'
+const TERMS_ACCEPTANCE_TABLE = 'user_terms_acceptances'
+
+export async function acceptTermsAction({
+  productUpdatesApproved = false,
+}: {
+  productUpdatesApproved?: boolean
+} = {}) {
   const supabase = await createClient()
 
   const {
@@ -493,11 +500,30 @@ export async function acceptTermsAction() {
     }
   }
 
+  const acceptedAt = new Date().toISOString()
+  const productUpdatesApprovedAt = productUpdatesApproved ? acceptedAt : null
+
+  const { error: acceptanceError } = await supabase
+    .from(TERMS_ACCEPTANCE_TABLE)
+    .insert({
+      user_id: user.id,
+      terms_version: TERMS_VERSION,
+      accepted_at: acceptedAt,
+      product_updates_approved_at: productUpdatesApprovedAt,
+    })
+
+  if (acceptanceError) {
+    return {
+      ok: false,
+      error: acceptanceError.message,
+    }
+  }
+
   const { error } = await supabase
     .from('profiles')
     .update({
-      terms_accepted_at: new Date().toISOString(),
-      terms_version: '2026-05-13',
+      terms_accepted_at: acceptedAt,
+      terms_version: TERMS_VERSION,
     })
     .eq('id', user.id)
 

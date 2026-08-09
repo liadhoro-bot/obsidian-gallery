@@ -1,9 +1,10 @@
 import { unstable_cache } from 'next/cache'
-import { supabase } from './supabase'
+import { createServiceRoleClient } from '../utils/supabase/service-role'
 
 const ONE_DAY = 60 * 60 * 24
 const TEN_MINUTES = 60 * 10
-const CACHE_VERSION = 'v2.8.5'
+const CACHE_VERSION = 'v2.8.7'
+const publicSupabase = createServiceRoleClient()
 
 export const getCachedCatalogFilterRows = unstable_cache(
   async () => {
@@ -15,7 +16,7 @@ export const getCachedCatalogFilterRows = unstable_cache(
     }[] = []
 
     while (true) {
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from('paint_catalog')
         .select('brand,line')
         .eq('is_active', true)
@@ -44,7 +45,7 @@ export const getCachedCatalogFilterRows = unstable_cache(
 
 export const getCachedCatalogPaintOptions = unstable_cache(
   async () => {
-    const { data, error } = await supabase
+    const { data, error } = await publicSupabase
       .from('paint_catalog')
       .select('id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type')
       .eq('is_active', true)
@@ -66,7 +67,7 @@ export const getCachedCatalogPaintOptions = unstable_cache(
 export function getCachedCatalogPaint(paintId: string) {
   return unstable_cache(
     async (id: string) => {
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from('paint_catalog')
         .select('id, name, brand, line, sku, swatch_image_url, hex_approx, finish, paint_type')
         .eq('id', id)
@@ -86,7 +87,7 @@ export function getCachedCatalogPaint(paintId: string) {
 
 export const getCachedPublicRecipes = unstable_cache(
   async () => {
-    const { data, error } = await supabase
+    const { data, error } = await publicSupabase
       .from('recipes')
       .select('id, name, description, image_url, is_public, created_at, user_id')
       .eq('is_public', true)
@@ -106,7 +107,7 @@ export const getCachedPublicRecipes = unstable_cache(
 export function getCachedPublicRecipe(recipeId: string) {
   return unstable_cache(
     async (id: string) => {
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from('recipes')
         .select('id, name, description, inventory_required, expert_tips, youtube_url, is_public, user_id')
         .eq('id', id)
@@ -130,12 +131,12 @@ export function getCachedPublicRecipeAssets(recipeId: string) {
     async (id: string) => {
       const [{ data: steps, error: stepsError }, { data: images, error: imagesError }] =
         await Promise.all([
-          supabase
+          publicSupabase
             .from('recipe_steps')
             .select('id, step_number, title, instructions, image_url')
             .eq('recipe_id', id)
             .order('step_number', { ascending: true }),
-          supabase
+          publicSupabase
             .from('image_assets')
             .select('id, image_url, is_featured, alt_text')
             .eq('entity_type', 'recipe')
@@ -150,7 +151,7 @@ export function getCachedPublicRecipeAssets(recipeId: string) {
 
       const { data: stepPaintLinks, error: stepPaintLinksError } =
         stepIds.length > 0
-          ? await supabase
+          ? await publicSupabase
               .from('recipe_step_paints')
               .select(`
                 id,
@@ -199,7 +200,7 @@ export function getCachedPublicRecipeAssets(recipeId: string) {
 
 export const getCachedPublicThemes = unstable_cache(
   async () => {
-    const { data, error } = await supabase
+    const { data, error } = await publicSupabase
       .from('themes')
       .select(`
         id,
@@ -244,7 +245,7 @@ export const getCachedPublicThemes = unstable_cache(
 export function getCachedPublicTheme(themeId: string) {
   return unstable_cache(
     async (id: string) => {
-      const { data, error } = await supabase
+      const { data, error } = await publicSupabase
         .from('themes')
         .select(`
           id,

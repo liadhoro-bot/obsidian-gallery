@@ -17,9 +17,15 @@ type Props = {
   recipe: Recipe
   mode: 'public' | 'mine' | 'saved'
   isSaved?: boolean
+  canSave?: boolean
 }
 
-export default function RecipeCard({ recipe, mode, isSaved }: Props) {
+export default function RecipeCard({
+  recipe,
+  mode,
+  isSaved,
+  canSave = true,
+}: Props) {
   return (
     <div className="tap-card group flex h-full flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] shadow-lg hover:border-cyan-400/40 hover:bg-white/[0.06]">
       <Link href={`/recipes/${recipe.id}`}>
@@ -55,30 +61,30 @@ export default function RecipeCard({ recipe, mode, isSaved }: Props) {
               : 'Public guide'}
         </p>
 
-        {mode === 'public' ? (
-  <form action={isSaved ? unsaveRecipe : saveRecipe} className="mt-auto">
-    <input type="hidden" name="recipeId" value={recipe.id} />
+        {mode === 'public' && canSave ? (
+          <form action={isSaved ? unsaveRecipe : saveRecipe} className="mt-auto">
+            <input type="hidden" name="recipeId" value={recipe.id} />
 
-    <SubmitButton
-      idleText={isSaved ? 'SAVED' : 'SAVE'}
-      pendingText={isSaved ? 'REMOVING...' : 'SAVING...'}
-      className="group flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-bold tracking-wider text-cyan-300 hover:bg-cyan-400/20"
-      leadingIcon={
-        <svg
-          viewBox="0 0 24 24"
-          className="h-3.5 w-3.5 fill-current opacity-80 transition duration-150 group-hover:opacity-100"
-          aria-hidden="true"
-        >
-          <path d="M6 3.5C6 2.67 6.67 2 7.5 2h9c.83 0 1.5.67 1.5 1.5V21l-6-3.5L6 21V3.5Z" />
-        </svg>
-      }
-    />
-  </form>
-) : (
-  <div className="mt-auto inline-flex rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">
-    {mode === 'mine' ? 'MINE' : 'SAVED'}
-  </div>
-)}
+            <SubmitButton
+              idleText={isSaved ? 'SAVED' : 'SAVE'}
+              pendingText={isSaved ? 'REMOVING...' : 'SAVING...'}
+              className="group flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-bold tracking-wider text-cyan-300 hover:bg-cyan-400/20"
+              leadingIcon={
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-3.5 w-3.5 fill-current opacity-80 transition duration-150 group-hover:opacity-100"
+                  aria-hidden="true"
+                >
+                  <path d="M6 3.5C6 2.67 6.67 2 7.5 2h9c.83 0 1.5.67 1.5 1.5V21l-6-3.5L6 21V3.5Z" />
+                </svg>
+              }
+            />
+          </form>
+        ) : mode !== 'public' ? (
+          <div className="mt-auto inline-flex rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold text-cyan-300">
+            {mode === 'mine' ? 'MINE' : 'SAVED'}
+          </div>
+        ) : null}
       </div>
     </div>
   )

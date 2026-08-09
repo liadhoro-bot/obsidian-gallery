@@ -29,24 +29,29 @@ export default function RecipeVisibilityPill({
         {isPublic ? 'Public' : 'Private'}
       </button>
 
-      {isOpen && !isPublic && (
+      {isOpen && (
         <form
           action={updateRecipeVisibilityAction}
           className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-white/10 bg-slate-950 p-4 shadow-xl"
         >
           <input type="hidden" name="recipeId" value={recipeId} />
-          <input type="hidden" name="isPublic" value="true" />
+          <input type="hidden" name="isPublic" value={String(!isPublic)} />
 
           <p className="text-sm leading-relaxed text-slate-200">
-            Are you sure you would like to make this guide public, and enable
-            other members to view it?
+            {isPublic
+              ? 'Make this guide private again? Other members will no longer be able to view it.'
+              : 'Are you sure you would like to make this guide public, and enable other members to view it?'}
           </p>
 
           <div className="mt-4 flex gap-2">
             <SubmitButton
-              idleText="Make public"
-              pendingText="Publishing..."
-              className="rounded-full bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950"
+              idleText={isPublic ? 'Make private' : 'Make public'}
+              pendingText={isPublic ? 'Updating...' : 'Publishing...'}
+              className={
+                isPublic
+                  ? 'rounded-full bg-white/10 px-4 py-2 text-xs font-bold text-slate-100'
+                  : 'rounded-full bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950'
+              }
             />
 
             <button

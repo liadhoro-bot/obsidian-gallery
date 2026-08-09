@@ -31,6 +31,7 @@ type Props = {
   myRecipes: Recipe[]
   savedRecipes: Recipe[]
   savedRecipeIds: string[]
+  isAuthenticated: boolean
 }
 
 export default function RecipesPageClient({
@@ -39,6 +40,7 @@ export default function RecipesPageClient({
   myRecipes,
   savedRecipes,
   savedRecipeIds,
+  isAuthenticated,
 }: Props) {
   const router = useRouter()
   const pathname = usePathname()
@@ -49,11 +51,13 @@ export default function RecipesPageClient({
   const deferredMySearch = useDeferredValue(mySearch)
   const requestedTab = searchParams.get('tab')
   const currentTab: Tab =
-    requestedTab === 'find' ||
-    requestedTab === 'mine' ||
-    requestedTab === 'custom'
-      ? requestedTab
-      : activeTab
+    !isAuthenticated
+      ? 'find'
+      : requestedTab === 'find' ||
+          requestedTab === 'mine' ||
+          requestedTab === 'custom'
+        ? requestedTab
+        : activeTab
 
   const savedSet = useMemo(() => new Set(savedRecipeIds), [savedRecipeIds])
 
@@ -90,6 +94,10 @@ export default function RecipesPageClient({
   }, [deferredMySearch, myLibrary])
 
   function setTab(tab: Tab) {
+    if (!isAuthenticated && tab !== 'find') {
+      return
+    }
+
     if (tab === currentTab) {
       return
     }
@@ -103,15 +111,21 @@ export default function RecipesPageClient({
   }
 
   return (
-    <section className="space-y-5">
-      <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1">
-        <button
-          type="button"
-          onClick={() => setTab('mine')}
-          className={tabClass(currentTab === 'mine')}
-        >
-          My Guides
-        </button>
+    <section id="guide-library" className="space-y-5">
+      <div
+        className={`grid ${
+          isAuthenticated ? 'grid-cols-3' : 'grid-cols-1'
+        } overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] p-1`}
+      >
+        {isAuthenticated ? (
+          <button
+            type="button"
+            onClick={() => setTab('mine')}
+            className={tabClass(currentTab === 'mine')}
+          >
+            My Guides
+          </button>
+        ) : null}
 
         <button
           type="button"
@@ -121,13 +135,15 @@ export default function RecipesPageClient({
           Discover
         </button>
 
-        <button
-          type="button"
-          onClick={() => setTab('custom')}
-          className={tabClass(currentTab === 'custom')}
-        >
-          Create
-        </button>
+        {isAuthenticated ? (
+          <button
+            type="button"
+            onClick={() => setTab('custom')}
+            className={tabClass(currentTab === 'custom')}
+          >
+            Create
+          </button>
+        ) : null}
       </div>
 
       {currentTab === 'find' ? (
@@ -152,6 +168,7 @@ export default function RecipesPageClient({
                 recipe={recipe}
                 mode="public"
                 isSaved={savedSet.has(recipe.id)}
+                canSave={isAuthenticated}
               />
             ))}
           </div>

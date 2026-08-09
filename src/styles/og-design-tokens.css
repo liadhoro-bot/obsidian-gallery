@@ -1,0 +1,183 @@
+/*
+ * OG-WDS tokens
+ * SOURCE values: fonts + 6/12/18px radius semantics are explicitly defined by the supplied Design DNA.
+ * CALIBRATED values: browser implementation defaults derived/sampled from the supplied references.
+ * Tune calibrated values globally against the approved golden implementation; do not fork them per route.
+ */
+:root {
+  /* Typography - SOURCE families */
+  --og-font-display: var(--font-og-display, "Cormorant Garamond", Georgia, serif);
+  --og-font-ui: var(--font-og-ui, "Source Sans 3", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  --og-font-mono: var(--font-og-mono, "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+
+  /* Radius - SOURCE */
+  --og-radius-s: 6px;
+  --og-radius-m: 12px;
+  --og-radius-l: 18px;
+  --og-radius-round: 999px;
+
+  /* Sampled/calibrated material palette */
+  --og-walnut-950: #201713;
+  --og-walnut-900: #2d211a;
+  --og-walnut-800: #403025;
+  --og-walnut-700: #5c4434;
+
+  --og-parchment-50: #f0e4d1;
+  --og-parchment-100: #e6d2b6;
+  --og-parchment-200: #d8bd98;
+
+  --og-paper-50: #f3eadc;
+  --og-paper-100: #e3d5c0;
+  --og-paper-200: #d2bfaa;
+
+  --og-brass-500: #a97c3e;
+  --og-brass-700: #654421;
+  --og-steel-500: #85817D;
+  --og-steel-700: #474541;
+  --og-leather-500: #5C3121;
+  --og-leather-700: #412A1D;
+
+  --og-ink-950: #241B15;
+  --og-ink-800: #3A2D23;
+  --og-ink-650: #5D5043;
+  --og-ink-500: #776B5D;
+
+  /* Semantic colors - intentionally muted */
+  --og-status-info: #365A72;
+  --og-status-success: #5F6F48;
+  --og-status-warning: #A1702F;
+  --og-status-danger: #9C4938;
+  --og-status-special: #6F5576;
+  --og-status-neutral: #726A60;
+  --og-focus: #315D7B;
+
+  /* Semantic surfaces */
+  --og-bg-workbench: var(--og-walnut-800);
+  --og-bg-recess: var(--og-walnut-950);
+  --og-surface-primary: var(--og-parchment-100);
+  --og-surface-primary-strong: var(--og-parchment-200);
+  --og-surface-secondary: var(--og-paper-100);
+  --og-surface-secondary-light: var(--og-paper-50);
+
+  /* Asset-backed material sources - tileable grain fills and isolated hardware icons ONLY.
+     Do not add a fixed-aspect "shell"/frame/plaque raster here: it will get stretched via
+     background-size:100% 100% into arbitrarily-proportioned live boxes. Draw frames in CSS
+     from the shadow/radius/border tokens below instead. See docs/design/golden-implementation.md. */
+  --og-asset-walnut: url('/og-v3/materials/walnut-seamless.png');
+  --og-asset-parchment-fiber: url('/og-v3/materials/parchment-fiber.png');
+  --og-asset-ebonized: url('/og-v3/materials/ebonized-control.png');
+  --og-asset-rivet: url('/og-v3/hardware/brass-rivet.png');
+
+  /* Material composites - CALIBRATED from approved V3 raster references */
+  --og-material-walnut-board: linear-gradient(90deg, color-mix(in srgb, var(--og-walnut-950) 40%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--og-walnut-950) 42%, transparent)), linear-gradient(180deg, color-mix(in srgb, var(--og-walnut-700) 10%, transparent), color-mix(in srgb, var(--og-walnut-950) 22%, transparent)), var(--og-asset-walnut), linear-gradient(180deg, var(--og-walnut-800), var(--og-walnut-950));
+  --og-material-walnut-control: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 5%, transparent), color-mix(in srgb, var(--og-walnut-950) 28%, transparent)), linear-gradient(90deg, color-mix(in srgb, var(--og-walnut-950) 18%, transparent), transparent 20%, transparent 80%, color-mix(in srgb, var(--og-walnut-950) 22%, transparent)), var(--og-asset-walnut), linear-gradient(180deg, var(--og-walnut-900), var(--og-walnut-950));
+  --og-material-parchment-panel: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 10%, transparent), color-mix(in srgb, var(--og-walnut-700) 8%, transparent)), var(--og-asset-parchment-fiber), linear-gradient(180deg, var(--og-parchment-50), var(--og-parchment-100));
+  --og-material-paper-card: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 12%, transparent), color-mix(in srgb, var(--og-walnut-700) 7%, transparent)), var(--og-asset-parchment-fiber), linear-gradient(180deg, var(--og-paper-50), var(--og-paper-100));
+  --og-material-photo-mount: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 14%, transparent), color-mix(in srgb, var(--og-walnut-700) 16%, transparent)), var(--og-asset-parchment-fiber), linear-gradient(180deg, var(--og-paper-200), color-mix(in srgb, var(--og-paper-200) 82%, var(--og-walnut-700)));
+  --og-material-brass: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 16%, transparent), transparent 40%, color-mix(in srgb, var(--og-ink-950) 18%, transparent)), linear-gradient(115deg, transparent 32%, color-mix(in srgb, var(--og-paper-50) 62%, transparent) 47%, transparent 62%), linear-gradient(90deg, color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950)), var(--og-brass-500) 50%, color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950)));
+  --og-material-progress-track: linear-gradient(180deg, rgb(255 239 203 / 0.18), color-mix(in srgb, var(--og-ink-800) 18%, transparent)), var(--og-asset-parchment-fiber);
+  --og-material-progress-fill: linear-gradient(90deg, color-mix(in srgb, var(--og-status-info) 72%, var(--og-ink-950)), color-mix(in srgb, var(--og-status-info) 64%, var(--og-paper-50))), url('/v3-raster/progress-paint.webp?v=20260807-clean3');
+  --og-material-dark-inset: linear-gradient(180deg, color-mix(in srgb, var(--og-ink-800) 48%, var(--og-walnut-950)), color-mix(in srgb, var(--og-walnut-950) 88%, black)), var(--og-asset-ebonized), linear-gradient(180deg, var(--og-walnut-950), color-mix(in srgb, var(--og-walnut-950) 88%, black));
+  --og-material-ebonized-control: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 5%, transparent), color-mix(in srgb, var(--og-ink-950) 42%, transparent)), var(--og-asset-ebonized), linear-gradient(180deg, var(--og-walnut-950), color-mix(in srgb, var(--og-walnut-950) 90%, black));
+  --og-text-primary: var(--og-ink-950);
+  --og-text-secondary: var(--og-ink-650);
+  --og-text-muted: var(--og-ink-500);
+
+  /* Border tones */
+  --og-border-subtle: rgb(93 80 67 / 0.22);
+  --og-border-medium: rgb(93 80 67 / 0.34);
+  --og-border-brass: rgb(129 91 44 / 0.72);
+
+  /* Spacing - CALIBRATED */
+  --og-space-1: 4px;
+  --og-space-2: 8px;
+  --og-space-3: 12px;
+  --og-space-4: 16px;
+  --og-space-5: 20px;
+  --og-space-6: 24px;
+  --og-space-8: 32px;
+  --og-space-10: 40px;
+  --og-space-12: 48px;
+  --og-space-16: 64px;
+
+  /* Typography scale - CALIBRATED */
+  --og-type-title-xl: clamp(2.5rem, 5vw, 3.5rem);
+  --og-type-title-lg: clamp(2.125rem, 4vw, 2.75rem);
+  --og-type-subtitle-lg: clamp(1.375rem, 2vw, 1.625rem);
+  --og-type-section: clamp(1.125rem, 1.5vw, 1.25rem);
+  --og-type-body-lg: clamp(1.0625rem, 1vw, 1.125rem);
+  --og-type-body: 1rem;
+  --og-type-caption: 0.875rem;
+  --og-type-label: 0.75rem;
+  --og-type-mono: 0.8125rem;
+
+  --og-leading-title: 1.04;
+  --og-leading-subtitle: 1.25;
+  --og-leading-body: 1.5;
+  --og-leading-caption: 1.4;
+  --og-leading-section: 1.15;
+  --og-tracking-section: 0.12em;
+  --og-tracking-label: 0.06em;
+
+  /* Depth - meaning is defined in docs/design/05-physicality-depth-system.md */
+  --og-shadow-contact: 0 1px 2px rgb(36 27 21 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.16);
+  --og-shadow-medium: 1px 5px 12px rgb(36 24 16 / 0.20);
+  --og-shadow-large: 2px 14px 30px rgb(28 18 12 / 0.28);
+  --og-shadow-pressed: inset 0 2px 4px rgb(36 24 16 / 0.30), inset 0 -1px 0 rgb(255 255 255 / 0.08);
+  /* Fallback only; true floating paper shadow should follow lifted paper edge. */
+  --og-shadow-floating-paper: 2px 7px 14px -6px rgb(36 24 16 / 0.28);
+  --og-shadow-physical-panel: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 54%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--og-paper-50) 20%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--og-walnut-700) 24%, transparent), 0 1px 0 color-mix(in srgb, var(--og-walnut-950) 34%, transparent), 0 7px 15px color-mix(in srgb, var(--og-walnut-950) 34%, transparent);
+  --og-shadow-photo-mount: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 38%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--og-walnut-700) 18%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--og-walnut-700) 26%, transparent), 0 3px 8px color-mix(in srgb, var(--og-walnut-950) 34%, transparent);
+  --og-shadow-walnut-control: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 14%, transparent), inset 0 -2px 4px color-mix(in srgb, var(--og-walnut-950) 74%, transparent), 0 4px 10px color-mix(in srgb, var(--og-walnut-950) 36%, transparent);
+  --og-shadow-constructed-panel: inset 0 0 0 1px color-mix(in srgb, var(--og-brass-700) 32%, transparent), inset 0 0 0 6px color-mix(in srgb, var(--og-paper-50) 10%, transparent), inset 0 0 0 7px color-mix(in srgb, var(--og-walnut-700) 16%, transparent), var(--og-shadow-physical-panel);
+  --og-shadow-constructed-card: inset 0 0 0 1px color-mix(in srgb, var(--og-walnut-700) 20%, transparent), inset 0 0 0 5px color-mix(in srgb, var(--og-paper-50) 10%, transparent), inset 0 0 0 6px color-mix(in srgb, var(--og-walnut-700) 12%, transparent), var(--og-shadow-contact);
+  --og-shadow-control-built: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 18%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--og-ink-950) 18%, transparent), inset 0 -2px 3px color-mix(in srgb, var(--og-ink-950) 42%, transparent), 0 2px 5px color-mix(in srgb, var(--og-walnut-950) 28%, transparent);
+  --og-shadow-brass-plate: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 28%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--og-ink-950) 18%, transparent), inset 0 -1px 1px color-mix(in srgb, var(--og-ink-950) 34%, transparent), 0 2px 4px color-mix(in srgb, var(--og-walnut-950) 30%, transparent);
+  --og-shadow-hardware-pin: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 36%, transparent), inset 0 -1px 1px color-mix(in srgb, var(--og-ink-950) 46%, transparent), 0 1px 1px color-mix(in srgb, var(--og-walnut-950) 40%, transparent);
+
+  /* Controls */
+  --og-touch-target-min: 44px;
+  --og-control-h: 44px;
+  --og-control-h-lg: 52px;
+  --og-control-h-compact: 36px;
+
+  /* Motion */
+  --og-motion-fast: 120ms;
+  --og-motion-medium: 220ms;
+  --og-motion-slow: 320ms;
+  --og-ease-physical: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --og-press-depth: 1px;
+
+  /* Layout */
+  --og-gutter-mobile: 16px;
+  --og-gutter-tablet: 24px;
+  --og-gutter-desktop: 32px;
+  --og-gutter-fluid: 3vw;
+  --og-gutter-fluid-comfortable: 4vw;
+  --og-shell-max-width: 72rem;
+  --og-workbench-compact-max-width: 390px;
+  --og-workbench-fade-stop: 34%;
+  --og-border-width: 1px;
+  --og-focus-width: 3px;
+  --og-focus-offset: 2px;
+}
+
+/* Optional shared primitives. Keep these minimal; component styles should own material semantics. */
+.og-focus-ring:focus-visible {
+  outline: var(--og-focus-width) solid color-mix(in srgb, var(--og-focus) 82%, white);
+  outline-offset: var(--og-focus-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --og-motion-fast: 0ms;
+    --og-motion-medium: 0ms;
+    --og-motion-slow: 0ms;
+  }
+}
+
+
+
+
+
+

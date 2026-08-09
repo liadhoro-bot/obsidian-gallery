@@ -8,7 +8,7 @@ import { captureServerEvent } from '../../utils/analytics/server'
 import { isCurrentUserAdmin } from '../admin'
 import { getContestPhase } from './phases'
 import { validateContestConfig } from './validation'
-import { canManageContest } from './permissions'
+import { canManageContest, canModerateContest } from './permissions'
 import {
   getSafeImageExtension,
   validateGalleryImageFile,
@@ -676,6 +676,11 @@ export async function moderateNominationAction(formData: FormData) {
   const nominationId = getString(formData, 'nominationId')
   const action = getString(formData, 'action')
   const reason = getString(formData, 'reason') || null
+
+  if (!(await canModerateContest(user.id, contestId))) {
+    throw new Error('Not authorized')
+  }
+
   const status =
     action === 'approve'
       ? 'approved'

@@ -4,12 +4,27 @@ import { createClient } from '../../utils/supabase/server'
 import SettingsProfileCard from './settings-profile-card'
 import SettingsSupportSection from './settings-support-section'
 import SettingsSessionSection from './settings-session-section'
+import SettingsV3Preview from './settings-v3-preview'
+import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import {
   SettingsProfileSkeleton,
   SettingsCardSkeleton,
 } from './settings-skeletons'
 
-export default async function SettingsPage() {
+type SettingsPageProps = {
+  searchParams?: Promise<{
+    preview?: string
+  }>
+}
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+  const params = searchParams ? await searchParams : undefined
+  const isPreview = await hasV3PreviewSession(params?.preview)
+
+  if (isPreview) {
+    return <SettingsV3Preview />
+  }
+
   const supabase = await createClient()
 
   const {

@@ -1,0 +1,183 @@
+import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
+import type {
+  DashboardFeedUnit,
+  DashboardNextActionsState,
+  DashboardPaintingTableFeed,
+  DashboardStatus,
+} from './dashboard-data'
+
+export type DashboardActiveUnitViewStatus =
+  | 'complete'
+  | 'active'
+  | 'bench'
+  | 'pile'
+  | 'other'
+
+export type DashboardActiveUnitsNextActionViewModel = {
+  id: string
+  label: string
+  breadcrumb: string
+  href: string
+  completedAt: string | null
+}
+
+export type DashboardActiveUnitsNextActionsViewModel = {
+  title: string
+  copy: string
+  totalCount: number
+  completedCount: number
+  actions: DashboardActiveUnitsNextActionViewModel[]
+  canMutate: boolean
+}
+
+export type DashboardFeaturedUnitViewModel = {
+  id: string
+  name: string
+  descriptor: string
+  imageUrl: string | null
+  progress: number
+  progressLabel: string
+  stageLabel: string
+  statusLabel: string
+}
+
+export type DashboardActiveUnitCardViewModel = {
+  id: string
+  name: string
+  imageUrl: string | null
+  progress: number
+  stageLabel: string
+  status: DashboardActiveUnitViewStatus
+  statusLabel: string
+}
+
+export type DashboardActiveUnitsViewModel = {
+  nextActions: DashboardActiveUnitsNextActionsViewModel | null
+  featuredUnit: DashboardFeaturedUnitViewModel | null
+  units: DashboardActiveUnitCardViewModel[]
+}
+
+const statusLabels: Record<DashboardActiveUnitViewStatus, string> = {
+  complete: 'Complete',
+  active: 'Active',
+  bench: 'On Bench',
+  pile: 'Pile',
+  other: 'Other',
+}
+
+function clampProgress(value: number | null | undefined) {
+  return Math.max(0, Math.min(100, Math.round(value ?? 0)))
+}
+
+function getStageLabel(progress: number) {
+  if (progress >= 100) {
+    return 'Stage 6 of 6'
+  }
+
+  const stage = Math.max(1, Math.min(6, Math.ceil((progress / 100) * 6)))
+  return `Stage ${stage} of 6`
+}
+
+function getCompactStageLabel(progress: number) {
+  return getStageLabel(progress).replace(' of 6', '')
+}
+
+function normalizeStatus(status: DashboardStatus): DashboardActiveUnitViewStatus {
+  return status === 'complete' ||
+    status === 'active' ||
+    status === 'bench' ||
+    status === 'pile' ||
+    status === 'other'
+    ? status
+    : 'other'
+}
+
+function getDescriptor(unit: DashboardFeedUnit) {
+  const projectNames = unit.parent_project_names?.filter(Boolean) ?? []
+  return projectNames.length > 0 ? projectNames.join(' / ') : 'Current unit'
+}
+
+function mapUnitImage(imageUrl: string | null, size: number) {
+  return getSupabaseImageUrl(imageUrl, {
+    width: size,
+    height: size,
+    quality: 48,
+    resize: 'cover',
+  })
+}
+
+function mapNextActions(
+  state: DashboardNextActionsState | null
+): DashboardActiveUnitsNextActionsViewModel | null {
+  if (!state) {
+    return null
+  }
+
+  const firstOpenAction = state.actions.find((action) => !action.completedAt)
+  const copy = firstOpenAction?.label ?? 'All next actions complete'
+
+  return {
+    title: state.title || 'Next Actions',
+    copy,
+    totalCount: state.totalCount,
+    completedCount: state.completedCount,
+    canMutate: true,
+    actions: state.actions.map((action) => ({
+      id: action.id,
+      label: action.label,
+      breadcrumb: action.breadcrumb,
+      href: action.href,
+      completedAt: action.completedAt,
+    })),
+  }
+}
+
+function mapFeaturedUnit(
+  unit: DashboardFeedUnit | null
+): DashboardFeaturedUnitViewModel | null {
+  if (!unit) {
+    return null
+  }
+
+  const progress = clampProgress(unit.progress_percent)
+
+  return {
+    id: unit.unit_id,
+    name: unit.name,
+    descriptor: getDescriptor(unit),
+    imageUrl: mapUnitImage(unit.primary_image_url, 640),
+    progress,
+    progressLabel: 'Campaign Progress',
+    stageLabel: getStageLabel(progress),
+    statusLabel: statusLabels[normalizeStatus(unit.status)],
+  }
+}
+
+function mapActiveUnit(unit: DashboardFeedUnit): DashboardActiveUnitCardViewModel {
+  const progress = clampProgress(unit.progress_percent)
+  const status = normalizeStatus(unit.status)
+
+  return {
+    id: unit.unit_id,
+    name: unit.name,
+    imageUrl: mapUnitImage(unit.primary_image_url, 320),
+    progress,
+    stageLabel: getCompactStageLabel(progress),
+    status,
+    statusLabel: statusLabels[status],
+  }
+}
+
+export function createDashboardActiveUnitsViewModel({
+  feed,
+  nextActions,
+}: {
+  feed: DashboardPaintingTableFeed
+  nextActions: DashboardNextActionsState | null
+}): DashboardActiveUnitsViewModel {
+  return {
+    nextActions: mapNextActions(nextActions),
+    featuredUnit: mapFeaturedUnit(feed.heroUnit),
+    units: feed.units.map(mapActiveUnit),
+  }
+}

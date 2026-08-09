@@ -15,9 +15,93 @@ import {
 import NominateForContestCard from '../../../components/contests/nominate-for-contest-card'
 import { getEligibleContestsForSource } from '../../../lib/contests/queries'
 import { isCurrentUserAdmin } from '../../../lib/admin'
+import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
+import ProjectV3Preview from './project-v3-preview'
 
 function firstRelation<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+type ProjectSupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))))
+}
+
+async function getProjectUnitIds(
+  supabase: ProjectSupabaseClient,
+  projectId: string,
+  userId: string
+) {
+  const [directUnitsResult, linkedUnitsResult] = await Promise.all([
+    supabase
+      .from('units')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('user_id', userId),
+    supabase
+      .from('unit_projects')
+      .select('unit_id')
+      .eq('project_id', projectId)
+      .eq('user_id', userId),
+  ])
+
+  const lookupError = directUnitsResult.error || linkedUnitsResult.error
+  if (lookupError) {
+    return {
+      ids: [],
+      error: lookupError,
+    }
+  }
+
+  const candidateUnitIds = uniqueStrings([
+    ...((directUnitsResult.data ?? []) as Array<{ id: string | null }>).map(
+      (unit) => unit.id
+    ),
+    ...((linkedUnitsResult.data ?? []) as Array<{ unit_id: string | null }>).map(
+      (link) => link.unit_id
+    ),
+  ])
+
+  if (candidateUnitIds.length === 0) {
+    return {
+      ids: [],
+      error: null,
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('units')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .in('id', candidateUnitIds)
+
+  return {
+    ids: ((data ?? []) as Array<{ id: string | null }>).map((unit) => unit.id).filter(
+      (unitId): unitId is string => Boolean(unitId)
+    ),
+    error,
+  }
+}
+
+async function getOwnedProject(
+  supabase: ProjectSupabaseClient,
+  projectId: string,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return data
 }
 
 async function ProjectContestCard({
@@ -75,6 +159,12 @@ async function addUnit(formData: FormData) {
   const imageFile = formData.get('image')
 
   if (!projectId || !name) return
+
+  const project = await getOwnedProject(supabase, projectId, user.id)
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
 
   const modelCount = Number(modelCountValue || '1')
 
@@ -167,7 +257,7 @@ async function addUnit(formData: FormData) {
   }))
 
   const { error: newStepsError } = await supabase
-    .from('unit_stage_progress')
+    .from('unit_progress_steps')
     .insert(newStepRows)
 
   if (newStepsError) {
@@ -277,10 +367,25 @@ async function setFeaturedUnit(formData: FormData) {
 
   if (!unitId || !projectId) return
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const project = await getOwnedProject(supabase, projectId, user.id)
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
+
   const { error: clearError } = await supabase
     .from('units')
     .update({ is_featured: false })
     .eq('project_id', projectId)
+    .eq('user_id', user.id)
 
   if (clearError) {
     console.error('Error clearing featured unit:', clearError)
@@ -291,6 +396,8 @@ async function setFeaturedUnit(formData: FormData) {
     .from('units')
     .update({ is_featured: true })
     .eq('id', unitId)
+    .eq('project_id', projectId)
+    .eq('user_id', user.id)
 
   if (setError) {
     console.error('Error setting featured unit:', setError)
@@ -324,11 +431,18 @@ async function uploadProjectImage(formData: FormData) {
 
   if (!projectId || files.length === 0) return
 
+  const project = await getOwnedProject(supabase, projectId, user.id)
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
+
   const { data: existingImages } = await supabase
     .from('image_assets')
     .select('id')
     .eq('entity_type', 'project')
     .eq('entity_id', projectId)
+    .eq('user_id', user.id)
 
   const result: GalleryUploadResult = {
     uploadedCount: 0,
@@ -432,6 +546,20 @@ async function setFeaturedProjectImage(formData: FormData) {
 
   if (!assetId || !projectId) return
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const project = await getOwnedProject(supabase, projectId, user.id)
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
+
   const { error: clearError } = await supabase
     .from('image_assets')
     .update({
@@ -440,6 +568,7 @@ async function setFeaturedProjectImage(formData: FormData) {
     })
     .eq('entity_type', 'project')
     .eq('entity_id', projectId)
+    .eq('user_id', user.id)
 
   if (clearError) {
     console.error('Error clearing project featured image:', clearError)
@@ -453,6 +582,9 @@ async function setFeaturedProjectImage(formData: FormData) {
       is_primary: true,
     })
     .eq('id', assetId)
+    .eq('entity_type', 'project')
+    .eq('entity_id', projectId)
+    .eq('user_id', user.id)
 
   if (setError) {
     console.error('Error setting project featured image:', setError)
@@ -471,10 +603,27 @@ async function deleteProjectImage(formData: FormData) {
 
   if (!assetId || !projectId) return
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const project = await getOwnedProject(supabase, projectId, user.id)
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
+
   const { data: imageToDelete, error: fetchError } = await supabase
     .from('image_assets')
-    .select('id, is_featured')
+    .select('id, is_featured, storage_bucket, storage_path')
     .eq('id', assetId)
+    .eq('entity_type', 'project')
+    .eq('entity_id', projectId)
+    .eq('user_id', user.id)
     .single()
 
   if (fetchError || !imageToDelete) {
@@ -484,10 +633,24 @@ async function deleteProjectImage(formData: FormData) {
 
   const wasFeatured = !!imageToDelete.is_featured
 
+  if (imageToDelete.storage_bucket && imageToDelete.storage_path) {
+    const { error: storageError } = await supabase.storage
+      .from(imageToDelete.storage_bucket)
+      .remove([imageToDelete.storage_path])
+
+    if (storageError) {
+      console.error('Error deleting project image storage object:', storageError)
+      return
+    }
+  }
+
   const { error: deleteError } = await supabase
     .from('image_assets')
     .delete()
     .eq('id', assetId)
+    .eq('entity_type', 'project')
+    .eq('entity_id', projectId)
+    .eq('user_id', user.id)
 
   if (deleteError) {
     console.error('Error deleting project image:', deleteError)
@@ -500,6 +663,7 @@ async function deleteProjectImage(formData: FormData) {
       .select('id')
       .eq('entity_type', 'project')
       .eq('entity_id', projectId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: true })
 
     const nextImage = remainingImages?.[0]
@@ -566,12 +730,8 @@ async function getProjectDetailData({
     }
   }
 
-  const [unitCountResult, featuredProjectImageResult] = await Promise.all([
-    supabase
-      .from('units')
-      .select('id', { count: 'exact', head: true })
-      .eq('project_id', projectId)
-      .eq('user_id', userId),
+  const [projectUnitIdsResult, featuredProjectImageResult] = await Promise.all([
+    getProjectUnitIds(supabase, projectId, userId),
     supabase
       .from('image_assets')
       .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
@@ -584,7 +744,8 @@ async function getProjectDetailData({
       .maybeSingle(),
   ])
 
-  const projectUnitCount = unitCountResult.count ?? 0
+  const projectUnitIds = projectUnitIdsResult.ids
+  const projectUnitCount = projectUnitIds.length
   const defaultTab: ProjectDetailTab = projectUnitCount > 0 ? 'units' : 'add'
   const projectImagesError = activeTab === 'details' ? null : null
 
@@ -618,7 +779,7 @@ async function getProjectDetailData({
                 )
               `)
               .eq('id', project.theme_id)
-              .eq('user_id', userId)
+              .or(`user_id.eq.${userId},is_public.eq.true`)
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         supabase
@@ -628,11 +789,13 @@ async function getProjectDetailData({
           .eq('entity_id', projectId)
           .eq('user_id', userId)
           .order('created_at', { ascending: true }),
-        supabase
-          .from('unit_sessions')
-          .select('duration_seconds, unit_id, unit:units!inner(project_id)')
-          .eq('user_id', userId)
-          .eq('unit.project_id', projectId),
+        projectUnitIds.length > 0
+          ? supabase
+              .from('unit_sessions')
+              .select('duration_seconds, unit_id')
+              .eq('user_id', userId)
+              .in('unit_id', projectUnitIds)
+          : Promise.resolve({ data: [], error: null }),
       ])
 
     const projectTheme = projectThemeResult.data
@@ -675,13 +838,17 @@ async function getProjectDetailData({
   }
 
   if (activeTab === 'units') {
-    const unitsResult = await supabase
-      .from('units')
-      .select('id, name, notes, created_at, updated_at, project_id, status, is_active')
-      .eq('project_id', projectId)
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
+    const unitsResult = projectUnitIdsResult.error
+      ? { data: [], error: projectUnitIdsResult.error }
+      : projectUnitIds.length > 0
+        ? await supabase
+            .from('units')
+            .select('id, name, notes, created_at, updated_at, project_id, status, is_active')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .in('id', projectUnitIds)
+            .order('created_at', { ascending: false })
+        : { data: [], error: null }
 
     const units = unitsResult.data ?? []
     const unitIds = units
@@ -787,8 +954,15 @@ export default async function ProjectDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; preview?: string }>
 }) {
+  const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
+  const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
+
+  if (isPreview) {
+    return <ProjectV3Preview id={id} />
+  }
+
   const supabase = await createClient()
 
   const user = await getSessionUser(supabase)
@@ -797,13 +971,10 @@ export default async function ProjectDetailPage({
     redirect('/login')
   }
 
-  const { id } = await params
-
   if (!id || id === 'undefined') {
     throw new Error('Missing or invalid project id in route params')
   }
 
-  const resolvedSearchParams = await searchParams
   const activeTab: ProjectDetailTab =
     resolvedSearchParams.tab === 'details' ||
     resolvedSearchParams.tab === 'units' ||

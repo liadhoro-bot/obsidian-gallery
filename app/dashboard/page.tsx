@@ -1,32 +1,107 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import { WorkbenchShell } from '@/src/components/v3'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
-
 import DashboardV3Preview from './dashboard-v3-preview'
-import DashboardTabSwitcher from './dashboard-tab-switcher'
-import DashboardTopBar from './dashboard-top-bar'
-import DashboardWelcome from './dashboard-welcome'
 import DashboardXpCard from './dashboard-xp-card'
 import DashboardMetadataGrid from './dashboard-metadata-grid'
-import DashboardPaintingTable from './dashboard-painting-table'
-import DashboardQuickActions from './dashboard-quick-actions'
 import DashboardHobbyBadges from './dashboard-hobby-badges'
-import DashboardNextActions from './dashboard-next-actions'
-
+import type { DashboardFeatureGuide } from './feature-guide-types'
 import {
-  BenchUnitsSkeleton,
-  FeaturedUnitSkeleton,
-  StatsSkeleton,
-  TopBarSkeleton,
-} from './dashboard-skeletons'
+  DashboardActiveUnitsGoldenFixtureScreen,
+  DashboardActiveUnitsScreen,
+} from './dashboard-active-units-screen'
+import styles from './dashboard-og.module.css'
+import {
+  getDashboardMetadataSummary,
+  getDashboardNextActions,
+  getDashboardPaintingTableFeed,
+  getDashboardXpState,
+} from './dashboard-data'
+import { StatsSkeleton } from './dashboard-skeletons'
 
 type DashboardPageProps = {
   searchParams?: Promise<{
+    golden?: string
     preview?: string
     tab?: string
   }>
+}
+
+const dashboardFeatureGuideOrder = [
+  'dashboard.help',
+  'dashboard.add_next_action',
+  'dashboard.next_actions.panel',
+  'dashboard.featured_unit',
+  'dashboard.resume_painting',
+] as const
+
+const dashboardFeatureGuideFallbacks: Record<
+  (typeof dashboardFeatureGuideOrder)[number],
+  DashboardFeatureGuide
+> = {
+  'dashboard.help': {
+    uid: 'dashboard.help',
+    feature_name: 'Dashboard explainer',
+    location_reference: 'Dashboard header > ?',
+    component_reference: 'app/dashboard/dashboard-v3-preview.tsx',
+    explanation:
+      'Explains what the dashboard is for: a quick check-in view for active units, next actions, and painting progress.',
+    place_in_page: 'Dashboard header',
+    coach_mark_area: 'The question mark button in the Dashboard header',
+    popup_placement: 'bottom-end',
+    display_order: 110,
+  },
+  'dashboard.add_next_action': {
+    uid: 'dashboard.add_next_action',
+    feature_name: 'Add next action',
+    location_reference: 'Dashboard header > +',
+    component_reference: 'app/dashboard/dashboard-v3-preview.tsx',
+    explanation:
+      'Adds a new dashboard task to the next action list so the user has one more concrete step to follow.',
+    place_in_page: 'Dashboard header',
+    coach_mark_area: 'The plus button beside the Dashboard help button',
+    popup_placement: 'bottom-end',
+    display_order: 120,
+  },
+  'dashboard.next_actions.panel': {
+    uid: 'dashboard.next_actions.panel',
+    feature_name: 'Next actions panel',
+    location_reference: 'Dashboard > Next Actions',
+    component_reference: 'app/dashboard/dashboard-next-actions-card.tsx',
+    explanation:
+      'A short guided checklist chosen from the user onboarding goal. Each action has a completion control, a breadcrumb, and a route to the exact place to act.',
+    place_in_page: 'Near top of Active Units dashboard',
+    coach_mark_area: 'The whole next actions card',
+    popup_placement: 'bottom',
+    display_order: 150,
+  },
+  'dashboard.featured_unit': {
+    uid: 'dashboard.featured_unit',
+    feature_name: 'Featured unit',
+    location_reference: 'Dashboard > Featured Unit',
+    component_reference: 'app/dashboard/dashboard-unit-in-progress.tsx',
+    explanation:
+      'Highlights the unit the user is currently focusing on, including progress, stage, time logged, and a resume route.',
+    place_in_page: 'Active Units dashboard',
+    coach_mark_area: 'The large featured unit card',
+    popup_placement: 'top',
+    display_order: 210,
+  },
+  'dashboard.resume_painting': {
+    uid: 'dashboard.resume_painting',
+    feature_name: 'Resume painting',
+    location_reference: 'Dashboard > Featured Unit > Resume',
+    component_reference: 'app/dashboard/dashboard-resume-button.tsx',
+    explanation:
+      'Opens the active unit so the user can continue recording stages, photos, paints, and sessions.',
+    place_in_page: 'Featured unit card',
+    coach_mark_area: 'The Resume button on a unit card',
+    popup_placement: 'left',
+    display_order: 220,
+  },
 }
 
 export default async function DashboardPage({
@@ -35,10 +110,21 @@ export default async function DashboardPage({
   const perf = createPerfTimer('/dashboard')
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const isPreview = await hasV3PreviewSession(resolvedSearchParams?.preview)
+  const isGoldenFixture =
+    resolvedSearchParams?.golden === 'dashboard-active-units' &&
+    process.env.NODE_ENV !== 'production'
 
-  if (isPreview) {
+  if (isGoldenFixture) {
     perf.total()
-    return <DashboardPreview />
+    return (
+      <WorkbenchShell
+        contentClassName={styles.dashboardFrame}
+        gutter="none"
+        maxWidth="var(--og-workbench-compact-max-width)"
+      >
+        <DashboardActiveUnitsGoldenFixtureScreen />
+      </WorkbenchShell>
+    )
   }
 
   const supabase = await createClient()
@@ -46,7 +132,36 @@ export default async function DashboardPage({
   perf.mark('auth/session fetch')
 
   if (!user) {
-    redirect('/login')
+    redirect(
+      isPreview
+        ? '/login?next=%2Fdashboard%3Fpreview%3D1&preview=1'
+        : '/login'
+    )
+  }
+
+  if (isPreview) {
+    const [featureGuides, feed, metadata, nextActions, xpState] = await perf.measure(
+      'v3 dashboard data',
+      () =>
+        Promise.all([
+          getDashboardFeatureGuides(),
+          getDashboardPaintingTableFeed(user.id),
+          getDashboardMetadataSummary(user.id),
+          getDashboardNextActions(user.id),
+          getDashboardXpState(user.id),
+        ])
+    )
+
+    perf.total()
+    return (
+      <DashboardPreview
+        featureGuides={featureGuides}
+        feed={feed}
+        metadata={metadata}
+        nextActions={nextActions}
+        xpState={xpState}
+      />
+    )
   }
 
   const activeTab =
@@ -85,59 +200,78 @@ export default async function DashboardPage({
     </div>
   )
 
-  const paintingTableContent = (
-    <Suspense
-      fallback={
-        <div className="grid gap-5">
-          <DashboardQuickActions />
-          <FeaturedUnitSkeleton />
-          <BenchUnitsSkeleton />
-        </div>
-      }
-    >
-      <div className="grid gap-5">
-        <DashboardQuickActions />
-        <DashboardPaintingTable userId={user.id} />
-      </div>
-    </Suspense>
-  )
-
   const profilePanel =
     activeTab === 'profile' ? (
       profileContent
     ) : (
-      <Suspense fallback={profileShell}>
-        {profileContent}
-      </Suspense>
+      <Suspense fallback={profileShell}>{profileContent}</Suspense>
     )
 
-  const paintingTablePanel = paintingTableContent
-
   return (
-    <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-        <Suspense fallback={<TopBarSkeleton />}>
-          <DashboardTopBar userId={user.id} />
-        </Suspense>
-
-        <DashboardWelcome />
-
-        <DashboardTabSwitcher
-          initialTab={activeTab}
-          nextActionsPanel={
-            <Suspense fallback={null}>
-              <DashboardNextActions userId={user.id} />
-            </Suspense>
-          }
-          profilePanel={profilePanel}
-          paintingTablePanel={paintingTablePanel}
-        />
-      </div>
-    </main>
+    <WorkbenchShell
+      contentClassName={styles.dashboardFrame}
+      gutter="none"
+      maxWidth="var(--og-workbench-compact-max-width)"
+    >
+      <DashboardActiveUnitsScreen
+        initialTab={activeTab}
+        profilePanel={profilePanel}
+        userId={user.id}
+      />
+    </WorkbenchShell>
   )
 }
 
-function DashboardPreview() {
-  return <DashboardV3Preview />
+async function getDashboardFeatureGuides(): Promise<DashboardFeatureGuide[]> {
+  const fallbackGuides = dashboardFeatureGuideOrder.map(
+    (uid) => dashboardFeatureGuideFallbacks[uid]
+  )
+
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('feature_guide')
+      .select(
+        'uid, feature_name, location_reference, component_reference, explanation, place_in_page, coach_mark_area, popup_placement, display_order'
+      )
+      .in('uid', [...dashboardFeatureGuideOrder])
+
+    if (error || !data) {
+      return fallbackGuides
+    }
+
+    const guideMap = new Map(
+      data.map((guide) => [guide.uid, guide as DashboardFeatureGuide])
+    )
+
+    return dashboardFeatureGuideOrder.map(
+      (uid) => guideMap.get(uid) ?? dashboardFeatureGuideFallbacks[uid]
+    )
+  } catch {
+    return fallbackGuides
+  }
 }
 
+function DashboardPreview({
+  feed,
+  featureGuides,
+  metadata,
+  nextActions,
+  xpState,
+}: {
+  feed: Awaited<ReturnType<typeof getDashboardPaintingTableFeed>>
+  featureGuides: DashboardFeatureGuide[]
+  metadata: Awaited<ReturnType<typeof getDashboardMetadataSummary>>
+  nextActions: Awaited<ReturnType<typeof getDashboardNextActions>>
+  xpState: Awaited<ReturnType<typeof getDashboardXpState>>
+}) {
+  return (
+    <DashboardV3Preview
+      featureGuides={featureGuides}
+      feed={feed}
+      metadata={metadata}
+      nextActions={nextActions}
+      xpState={xpState}
+    />
+  )
+}

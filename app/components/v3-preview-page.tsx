@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import V3PerfIndicator from './v3-perf-indicator'
 
 type PreviewLink = {
   href: string
@@ -10,7 +11,7 @@ type V3PreviewPageProps = {
   eyebrow: string
   title: string
   text: string
-  active: 'dashboard' | 'projects' | 'paints' | 'guides' | 'themes'
+  active: 'dashboard' | 'projects' | 'paints' | 'guides' | 'community'
   primary?: PreviewLink
   panels: PreviewLink[]
 }
@@ -24,7 +25,7 @@ const navItems: Array<{
   { id: 'projects', label: 'Projects', href: '/projects?preview=1' },
   { id: 'paints', label: 'Paints', href: '/paints?preview=1' },
   { id: 'guides', label: 'Guides', href: '/guides?preview=1' },
-  { id: 'themes', label: 'Themes', href: '/themes?preview=1' },
+  { id: 'community', label: 'Community', href: '/community?preview=1' },
 ]
 
 export default function V3PreviewPage({
@@ -37,6 +38,7 @@ export default function V3PreviewPage({
 }: V3PreviewPageProps) {
   return (
     <main className="min-h-screen bg-[#081018] text-white">
+      <V3PerfIndicator surface={active} detail="scaffold" />
       <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
         <header className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
           <div className="flex items-center justify-between gap-4">

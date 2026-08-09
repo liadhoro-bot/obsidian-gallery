@@ -1,0 +1,73 @@
+import type { DashboardActiveUnitsViewModel } from './dashboard-active-units-model'
+
+export const dashboardActiveUnitsFixture: DashboardActiveUnitsViewModel = {
+  nextActions: {
+    title: 'Next Actions',
+    copy: 'Your first miniature',
+    completedCount: 1,
+    totalCount: 3,
+    canMutate: false,
+    actions: [
+      {
+        id: 'fixture-prime',
+        label: 'Prime and basecoat your first miniature',
+        breadcrumb: 'Dashboard / First miniature',
+        href: '/dashboard?golden=dashboard-active-units',
+        completedAt: '2026-08-08T00:00:00.000Z',
+      },
+      {
+        id: 'fixture-layer',
+        label: 'Paint armor panels and first highlights',
+        breadcrumb: 'Units / Stormward Veteran',
+        href: '/dashboard?golden=dashboard-active-units',
+        completedAt: null,
+      },
+      {
+        id: 'fixture-base',
+        label: 'Finish base texture and rim',
+        breadcrumb: 'Guides / Battle-ready finish',
+        href: '/dashboard?golden=dashboard-active-units',
+        completedAt: null,
+      },
+    ],
+  },
+  featuredUnit: {
+    id: 'fixture-stormward-veteran',
+    name: 'Stormward Veteran',
+    descriptor: 'Intercessor Squad',
+    imageUrl: '/dashboard-golden/stormward-veteran.png',
+    progress: 68,
+    progressLabel: 'Campaign Progress',
+    stageLabel: 'Stage 4 of 6',
+    statusLabel: 'Battle-Ready',
+  },
+  units: [
+    {
+      id: 'fixture-intercessor',
+      name: 'Intercessor',
+      imageUrl: '/dashboard-golden/intercessor.png',
+      progress: 54,
+      stageLabel: 'Stage 3',
+      status: 'active',
+      statusLabel: 'Active',
+    },
+    {
+      id: 'fixture-hellblaster',
+      name: 'Hellblaster',
+      imageUrl: '/dashboard-golden/hellblaster.png',
+      progress: 38,
+      stageLabel: 'Stage 2',
+      status: 'active',
+      statusLabel: 'Active',
+    },
+    {
+      id: 'fixture-inceptor',
+      name: 'Inceptor',
+      imageUrl: '/dashboard-golden/inceptor.png',
+      progress: 22,
+      stageLabel: 'Stage 1',
+      status: 'active',
+      statusLabel: 'Active',
+    },
+  ],
+}

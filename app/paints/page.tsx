@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 import PaintsV3Preview from './paints-v3-preview'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
+import { createPerfTimer } from '../../utils/perf/server'
+import { getPaintsV3Payload } from './paints-v3-data'
 
 type PaintsPageProps = {
   searchParams?: Promise<{
@@ -9,6 +12,7 @@ type PaintsPageProps = {
 }
 
 export default async function PaintsPage({ searchParams }: PaintsPageProps) {
+  const perf = createPerfTimer('/paints')
   const params = searchParams ? await searchParams : undefined
   const isPreview = await hasV3PreviewSession(params?.preview)
 
@@ -16,5 +20,18 @@ export default async function PaintsPage({ searchParams }: PaintsPageProps) {
     redirect('/vault')
   }
 
-  return <PaintsV3Preview />
+  const supabase = await createClient()
+  const user = await getSessionUser(supabase)
+  perf.mark('auth/session fetch')
+
+  if (!user) {
+    redirect('/login?next=%2Fpaints%3Fpreview%3D1&preview=1')
+  }
+
+  const payload = await perf.measure('v3 paints data', () =>
+    getPaintsV3Payload(user.id)
+  )
+
+  perf.total()
+  return <PaintsV3Preview initialPayload={payload} />
 }

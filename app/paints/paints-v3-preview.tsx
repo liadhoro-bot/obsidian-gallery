@@ -1,7 +1,9 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import V3PerfIndicator from '../components/v3-perf-indicator'
+import type { PaintsV3Payload } from './paints-v3-data'
 
 type PaintRecord = {
   id: string
@@ -11,12 +13,17 @@ type PaintRecord = {
   finish: string
   size: string
   color: string
+  swatchImageUrl?: string | null
   owned: boolean
   wish: boolean
   notes: string
 }
 
-const paints: PaintRecord[] = [
+type PaintExportFormat = 'csv' | 'txt' | 'json' | 'pdf'
+type PaintOwnershipAction = 'owned' | 'wishlist'
+type PaintOwnershipState = Pick<PaintRecord, 'owned' | 'wish'>
+
+const fallbackPaints: PaintRecord[] = [
   {
     id: 'abaddon-black',
     name: 'Abaddon Black',
@@ -236,37 +243,365 @@ const paints: PaintRecord[] = [
 ]
 
 const pageSize = 9
+const defaultMatchColor = '#17c9d2'
+const paintExportOptions: {
+  format: PaintExportFormat
+  label: string
+  description: string
+}[] = [
+  {
+    format: 'csv',
+    label: 'CSV',
+    description: 'Spreadsheet-ready collection rows.',
+  },
+  {
+    format: 'txt',
+    label: 'TXT',
+    description: 'Plain text list for sharing or notes.',
+  },
+  {
+    format: 'json',
+    label: 'JSON',
+    description: 'Structured data for tools and backups.',
+  },
+  {
+    format: 'pdf',
+    label: 'PDF',
+    description: 'Printable report in a new window.',
+  },
+]
 
-export default function PaintsV3Preview() {
+function getPaintColorGroup(hex: string) {
+  const value = hex.replace('#', '')
+  const red = parseInt(value.slice(0, 2), 16)
+  const green = parseInt(value.slice(2, 4), 16)
+  const blue = parseInt(value.slice(4, 6), 16)
+  const max = Math.max(red, green, blue)
+  const min = Math.min(red, green, blue)
+
+  if (max < 45) return 'black'
+  if (min > 205) return 'white'
+  if (red > 150 && green > 115 && blue < 90) return 'yellow'
+  if (red > 135 && green < 90 && blue < 90) return 'red'
+  if (blue > red && blue > green) return 'blue'
+  if (green > red && green > blue) return 'green'
+  if (red > 100 && blue > 100) return 'violet'
+  return 'brown'
+}
+
+function getColorDistance(firstHex: string, secondHex: string) {
+  const first = firstHex.replace('#', '')
+  const second = secondHex.replace('#', '')
+  const firstRed = parseInt(first.slice(0, 2), 16)
+  const firstGreen = parseInt(first.slice(2, 4), 16)
+  const firstBlue = parseInt(first.slice(4, 6), 16)
+  const secondRed = parseInt(second.slice(0, 2), 16)
+  const secondGreen = parseInt(second.slice(2, 4), 16)
+  const secondBlue = parseInt(second.slice(4, 6), 16)
+
+  return Math.hypot(
+    firstRed - secondRed,
+    firstGreen - secondGreen,
+    firstBlue - secondBlue
+  )
+}
+
+function escapeCsvValue(value: string | boolean) {
+  const stringValue = String(value)
+  if (!/[",\n\r]/.test(stringValue)) {
+    return stringValue
+  }
+
+  return `"${stringValue.replaceAll('"', '""')}"`
+}
+
+function getPaintExportFilename(format: PaintExportFormat) {
+  return `obsidian-gallery-paints.${format === 'pdf' ? 'html' : format}`
+}
+
+function buildPaintExportPayload(format: Exclude<PaintExportFormat, 'pdf'>, paintList: PaintRecord[]) {
+  if (format === 'json') {
+    return JSON.stringify(paintList, null, 2)
+  }
+
+  if (format === 'txt') {
+    return paintList
+      .map(
+        (paint) =>
+          `${paint.name} - ${paint.brand} ${paint.line}, ${paint.finish}, ${paint.size}, ${
+            paint.owned ? 'owned' : 'not owned'
+          }${paint.wish ? ', wishlist' : ''}\n${paint.notes}`
+      )
+      .join('\n\n')
+  }
+
+  const columns = [
+    'name',
+    'brand',
+    'line',
+    'finish',
+    'size',
+    'color',
+    'owned',
+    'wishlist',
+    'notes',
+  ]
+  const rows = paintList.map((paint) =>
+    [
+      paint.name,
+      paint.brand,
+      paint.line,
+      paint.finish,
+      paint.size,
+      paint.color,
+      paint.owned,
+      paint.wish,
+      paint.notes,
+    ]
+      .map(escapeCsvValue)
+      .join(',')
+  )
+
+  return [columns.join(','), ...rows].join('\n')
+}
+
+function downloadPaintExport(
+  format: Exclude<PaintExportFormat, 'pdf'>,
+  paintList: PaintRecord[]
+) {
+  const mimeTypes = {
+    csv: 'text/csv;charset=utf-8',
+    txt: 'text/plain;charset=utf-8',
+    json: 'application/json;charset=utf-8',
+  } as const
+  const payload = buildPaintExportPayload(format, paintList)
+  const blob = new Blob([payload], { type: mimeTypes[format] })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = getPaintExportFilename(format)
+  document.body.append(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function openPaintPdfExport(paintList: PaintRecord[]) {
+  const exportWindow = window.open('', '_blank', 'noopener,noreferrer')
+  if (!exportWindow) {
+    return
+  }
+
+  const rows = paintList
+    .map(
+      (paint) => `
+        <tr>
+          <td><span class="swatch" style="background:${paint.color}"></span>${paint.name}</td>
+          <td>${paint.brand}</td>
+          <td>${paint.line}</td>
+          <td>${paint.finish}</td>
+          <td>${paint.size}</td>
+          <td>${paint.owned ? 'Owned' : paint.wish ? 'Wishlist' : 'Library'}</td>
+        </tr>
+      `
+    )
+    .join('')
+
+  exportWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>Obsidian Gallery Paint Export</title>
+        <style>
+          body { background: #f8fafc; color: #0f172a; font-family: Arial, sans-serif; margin: 32px; }
+          h1 { margin: 0 0 8px; font-size: 28px; }
+          p { color: #475569; margin: 0 0 24px; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border-bottom: 1px solid #cbd5e1; padding: 10px; text-align: left; font-size: 12px; }
+          th { color: #334155; text-transform: uppercase; letter-spacing: 0.08em; }
+          .swatch { border: 1px solid #cbd5e1; border-radius: 999px; display: inline-block; height: 14px; margin-right: 8px; vertical-align: -2px; width: 14px; }
+        </style>
+      </head>
+      <body>
+        <h1>Obsidian Gallery Paint Export</h1>
+        <p>${paintList.length} paints exported from the V3 Paint Vault preview.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Brand</th>
+              <th>Line</th>
+              <th>Finish</th>
+              <th>Size</th>
+              <th>Ownership</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </body>
+    </html>
+  `)
+  exportWindow.document.close()
+  exportWindow.print()
+}
+
+function isCustomPaintId(paintId: string) {
+  return paintId.startsWith('custom-')
+}
+
+function applyPaintStateOverrides(
+  paints: PaintRecord[],
+  overrides: Record<string, PaintOwnershipState>
+) {
+  return paints.map((paint) => ({
+    ...paint,
+    ...overrides[paint.id],
+  }))
+}
+
+type PaintsV3PreviewProps = {
+  initialPayload?: PaintsV3Payload
+}
+
+export default function PaintsV3Preview({
+  initialPayload,
+}: PaintsV3PreviewProps) {
   const [activeTab, setActiveTab] = useState<'owned' | 'library'>('owned')
   const [query, setQuery] = useState('')
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isMixOpen, setIsMixOpen] = useState(false)
+  const [isExportOpen, setIsExportOpen] = useState(false)
   const [brandFilter, setBrandFilter] = useState('all')
-  const [finishFilter, setFinishFilter] = useState('all')
+  const [lineFilter, setLineFilter] = useState('all')
+  const [ownershipFilter, setOwnershipFilter] = useState('all')
+  const [colorGroupFilter, setColorGroupFilter] = useState('all')
+  const [matchColor, setMatchColor] = useState('')
   const [pageIndex, setPageIndex] = useState(0)
-  const [selectedPaintId, setSelectedPaintId] = useState(paints[7].id)
+  const [paintStateOverrides, setPaintStateOverrides] = useState<
+    Record<string, PaintOwnershipState>
+  >({})
+  const [pendingPaintActions, setPendingPaintActions] = useState<
+    Record<string, PaintOwnershipAction>
+  >({})
+  const libraryBasePaints = useMemo(
+    () => initialPayload?.libraryPaints ?? fallbackPaints,
+    [initialPayload]
+  )
+  const basePaints = useMemo(() => {
+    const payloadPaints = initialPayload
+      ? [...initialPayload.ownedPaints, ...initialPayload.libraryPaints]
+      : fallbackPaints
+    const seenPaintIds = new Set<string>()
+
+    return payloadPaints.filter((paint) => {
+      if (seenPaintIds.has(paint.id)) return false
+      seenPaintIds.add(paint.id)
+      return true
+    })
+  }, [initialPayload])
+  const basePaintStateById = useMemo(
+    () =>
+      new Map(
+        basePaints.map((paint) => [
+          paint.id,
+          {
+            owned: paint.owned,
+            wish: paint.wish,
+          },
+        ])
+      ),
+    [basePaints]
+  )
+  const allPaints = useMemo(
+    () => applyPaintStateOverrides(basePaints, paintStateOverrides),
+    [basePaints, paintStateOverrides]
+  )
+  const libraryPaints = useMemo(
+    () => applyPaintStateOverrides(libraryBasePaints, paintStateOverrides),
+    [libraryBasePaints, paintStateOverrides]
+  )
+  const ownedCount =
+    (initialPayload?.counts.owned ??
+      fallbackPaints.filter((paint) => paint.owned).length) +
+    Object.entries(paintStateOverrides).reduce((sum, [paintId, override]) => {
+      if (isCustomPaintId(paintId)) return sum
+      const previousOwned = basePaintStateById.get(paintId)?.owned ?? false
+      if (previousOwned === override.owned) return sum
+      return sum + (override.owned ? 1 : -1)
+    }, 0)
+  const wishlistCount =
+    (initialPayload?.counts.wishlist ??
+      fallbackPaints.filter((paint) => paint.wish).length) +
+    Object.entries(paintStateOverrides).reduce((sum, [paintId, override]) => {
+      if (isCustomPaintId(paintId)) return sum
+      const previousWishlist = basePaintStateById.get(paintId)?.wish ?? false
+      if (previousWishlist === override.wish) return sum
+      return sum + (override.wish ? 1 : -1)
+    }, 0)
+  const brandOptions =
+    initialPayload?.filters.brands.length
+      ? initialPayload.filters.brands
+      : ['WHC', 'VAL', 'TAP', 'AK']
+  const lineOptions =
+    initialPayload?.filters.lines.length
+      ? initialPayload.filters.lines
+      : ['Base', 'Technical', 'Game Color', 'Warpaints', 'Model Color', '3rd Gen', 'Shade']
+  const defaultSelectedPaintId = allPaints[7]?.id ?? allPaints[0]?.id ?? ''
+  const [selectedPaintId, setSelectedPaintId] = useState(defaultSelectedPaintId)
   const [mixName, setMixName] = useState('')
-  const [mixBase, setMixBase] = useState('Abaddon Black')
+  const [mixBase, setMixBase] = useState(allPaints[0]?.name ?? '')
+
+  useEffect(() => {
+    performance.mark('v3-paints-hydrated')
+  }, [])
 
   const filteredPaints = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
+    const basePaints =
+      activeTab === 'owned'
+        ? allPaints.filter((paint) => paint.owned || paint.wish)
+        : libraryPaints
 
-    return paints.filter((paint) => {
-      const matchesTab = activeTab === 'library' || paint.owned || paint.wish
+    return basePaints.filter((paint) => {
       const matchesQuery =
         !normalizedQuery ||
         paint.name.toLowerCase().includes(normalizedQuery) ||
         paint.brand.toLowerCase().includes(normalizedQuery) ||
         paint.line.toLowerCase().includes(normalizedQuery)
       const matchesBrand = brandFilter === 'all' || paint.brand === brandFilter
-      const matchesFinish =
-        finishFilter === 'all' || paint.finish === finishFilter
+      const matchesLine = lineFilter === 'all' || paint.line === lineFilter
+      const matchesOwnership =
+        ownershipFilter === 'all' ||
+        (ownershipFilter === 'owned' && paint.owned) ||
+        (ownershipFilter === 'wishlist' && paint.wish)
+      const matchesColorGroup =
+        colorGroupFilter === 'all' ||
+        getPaintColorGroup(paint.color) === colorGroupFilter
+      const matchesColor =
+        !matchColor || getColorDistance(paint.color, matchColor) < 150
 
-      return matchesTab && matchesQuery && matchesBrand && matchesFinish
+      return (
+        matchesQuery &&
+        matchesBrand &&
+        matchesLine &&
+        matchesOwnership &&
+        matchesColorGroup &&
+        matchesColor
+      )
     })
-  }, [activeTab, brandFilter, finishFilter, query])
+  }, [
+    activeTab,
+    allPaints,
+    brandFilter,
+    colorGroupFilter,
+    libraryPaints,
+    lineFilter,
+    matchColor,
+    ownershipFilter,
+    query,
+  ])
 
   const pageCount = Math.max(1, Math.ceil(filteredPaints.length / pageSize))
   const normalizedPageIndex = Math.min(pageIndex, pageCount - 1)
@@ -275,9 +610,9 @@ export default function PaintsV3Preview() {
     normalizedPageIndex * pageSize + pageSize
   )
   const selectedPaint =
-    paints.find((paint) => paint.id === selectedPaintId) ??
+    allPaints.find((paint) => paint.id === selectedPaintId) ??
     filteredPaints[0] ??
-    paints[0]
+    allPaints[0]
 
   function showPreviousPage() {
     setPageIndex((current) => (current === 0 ? pageCount - 1 : current - 1))
@@ -295,13 +630,105 @@ export default function PaintsV3Preview() {
   function handleMixSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMixName('')
-    setMixBase('Abaddon Black')
+    setMixBase(allPaints[0]?.name ?? '')
     setIsMixOpen(false)
   }
 
+  function handleExport(format: PaintExportFormat) {
+    if (format === 'pdf') {
+      openPaintPdfExport(filteredPaints)
+    } else {
+      downloadPaintExport(format, filteredPaints)
+    }
+    setIsExportOpen(false)
+  }
+
+  async function togglePaintOwnershipState(
+    paint: PaintRecord,
+    action: PaintOwnershipAction
+  ) {
+    if (isCustomPaintId(paint.id) || pendingPaintActions[paint.id]) {
+      return
+    }
+
+    const previousState: PaintOwnershipState = {
+      owned: paint.owned,
+      wish: paint.wish,
+    }
+    const optimisticState: PaintOwnershipState =
+      action === 'owned'
+        ? {
+            ...previousState,
+            owned: !paint.owned,
+          }
+        : {
+            ...previousState,
+            wish: !paint.wish,
+          }
+
+    setPaintStateOverrides((current) => ({
+      ...current,
+      [paint.id]: optimisticState,
+    }))
+    setPendingPaintActions((current) => ({
+      ...current,
+      [paint.id]: action,
+    }))
+
+    try {
+      const response = await fetch('/api/vault/ownership', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          currentValue: action === 'owned' ? paint.owned : paint.wish,
+          paintId: paint.id,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update paint ownership.')
+      }
+
+      const result = (await response.json()) as {
+        ownership?: {
+          is_owned?: boolean | null
+          is_wishlist?: boolean | null
+        }
+      }
+      const ownership = result.ownership
+
+      setPaintStateOverrides((current) => ({
+        ...current,
+        [paint.id]: {
+          owned: Boolean(ownership?.is_owned),
+          wish: Boolean(ownership?.is_wishlist),
+        },
+      }))
+    } catch {
+      setPaintStateOverrides((current) => ({
+        ...current,
+        [paint.id]: previousState,
+      }))
+    } finally {
+      setPendingPaintActions((current) => {
+        const next = { ...current }
+        delete next[paint.id]
+        return next
+      })
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-[#05090b] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-3 pb-48 pt-8">
+    <main
+      className="min-h-screen bg-[#05090b] text-white"
+      data-v3-paints-indicator="root"
+      data-v3-paints-source={initialPayload ? 'live' : 'fallback'}
+    >
+      <V3PerfIndicator surface="paints" detail={activeTab} />
+      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-48 pt-6">
         <TopNav />
 
         <header className="relative">
@@ -311,7 +738,9 @@ export default function PaintsV3Preview() {
                 Paint Vault
               </h1>
               <p className="mt-2 text-[11px] font-black text-white/34">
-                22 owned <span className="mx-1 text-white/18">-</span> 2 on wishlist
+                {ownedCount} owned{' '}
+                <span className="mx-1 text-white/18">-</span> {wishlistCount} on
+                wishlist
               </p>
             </div>
 
@@ -323,9 +752,10 @@ export default function PaintsV3Preview() {
                 aria-label="About paint vault"
                 onClick={() => {
                   setIsFilterOpen(false)
+                  setIsExportOpen(false)
                   setIsHelpOpen((open) => !open)
                 }}
-                className="grid h-10 w-10 place-items-center rounded-full bg-[#11171d] text-sm font-black text-white/58 transition hover:bg-white/12 hover:text-cyan-300"
+                className="grid h-9 w-9 place-items-center rounded-full bg-[#11171d] text-sm font-black text-white/58 transition hover:bg-white/12 hover:text-cyan-300"
               >
                 ?
               </button>
@@ -335,9 +765,10 @@ export default function PaintsV3Preview() {
                 onClick={() => {
                   setIsHelpOpen(false)
                   setIsFilterOpen(false)
+                  setIsExportOpen(false)
                   setIsMixOpen(true)
                 }}
-                className="grid h-10 w-10 place-items-center rounded-full bg-cyan-300 text-2xl font-black leading-none text-black shadow-[0_0_24px_rgba(34,211,238,0.26)] transition hover:bg-cyan-200"
+                className="grid h-9 w-9 place-items-center rounded-full bg-cyan-300 text-xl font-black leading-none text-black shadow-[0_0_24px_rgba(34,211,238,0.26)] transition hover:bg-cyan-200"
               >
                 +
               </button>
@@ -363,7 +794,7 @@ export default function PaintsV3Preview() {
         </header>
 
         <div
-          className="grid grid-cols-2 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-1"
+          className="grid grid-cols-2 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-0.5"
           role="tablist"
           aria-label="Paint views"
         >
@@ -373,7 +804,7 @@ export default function PaintsV3Preview() {
             aria-selected={activeTab === 'owned'}
             onClick={() => handleTabChange('owned')}
             className={[
-              'h-10 rounded-[6px] text-xs font-black transition',
+              'h-9 rounded-[6px] text-xs font-black transition',
               activeTab === 'owned'
                 ? 'bg-[#101822] text-cyan-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.06)]'
                 : 'text-white/38 hover:text-white/70',
@@ -387,7 +818,7 @@ export default function PaintsV3Preview() {
             aria-selected={activeTab === 'library'}
             onClick={() => handleTabChange('library')}
             className={[
-              'h-10 rounded-[6px] text-xs font-black transition',
+              'h-9 rounded-[6px] text-xs font-black transition',
               activeTab === 'library'
                 ? 'bg-[#101822] text-cyan-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.06)]'
                 : 'text-white/38 hover:text-white/70',
@@ -431,6 +862,7 @@ export default function PaintsV3Preview() {
               aria-controls="paint-filters"
               onClick={() => {
                 setIsHelpOpen(false)
+                setIsExportOpen(false)
                 setIsFilterOpen((open) => !open)
               }}
               className="flex h-12 items-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-4 text-xs font-black text-white/48 transition hover:text-cyan-300"
@@ -456,76 +888,181 @@ export default function PaintsV3Preview() {
           {isFilterOpen ? (
             <div
               id="paint-filters"
-              className="absolute inset-x-0 top-14 z-20 grid gap-3 rounded-[8px] border border-white/10 bg-[#111821] p-4 shadow-2xl shadow-black/45"
+              className="absolute inset-x-0 top-14 z-20 grid gap-4 rounded-[8px] border border-white/10 bg-[#071015] p-3 shadow-2xl shadow-black/45"
             >
-              <div className="grid grid-cols-2 gap-3">
-                <label className="grid gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/36">
-                    Brand
-                  </span>
+              <div className="grid grid-cols-3 gap-3">
+                <label className="relative">
+                  <span className="sr-only">Brand</span>
                   <select
                     value={brandFilter}
                     onChange={(event) => {
                       setBrandFilter(event.target.value)
                       setPageIndex(0)
                     }}
-                    className="h-10 rounded-[8px] border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none"
+                    className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
                   >
-                    <option value="all">All</option>
-                    <option value="WHC">WHC</option>
-                    <option value="VAL">VAL</option>
-                    <option value="TAP">TAP</option>
-                    <option value="AK">AK</option>
+                    <option value="all">Brand</option>
+                    {brandOptions.map((brand) => (
+                      <option key={brand} value={brand}>
+                        {brand}
+                      </option>
+                    ))}
                   </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/70">
+                    v
+                  </span>
                 </label>
 
-                <label className="grid gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/36">
-                    Finish
-                  </span>
+                <label className="relative">
+                  <span className="sr-only">Line</span>
                   <select
-                    value={finishFilter}
+                    value={lineFilter}
                     onChange={(event) => {
-                      setFinishFilter(event.target.value)
+                      setLineFilter(event.target.value)
                       setPageIndex(0)
                     }}
-                    className="h-10 rounded-[8px] border border-white/10 bg-black/24 px-3 text-xs font-bold text-white outline-none"
+                    className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
+                  >
+                    <option value="all">Line</option>
+                    {lineOptions.map((line) => (
+                      <option key={line} value={line}>
+                        {line}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/70">
+                    v
+                  </span>
+                </label>
+
+                <label className="relative">
+                  <span className="sr-only">Ownership</span>
+                  <select
+                    value={ownershipFilter}
+                    onChange={(event) => {
+                      setOwnershipFilter(event.target.value)
+                      setPageIndex(0)
+                    }}
+                    className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
                   >
                     <option value="all">All</option>
-                    <option value="Matte">Matte</option>
-                    <option value="Satin">Satin</option>
-                    <option value="Gloss">Gloss</option>
-                    <option value="Metallic">Metallic</option>
+                    <option value="owned">Owned</option>
+                    <option value="wishlist">Wishlist</option>
                   </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/70">
+                    v
+                  </span>
                 </label>
               </div>
 
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-bold text-white/42">
-                  {filteredPaints.length} paints shown
-                </span>
+              <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                <label className="relative">
+                  <span className="sr-only">Color group</span>
+                  <select
+                    value={colorGroupFilter}
+                    onChange={(event) => {
+                      setColorGroupFilter(event.target.value)
+                      setPageIndex(0)
+                    }}
+                    className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
+                  >
+                    <option value="all">Color group</option>
+                    <option value="black">Black</option>
+                    <option value="blue">Blue</option>
+                    <option value="brown">Brown</option>
+                    <option value="green">Green</option>
+                    <option value="red">Red</option>
+                    <option value="violet">Violet</option>
+                    <option value="white">White</option>
+                    <option value="yellow">Yellow</option>
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/70">
+                    v
+                  </span>
+                </label>
+
+                <label
+                  className={[
+                    'relative flex h-11 cursor-pointer items-center gap-2 rounded-[8px] border px-3 text-sm font-black transition',
+                    matchColor
+                      ? 'border-cyan-300/60 bg-cyan-300/10 text-cyan-100'
+                      : 'border-[#22304a] bg-[#02051a] text-white',
+                  ].join(' ')}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-4 w-4 rounded-full border border-white/20"
+                    style={{
+                      background:
+                        'conic-gradient(#f43f5e, #f59e0b, #22c55e, #06b6d4, #8b5cf6, #f43f5e)',
+                    }}
+                  />
+                  Match a Color
+                  <input
+                    type="color"
+                    value={matchColor || defaultMatchColor}
+                    onChange={(event) => {
+                      setMatchColor(event.target.value)
+                      setPageIndex(0)
+                    }}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                    aria-label="Match a color"
+                  />
+                </label>
+
                 <button
                   type="button"
                   onClick={() => {
                     setBrandFilter('all')
-                    setFinishFilter('all')
-                    setIsFilterOpen(false)
+                    setLineFilter('all')
+                    setOwnershipFilter('all')
+                    setColorGroupFilter('all')
+                    setMatchColor('')
                     setPageIndex(0)
                   }}
-                  className="rounded-[8px] bg-white/[0.07] px-3 py-2 text-xs font-black text-white/58 transition hover:text-white"
+                  className="h-11 rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 text-sm font-black text-white transition hover:border-cyan-300/55 hover:text-cyan-200"
                 >
-                  Reset
+                  Clear
                 </button>
               </div>
             </div>
           ) : null}
         </section>
 
-        <section className="grid grid-cols-[1fr_auto] gap-2">
+        <section className="grid grid-cols-[1fr_auto_auto] gap-2">
           <button className="flex h-9 items-center justify-between rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/45">
             Name A-Z
             <span className="text-white/28">v</span>
           </button>
+
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={isExportOpen}
+            onClick={() => {
+              setIsHelpOpen(false)
+              setIsFilterOpen(false)
+              setIsExportOpen(true)
+            }}
+            className="flex h-9 items-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/48 transition hover:border-cyan-300/45 hover:text-cyan-300"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+            Export
+          </button>
+
           <div className="flex h-9 rounded-[8px] border border-white/10 bg-[#111821] p-1">
             <span className="grid w-8 place-items-center rounded-[6px] bg-cyan-300/10 text-cyan-300">
               <svg
@@ -555,16 +1092,36 @@ export default function PaintsV3Preview() {
         </section>
 
         <section className="relative pr-8">
-          <div className="grid grid-cols-3 gap-2" aria-label="Paint swatches">
-            {visiblePaints.map((paint) => (
-              <PaintSwatch
-                key={paint.id}
-                paint={paint}
-                isSelected={paint.id === selectedPaint.id}
-                onSelect={() => setSelectedPaintId(paint.id)}
-              />
-            ))}
-          </div>
+          {visiblePaints.length > 0 ? (
+            <div
+              className="grid grid-cols-3 gap-2"
+              aria-label="Paint swatches"
+              data-v3-paints-indicator={
+                activeTab === 'owned' ? 'my-paints-grid' : 'library-grid'
+              }
+            >
+              {visiblePaints.map((paint) => (
+                <PaintSwatch
+                  key={paint.id}
+                  paint={paint}
+                  isSelected={paint.id === selectedPaint?.id}
+                  onSelect={() => setSelectedPaintId(paint.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="rounded-[8px] border border-dashed border-white/10 bg-[#111821] p-6 text-center"
+              data-v3-paints-indicator={
+                activeTab === 'owned' ? 'my-paints-empty' : 'library-empty'
+              }
+            >
+              <p className="text-sm font-black text-white">No paints found</p>
+              <p className="mt-2 text-xs font-semibold leading-5 text-white/42">
+                Try clearing the search or filters.
+              </p>
+            </div>
+          )}
 
           <div className="absolute bottom-0 right-0 top-0 flex w-6 flex-col items-center justify-between rounded-full border border-white/10 bg-[#111821]/92 py-2">
             <button
@@ -590,7 +1147,71 @@ export default function PaintsV3Preview() {
         </section>
       </div>
 
-      <PaintInfoPanel paint={selectedPaint} />
+      {selectedPaint ? (
+        <PaintInfoPanel
+          paint={selectedPaint}
+          pendingAction={pendingPaintActions[selectedPaint.id]}
+          onToggleOwned={() => togglePaintOwnershipState(selectedPaint, 'owned')}
+          onToggleWishlist={() =>
+            togglePaintOwnershipState(selectedPaint, 'wishlist')
+          }
+        />
+      ) : null}
+
+      {isExportOpen ? (
+        <div className="fixed inset-0 z-[60] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="paint-export-title"
+            className="w-full max-w-md rounded-[8px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
+                  Export
+                </p>
+                <h2
+                  id="paint-export-title"
+                  className="mt-1 text-2xl font-black leading-tight"
+                >
+                  Export paints
+                </h2>
+                <p className="mt-2 text-xs font-semibold leading-5 text-white/45">
+                  Export {filteredPaints.length} currently visible paint
+                  records.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Close paint export"
+                onClick={() => setIsExportOpen(false)}
+                className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06] text-lg font-black text-white/48 transition hover:text-white"
+              >
+                x
+              </button>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {paintExportOptions.map((option) => (
+                <button
+                  key={option.format}
+                  type="button"
+                  onClick={() => handleExport(option.format)}
+                  className="min-h-[92px] rounded-[8px] border border-white/10 bg-black/20 p-4 text-left transition hover:border-cyan-300/55 hover:bg-cyan-300/10"
+                >
+                  <span className="text-lg font-black text-white">
+                    {option.label}
+                  </span>
+                  <span className="mt-2 block text-xs font-semibold leading-5 text-white/42">
+                    {option.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {isMixOpen ? (
         <div className="fixed inset-0 z-[60] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
@@ -644,7 +1265,7 @@ export default function PaintsV3Preview() {
                   onChange={(event) => setMixBase(event.target.value)}
                   className="h-12 rounded-[8px] border border-white/10 bg-black/24 px-4 text-sm font-semibold text-white outline-none transition focus:border-cyan-300/70"
                 >
-                  {paints.slice(0, 9).map((paint) => (
+                  {allPaints.slice(0, 9).map((paint) => (
                     <option key={paint.id}>{paint.name}</option>
                   ))}
                 </select>
@@ -763,9 +1384,19 @@ function PaintSwatch({
       ].join(' ')}
     >
       <span
-        className="absolute inset-x-0 top-0 h-[39%]"
+        className="absolute inset-x-0 top-0 h-[39%] overflow-hidden"
         style={{ backgroundColor: paint.color }}
-      />
+      >
+        {paint.swatchImageUrl ? (
+          <Image
+            src={paint.swatchImageUrl}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 31vw, 128px"
+            className="object-cover"
+          />
+        ) : null}
+      </span>
       {(paint.owned || paint.wish) && (
         <span className="absolute right-2 top-2 grid h-4 w-4 place-items-center rounded-full bg-cyan-300 text-[10px] font-black text-black">
           {paint.owned ? (
@@ -798,11 +1429,38 @@ function PaintSwatch({
   )
 }
 
-function PaintInfoPanel({ paint }: { paint: PaintRecord }) {
+function PaintInfoPanel({
+  onToggleOwned,
+  onToggleWishlist,
+  paint,
+  pendingAction,
+}: {
+  onToggleOwned: () => void
+  onToggleWishlist: () => void
+  paint: PaintRecord
+  pendingAction?: PaintOwnershipAction
+}) {
+  const isCustomPaint = isCustomPaintId(paint.id)
+  const isOwnedPending = pendingAction === 'owned'
+  const isWishlistPending = pendingAction === 'wishlist'
+
   return (
     <aside className="fixed inset-x-2 bottom-16 z-40 mx-auto max-w-md overflow-hidden rounded-[8px] border border-cyan-300/18 bg-[#10161d]/96 shadow-2xl shadow-black/50 backdrop-blur">
       <div className="grid grid-cols-[64px_1fr]">
-        <div style={{ backgroundColor: paint.color }} />
+        <div
+          className="relative overflow-hidden"
+          style={{ backgroundColor: paint.color }}
+        >
+          {paint.swatchImageUrl ? (
+            <Image
+              src={paint.swatchImageUrl}
+              alt=""
+              fill
+              sizes="64px"
+              className="object-cover"
+            />
+          ) : null}
+        </div>
         <div className="min-w-0 p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -814,12 +1472,36 @@ function PaintInfoPanel({ paint }: { paint: PaintRecord }) {
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <span className="rounded-full border border-cyan-300/45 bg-cyan-300/10 px-3 py-1 text-[10px] font-black text-cyan-300">
+              <button
+                type="button"
+                onClick={onToggleOwned}
+                disabled={isCustomPaint}
+                aria-pressed={paint.owned}
+                aria-busy={isOwnedPending || undefined}
+                className={[
+                  'rounded-full border px-3 py-1 text-[10px] font-black transition disabled:cursor-not-allowed disabled:opacity-55',
+                  paint.owned
+                    ? 'border-cyan-300/45 bg-cyan-300/10 text-cyan-300'
+                    : 'border-white/10 bg-white/[0.04] text-white/44 hover:border-cyan-300/40 hover:text-cyan-200',
+                ].join(' ')}
+              >
                 {paint.owned ? 'Owned' : 'Not owned'}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-black text-white/42">
-                {paint.wish ? 'Wish' : 'Use'}
-              </span>
+              </button>
+              <button
+                type="button"
+                onClick={onToggleWishlist}
+                disabled={isCustomPaint}
+                aria-pressed={paint.wish}
+                aria-busy={isWishlistPending || undefined}
+                className={[
+                  'rounded-full border px-3 py-1 text-[10px] font-black transition disabled:cursor-not-allowed disabled:opacity-55',
+                  paint.wish
+                    ? 'border-fuchsia-300/45 bg-fuchsia-300/10 text-fuchsia-200'
+                    : 'border-white/10 bg-white/[0.04] text-white/44 hover:border-fuchsia-300/40 hover:text-fuchsia-100',
+                ].join(' ')}
+              >
+                {paint.wish ? 'Wishlisted' : 'Wishlist'}
+              </button>
             </div>
           </div>
 

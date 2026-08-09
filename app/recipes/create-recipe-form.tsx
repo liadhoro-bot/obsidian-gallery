@@ -25,7 +25,7 @@ export default function CreateRecipeForm() {
   }
 
   return (
-    <form action={createRecipe} className="space-y-5">
+    <form id="create-guide-form" action={createRecipe} className="space-y-5">
       <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
         <h2 className="mb-5 text-sm font-bold tracking-[0.22em] text-cyan-300">
           CREATE CUSTOM GUIDE

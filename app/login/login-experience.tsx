@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import V3PerfIndicator from '../components/v3-perf-indicator'
 import LoginForm from './login-form'
 
 type LoginAudience = 'new' | 'returning'
@@ -10,12 +11,14 @@ type LoginExperienceProps = {
   authError?: string | null
   nextPath: string
   previewMode?: boolean
+  useLocalPreviewAuth?: boolean
 }
 
 export default function LoginExperience({
   authError,
   nextPath,
   previewMode = false,
+  useLocalPreviewAuth = false,
 }: LoginExperienceProps) {
   const [showSignIn, setShowSignIn] = useState(Boolean(authError))
   const [audience, setAudience] = useState<LoginAudience>('new')
@@ -27,6 +30,7 @@ export default function LoginExperience({
 
   return (
     <main className="grid min-h-screen place-items-center bg-[#030607] text-white">
+      <V3PerfIndicator surface="login" detail={previewMode ? 'preview' : 'default'} />
       <div className="relative min-h-[100svh] w-full max-w-md overflow-hidden bg-[#030607] shadow-2xl shadow-black/60 sm:my-6 sm:min-h-[844px] sm:rounded-[8px] sm:border sm:border-white/10">
         <Image
           src="/onboarding/welcome-hero.jpeg"
@@ -80,12 +84,13 @@ export default function LoginExperience({
         </div>
 
         {showSignIn ? (
-          <div className="absolute inset-0 z-20 flex items-end bg-black/20 px-4 pb-4 backdrop-blur-[1px] sm:items-center sm:justify-center sm:pb-0">
+          <div className="absolute inset-0 z-20 flex items-end bg-black/35 px-4 pb-4 backdrop-blur-[1px] sm:items-center sm:justify-center sm:pb-0">
             <LoginForm
               audience={audience}
               authError={authError}
               nextPath={nextPath}
               previewMode={previewMode}
+              useLocalPreviewAuth={useLocalPreviewAuth}
               onAudienceChange={setAudience}
               onBack={() => setShowSignIn(false)}
             />

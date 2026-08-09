@@ -5,6 +5,19 @@ import { createClient } from '../../utils/supabase/server'
 import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
 import { captureServerEvent } from '../../utils/analytics/server'
 
+function isMissingCustomPaintMigrationError(error: unknown) {
+  if (!error || typeof error !== 'object') return false
+
+  const candidate = error as { code?: string; message?: string }
+  const message = candidate.message || ''
+
+  return (
+    candidate.code === 'PGRST204' ||
+    message.includes("Could not find the 'description' column") ||
+    message.includes('schema cache')
+  )
+}
+
 export async function togglePaintOwnership(formData: FormData) {
   const supabase = await createClient()
 
@@ -55,6 +68,7 @@ export async function createCustomPaint(formData: FormData) {
   const series = formData.get('series')?.toString().trim() || null
   const paintType = formData.get('paintType')?.toString().trim() || null
   const colorHex = formData.get('colorHex')?.toString().trim() || null
+  const description = formData.get('description')?.toString().trim() || null
 
   if (!name) return
 
@@ -66,6 +80,7 @@ export async function createCustomPaint(formData: FormData) {
       name,
       manufacturer,
       series,
+      description,
       paint_type: paintType,
       color_hex: colorHex,
     },
@@ -74,6 +89,12 @@ export async function createCustomPaint(formData: FormData) {
   .single()
 
   if (error) {
+    if (isMissingCustomPaintMigrationError(error)) {
+      throw new Error(
+        'The custom paint mix database migration has not been applied yet. Run supabase/migrations/20260717120000_add_custom_paint_mix_details.sql, then reload the app.'
+      )
+    }
+
     console.error('Error creating custom paint:', error)
     return
   }
@@ -87,6 +108,7 @@ await captureServerEvent({
     manufacturer,
     series,
     paint_type: paintType,
+    has_description: Boolean(description),
     has_color_hex: Boolean(colorHex),
     has_swatch_image: false,
     source: 'vault_actions',

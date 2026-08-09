@@ -103,6 +103,17 @@ const UnitGallerySection = dynamic(() => import('./components/unit-gallery-secti
     </section>
   ),
 })
+const UnitSessionScheduler = dynamic(
+  () => import('./components/unit-session-scheduler'),
+  {
+    loading: () => (
+      <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+        <div className="h-5 w-44 rounded bg-white/10" />
+        <div className="mt-4 h-56 rounded-2xl bg-white/[0.04]" />
+      </section>
+    ),
+  }
+)
 
 type Unit = {
   id: string
@@ -154,6 +165,17 @@ type Session = {
   user_id?: string | null
   entry_source?: string | null
   notes?: string | null
+}
+type ScheduledSession = {
+  id: string
+  unit_id: string
+  user_id?: string | null
+  scheduled_start_at: string
+  focus: string
+  notify: boolean
+  status: string
+  created_at?: string | null
+  updated_at?: string | null
 }
 type StagePaint = {
   id: string
@@ -216,6 +238,7 @@ type Props = {
   totalLoggedSeconds: number
   activeSession: Session | null
   sessions: Session[]
+  scheduledSessions: ScheduledSession[]
   stagePaints: StagePaint[]
   parentProjects: ParentProject[]
   availableProjects: ParentProject[]
@@ -323,6 +346,7 @@ export default function UnitDetailClient({
   totalLoggedSeconds,
   activeSession,
   sessions,
+  scheduledSessions,
   stagePaints,
   parentProjects,
   availableProjects,
@@ -346,6 +370,8 @@ export default function UnitDetailClient({
   const [unit, setLocalUnit] = useState(initialUnit)
   const [localImages, setLocalImages] = useState(images)
   const [localSessionsState, setLocalSessionsState] = useState(sessions)
+  const [localScheduledSessionsState, setLocalScheduledSessionsState] =
+    useState(scheduledSessions)
   const [localActiveSessionState, setLocalActiveSessionState] =
     useState(activeSession)
   const [localTotalLoggedSecondsState, setLocalTotalLoggedSecondsState] =
@@ -454,6 +480,10 @@ export default function UnitDetailClient({
   useEffect(() => {
     setLocalSessionsState(sessions)
   }, [sessions])
+
+  useEffect(() => {
+    setLocalScheduledSessionsState(scheduledSessions)
+  }, [scheduledSessions])
 
   useEffect(() => {
     setLocalActiveSessionState(activeSession)
@@ -1553,6 +1583,14 @@ const handleRemoveStagePhoto = (imageId: string) => {
             autoStart={autoStartSession}
             onMutationCommitted={queueBackgroundRefresh}
             onStateChange={handleSessionStateChange}
+          />
+
+          <UnitSessionScheduler
+            unitId={unit.id}
+            loggedSessions={localSessionsState}
+            scheduledSessions={localScheduledSessionsState}
+            onMutationCommitted={queueBackgroundRefresh}
+            onScheduledSessionsChange={setLocalScheduledSessionsState}
           />
 
           <section className="mt-6">

@@ -6,8 +6,19 @@ import lighthouse from 'lighthouse'
 import { chromium } from 'playwright'
 import {
   applyStorageStateToContext,
+  BENCHMARK_CUSTOM_PAINT_ID,
+  BENCHMARK_RECIPE_ID,
+  BENCHMARK_THEME_ID,
+  BENCHMARK_UNIT_ID,
   ensurePerfStorageState,
 } from './perf-auth-utils.mjs'
+
+const benchmarkRoutes = {
+  unit: `/units/${BENCHMARK_UNIT_ID}`,
+  paint: `/vault/custom/${BENCHMARK_CUSTOM_PAINT_ID}`,
+  recipe: `/recipes/${BENCHMARK_RECIPE_ID}`,
+  theme: `/themes/${BENCHMARK_THEME_ID}`,
+}
 
 const importantOnly = process.env.PERF_IMPORTANT_ONLY === '1'
 
@@ -16,27 +27,27 @@ const importantRoutes = [
   { path: '/projects', requiresAuth: true },
   { path: '/units', requiresAuth: true, expectedPathname: '/units' },
   {
-    path: '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
+    path: benchmarkRoutes.unit,
     requiresAuth: true,
-    expectedPathname: '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
+    expectedPathname: benchmarkRoutes.unit,
   },
   { path: '/vault', requiresAuth: true },
   {
-    path: '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
+    path: benchmarkRoutes.paint,
     requiresAuth: true,
-    expectedPathname: '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
+    expectedPathname: benchmarkRoutes.paint,
   },
   { path: '/recipes', requiresAuth: true },
   {
-    path: '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
+    path: benchmarkRoutes.recipe,
     requiresAuth: true,
-    expectedPathname: '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
+    expectedPathname: benchmarkRoutes.recipe,
   },
   { path: '/themes', requiresAuth: true },
   {
-    path: '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+    path: benchmarkRoutes.theme,
     requiresAuth: true,
-    expectedPathname: '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+    expectedPathname: benchmarkRoutes.theme,
   },
 ]
 
@@ -54,13 +65,13 @@ const requiredMainPerformanceRoutes = [
   '/dashboard',
   '/projects',
   '/units',
-  '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
+  benchmarkRoutes.unit,
   '/vault',
-  '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
+  benchmarkRoutes.paint,
   '/recipes',
-  '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
+  benchmarkRoutes.recipe,
   '/themes',
-  '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+  benchmarkRoutes.theme,
 ]
 
 const budgets = {

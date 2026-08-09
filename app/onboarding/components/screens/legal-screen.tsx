@@ -27,7 +27,9 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
       return
     }
 
-    const result = await acceptTermsAction()
+    const result = await acceptTermsAction({
+      productUpdatesApproved: marketingAccepted,
+    })
 
     if (!result.ok) {
       setError(result.error ?? 'Could not save your acceptance. Please try again.')

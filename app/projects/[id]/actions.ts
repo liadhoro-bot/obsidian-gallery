@@ -9,6 +9,33 @@ import {
   findNearestUniquePaints,
 } from '../../../utils/color-matching'
 
+type StoredImageAsset = {
+  storage_bucket: string | null
+  storage_path: string | null
+}
+
+async function removeStoredImages(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  images: StoredImageAsset[]
+) {
+  const pathsByBucket = images.reduce<Record<string, string[]>>((acc, image) => {
+    if (image.storage_bucket && image.storage_path) {
+      acc[image.storage_bucket] = acc[image.storage_bucket] || []
+      acc[image.storage_bucket].push(image.storage_path)
+    }
+
+    return acc
+  }, {})
+
+  for (const [bucket, paths] of Object.entries(pathsByBucket)) {
+    const { error } = await supabase.storage.from(bucket).remove(paths)
+
+    if (error) {
+      throw error
+    }
+  }
+}
+
 export async function setFeaturedUnit(formData: FormData) {
   const supabase = await createClient()
 
@@ -35,6 +62,10 @@ export async function setFeaturedUnit(formData: FormData) {
     .single()
 
   if (!unit) {
+    return
+  }
+
+  if (unit.project_id !== projectId) {
     return
   }
 
@@ -80,11 +111,99 @@ export async function deleteProject(formData: FormData) {
     return
   }
 
+  const { data: units, error: unitsError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('project_id', projectId)
+    .eq('user_id', user.id)
+
+  if (unitsError) {
+    throw unitsError
+  }
+
+  const unitIds = (units ?? [])
+    .map((unit) => unit.id)
+    .filter((unitId): unitId is string => Boolean(unitId))
+
+  const [projectImagesResult, unitImagesResult] = await Promise.all([
+    supabase
+      .from('image_assets')
+      .select('storage_bucket, storage_path')
+      .eq('entity_id', projectId)
+      .eq('entity_type', 'project')
+      .eq('user_id', user.id),
+    unitIds.length > 0
+      ? supabase
+          .from('image_assets')
+          .select('storage_bucket, storage_path')
+          .eq('entity_type', 'unit')
+          .eq('user_id', user.id)
+          .in('entity_id', unitIds)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+
+  if (projectImagesResult.error) {
+    throw projectImagesResult.error
+  }
+
+  if (unitImagesResult.error) {
+    throw unitImagesResult.error
+  }
+
+  await removeStoredImages(supabase, [
+    ...((projectImagesResult.data ?? []) as StoredImageAsset[]),
+    ...((unitImagesResult.data ?? []) as StoredImageAsset[]),
+  ])
+
+  if (unitIds.length > 0) {
+    await supabase
+      .from('unit_stage_paints')
+      .delete()
+      .in('unit_id', unitIds)
+      .eq('user_id', user.id)
+
+    await supabase
+      .from('unit_stage_recipes')
+      .delete()
+      .in('unit_id', unitIds)
+      .eq('user_id', user.id)
+
+    await supabase
+      .from('unit_sessions')
+      .delete()
+      .in('unit_id', unitIds)
+      .eq('user_id', user.id)
+
+    await supabase
+      .from('unit_progress_steps')
+      .delete()
+      .in('unit_id', unitIds)
+
+    await supabase
+      .from('unit_stage_progress')
+      .delete()
+      .in('unit_id', unitIds)
+
+    await supabase
+      .from('image_assets')
+      .delete()
+      .eq('entity_type', 'unit')
+      .eq('user_id', user.id)
+      .in('entity_id', unitIds)
+  }
+
   await supabase
     .from('image_assets')
     .delete()
     .eq('entity_id', projectId)
     .eq('entity_type', 'project')
+    .eq('user_id', user.id)
+
+  await supabase
+    .from('unit_projects')
+    .delete()
+    .eq('project_id', projectId)
+    .eq('user_id', user.id)
 
   await supabase
     .from('units')

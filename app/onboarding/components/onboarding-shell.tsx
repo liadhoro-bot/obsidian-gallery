@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import V3PerfIndicator from '../../components/v3-perf-indicator'
 import CuratorBridgeScreen from './screens/curator-bridge-screen'
 import FirstProjectScreen from './screens/first-project-screen'
 import GoalScreen from './screens/goal-screen'
@@ -44,6 +45,7 @@ export default function OnboardingShell({
 
   return (
     <main className="min-h-screen bg-black text-white">
+      <V3PerfIndicator surface="onboarding" detail={currentStep} />
       <div className="mx-auto min-h-screen w-full max-w-md">
         {currentStep === 'terms' ? (
           <LegalScreen

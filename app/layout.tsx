@@ -1,9 +1,35 @@
 import type { Metadata, Viewport } from 'next'
+import {
+  Cormorant_Garamond,
+  IBM_Plex_Mono,
+  Source_Sans_3,
+} from 'next/font/google'
 import './globals.css'
 
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import ClientShell from './providers/client-shell'
+
+const ogDisplayFont = Cormorant_Garamond({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-og-display',
+  weight: '600',
+})
+
+const ogUiFont = Source_Sans_3({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-og-ui',
+  weight: 'variable',
+})
+
+const ogMonoFont = IBM_Plex_Mono({
+  display: 'swap',
+  subsets: ['latin'],
+  variable: '--font-og-mono',
+  weight: ['400', '500'],
+})
 
 const enableProductionTelemetry = process.env.VERCEL_ENV === 'production'
 
@@ -53,8 +79,11 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#081018',
   colorScheme: 'dark',
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({
@@ -63,7 +92,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html
+      lang="en"
+      className={`${ogDisplayFont.variable} ${ogUiFont.variable} ${ogMonoFont.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">
         <ClientShell enableProductionTelemetry={enableProductionTelemetry} />
         {children}
@@ -78,4 +110,3 @@ export default function RootLayout({
     </html>
   )
 }
-

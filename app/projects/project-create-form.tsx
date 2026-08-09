@@ -33,7 +33,10 @@ export default function ProjectCreateForm({
   }
 
   return (
-    <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+    <section
+      id="create-project-form"
+      className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm"
+    >
       <div>
         <p className="text-sm uppercase tracking-wider text-cyan-400">
           New Project

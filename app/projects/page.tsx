@@ -9,6 +9,7 @@ import { createPerfTimer } from '../../utils/perf/server'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
 import ProjectsV3Preview from './projects-v3-preview'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
+import { getProjectsV3Payload } from './projects-v3-data'
 
 type ProjectsPageProps = {
   searchParams: Promise<{
@@ -115,31 +116,35 @@ async function ProjectsTabsContent({
 
 function ProjectsTabsSkeleton() {
   return (
-    <div className="grid gap-5 animate-pulse">
-      <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1">
-        <div className="h-10 rounded-xl bg-white/10" />
-        <div className="h-10 rounded-xl bg-white/10" />
+    <div className="grid gap-3 animate-pulse">
+      <div className="grid grid-cols-2 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-0.5">
+        <div className="h-9 rounded-[6px] bg-[#101822]" />
+        <div className="h-9 rounded-[6px] bg-white/[0.045]" />
       </div>
 
-      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5">
-        <div className="h-4 w-32 rounded bg-neutral-800" />
-        <div className="mt-3 h-6 w-36 rounded bg-neutral-800" />
-        <div className="mt-5 grid gap-4">
-          {Array.from({ length: 2 }).map((_, index) => (
-            <div
-              key={index}
-              className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/80"
-            >
-              <div className="h-40 bg-neutral-800" />
-              <div className="p-4">
-                <div className="h-5 w-32 rounded bg-neutral-800" />
-                <div className="mt-3 h-4 w-full rounded bg-neutral-800" />
-                <div className="mt-2 h-4 w-4/5 rounded bg-neutral-800" />
+      <div className="grid gap-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <section
+            key={index}
+            className="overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821]"
+          >
+            <div className="relative h-[112px] bg-white/[0.055]">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+                <div className="h-4 w-40 rounded bg-white/16" />
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="px-3 py-2.5">
+              <div className="h-1 rounded-full bg-white/[0.08]">
+                <div className="h-full w-1/3 rounded-full bg-cyan-300/75" />
+              </div>
+              <div className="mt-2 flex items-center justify-between">
+                <div className="h-4 w-16 rounded-full bg-white/10" />
+                <div className="h-3 w-12 rounded bg-white/10" />
+              </div>
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   )
 }
@@ -149,11 +154,6 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const resolvedSearchParams = await searchParams
   const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
 
-  if (isPreview) {
-    perf.total()
-    return <ProjectsV3Preview />
-  }
-
   const supabase = await createClient()
   const activeTab = resolvedSearchParams.tab === 'create' ? 'create' : 'mine'
 
@@ -161,7 +161,20 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   perf.mark('auth/session fetch')
 
   if (!user) {
-    redirect('/login')
+    redirect(
+      isPreview
+        ? '/login?next=%2Fprojects%3Fpreview%3D1&preview=1'
+        : '/login'
+    )
+  }
+
+  if (isPreview) {
+    const payload = await perf.measure('v3 projects data', () =>
+      getProjectsV3Payload(user.id)
+    )
+
+    perf.total()
+    return <ProjectsV3Preview initialProjects={payload.projects} initialUnits={payload.units} />
   }
 
   const profilePromise = (async () => ({

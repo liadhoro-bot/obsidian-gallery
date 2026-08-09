@@ -3,10 +3,10 @@ import { resolve } from 'node:path'
 import { expect, type Page, test, type TestInfo } from '@playwright/test'
 
 const EXPLICIT_DETAIL_ROUTES = {
-  unit: '/units/e6463818-c5b1-40fd-9fa8-a82da330a557',
-  paint: '/vault/custom/ef6df4c6-3257-4de3-bc19-3c7c746db82f',
-  recipe: '/recipes/f810a0ea-6b2d-4479-8b99-1309cd3511e7',
-  theme: '/themes/a8755d20-3601-4b53-aa55-823f1224e4b3',
+  unit: '/units/9c0f9a84-c6bd-4e46-9ef7-41de27535071',
+  paint: '/vault/custom/1f0ce574-bbd7-4042-8bc3-376d1df5376f',
+  recipe: '/recipes/7a09f402-87d7-4a4f-b87f-c279490c3a31',
+  theme: '/themes/f083f8ac-dfc3-49d7-9261-7f278766689a',
 } as const
 
 const importantOnly = process.env.PERF_IMPORTANT_ONLY === '1'

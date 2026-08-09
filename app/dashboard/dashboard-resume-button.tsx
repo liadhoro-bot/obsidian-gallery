@@ -1,12 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { OgButton } from '@/src/components/v3'
 import { prefetchRoute } from '../components/route-prefetch'
+import styles from './dashboard-og.module.css'
 
 export default function DashboardResumeButton({
+  icon,
+  label = 'Resume Painting',
   unitId,
 }: {
+  icon?: ReactNode
+  label?: string
   unitId: string
 }) {
   const router = useRouter()
@@ -14,8 +21,8 @@ export default function DashboardResumeButton({
   const href = `/units/${unitId}?session=started&autostart=1`
 
   return (
-    <button
-      type="button"
+    <OgButton
+      icon={icon}
       onPointerEnter={() => {
         prefetchRoute(router, href)
       }}
@@ -27,10 +34,13 @@ export default function DashboardResumeButton({
         setIsNavigating(true)
         router.push(href, { scroll: false })
       }}
-      className="inline-flex rounded-2xl border border-cyan-300/55 bg-black/45 px-4 py-2.5 text-xs font-black uppercase text-cyan-100 shadow-[0_0_18px_rgba(34,211,238,0.22)] backdrop-blur-md transition hover:border-cyan-200/80 hover:bg-cyan-400/15 hover:text-cyan-50 active:bg-cyan-400 active:text-slate-950 sm:px-5 sm:py-3 sm:text-sm disabled:opacity-70"
+      className={styles.inlineLinkButton}
       disabled={isNavigating}
+      loading={isNavigating}
+      size="large"
+      variant="primary"
     >
-      {isNavigating ? 'Opening...' : 'Resume Painting'}
-    </button>
+      {isNavigating ? 'Opening...' : label}
+    </OgButton>
   )
 }
