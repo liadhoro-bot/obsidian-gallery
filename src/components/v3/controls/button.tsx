@@ -39,7 +39,7 @@ export function OgButton({
       disabled={disabled || loading}
       type={type}
     >
-      {icon ? <span aria-hidden="true">{icon}</span> : null}
+      {icon ? <span className={styles.buttonIcon} aria-hidden="true">{icon}</span> : null}
       {children}
     </button>
   )

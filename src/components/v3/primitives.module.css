@@ -180,6 +180,13 @@
   outline-offset: var(--og-space-1);
 }
 
+.buttonIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
 .button,
 .iconButton {
   position: relative;
