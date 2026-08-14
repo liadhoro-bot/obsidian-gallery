@@ -67,7 +67,7 @@
   background-image: var(--og-material-brass), var(--og-material-ebonized-control);
   background-position: center;
   background-repeat: no-repeat, repeat, no-repeat, no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 36px auto, 100% 100%, 100% 100%, 150px auto, 100% 100%;
+  background-size: 100% 100%, 220px auto, 100% 100%, 100% 100%, 150px auto, 100% 100%;
   color: var(--og-paper-50);
   box-shadow: var(--og-shadow-control-built);
 }
