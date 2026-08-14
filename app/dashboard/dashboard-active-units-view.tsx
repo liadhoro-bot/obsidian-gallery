@@ -451,11 +451,11 @@ function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[]
           </div>
 
           <div className={styles.viewToggle} aria-label="Display mode">
-            <OgIconButton label="Show units as cards" aria-pressed={mode === 'cards'} className={styles.iconToggle} data-selected={mode === 'cards'} onClick={() => handleModeChange('cards')} size="compact">
-              <CardsIcon />
-            </OgIconButton>
             <OgIconButton label="Show units as tiles" aria-pressed={mode === 'tiles'} className={styles.iconToggle} data-selected={mode === 'tiles'} onClick={() => handleModeChange('tiles')} size="compact">
               <TilesIcon />
+            </OgIconButton>
+            <OgIconButton label="Show units as cards" aria-pressed={mode === 'cards'} className={styles.iconToggle} data-selected={mode === 'cards'} onClick={() => handleModeChange('cards')} size="compact">
+              <CardsIcon />
             </OgIconButton>
           </div>
         </div>
