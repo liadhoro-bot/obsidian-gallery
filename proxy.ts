@@ -126,7 +126,7 @@ export default async function proxy(request: NextRequest) {
     if (!isPublicRoute) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
-      if (isInspectionPreview) {
+      if (hasInspectionPreviewParam || hasInspectionPreviewCookie) {
         loginUrl.searchParams.set('preview', '1')
       }
       return NextResponse.redirect(loginUrl)

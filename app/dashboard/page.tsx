@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { WorkbenchShell } from '@/src/components/v3'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
-import { hasV3PreviewSession } from '../../lib/v3-preview-server'
+import { isV3PreviewValue } from '../../lib/v3-preview'
 import DashboardV3Preview from './dashboard-v3-preview'
 import DashboardXpCard from './dashboard-xp-card'
 import DashboardMetadataGrid from './dashboard-metadata-grid'
@@ -109,7 +109,7 @@ export default async function DashboardPage({
 }: DashboardPageProps) {
   const perf = createPerfTimer('/dashboard')
   const resolvedSearchParams = searchParams ? await searchParams : undefined
-  const isPreview = await hasV3PreviewSession(resolvedSearchParams?.preview)
+  const isPreview = isV3PreviewValue(resolvedSearchParams?.preview)
   const isGoldenFixture =
     resolvedSearchParams?.golden === 'dashboard-active-units' &&
     process.env.NODE_ENV !== 'production'
