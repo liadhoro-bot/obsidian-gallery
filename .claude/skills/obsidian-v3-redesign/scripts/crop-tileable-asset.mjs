@@ -109,6 +109,32 @@ export async function wornMetalTexture({ out, size = 384, seed = 11, patinaRgb, 
   return out;
 }
 
+// Directional "brushed metal" texture: anisotropic feTurbulence (different X/Y
+// baseFrequency creates elongated streaks along one axis) layered over a
+// coarse patina-blotch base, both with stitchTiles="stitch" so it's seamless
+// by construction. Use this instead of a real photo crop for brushed-metal
+// looks - a photo crop's streaks rarely repeat cleanly at small tile sizes,
+// this always does. direction 'horizontal' streaks run left-right.
+export async function brushedMetalTexture({ out, size = 384, seed = 11, direction = 'horizontal', streakFreq = 0.9, lengthFreq = 0.025, patinaRgb, grainRgb, patinaAlpha = 0.28, grainAlpha = 0.4 }) {
+  const [fx, fy] = direction === 'horizontal' ? [lengthFreq, streakFreq] : [streakFreq, lengthFreq];
+  const [pr, pg, pb] = patinaRgb;
+  const [gr, gg, gb] = grainRgb;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+    <filter id="patina">
+      <feTurbulence type="turbulence" baseFrequency="0.045" numOctaves="2" seed="${seed}" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 ${pr}  0 0 0 0 ${pg}  0 0 0 0 ${pb}  0 0 0 ${patinaAlpha} 0"/>
+    </filter>
+    <filter id="brush">
+      <feTurbulence type="fractalNoise" baseFrequency="${fx} ${fy}" numOctaves="2" seed="${seed + 7}" stitchTiles="stitch"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 ${gr}  0 0 0 0 ${gg}  0 0 0 0 ${gb}  0 0 0 ${grainAlpha} 0"/>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#patina)"/>
+    <rect width="100%" height="100%" filter="url(#brush)"/>
+  </svg>`;
+  await sharp(Buffer.from(svg)).png().toFile(out);
+  return out;
+}
+
 // Fallback only: use when no source crop yields usable grain. baseFrequency
 // ~0.7-1.1 gives fine paper/wood-scale grain; lower values look coarser/blotchy.
 export async function noiseGrain({ out, size = 512, baseFrequency = 0.9, seed = 7, rgb, alpha = 0.22 }) {
@@ -126,7 +152,7 @@ export async function noiseGrain({ out, size = 512, baseFrequency = 0.9, seed = 
 
 async function main() {
   const [, , command, argsJson] = process.argv;
-  const fns = { cropTile, isolateCircleIcon, noiseGrain, makeSeamlessTile, wornMetalTexture };
+  const fns = { cropTile, isolateCircleIcon, noiseGrain, makeSeamlessTile, wornMetalTexture, brushedMetalTexture };
   if (!command || !fns[command]) {
     console.error('Usage: node crop-tileable-asset.mjs <cropTile|isolateCircleIcon|noiseGrain> \'<json-args>\'');
     process.exit(1);

@@ -37,7 +37,6 @@ export default function DashboardResumeButton({
       className={styles.inlineLinkButton}
       disabled={isNavigating}
       loading={isNavigating}
-      size="large"
       variant="primary"
     >
       {isNavigating ? 'Opening...' : label}

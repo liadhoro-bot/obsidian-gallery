@@ -274,7 +274,7 @@
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
   background-size: 100% 100%, 100% 100%, 36px auto, 100% 100%;
   color: var(--og-ink-950);
-  box-shadow: var(--og-shadow-brass-plate);
+  box-shadow: var(--og-shadow-brass-plate), inset 0 0 0 3px color-mix(in srgb, var(--og-ink-950) 30%, transparent), inset 0 0 0 4px color-mix(in srgb, var(--og-paper-50) 30%, transparent);
 }
 
 .nextActionMedallion svg {
@@ -432,10 +432,10 @@
 
 .featuredPanel {
   display: grid;
-  min-height: 238px;
+  min-height: 200px;
   grid-template-columns: minmax(0, 1fr) 144px;
   gap: 12px;
-  padding: 40px 12px 12px;
+  padding: 12px;
 }
 
 .panelPlaque {
@@ -534,16 +534,16 @@
   display: grid;
   min-width: 0;
   align-content: center;
-  gap: 6px;
+  gap: 5px;
   order: 1;
-  padding-block-start: 6px;
+  padding-block-start: 32px;
 }
 
 .featuredTitle {
   margin: 0;
   color: var(--og-text-primary);
   font-family: var(--og-font-display);
-  font-size: 1.26rem;
+  font-size: 1.1rem;
   font-weight: 600;
   letter-spacing: 0;
   line-height: 1;
@@ -592,7 +592,7 @@
 .featuredPercent {
   color: var(--og-text-primary);
   font-family: var(--og-font-display);
-  font-size: 1.18rem;
+  font-size: 1.02rem;
   font-weight: 600;
   line-height: 1;
 }
@@ -615,7 +615,8 @@
 
 .inlineLinkButton {
   width: 100%;
-  min-height: 38px;
+  min-height: 34px;
+  padding-inline: var(--og-space-3);
   border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
   background-color: var(--og-walnut-950);
   background-image: var(--og-material-ebonized-control);
@@ -624,7 +625,7 @@
   background-size: 100% 100%, 160px auto, 100% 100%;
   color: var(--og-paper-50);
   font-family: var(--og-font-display);
-  font-size: 1rem;
+  font-size: 0.92rem;
   letter-spacing: 0;
   box-shadow: var(--og-shadow-control-built);
 }
@@ -638,22 +639,8 @@
 .activeUnitsPanel {
   display: grid;
   gap: 7px;
-  min-height: 286px;
-  padding: 42px 12px 9px;
-}
-
-.activeUnitsHeader {
-  display: grid;
-  gap: 6px;
-}
-
-.activeUnitsHeader h2 {
-  margin: 0;
-  color: var(--og-text-primary);
-  font-family: var(--og-font-display);
-  font-size: 1.34rem;
-  font-weight: 600;
-  line-height: var(--og-leading-title);
+  min-height: 250px;
+  padding: 34px 12px 9px;
 }
 
 .activeUnitsControls {
@@ -663,10 +650,21 @@
   gap: var(--og-space-2);
 }
 
+.showingLabel {
+  color: var(--og-text-secondary);
+  font-family: var(--og-font-ui);
+  font-size: var(--og-type-label);
+  font-weight: 600;
+  letter-spacing: var(--og-tracking-label);
+  text-transform: uppercase;
+}
+
 .statusMenuWrap {
   position: relative;
   z-index: 10;
   display: inline-flex;
+  align-items: center;
+  gap: var(--og-space-2);
 }
 
 .statusTrigger {

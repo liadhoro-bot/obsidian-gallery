@@ -409,10 +409,9 @@ function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[]
   return (
     <section className={styles.activeUnitsPanel}>
       <OgPlaque className={styles.panelPlaque}>Up Next</OgPlaque>
-      <div className={styles.activeUnitsHeader}>
-        <h2>Active Units</h2>
-        <div className={styles.activeUnitsControls}>
+      <div className={styles.activeUnitsControls}>
           <div className={styles.statusMenuWrap}>
+            <span className={styles.showingLabel}>Showing</span>
             <OgButton
               aria-expanded={isStatusMenuOpen}
               aria-haspopup="menu"
@@ -458,7 +457,6 @@ function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[]
               <CardsIcon />
             </OgIconButton>
           </div>
-        </div>
       </div>
 
       {displayUnits.length > 0 ? (
