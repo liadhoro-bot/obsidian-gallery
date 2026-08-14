@@ -269,7 +269,7 @@
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 70%, var(--og-ink-950));
   border-radius: var(--og-radius-round);
   background-color: var(--og-brass-500);
-  background-image: radial-gradient(circle at 42% 30%, color-mix(in srgb, var(--og-paper-50) 30%, transparent), transparent 36%), var(--og-material-brass);
+  background-image: radial-gradient(circle at 38% 26%, color-mix(in srgb, white 55%, var(--og-paper-50)) 48%, transparent 52%), var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
   background-size: 100% 100%, 100% 100%, 36px auto, 100% 100%;
@@ -463,7 +463,7 @@
 }
 
 .featuredImageMount {
-  padding: 9px;
+  padding: 5px;
 }
 
 .featuredImageMount::before,
