@@ -641,16 +641,16 @@
 
 .activeUnitsPanel {
   display: grid;
-  gap: 7px;
+  gap: 11px;
   min-height: 250px;
-  padding: 34px 12px 9px;
+  padding: 52px 12px 9px;
 }
 
 .activeUnitsControls {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--og-space-2);
+  gap: var(--og-space-3);
 }
 
 .showingLabel {
@@ -667,7 +667,7 @@
   z-index: 10;
   display: inline-flex;
   align-items: center;
-  gap: var(--og-space-2);
+  gap: var(--og-space-3);
 }
 
 .statusTrigger {
