@@ -589,28 +589,42 @@
 }
 
 .plaque[data-tone="paper"]::before,
-.plaque[data-tone="paper"]::after,
-.plaque[data-tone="brass"]::before,
-.plaque[data-tone="brass"]::after {
+.plaque[data-tone="paper"]::after {
   display: none;
 }
 
 .plaque[data-tone="brass"] {
   background-color: var(--og-brass-500);
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 12%, transparent), color-mix(in srgb, var(--og-ink-950) 16%, transparent)), var(--og-material-brass);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 16%, transparent), color-mix(in srgb, var(--og-ink-950) 20%, transparent)), var(--og-material-brass);
   background-position: center;
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
   background-size: 100% 100%, 100% 100%, 220px auto, 100% 100%;
-  border-width: 14px 20px;
+  border-width: calc(var(--og-border-width) * 2);
   border-style: solid;
-  border-color: transparent;
-  border-image-source: url('/og-v3/panels/brass-plaque-frame.png?v=blank1');
-  border-image-slice: 25 20;
-  border-image-width: 14px 20px;
-  border-image-repeat: stretch;
-  padding: 0 6px;
+  border-color: color-mix(in srgb, var(--og-brass-700) 92%, var(--og-ink-950));
+  padding: 5px 26px;
   color: var(--og-ink-950);
-  text-shadow: 0 1px 0 color-mix(in srgb, var(--og-paper-50) 22%, transparent);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--og-paper-50) 26%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 38%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--og-ink-950) 22%, transparent),
+    inset 0 -2px 2px color-mix(in srgb, var(--og-ink-950) 46%, transparent),
+    0 1px 0 color-mix(in srgb, var(--og-paper-50) 20%, transparent),
+    0 2px 5px color-mix(in srgb, var(--og-walnut-950) 40%, transparent);
+}
+
+.plaque[data-tone="brass"]::before,
+.plaque[data-tone="brass"]::after {
+  width: 8px;
+  height: 8px;
+}
+
+.plaque[data-tone="brass"]::before {
+  left: 8px;
+}
+
+.plaque[data-tone="brass"]::after {
+  right: 8px;
 }
 
 .plaque[data-tone="paper"] {
