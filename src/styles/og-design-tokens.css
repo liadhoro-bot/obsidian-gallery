@@ -67,7 +67,7 @@
   --og-asset-parchment-fiber: url('/og-v3/materials/parchment-fiber.png');
   --og-asset-ebonized: url('/og-v3/materials/ebonized-control.png');
   --og-asset-rivet: url('/og-v3/hardware/brass-rivet.png');
-  --og-asset-brass-worn: url('/og-v3/materials/brass-worn.png');
+  --og-asset-brass-worn: url('/og-v3/materials/brass-worn.png?v=directional1');
   --og-asset-leather-grain: url('/og-v3/materials/leather-grain.png');
 
   /* Material composites - CALIBRATED from approved V3 raster references */

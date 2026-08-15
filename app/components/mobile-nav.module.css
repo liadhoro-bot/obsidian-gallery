@@ -69,7 +69,7 @@
   background-size: 100% 100%, 100% 100%, 220px auto, 100% 100%;
   border-width: 8px;
   border-style: solid;
-  border-image-source: url('/og-v3/nav/nav-tile-active.png');
+  border-image-source: url('/og-v3/nav/nav-tile-active.png?v=1');
   border-image-slice: 22;
   border-image-width: 8px;
   border-image-repeat: stretch;
