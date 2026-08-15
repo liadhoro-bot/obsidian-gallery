@@ -21,7 +21,6 @@ export default async function proxy(request: NextRequest) {
     hasInspectionPreviewHost
 
   const isGoldenDashboardFixture =
-    process.env.NODE_ENV !== 'production' &&
     pathname === '/dashboard' &&
     request.nextUrl.searchParams.get('golden') === 'dashboard-active-units'
 
