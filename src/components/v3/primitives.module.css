@@ -601,14 +601,14 @@
   background-position: center;
   background-repeat: no-repeat, no-repeat, repeat, no-repeat;
   background-size: 100% 100%, 100% 100%, 220px auto, 100% 100%;
-  border-width: 14px 32px;
+  border-width: 14px 20px;
   border-style: solid;
   border-color: transparent;
   border-image-source: url('/og-v3/panels/brass-plaque-frame.png');
-  border-image-slice: 24 55;
-  border-image-width: 14px 32px;
+  border-image-slice: 25 20;
+  border-image-width: 14px 20px;
   border-image-repeat: stretch;
-  padding: 0 2px;
+  padding: 0 6px;
   color: var(--og-ink-950);
   text-shadow: 0 1px 0 color-mix(in srgb, var(--og-paper-50) 22%, transparent);
 }

@@ -111,8 +111,7 @@ export default async function DashboardPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const isPreview = isV3PreviewValue(resolvedSearchParams?.preview)
   const isGoldenFixture =
-    resolvedSearchParams?.golden === 'dashboard-active-units' &&
-    process.env.NODE_ENV !== 'production'
+    resolvedSearchParams?.golden === 'dashboard-active-units'
 
   if (isGoldenFixture) {
     perf.total()
