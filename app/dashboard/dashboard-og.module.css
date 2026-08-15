@@ -541,13 +541,16 @@
 
 .featuredTitle {
   margin: 0;
+  overflow: hidden;
   color: var(--og-text-primary);
   font-family: var(--og-font-display);
-  font-size: 1.1rem;
+  font-size: 1.16rem;
   font-weight: 600;
-  letter-spacing: 0;
-  line-height: 1;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  font-variant-caps: small-caps;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .featuredDescriptor {
