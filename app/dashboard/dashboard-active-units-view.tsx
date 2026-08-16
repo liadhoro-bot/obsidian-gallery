@@ -20,10 +20,7 @@ import type {
   DashboardActiveUnitsNextActionViewModel,
   DashboardActiveUnitsViewModel,
 } from './dashboard-active-units-model'
-import {
-  dismissDashboardNextActions,
-  setDashboardNextActionDone,
-} from './actions'
+import { setDashboardNextActionDone } from './actions'
 import styles from './dashboard-og.module.css'
 
 type ActiveTab = 'profile' | 'painting-table'
@@ -205,12 +202,11 @@ function DashboardTabs({ currentTab, onChange }: { currentTab: ActiveTab; onChan
 }
 
 function NextActionsObject({ nextActions }: { nextActions: NonNullable<DashboardActiveUnitsViewModel['nextActions']> | null }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [hidden, setHidden] = useState(false)
+  const [isOpen, setIsOpen] = useState(true)
   const [completionOverrides, setCompletionOverrides] = useState(() => new Map<string, boolean>())
   const [isPending, startTransition] = useTransition()
 
-  if (!nextActions || hidden) {
+  if (!nextActions) {
     return null
   }
 
@@ -239,16 +235,6 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
           return next
         })
       }
-    })
-  }
-
-  function dismiss() {
-    setHidden(true)
-    if (!nextActions?.canMutate) return
-
-    startTransition(async () => {
-      const result = await dismissDashboardNextActions()
-      if (!result.ok) setHidden(false)
     })
   }
 
@@ -298,9 +284,6 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
               </div>
             )
           })}
-          <button type="button" className={styles.nextActionDismiss} onClick={dismiss}>
-            Dismiss
-          </button>
         </div>
       ) : null}
     </section>

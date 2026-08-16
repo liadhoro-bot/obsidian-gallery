@@ -407,8 +407,7 @@
   font-size: var(--og-type-label);
 }
 
-.nextActionGo,
-.nextActionDismiss {
+.nextActionGo {
   display: inline-flex;
   min-height: var(--og-control-h-compact);
   align-items: center;
@@ -424,10 +423,6 @@
   padding-inline: var(--og-space-3);
   text-decoration: none;
   box-shadow: var(--og-shadow-control-built);
-}
-
-.nextActionDismiss {
-  justify-self: end;
 }
 
 .featuredPanel {
@@ -982,7 +977,6 @@
 .nextActionSummary:focus-visible,
 .nextActionCheck:focus-visible,
 .nextActionGo:focus-visible,
-.nextActionDismiss:focus-visible,
 .featuredImageMount:focus-visible,
 .statusMenuItem:focus-visible,
 .iconToggle:focus-visible,
