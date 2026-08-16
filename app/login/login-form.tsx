@@ -33,10 +33,14 @@ export default function LoginForm({
     authError ? { kind: 'error', text: authError } : null
   )
   const [loading, setLoading] = useState(false)
-  const effectiveNextPath = getEffectiveNextPath(
-    audience === 'new' ? '/onboarding' : nextPath,
-    previewMode
-  )
+  // `nextPath` was already resolved server-side (page.tsx), including the
+  // carve-out that keeps a plain /dashboard target out of preview mode -
+  // re-deriving preview-forcing from `previewMode` here would silently
+  // re-apply ?preview=1 and undo that carve-out. Only /onboarding (the
+  // 'new' audience target) needs preview-forcing computed client-side,
+  // since the server can't know in advance which audience the visitor picks.
+  const effectiveNextPath =
+    audience === 'new' ? getEffectiveNextPath('/onboarding', previewMode) : nextPath
 
   useEffect(() => {
     performance.mark('v3-login-form-hydrated')
