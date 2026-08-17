@@ -40,7 +40,11 @@ export default function OnboardingShell({
   }
 
   function enterDashboard() {
-    router.push('/dashboard?preview=1')
+    // /dashboard has its own real (non-preview) implementation now (see
+    // app/login/page.tsx's requestedNextIsDashboard carve-out) - sending
+    // people here with ?preview=1 lands them on the old, abandoned
+    // DashboardV3Preview component instead.
+    router.push('/dashboard')
   }
 
   return (

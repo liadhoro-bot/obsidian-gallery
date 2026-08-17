@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Obsidian',
     description: 'Miniature painting and hobby companion',
     id: '/',
-    start_url: '/dashboard?preview=1',
+    start_url: '/dashboard',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
