@@ -756,9 +756,20 @@
 }
 
 .unitGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
   gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--og-brass-700) 60%, transparent) transparent;
+  padding-block-end: 4px;
+}
+
+.unitGrid .unitTile {
+  flex: 0 0 calc((100% - 2 * 8px) / 3);
+  scroll-snap-align: start;
 }
 
 .unitStack {
