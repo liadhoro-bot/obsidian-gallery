@@ -107,10 +107,30 @@ function mapUnitImage(imageUrl: string | null, size: number) {
 }
 
 function mapNextActions(
-  state: DashboardNextActionsState | null
+  state: DashboardNextActionsState | null,
+  featuredUnit: DashboardFeaturedUnitViewModel | null
 ): DashboardActiveUnitsNextActionsViewModel | null {
   if (!state) {
-    return null
+    if (!featuredUnit) {
+      return null
+    }
+
+    return {
+      title: 'Next Actions',
+      copy: `Resume ${featuredUnit.name}`,
+      totalCount: 1,
+      completedCount: 0,
+      canMutate: false,
+      actions: [
+        {
+          id: `resume-featured-${featuredUnit.id}`,
+          label: 'Resume painting',
+          breadcrumb: 'Dashboard / Featured Unit',
+          href: `/units/${featuredUnit.id}?session=started&autostart=1`,
+          completedAt: null,
+        },
+      ],
+    }
   }
 
   const firstOpenAction = state.actions.find((action) => !action.completedAt)
@@ -175,9 +195,11 @@ export function createDashboardActiveUnitsViewModel({
   feed: DashboardPaintingTableFeed
   nextActions: DashboardNextActionsState | null
 }): DashboardActiveUnitsViewModel {
+  const featuredUnit = mapFeaturedUnit(feed.heroUnit)
+
   return {
-    nextActions: mapNextActions(nextActions),
-    featuredUnit: mapFeaturedUnit(feed.heroUnit),
+    nextActions: mapNextActions(nextActions, featuredUnit),
+    featuredUnit,
     units: feed.units.map(mapActiveUnit),
   }
 }

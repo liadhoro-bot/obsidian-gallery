@@ -21,6 +21,7 @@ export default function DashboardHobbyBadges() {
           <div
             key={badge.title}
             className={styles.badgeCard}
+            data-v3-dashboard-indicator="badge-earned"
           >
             <div className={styles.badgeImageMount}>
               <span className={styles.badgeImageFrame}>

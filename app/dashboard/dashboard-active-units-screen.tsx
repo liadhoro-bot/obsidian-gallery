@@ -59,6 +59,7 @@ export function DashboardActiveUnitsGoldenFixtureScreen() {
       initialTab="painting-table"
       model={dashboardActiveUnitsFixture}
       profilePanel={<DashboardProgressFixturePanel />}
+      source="fixture"
     />
   )
 }

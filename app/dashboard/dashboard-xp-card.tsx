@@ -49,7 +49,7 @@ export function DashboardXpLedgerCard({
   xpToNextLevel,
 }: DashboardXpLedgerCardProps) {
   return (
-    <section className={styles.progressLedger}>
+    <section className={styles.progressLedger} data-v3-dashboard-indicator="xp-card">
       <div className={styles.progressLedgerHeader}>
         <div>
           <p className={styles.progressKicker}>Path to Grandmastery</p>

@@ -378,6 +378,11 @@
   color: var(--og-status-success);
 }
 
+.nextActionCheck:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
 .nextActionRowText {
   display: grid;
   min-width: 0;

@@ -11,6 +11,7 @@ import {
   OgPlaque,
   OgProgressTrack,
 } from '@/src/components/v3'
+import V3PerfIndicator from '../components/v3-perf-indicator'
 import PrefetchLink from '../components/prefetch-link'
 import DashboardQuickActionStartButton from './dashboard-quick-action-start-button'
 import DashboardResumeButton from './dashboard-resume-button'
@@ -239,7 +240,15 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
   }
 
   return (
-    <section className={styles.nextActionObject} data-pending={isPending} aria-label="Next actions">
+    <section
+      className={styles.nextActionObject}
+      data-pending={isPending}
+      data-v3-dashboard-indicator="next-actions"
+      data-v3-dashboard-next-actions-source={
+        nextActions.canMutate ? 'onboarding-flow' : 'featured-unit-fallback'
+      }
+      aria-label="Next actions"
+    >
       <button type="button" className={styles.nextActionSummary} onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen}>
         <span className={styles.nextActionMedallion} aria-hidden="true">
           <BottleIcon />
@@ -270,6 +279,7 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
                   className={styles.nextActionCheck}
                   data-done={isDone}
                   aria-pressed={isDone}
+                  disabled={!nextActions.canMutate}
                   onClick={() => toggleAction(action)}
                 >
                   <CheckIcon />
@@ -293,7 +303,11 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
 function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredUnit'] }) {
   if (!unit) {
     return (
-      <section className={styles.featuredPanel} id="featured-unit">
+      <section
+        className={styles.featuredPanel}
+        id="featured-unit"
+        data-v3-dashboard-indicator="featured-unit-empty"
+      >
         <OgPlaque className={styles.panelPlaque}>Featured Unit</OgPlaque>
         <div className={styles.emptyFeatured}>
           <h2>No active units yet</h2>
@@ -304,7 +318,11 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
   }
 
   return (
-    <section className={styles.featuredPanel} id="featured-unit">
+    <section
+      className={styles.featuredPanel}
+      id="featured-unit"
+      data-v3-dashboard-indicator="featured-unit"
+    >
       <OgPlaque className={styles.panelPlaque}>Featured Unit</OgPlaque>
       <PrefetchLink href={`/units/${unit.id}`} className={styles.featuredImageMount} aria-label={`Open ${unit.name}`}>
         <span className={styles.featuredImageFrame}>
@@ -341,7 +359,10 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
 
 function ActiveUnitCard({ unit, mode }: { unit: DashboardActiveUnitCardViewModel; mode: DisplayMode }) {
   return (
-    <article className={mode === 'tiles' ? styles.unitTile : styles.unitListCard}>
+    <article
+      className={mode === 'tiles' ? styles.unitTile : styles.unitListCard}
+      data-v3-dashboard-indicator="active-unit"
+    >
       <PrefetchLink href={`/units/${unit.id}`} className={styles.unitCardLink} aria-label={`Open ${unit.name}`}>
         <span className={styles.unitImageMount}>
           <span className={styles.unitImageFrame}>
@@ -443,13 +464,21 @@ function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[]
       </div>
 
       {displayUnits.length > 0 ? (
-        <div className={mode === 'tiles' ? styles.unitGrid : styles.unitStack}>
+        <div
+          className={mode === 'tiles' ? styles.unitGrid : styles.unitStack}
+          data-v3-dashboard-active-units-layout={mode === 'tiles' ? 'grid' : 'cards'}
+        >
           {displayUnits.map((unit) => (
             <ActiveUnitCard key={unit.id} unit={unit} mode={mode} />
           ))}
         </div>
       ) : (
-        <div className={styles.emptyUnits}>No {selectedOption.label.toLowerCase()} units yet.</div>
+        <div
+          className={styles.emptyUnits}
+          data-v3-dashboard-indicator="active-unit-empty"
+        >
+          No {selectedOption.label.toLowerCase()} units yet.
+        </div>
       )}
     </section>
   )
@@ -459,10 +488,12 @@ export default function DashboardActiveUnitsView({
   initialTab,
   model,
   profilePanel,
+  source = 'live',
 }: {
   initialTab: ActiveTab
   model: DashboardActiveUnitsViewModel
   profilePanel: ReactNode
+  source?: 'fixture' | 'live'
 }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -477,13 +508,25 @@ export default function DashboardActiveUnitsView({
   }
 
   return (
-    <div className={styles.dashboardApp}>
+    <div
+      className={styles.dashboardApp}
+      data-v3-dashboard-indicator="root"
+      data-v3-dashboard-source={source}
+    >
+      <V3PerfIndicator
+        surface="dashboard"
+        detail={currentTab === 'profile' ? 'my-progress' : 'active-units'}
+      />
       <DashboardHeader />
       <div className={styles.tabBand}>
         <DashboardTabs currentTab={currentTab} onChange={navigate} />
       </div>
 
-      <div hidden={currentTab !== 'painting-table'} aria-hidden={currentTab !== 'painting-table'}>
+      <div
+        hidden={currentTab !== 'painting-table'}
+        aria-hidden={currentTab !== 'painting-table'}
+        data-v3-dashboard-indicator="active-units"
+      >
         <div className={styles.dashboardBody}>
           <NextActionsObject nextActions={model.nextActions} />
           <FeaturedUnit unit={model.featuredUnit} />
@@ -491,11 +534,14 @@ export default function DashboardActiveUnitsView({
         </div>
       </div>
 
-      <div hidden={currentTab !== 'profile'} aria-hidden={currentTab !== 'profile'} className={styles.profilePanel}>
+      <div
+        hidden={currentTab !== 'profile'}
+        aria-hidden={currentTab !== 'profile'}
+        className={styles.profilePanel}
+        data-v3-dashboard-indicator="my-progress"
+      >
         {profilePanel}
       </div>
     </div>
   )
 }
-
-
