@@ -7,8 +7,24 @@ import {
 import { createDashboardActiveUnitsViewModel } from './dashboard-active-units-model'
 import { dashboardActiveUnitsFixture } from './dashboard-active-units-fixture'
 import DashboardActiveUnitsView from './dashboard-active-units-view'
+import DashboardHobbyBadges from './dashboard-hobby-badges'
+import DashboardMetadataCards, {
+  DashboardPaintStreakCard,
+  type DashboardMetadataItem,
+} from './dashboard-metadata-cards'
+import styles from './dashboard-og.module.css'
+import { DashboardXpLedgerCard } from './dashboard-xp-card'
 
 type ActiveTab = 'profile' | 'painting-table'
+
+const fixtureMetadataItems: DashboardMetadataItem[] = [
+  { id: 'total-units', label: 'Total Units', value: '18', accent: 'neutral' },
+  { id: 'time-logged', label: 'Time Logged', value: '42h', accent: 'neutral' },
+  { id: 'colors', label: 'Colors', value: '126', accent: 'neutral' },
+  { id: 'average-session-length', label: 'Avg Session', value: '1h 18m', accent: 'neutral' },
+  { id: 'weekly-sessions', label: 'Sessions/Wk', value: '4', accent: 'warm' },
+  { id: 'completed', label: 'Completed', value: '31', accent: 'neutral' },
+]
 
 export async function DashboardActiveUnitsScreen({
   initialTab,
@@ -42,7 +58,24 @@ export function DashboardActiveUnitsGoldenFixtureScreen() {
     <DashboardActiveUnitsView
       initialTab="painting-table"
       model={dashboardActiveUnitsFixture}
-      profilePanel={null}
+      profilePanel={<DashboardProgressFixturePanel />}
     />
+  )
+}
+
+function DashboardProgressFixturePanel() {
+  return (
+    <div className={styles.profileStack}>
+      <DashboardXpLedgerCard
+        currentLevel={7}
+        progressPercent={64}
+        xpIntoLevel={640}
+        xpNeededForLevel={1000}
+        xpToNextLevel={360}
+      />
+      <DashboardPaintStreakCard paintStreak="9d" sessionLabel="1d 6h" />
+      <DashboardHobbyBadges />
+      <DashboardMetadataCards items={fixtureMetadataItems} />
+    </div>
   )
 }

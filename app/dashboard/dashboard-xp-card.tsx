@@ -2,6 +2,16 @@ import {
   getDashboardCurrentUser,
   getDashboardXpState,
 } from './dashboard-data'
+import { OgProgressTrack } from '@/src/components/v3'
+import styles from './dashboard-og.module.css'
+
+export type DashboardXpLedgerCardProps = {
+  currentLevel: number
+  progressPercent: number
+  xpIntoLevel: number
+  xpNeededForLevel: number
+  xpToNextLevel: number
+}
 
 export default async function DashboardXpCard({
   userId,
@@ -21,26 +31,45 @@ export default async function DashboardXpCard({
   } = await getDashboardXpState(resolvedUserId)
 
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
-        Path to Grandmastery
-      </p>
+    <DashboardXpLedgerCard
+      currentLevel={currentLevel}
+      progressPercent={progressPercent}
+      xpIntoLevel={xpIntoLevel}
+      xpNeededForLevel={xpNeededForLevel}
+      xpToNextLevel={xpToNextLevel}
+    />
+  )
+}
 
-      <div className="mt-3 flex items-end justify-between gap-4">
-        <p className="text-3xl font-semibold text-white">
-          {xpIntoLevel} / {xpNeededForLevel}
-        </p>
-        <p className="text-sm text-white/55">
-          Level {currentLevel} · {xpToNextLevel} XP to Level {currentLevel + 1}
-        </p>
+export function DashboardXpLedgerCard({
+  currentLevel,
+  progressPercent,
+  xpIntoLevel,
+  xpNeededForLevel,
+  xpToNextLevel,
+}: DashboardXpLedgerCardProps) {
+  return (
+    <section className={styles.progressLedger}>
+      <div className={styles.progressLedgerHeader}>
+        <div>
+          <p className={styles.progressKicker}>Path to Grandmastery</p>
+          <h2 className={styles.progressLedgerTitle}>Level {currentLevel}</h2>
+        </div>
+        <div className={styles.levelMedallion} aria-label={`Current level ${currentLevel}`}>
+          {currentLevel}
+        </div>
       </div>
 
-      <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-white/10">
-        <div
-          className="h-full rounded-full bg-cyan-400 transition-all"
-          style={{ width: `${progressPercent}%` }}
-        />
+      <div className={styles.xpReadout}>
+        <span className={styles.xpValue}>{xpIntoLevel} / {xpNeededForLevel}</span>
+        <span>{xpToNextLevel} XP to Level {currentLevel + 1}</span>
       </div>
+
+      <OgProgressTrack
+        className={styles.profileProgressTrack}
+        label="XP progress toward next level"
+        value={progressPercent}
+      />
     </section>
   )
 }

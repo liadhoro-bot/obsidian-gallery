@@ -117,11 +117,11 @@ export default async function proxy(request: NextRequest) {
   )
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  const user = session?.user ?? null
+    data: { user: verifiedUser },
+  } = await supabase.auth.getUser()
+  const activeUser = verifiedUser ?? null
 
-  if (!user) {
+  if (!activeUser) {
     if (!isPublicRoute) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
@@ -137,7 +137,7 @@ export default async function proxy(request: NextRequest) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('terms_accepted_at')
-    .eq('id', user.id)
+    .eq('id', activeUser.id)
     .maybeSingle()
 
   const hasAcceptedTerms = Boolean(profile?.terms_accepted_at)

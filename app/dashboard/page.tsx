@@ -6,7 +6,9 @@ import { createPerfTimer } from '../../utils/perf/server'
 import { isV3PreviewValue } from '../../lib/v3-preview'
 import DashboardV3Preview from './dashboard-v3-preview'
 import DashboardXpCard from './dashboard-xp-card'
-import DashboardMetadataGrid from './dashboard-metadata-grid'
+import DashboardMetadataGrid, {
+  DashboardPaintStreak,
+} from './dashboard-metadata-grid'
 import DashboardHobbyBadges from './dashboard-hobby-badges'
 import type { DashboardFeatureGuide } from './feature-guide-types'
 import {
@@ -20,7 +22,7 @@ import {
   getDashboardPaintingTableFeed,
   getDashboardXpState,
 } from './dashboard-data'
-import { StatsSkeleton } from './dashboard-skeletons'
+import { PaintStreakSkeleton, StatsSkeleton } from './dashboard-skeletons'
 
 type DashboardPageProps = {
   searchParams?: Promise<{
@@ -168,20 +170,26 @@ export default async function DashboardPage({
   perf.total()
 
   const xpCardShell = (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-5 animate-pulse">
-      <div className="h-3 w-32 rounded bg-white/10" />
-      <div className="mt-3 flex items-end justify-between gap-4">
-        <div className="h-8 w-40 rounded bg-white/10" />
-        <div className="h-4 w-28 rounded bg-white/10" />
+    <section className={`${styles.progressLedger} ${styles.profileSkeleton}`}>
+      <div className={styles.progressLedgerHeader}>
+        <div className={styles.skeletonCopy}>
+          <span />
+          <strong />
+        </div>
+        <span className={styles.levelMedallion} aria-hidden="true" />
       </div>
-      <div className="mt-4 h-3 w-full rounded-full bg-white/10" />
+      <span className={styles.skeletonLine} />
+      <span className={styles.skeletonTrack} />
     </section>
   )
 
   const profileContent = (
-    <div className="grid gap-5">
+    <div className={styles.profileStack}>
       <Suspense fallback={xpCardShell}>
         <DashboardXpCard userId={user.id} />
+      </Suspense>
+      <Suspense fallback={<PaintStreakSkeleton />}>
+        <DashboardPaintStreak userId={user.id} />
       </Suspense>
       <DashboardHobbyBadges />
 
@@ -192,8 +200,9 @@ export default async function DashboardPage({
   )
 
   const profileShell = (
-    <div className="grid gap-5">
+    <div className={styles.profileStack}>
       {xpCardShell}
+      <PaintStreakSkeleton />
       <DashboardHobbyBadges />
       <StatsSkeleton />
     </div>
