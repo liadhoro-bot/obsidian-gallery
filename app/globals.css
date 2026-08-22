@@ -3,8 +3,8 @@
 
 :root {
   color-scheme: dark;
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: var(--og-bg-workbench);
+  --foreground: var(--og-text-primary);
   --font-geist-sans: Arial, Helvetica, sans-serif;
   --font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
@@ -17,7 +17,11 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
+  background-image: var(--og-material-walnut-board);
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, 900px auto, 100% 100%;
   color: var(--foreground);
   font-family: var(--font-sans);
 }

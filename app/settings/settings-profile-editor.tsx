@@ -6,6 +6,7 @@ import {
   updateProfileAction,
   type UpdateProfileState,
 } from './settings-actions'
+import styles from '../settings-support-silver.module.css'
 
 const initialState: UpdateProfileState = {
   error: null,
@@ -32,7 +33,7 @@ export default function SettingsProfileEditor({
       <button
         type="button"
         onClick={() => setIsEditing(true)}
-        className="mt-5 rounded-xl bg-white/10 px-5 py-3 text-sm font-semibold text-slate-100"
+        className={styles.editButton}
       >
         Edit Profile
       </button>
@@ -42,7 +43,7 @@ export default function SettingsProfileEditor({
   return (
     <form
       action={formAction}
-      className="mt-5 w-full space-y-3"
+      className={styles.editorForm}
       onSubmit={(event) => {
         const formData = new FormData(event.currentTarget)
         const nextUsername = String(formData.get('username') || '')
@@ -89,7 +90,7 @@ export default function SettingsProfileEditor({
         aria-invalid={Boolean(errorMessage)}
         aria-describedby={errorMessage || state.message ? messageId : undefined}
         onChange={() => setClientError(null)}
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-center text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/60"
+        className={styles.input}
       />
 
       <input
@@ -101,26 +102,26 @@ export default function SettingsProfileEditor({
         aria-invalid={Boolean(errorMessage)}
         aria-describedby={errorMessage || state.message ? messageId : undefined}
         onChange={() => setClientError(null)}
-        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-center text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/60"
+        className={styles.input}
       />
 
       {errorMessage ? (
-        <p id="profile-error" className="text-sm font-medium text-red-300">
+        <p id="profile-error" className={styles.messageError}>
           {errorMessage}
         </p>
       ) : null}
 
       {!errorMessage && state.message ? (
-        <p id="profile-message" className="text-sm font-medium text-cyan-200">
+        <p id="profile-message" className={styles.messageSuccess}>
           {state.message}
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className={styles.buttonGrid}>
         <button
           type="button"
           onClick={() => setIsEditing(false)}
-          className="rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-slate-300"
+          className={styles.secondaryButton}
         >
           Cancel
         </button>
@@ -128,7 +129,7 @@ export default function SettingsProfileEditor({
         <SubmitButton
           idleText="Save"
           pendingText="Saving..."
-          className="rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950"
+          className={styles.primaryButton}
         />
       </div>
     </form>

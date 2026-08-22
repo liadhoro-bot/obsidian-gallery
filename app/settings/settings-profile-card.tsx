@@ -4,6 +4,7 @@ import { updateAvatar } from './settings-actions'
 import BackButton from '../components/back-button'
 import AvatarUploadInput from './avatar-upload-input'
 import SettingsProfileEditor from './settings-profile-editor'
+import styles from '../settings-support-silver.module.css'
 
 export default async function SettingsProfileCard() {
   const supabase = await createClient()
@@ -30,14 +31,14 @@ export default async function SettingsProfileCard() {
   const avatarUrl = profile?.avatar_url
 
   return (
-    <section className="relative rounded-3xl border border-white/5 bg-white/[0.04] p-6 shadow-lg">
-      <div className="absolute left-4 top-4 z-20">
-        <BackButton fallbackHref="/dashboard" />
+    <section className={`${styles.panel} ${styles.profilePanel}`}>
+      <div className={styles.backWrap}>
+        <BackButton fallbackHref="/dashboard" className={styles.backButton} />
       </div>
 
-      <div className="flex flex-col items-center text-center">
+      <div className={styles.profileBody}>
         <form action={updateAvatar}>
-          <label className="relative block h-28 w-28 cursor-pointer overflow-hidden rounded-3xl border border-cyan-400/30 bg-slate-900">
+          <label className={styles.avatarFrame}>
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
@@ -47,12 +48,12 @@ export default async function SettingsProfileCard() {
                 sizes="112px"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-4xl">
+              <div className={styles.avatarFallback}>
                 🎨
               </div>
             )}
 
-            <span className="absolute bottom-2 right-2 flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-400 text-xs text-slate-950">
+            <span className={styles.cameraBadge}>
               📷
             </span>
 
@@ -60,19 +61,19 @@ export default async function SettingsProfileCard() {
           </label>
         </form>
 
-        <p className="mt-3 text-xs text-slate-500">
+        <p className={styles.hint}>
           Tap image to replace avatar
         </p>
 
-        <h1 className="mt-4 text-2xl font-bold leading-tight">{displayName}</h1>
-        <p className="mt-1 text-sm text-slate-400">{user.email}</p>
-        <p className="mt-1 text-sm text-slate-500">@{username}</p>
+        <h1 className={styles.identityTitle}>{displayName}</h1>
+        <p className={styles.emailText}>{user.email}</p>
+        <p className={styles.usernameText}>@{username}</p>
 
-        <div className="mt-4 flex gap-2">
-          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-cyan-300">
+        <div className={styles.badgeRow}>
+          <span className={styles.badge}>
             Painter
           </span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-400">
+          <span className={`${styles.badge} ${styles.badgeMuted}`}>
             Member
           </span>
         </div>

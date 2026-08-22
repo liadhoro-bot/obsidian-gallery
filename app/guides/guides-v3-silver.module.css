@@ -1,0 +1,533 @@
+.guidesSilver {
+  min-height: 100dvh;
+  background-color: var(--og-bg-workbench);
+  background-image: var(--og-material-walnut-board);
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, 900px auto, 100% 100%;
+  color: var(--og-text-primary);
+  font-family: var(--og-font-ui);
+  padding-bottom: calc(var(--og-control-h-lg) + env(safe-area-inset-bottom));
+}
+
+.guidesSilver [data-v3-guides-indicator="content"],
+.guidesSilver [data-v3-guides-indicator="forge-content"] {
+  width: 100%;
+  max-width: var(--og-workbench-compact-max-width);
+  margin-inline: auto;
+  gap: 10px;
+  padding: 0 14px calc(86px + env(safe-area-inset-bottom));
+}
+
+.guidesSilver [data-v3-guides-indicator="forge-content"] {
+  padding-block-start: 12px;
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header"],
+.guidesSilver [data-v3-guides-indicator="forge-header"] {
+  position: relative;
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-2);
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950));
+  border-radius: 0 0 var(--og-radius-m) var(--og-radius-m);
+  border-block-start: 0;
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-walnut-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 280px auto, 100% 100%;
+  padding: 8px 14px 7px;
+  box-shadow: var(--og-shadow-walnut-control);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header"]::before,
+.guidesSilver [data-v3-guides-indicator="app-header"]::after,
+.guidesSilver [data-v3-guides-indicator="forge-header"]::before,
+.guidesSilver [data-v3-guides-indicator="forge-header"]::after {
+  pointer-events: none;
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header"]::before,
+.guidesSilver [data-v3-guides-indicator="forge-header"]::before {
+  inset-block-start: 5px;
+  height: 1px;
+  background: color-mix(in srgb, var(--og-brass-500) 24%, transparent);
+  box-shadow: 0 48px 0 color-mix(in srgb, var(--og-ink-950) 46%, transparent);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header"]::after,
+.guidesSilver [data-v3-guides-indicator="forge-header"]::after {
+  inset-block-end: -6px;
+  height: 7px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--og-walnut-950) 78%, transparent), transparent);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-title"] {
+  position: absolute;
+  inset-inline: 0;
+  z-index: 1;
+  width: fit-content;
+  margin: 0 auto;
+  color: var(--og-paper-50);
+  font-family: var(--og-font-display);
+  font-size: 1.76rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: var(--og-leading-title);
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 2px 2px color-mix(in srgb, var(--og-walnut-950) 76%, transparent);
+}
+
+.guidesSilver [data-v3-guides-indicator="forge-header"] h1 {
+  position: relative;
+  z-index: 1;
+  color: var(--og-paper-50);
+  font-family: var(--og-font-display);
+  font-size: 1.34rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-shadow: 0 2px 2px color-mix(in srgb, var(--og-walnut-950) 76%, transparent);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header-actions"] {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--og-space-2);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header-actions"] button,
+.guidesSilver [data-v3-guides-indicator="menu-control"],
+.guidesSilver [data-v3-guides-indicator="forge-header"] button {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  border-radius: var(--og-radius-round);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  color: var(--og-brass-500);
+  text-decoration: none;
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header-actions"] button::before,
+.guidesSilver [data-v3-guides-indicator="app-header-actions"] button::after,
+.guidesSilver [data-v3-guides-indicator="menu-control"]::before,
+.guidesSilver [data-v3-guides-indicator="menu-control"]::after,
+.guidesSilver [data-v3-guides-indicator="forge-header"] button::before,
+.guidesSilver [data-v3-guides-indicator="forge-header"] button::after {
+  pointer-events: none;
+  content: '';
+  position: absolute;
+  border-radius: inherit;
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header-actions"] button::before,
+.guidesSilver [data-v3-guides-indicator="menu-control"]::before,
+.guidesSilver [data-v3-guides-indicator="forge-header"] button::before {
+  inset: 2px;
+  background-image: var(--og-material-brass);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 220px auto, 100% 100%;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 14%, transparent);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header-actions"] button::after,
+.guidesSilver [data-v3-guides-indicator="menu-control"]::after,
+.guidesSilver [data-v3-guides-indicator="forge-header"] button::after {
+  inset: 6px;
+  background: radial-gradient(circle at 42% 28%, color-mix(in srgb, var(--og-paper-50) 12%, transparent), transparent 34%);
+}
+
+.guidesSilver [data-v3-guides-indicator="app-header-actions"] button > svg,
+.guidesSilver [data-v3-guides-indicator="menu-control"] svg,
+.guidesSilver [data-v3-guides-indicator="forge-header"] button > svg {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--og-ink-950) 72%, transparent));
+}
+
+.guidesSilver [data-v3-guides-indicator="menu-control"] {
+  width: 40px;
+  height: 40px;
+}
+
+.guidesSilver h1,
+.guidesSilver h2,
+.guidesSilver h3 {
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.guidesSilver p {
+  color: var(--og-text-secondary);
+}
+
+.guidesSilver [data-v3-guides-indicator="help-popover"] {
+  position: absolute;
+  inset-block-start: calc(100% + var(--og-space-2));
+  inset-inline-end: var(--og-space-3);
+  z-index: 20;
+  width: min(312px, calc(100vw - 40px));
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  padding: var(--og-space-4);
+  box-shadow: var(--og-shadow-large);
+}
+
+.guidesSilver [data-v3-guides-indicator="help-popover"] p:first-child {
+  color: color-mix(in srgb, var(--og-status-warning) 78%, var(--og-ink-800));
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: var(--og-leading-caption);
+  text-transform: uppercase;
+}
+
+.guidesSilver [data-v3-guides-indicator="help-popover"] p:last-child {
+  margin-block-start: var(--og-space-2);
+  color: var(--og-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: var(--og-leading-body);
+}
+
+.guidesSilver [role="tablist"] {
+  min-height: 42px;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
+  border-radius: var(--og-radius-l);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-dark-inset);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  padding: 5px;
+  box-shadow: var(--og-shadow-pressed), var(--og-shadow-contact);
+}
+
+.guidesSilver [role="tab"] {
+  min-height: 30px;
+  border-radius: var(--og-radius-m);
+  color: var(--og-paper-200);
+  font-family: var(--og-font-display);
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.guidesSilver [role="tab"][aria-selected="true"] {
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-paper-card);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 220px auto, 100% 100%;
+  color: var(--og-text-primary);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--og-paper-50) 32%, transparent),
+    inset 0 -1px 1px color-mix(in srgb, var(--og-walnut-700) 18%, transparent),
+    0 1px 2px color-mix(in srgb, var(--og-walnut-950) 36%, transparent);
+}
+
+.guidesSilver input,
+.guidesSilver textarea {
+  border: var(--og-border-width) solid var(--og-border-subtle);
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  font-family: var(--og-font-ui);
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.guidesSilver input::placeholder,
+.guidesSilver textarea::placeholder {
+  color: var(--og-text-muted);
+}
+
+.guidesSilver input:focus,
+.guidesSilver textarea:focus {
+  border-color: color-mix(in srgb, var(--og-focus) 72%, var(--og-brass-500));
+  outline: var(--og-focus-width) solid color-mix(in srgb, var(--og-focus) 70%, white);
+  outline-offset: 1px;
+}
+
+.guidesSilver [data-v3-guides-indicator="search-input"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  padding: 8px;
+  box-shadow: var(--og-shadow-physical-panel);
+}
+
+.guidesSilver [data-v3-guides-indicator="search-input"] svg {
+  color: var(--og-text-muted);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"],
+.guidesSilver [data-v3-guides-indicator="decks-list"],
+.guidesSilver [data-v3-guides-indicator="library-section"],
+.guidesSilver [data-v3-guides-indicator="library-tags"],
+.guidesSilver [data-v3-guides-indicator="empty-panel"],
+.guidesSilver [data-v3-guides-indicator="choice-card"],
+.guidesSilver [data-v3-guides-indicator="source-choice-card"],
+.guidesSilver [data-v3-guides-indicator="selectable-media-row"],
+.guidesSilver [data-v3-guides-indicator="info-pair"],
+.guidesSilver [data-v3-guides-indicator="info-box"],
+.guidesSilver [data-v3-guides-indicator="create-choice-sheet"],
+.guidesSilver [data-v3-guides-indicator="add-card-sheet"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 260px auto, 100% 100%;
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"] > div:first-child {
+  background-color: color-mix(in srgb, var(--og-paper-50) 42%, transparent);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"] > div:first-child > div:first-child,
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"] > span:first-child,
+.guidesSilver [data-v3-guides-indicator="deck-row"] span:has(img),
+.guidesSilver [data-v3-guides-indicator="choice-card"] > span:first-child,
+.guidesSilver [data-v3-guides-indicator="source-choice-card"] > span:first-child,
+.guidesSilver [data-v3-guides-indicator="selectable-media-row"] > span:first-child {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
+  background-color: var(--og-paper-200);
+  background-image: var(--og-material-photo-mount);
+  box-shadow: var(--og-shadow-photo-mount);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"] h2,
+.guidesSilver [data-v3-guides-indicator="guide-card"] p,
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"] span,
+.guidesSilver [data-v3-guides-indicator="deck-row"] span,
+.guidesSilver [data-v3-guides-indicator="forge-deck-row"] span,
+.guidesSilver [data-v3-guides-indicator="choice-card"] span,
+.guidesSilver [data-v3-guides-indicator="source-choice-card"] span,
+.guidesSilver [data-v3-guides-indicator="selectable-media-row"] span {
+  color: var(--og-text-primary);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"] p,
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"] span span:last-child,
+.guidesSilver [data-v3-guides-indicator="deck-row"] span span:not(:first-child),
+.guidesSilver [data-v3-guides-indicator="choice-card"] span span:last-child,
+.guidesSilver [data-v3-guides-indicator="source-choice-card"] span span:last-child,
+.guidesSilver [data-v3-guides-indicator="selectable-media-row"] span span:last-child {
+  color: var(--og-text-secondary);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"] > div:last-child {
+  border-block-start: var(--og-border-width) solid var(--og-border-subtle);
+  background-color: color-mix(in srgb, var(--og-paper-50) 42%, transparent);
+  color: var(--og-text-muted);
+  font-family: var(--og-font-mono);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"] > div:last-child span:last-child,
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"] > span:last-child,
+.guidesSilver [data-v3-guides-indicator="deck-row"] > button,
+.guidesSilver [data-v3-guides-indicator="deck-row"] > a[data-v3-guides-indicator="deck-edit-link"],
+.guidesSilver [data-v3-guides-indicator="forge-deck-row"] > span:last-child {
+  border-color: color-mix(in srgb, var(--og-brass-500) 62%, var(--og-walnut-700));
+  background-color: color-mix(in srgb, var(--og-brass-500) 18%, var(--og-paper-50));
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-brass-plate);
+}
+
+.guidesSilver [data-v3-guides-indicator="deck-row"] > a[data-v3-guides-indicator="deck-edit-link"]:hover,
+.guidesSilver [data-v3-guides-indicator="deck-row"] > a[data-v3-guides-indicator="deck-edit-link"]:focus-visible {
+  border-color: color-mix(in srgb, var(--og-brass-300) 76%, var(--og-paper-50));
+  color: var(--og-paper-50);
+  outline: none;
+}
+
+.guidesSilver [data-v3-guides-indicator="deck-row"],
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"],
+.guidesSilver [data-v3-guides-indicator="forge-deck-row"] {
+  color: var(--og-text-primary);
+}
+
+.guidesSilver [data-v3-guides-indicator="deck-row"] {
+  border-block-start: var(--og-border-width) solid var(--og-border-subtle);
+}
+
+.guidesSilver [data-v3-guides-indicator="library-section"] > div:first-child,
+.guidesSilver [data-v3-guides-indicator="decks-list"] > div:first-child {
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, transparent);
+}
+
+.guidesSilver [data-v3-guides-indicator="library-section"] h2,
+.guidesSilver [data-v3-guides-indicator="decks-list"] h2 {
+  color: color-mix(in srgb, var(--og-status-warning) 82%, var(--og-ink-800));
+  font-family: var(--og-font-ui);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: var(--og-tracking-label);
+}
+
+.guidesSilver [data-v3-guides-indicator="library-section"] button,
+.guidesSilver [data-v3-guides-indicator="library-tag"],
+.guidesSilver [data-v3-guides-indicator="decks-list"] button,
+.guidesSilver [data-v3-guides-indicator="primary-button"],
+.guidesSilver [data-v3-guides-indicator="create-choice-sheet"] button,
+.guidesSilver [data-v3-guides-indicator="add-card-sheet"] button {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  color: var(--og-paper-100);
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.guidesSilver [data-v3-guides-indicator="library-tags"] button[data-v3-guides-indicator="library-tag"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  color: var(--og-paper-100);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.1;
+  padding: 9px 12px;
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.guidesSilver [data-v3-guides-indicator="library-tags"] button[data-v3-guides-indicator="library-tag"]:hover,
+.guidesSilver [data-v3-guides-indicator="library-tags"] button[data-v3-guides-indicator="library-tag"]:focus-visible {
+  border-color: color-mix(in srgb, var(--og-brass-500) 72%, var(--og-paper-50));
+  color: var(--og-paper-50);
+  outline: none;
+}
+
+.guidesSilver [data-v3-guides-indicator="primary-button"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-walnut-control);
+  color: var(--og-paper-50);
+  font-family: var(--og-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.guidesSilver [data-v3-guides-indicator="info-box"] {
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-secondary);
+}
+
+.guidesSilver [data-v3-guides-indicator="create-choice-sheet"],
+.guidesSilver [data-v3-guides-indicator="add-card-sheet"] {
+  border-radius: var(--og-radius-l);
+  box-shadow: var(--og-shadow-large);
+}
+
+.guidesSilver [data-v3-guides-indicator="create-choice-sheet"] h2,
+.guidesSilver [data-v3-guides-indicator="add-card-sheet"] h2 {
+  font-size: 1.55rem;
+}
+
+.guidesSilver [data-v3-guides-indicator="create-choice-sheet"] [data-v3-guides-indicator="choice-card"],
+.guidesSilver [data-v3-guides-indicator="add-card-sheet"] button:not([aria-label]),
+.guidesSilver [data-v3-guides-indicator="source-choice-card"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 260px auto, 100% 100%;
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.guidesSilver [data-v3-guides-indicator="source-choice-card"] > span:first-child {
+  border-color: color-mix(in srgb, var(--og-brass-500) 62%, var(--og-walnut-700));
+  background-color: color-mix(in srgb, var(--og-brass-500) 16%, var(--og-paper-50));
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-brass-plate);
+}
+
+.guidesSilver [data-v3-guides-indicator="source-choice-card"] > span:last-child,
+.guidesSilver [data-v3-guides-indicator="choice-card"] > span:last-child {
+  color: var(--og-text-muted);
+}
+
+.guidesSilver section[class*="bg-[#111821]"],
+.guidesSilver div[class*="bg-[#111821]"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-contact);
+}
+
+.guidesSilver [class*="divide-y"] > * + * {
+  border-color: var(--og-border-subtle);
+}
+
+.guidesSilver a,
+.guidesSilver button {
+  transition:
+    border-color var(--og-motion-fast) var(--og-ease-physical),
+    box-shadow var(--og-motion-fast) var(--og-ease-physical),
+    color var(--og-motion-fast) var(--og-ease-physical),
+    transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.guidesSilver a:active,
+.guidesSilver button:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 390px) {
+  .guidesSilver [data-v3-guides-indicator="content"],
+  .guidesSilver [data-v3-guides-indicator="forge-content"] {
+    padding-inline: 10px;
+  }
+
+  .guidesSilver [data-v3-guides-indicator="app-title"] {
+    font-size: 1.58rem;
+  }
+}

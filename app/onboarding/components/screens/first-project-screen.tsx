@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState, useTransition } from 'react'
 import { createFirstProjectUnitAction } from '../../actions'
+import styles from '../../../auth-flow-silver.module.css'
 
 type FirstProjectScreenProps = {
   onCreated: (unitId: string | null) => void
@@ -53,14 +54,14 @@ export default function FirstProjectScreen({
   }
 
   return (
-    <section className="flex min-h-screen flex-col bg-[#05090a] px-4 pb-8 pt-9 text-white">
+    <section className={styles.paperScreen}>
       <StepDots activeIndex={2} />
 
-      <div className="mt-24 space-y-3">
-        <h1 className="text-2xl font-black leading-tight">
+      <div className={`${styles.screenIntro} ${styles.screenIntroLarge}`}>
+        <h1 className={styles.screenTitle}>
           Let&apos;s start with one miniature
         </h1>
-        <p className="max-w-sm text-sm font-medium leading-6 text-white/55">
+        <p className={styles.screenCopy}>
           Add the model you want to paint. We will help you decide what to do
           first.
         </p>
@@ -69,18 +70,18 @@ export default function FirstProjectScreen({
       <form onSubmit={handleSubmit} className="mt-8 flex flex-1 flex-col">
         <input type="hidden" name="projectName" value="Onboarding Bench" />
 
-        <label className="relative flex min-h-36 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/16 bg-[#121923] px-5 py-6 text-center transition hover:border-cyan-300/50 hover:bg-cyan-300/[0.05]">
+        <label className={styles.uploadTray}>
           {imagePreview ? (
             <Image
               src={imagePreview}
               alt=""
               fill
-              className="object-cover opacity-75"
+              className={styles.previewImage}
               unoptimized
             />
           ) : null}
 
-          <span className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-white/42">
+          <span className={styles.uploadIcon}>
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
               <path
                 d="M4.5 8.5A2.5 2.5 0 0 1 7 6h1.6l1.2-1.5h4.4L15.4 6H17a2.5 2.5 0 0 1 2.5 2.5V17A2.5 2.5 0 0 1 17 19.5H7A2.5 2.5 0 0 1 4.5 17V8.5Z"
@@ -96,10 +97,10 @@ export default function FirstProjectScreen({
             </svg>
           </span>
 
-          <span className="relative z-10 mt-4 text-sm font-black text-white/72">
+          <span className={styles.uploadTitle}>
             Take or upload a photo
           </span>
-          <span className="relative z-10 mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300/42">
+          <span className={styles.uploadHint}>
             Optional - helps guide your experience
           </span>
 
@@ -112,8 +113,8 @@ export default function FirstProjectScreen({
           />
         </label>
 
-        <label className="mt-8 block space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
+        <label className={styles.fieldGroup}>
+          <span className={styles.fieldLabel}>
             What are you painting?
           </span>
           <input
@@ -121,32 +122,32 @@ export default function FirstProjectScreen({
             value={unitName}
             onChange={(event) => setUnitName(event.target.value)}
             required
-            className="min-h-12 w-full rounded-2xl border border-white/10 bg-[#101722] px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/26 focus:border-cyan-300/55 focus:bg-[#121c29]"
+            className={styles.input}
             placeholder="e.g. Space Marine Captain, Skeleton Warriors..."
           />
         </label>
 
-        <label className="mt-5 flex cursor-pointer items-center gap-3 text-xs font-bold text-white/38">
+        <label className={styles.inlineCheck}>
           <input
             type="checkbox"
             checked={useDemo}
             onChange={(event) => setUseDemo(event.target.checked)}
-            className="h-4 w-4 rounded border-white/20 bg-white/[0.06] accent-cyan-300"
+            className={styles.checkbox}
           />
           <span>I don&apos;t have a miniature ready - show me a demo</span>
         </label>
 
         {error ? (
-          <p className="mt-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
+          <p className={`${styles.message} ${styles.messageError}`}>
             {error}
           </p>
         ) : null}
 
-        <div className="mt-auto space-y-4 pt-10">
+        <div className={styles.bottomActions}>
           <button
             type="submit"
             disabled={!canSubmit}
-            className="tap-press tap-target h-14 w-full rounded-2xl bg-cyan-400 text-sm font-black text-black shadow-[0_0_28px_rgba(34,211,238,0.24)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-white/[0.10] disabled:text-white/28 disabled:shadow-none"
+            className={`tap-press tap-target ${styles.ctaButton}`}
           >
             {isPending ? 'Creating...' : 'Show me my first step -&gt;'}
           </button>
@@ -155,7 +156,7 @@ export default function FirstProjectScreen({
             type="button"
             disabled={isPending}
             onClick={onSkip}
-            className="tap-target mx-auto block rounded-full px-4 py-2 text-sm font-bold text-white/40 transition hover:bg-white/5 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`tap-target ${styles.backButton}`}
           >
             I&apos;ll add one later
           </button>
@@ -167,15 +168,13 @@ export default function FirstProjectScreen({
 
 function StepDots({ activeIndex }: { activeIndex: number }) {
   return (
-    <div className="flex gap-2" aria-label="Onboarding step 3 of 3">
+    <div className={styles.stepDots} aria-label="Onboarding step 3 of 3">
       {[0, 1, 2].map((step) => (
         <span
           key={step}
           className={[
-            'h-2 rounded-full transition-all',
-            activeIndex === step
-              ? 'w-4 bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.7)]'
-              : 'w-2 bg-white/18',
+            styles.stepDot,
+            activeIndex === step ? styles.stepDotActive : '',
           ].join(' ')}
         />
       ))}

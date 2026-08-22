@@ -3,7 +3,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ReactNode, useEffect, useState } from 'react'
+import AppHamburgerMenu from '../components/app-hamburger-menu'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import styles from './guides-v3-silver.module.css'
 import type {
   GuidesV3Deck,
   GuidesV3GuideFile,
@@ -339,16 +341,9 @@ export default function GuidesV3Preview({
     initialPayload?.libraryDecks.length
       ? initialPayload.libraryDecks
       : publicDecks
-  const seedSavedDeckIds =
-    initialPayload?.savedDeckIds.length
-      ? initialPayload.savedDeckIds
-      : initialDecks.filter((deck) => deck.saved).map((deck) => deck.id)
   const [activeTab, setActiveTab] = useState<GuideTab>('guides')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks, setDecks] = useState(seedDecks)
-  const [savedDeckIds, setSavedDeckIds] = useState(
-    () => new Set(seedSavedDeckIds)
-  )
   const [query, setQuery] = useState('')
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false)
@@ -500,7 +495,6 @@ export default function GuidesV3Preview({
         accent: '#22d3ee',
       }
       setDecks((current) => [nextDeck, ...current])
-      setSavedDeckIds((current) => new Set(current).add(nextDeck.id))
       setActiveTab('decks')
     } else {
       const guideDeckTotal = selectedGuideDecks.length
@@ -589,18 +583,6 @@ export default function GuidesV3Preview({
     )
     setGuideImage(firstDeck?.image ?? '/onboarding/pains/tough-choices.jpeg')
     setForgeScreen('guide-compose')
-  }
-
-  function toggleDeckSave(deckId: string) {
-    setSavedDeckIds((current) => {
-      const next = new Set(current)
-      if (next.has(deckId)) {
-        next.delete(deckId)
-      } else {
-        next.add(deckId)
-      }
-      return next
-    })
   }
 
   if (forgeScreen) {
@@ -755,58 +737,23 @@ export default function GuidesV3Preview({
 
   return (
     <main
-      className="min-h-screen bg-[#05090b] text-white"
+      className={styles.guidesSilver}
       data-v3-guides-indicator="root"
       data-v3-guides-source={initialPayload ? 'live' : 'fallback'}
     >
       <V3PerfIndicator surface="guides" detail={activeTab} />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6">
-        <TopNav />
-
-        <header className="relative">
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="text-[28px] font-black leading-none tracking-normal">
-              Guides
-            </h1>
-
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                aria-expanded={isHelpOpen}
-                aria-controls="guides-help"
-                aria-label="About guides"
-                onClick={() => setIsHelpOpen((open) => !open)}
-                className="grid h-9 w-9 place-items-center rounded-full bg-[#11171d] text-sm font-black text-white/58 transition hover:bg-white/12 hover:text-cyan-300"
-              >
-                ?
-              </button>
-              <button
-                type="button"
-                aria-label="Create guide or deck"
-                onClick={openCreateChoice}
-                className="grid h-9 w-9 place-items-center rounded-full bg-cyan-300 text-xl font-black leading-none text-black shadow-[0_0_24px_rgba(34,211,238,0.22)] transition hover:bg-cyan-200"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {isHelpOpen ? (
-            <aside
-              id="guides-help"
-              className="absolute right-12 top-12 z-20 w-[min(312px,calc(100vw-40px))] rounded-[8px] border border-cyan-300/20 bg-[#11171d] p-4 shadow-2xl shadow-black/45"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
-                Guides, Decks, Library
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/70">
-                Guides are collections of decks. Decks are step-card sequences
-                for a material, technique, or result. Library is where public
-                guides and decks can be found and saved.
-              </p>
-            </aside>
-          ) : null}
-        </header>
+      <div
+        className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6"
+        data-v3-guides-indicator="content"
+      >
+        <TopNav
+          isHelpOpen={isHelpOpen}
+          onCreate={openCreateChoice}
+          onHelpToggle={() => {
+            setIsCreateChoiceOpen(false)
+            setIsHelpOpen((open) => !open)
+          }}
+        />
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -814,9 +761,7 @@ export default function GuidesV3Preview({
         {activeTab === 'decks' ? (
           <DecksTab
             decks={decks}
-            savedDeckIds={savedDeckIds}
             onAddDeck={openCreateChoice}
-            onToggleDeckSave={toggleDeckSave}
           />
         ) : null}
         {activeTab === 'library' ? (
@@ -825,8 +770,6 @@ export default function GuidesV3Preview({
             onQueryChange={setQuery}
             guides={filteredLibraryGuides}
             decks={filteredLibraryDecks}
-            savedDeckIds={savedDeckIds}
-            onSaveDeck={toggleDeckSave}
           />
         ) : null}
       </div>
@@ -855,48 +798,59 @@ function getForgeScreenTitle(screen: ForgeScreen, mode: ForgeMode) {
   return mode === 'deck' ? 'Edit Deck' : 'Deck Editor'
 }
 
-function TopNav() {
+function TopNav({
+  isHelpOpen,
+  onCreate,
+  onHelpToggle,
+}: {
+  isHelpOpen: boolean
+  onCreate: () => void
+  onHelpToggle: () => void
+}) {
   return (
-    <header className="flex items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/10">
-          <Image
-            src="/curator/the-curator.png"
-            alt=""
-            fill
-            sizes="36px"
-            className="object-cover"
-            priority
-          />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[8px] font-black uppercase tracking-[0.28em] text-white/28">
-            Obsidian Gallery
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="shrink-0 text-xs font-black text-cyan-300">
-              Lv.4
-            </span>
-            <div
-              className="flex gap-1"
-              aria-label="Level progress 4 out of 300"
-            >
-              {Array.from({ length: 10 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={[
-                    'h-1.5 w-3 rounded-full',
-                    index === 0 ? 'bg-cyan-300/85' : 'bg-white/10',
-                  ].join(' ')}
-                />
-              ))}
-            </div>
-            <span className="shrink-0 text-[10px] font-black text-white/30">
-              4/300
-            </span>
-          </div>
-        </div>
+    <header data-v3-guides-indicator="app-header">
+      <AppHamburgerMenu
+        data-v3-guides-indicator="menu-control"
+        aria-label="Open guides menu"
+      />
+
+      <h1 data-v3-guides-indicator="app-title">Guides</h1>
+
+      <div data-v3-guides-indicator="app-header-actions">
+        <button
+          type="button"
+          aria-expanded={isHelpOpen}
+          aria-controls="guides-help"
+          aria-label="About guides"
+          onClick={onHelpToggle}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+            <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
+            <path d="M12 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          aria-label="Create guide or deck"
+          onClick={onCreate}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+          </svg>
+        </button>
       </div>
+
+      {isHelpOpen ? (
+        <aside id="guides-help" data-v3-guides-indicator="help-popover">
+          <p>Guides, Decks, Library</p>
+          <p>
+            Guides are collections of decks. Decks are step-card sequences for
+            a material, technique, or result. Library is where public guides
+            and decks can be found and saved.
+          </p>
+        </aside>
+      ) : null}
     </header>
   )
 }
@@ -913,9 +867,18 @@ function ForgeShell({
   title: string
 }) {
   return (
-    <main className="min-h-screen bg-[#05090b] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-3 pb-28 pt-7">
-        <header className="flex items-center justify-between gap-3">
+    <main
+      className={styles.guidesSilver}
+      data-v3-guides-indicator="forge-root"
+    >
+      <div
+        className="mx-auto flex w-full max-w-md flex-col gap-4 px-3 pb-28 pt-7"
+        data-v3-guides-indicator="forge-content"
+      >
+        <header
+          className="flex items-center justify-between gap-3"
+          data-v3-guides-indicator="forge-header"
+        >
           <button
             type="button"
             onClick={onBack}
@@ -1244,7 +1207,10 @@ function CreateChoiceSheet({
 }) {
   return (
     <div className="fixed inset-0 z-[60] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
-      <section className="w-full max-w-md rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50">
+      <section
+        className="w-full max-w-md rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
+        data-v3-guides-indicator="create-choice-sheet"
+      >
         <div className="mb-4 flex items-center justify-between">
           <button
             type="button"
@@ -1298,6 +1264,7 @@ function ChoiceCard({
     <button
       type="button"
       onClick={onClick}
+      data-v3-guides-indicator="choice-card"
       className="grid grid-cols-[72px_1fr_auto] items-center gap-3 rounded-[10px] border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-cyan-300/45"
     >
       <span className="relative h-16 overflow-hidden rounded-[8px] bg-black">
@@ -1335,6 +1302,7 @@ function SourcePicker({
           key={id}
           type="button"
           onClick={() => onChooseSource(id as SourceKind)}
+          data-v3-guides-indicator="source-choice-card"
           className="flex items-center gap-3 rounded-[10px] border border-white/10 bg-[#111821] p-3 text-left transition hover:border-cyan-300/45"
         >
           <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] bg-cyan-300/10 text-xl font-black text-cyan-300">
@@ -1835,7 +1803,10 @@ function AddCardSheet({
   ]
   return (
     <div className="fixed inset-0 z-[70] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
-      <section className="w-full max-w-md rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50">
+      <section
+        className="w-full max-w-md rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
+        data-v3-guides-indicator="add-card-sheet"
+      >
         <div className="mb-4 flex items-center gap-3">
           <button
             type="button"
@@ -1934,13 +1905,9 @@ function GuidesTab({ guideFiles }: { guideFiles: GuideFile[] }) {
 function DecksTab({
   decks,
   onAddDeck,
-  onToggleDeckSave,
-  savedDeckIds,
 }: {
   decks: Deck[]
   onAddDeck: () => void
-  onToggleDeckSave: (deckId: string) => void
-  savedDeckIds: Set<string>
 }) {
   return (
     <section
@@ -1965,8 +1932,6 @@ function DecksTab({
             <DeckRow
               key={deck.id}
               deck={deck}
-              isSaved={savedDeckIds.has(deck.id)}
-              onToggleSave={() => onToggleDeckSave(deck.id)}
             />
           ))
         ) : (
@@ -1984,16 +1949,12 @@ function LibraryTab({
   decks,
   guides,
   onQueryChange,
-  onSaveDeck,
   query,
-  savedDeckIds,
 }: {
   decks: Deck[]
   guides: GuideFile[]
   onQueryChange: (query: string) => void
-  onSaveDeck: (deckId: string) => void
   query: string
-  savedDeckIds: Set<string>
 }) {
   return (
     <section className="grid gap-4">
@@ -2002,7 +1963,10 @@ function LibraryTab({
         value={query}
         onChange={onQueryChange}
       />
-      <section className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4">
+      <section
+        className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
+        data-v3-guides-indicator="library-tags"
+      >
         <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
           Popular Tags
         </h2>
@@ -2012,6 +1976,7 @@ function LibraryTab({
               key={tag}
               type="button"
               onClick={() => onQueryChange(tag)}
+              data-v3-guides-indicator="library-tag"
               className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black text-white/52 transition hover:border-cyan-300/45 hover:text-cyan-300"
             >
               {tag}
@@ -2035,8 +2000,6 @@ function LibraryTab({
               <DeckRow
                 key={deck.id}
                 deck={deck}
-                isSaved={savedDeckIds.has(deck.id)}
-                onToggleSave={() => onSaveDeck(deck.id)}
               />
             ))
           ) : (
@@ -2050,7 +2013,10 @@ function LibraryTab({
 
 function EmptyPanel({ text, title }: { text: string; title: string }) {
   return (
-    <div className="m-4 rounded-[8px] border border-dashed border-white/10 bg-black/18 p-5 text-center">
+    <div
+      className="m-4 rounded-[8px] border border-dashed border-white/10 bg-black/18 p-5 text-center"
+      data-v3-guides-indicator="empty-panel"
+    >
       <p className="text-sm font-black text-white">{title}</p>
       <p className="mt-2 text-xs font-semibold leading-5 text-white/42">{text}</p>
     </div>
@@ -2061,6 +2027,7 @@ function GuideFileCard({ guide }: { guide: GuideFile }) {
   return (
     <Link
       href={`/guides/${guide.id}?preview=1`}
+      data-v3-guides-indicator="guide-card"
       className="block overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45"
     >
       <div className="grid grid-cols-[110px_1fr] gap-3 p-3">
@@ -2108,6 +2075,7 @@ function CompactGuideCard({ guide }: { guide: GuideFile }) {
   return (
     <Link
       href={`/guides/${guide.id}?preview=1`}
+      data-v3-guides-indicator="compact-guide-card"
       className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.035]"
     >
       <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[8px] bg-black">
@@ -2130,15 +2098,14 @@ function CompactGuideCard({ guide }: { guide: GuideFile }) {
 
 function DeckRow({
   deck,
-  isSaved,
-  onToggleSave,
 }: {
   deck: Deck
-  isSaved: boolean
-  onToggleSave: () => void
 }) {
   return (
-    <article className="flex items-center gap-3 px-4 py-3">
+    <article
+      className="flex items-center gap-3 px-4 py-3"
+      data-v3-guides-indicator="deck-row"
+    >
       <Link
         href={`/guides/decks/${deck.id}?preview=1`}
         className="flex min-w-0 flex-1 items-center gap-3 transition hover:opacity-85"
@@ -2162,26 +2129,24 @@ function DeckRow({
           </span>
         </span>
       </Link>
-      <button
-        type="button"
-        onClick={onToggleSave}
-        aria-label={isSaved ? `Remove ${deck.title}` : `Save ${deck.title}`}
-        className={[
-          'grid h-9 w-9 shrink-0 place-items-center rounded-full border text-lg font-black transition',
-          isSaved
-            ? 'border-cyan-300/35 bg-cyan-300/10 text-cyan-300'
-            : 'border-white/14 bg-white/[0.04] text-white/52 hover:border-cyan-300/45 hover:text-cyan-300',
-        ].join(' ')}
+      <Link
+        href={`/recipes/${deck.id}`}
+        aria-label={`Edit ${deck.title}`}
+        data-v3-guides-indicator="deck-edit-link"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border text-lg font-black transition"
       >
-        {isSaved ? <CheckIcon /> : '+'}
-      </button>
+        <EditIcon />
+      </Link>
     </article>
   )
 }
 
 function ForgeDeckRow({ deck }: { deck: ForgeDeck }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
+    <div
+      className="flex items-center gap-3 px-4 py-3"
+      data-v3-guides-indicator="forge-deck-row"
+    >
       <span className="text-white/22">::</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-black text-white">
@@ -2208,7 +2173,10 @@ function LibrarySection({
   title: string
 }) {
   return (
-    <section className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
+    <section
+      className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
+      data-v3-guides-indicator="library-section"
+    >
       <div className="flex items-center justify-between px-4 py-3">
         <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
           {title}
@@ -2242,6 +2210,7 @@ function SelectableMediaRow({
     <button
       type="button"
       onClick={onClick}
+      data-v3-guides-indicator="selectable-media-row"
       className={[
         'grid grid-cols-[64px_1fr_auto] items-center gap-3 rounded-[10px] border bg-[#111821] p-3 text-left transition',
         selected ? 'border-cyan-300/55' : 'border-white/10',
@@ -2273,7 +2242,7 @@ function SearchInput({
   value?: string
 }) {
   return (
-    <label className="relative block">
+    <label className="relative block" data-v3-guides-indicator="search-input">
       <span className="sr-only">{placeholder}</span>
       <svg
         aria-hidden="true"
@@ -2300,7 +2269,10 @@ function SearchInput({
 
 function InfoPair({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[8px] border border-white/10 bg-white/[0.035] p-3">
+    <div
+      className="rounded-[8px] border border-white/10 bg-white/[0.035] p-3"
+      data-v3-guides-indicator="info-pair"
+    >
       <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/28">
         {label}
       </p>
@@ -2311,7 +2283,10 @@ function InfoPair({ label, value }: { label: string; value: string }) {
 
 function InfoBox({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-[10px] border border-cyan-300/18 bg-cyan-300/8 p-3 text-xs font-semibold leading-5 text-white/52">
+    <div
+      className="rounded-[10px] border border-cyan-300/18 bg-cyan-300/8 p-3 text-xs font-semibold leading-5 text-white/52"
+      data-v3-guides-indicator="info-box"
+    >
       {children}
     </div>
   )
@@ -2328,6 +2303,7 @@ function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
+      data-v3-guides-indicator="primary-button"
       className="tap-press h-12 rounded-[10px] bg-cyan-300 text-sm font-black text-black shadow-[0_0_24px_rgba(34,211,238,0.22)] transition hover:bg-cyan-200"
     >
       {children}
@@ -2348,6 +2324,24 @@ function CheckIcon() {
       strokeLinejoin="round"
     >
       <path d="m5 12 4 4L19 6" />
+    </svg>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   )
 }

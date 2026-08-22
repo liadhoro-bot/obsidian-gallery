@@ -68,7 +68,7 @@ export const metadata: Metadata = {
       {
         rel: 'mask-icon',
         url: '/bookmark.svg',
-        color: '#22d3ee',
+        color: '#c79a54',
       },
     ],
   },
@@ -81,7 +81,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#081018',
+  themeColor: '#24150b',
   colorScheme: 'dark',
   viewportFit: 'cover',
 }

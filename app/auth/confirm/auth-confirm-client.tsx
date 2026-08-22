@@ -3,6 +3,7 @@
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
 import { isV3PreviewValue } from '../../../lib/v3-preview'
+import styles from '../../auth-flow-silver.module.css'
 
 const emailOtpTypes = new Set<EmailOtpType>([
   'signup',
@@ -141,16 +142,16 @@ export default function AuthConfirmClient() {
   }, [params])
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-[#05080a] px-6 text-white">
-      <section className="w-full max-w-sm text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl border border-cyan-300/20 bg-cyan-300/10 shadow-[0_0_40px_rgba(34,211,238,0.18)]">
-          <span className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-200 border-t-transparent" />
+    <main className={`${styles.authRoot} px-6`}>
+      <section className={styles.confirmPanel}>
+        <div className={styles.confirmSpinnerShell}>
+          <span className={styles.spin} />
         </div>
-        <p className="mt-6 text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
+        <p className={`${styles.eyebrow} mt-6`}>
           Obsidian Gallery
         </p>
-        <h1 className="mt-3 text-2xl font-black">{status}</h1>
-        <p className="mt-3 text-sm font-semibold leading-6 text-white/50">
+        <h1 className={styles.confirmTitle}>{status}</h1>
+        <p className={`${styles.screenCopy} mx-auto mt-3`}>
           Keep this tab open while we finish the secure sign-in handoff.
         </p>
       </section>

@@ -10,6 +10,7 @@ import {
   SettingsProfileSkeleton,
   SettingsCardSkeleton,
 } from './settings-skeletons'
+import styles from '../settings-support-silver.module.css'
 
 type SettingsPageProps = {
   searchParams?: Promise<{
@@ -36,14 +37,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   }
 
   return (
-    <main className="min-h-screen bg-[#061012] pb-24 text-slate-100">
-
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pt-8">
+    <main className={styles.root}>
+      <div className={styles.shell}>
         <Suspense fallback={<SettingsProfileSkeleton />}>
           <SettingsProfileCard />
         </Suspense>
 
-                <Suspense fallback={<SettingsCardSkeleton />}>
+        <Suspense fallback={<SettingsCardSkeleton />}>
           <SettingsSupportSection />
         </Suspense>
 

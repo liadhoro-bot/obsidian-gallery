@@ -37,7 +37,13 @@ function getSafeReason(value: string | null) {
     return null
   }
 
-  return value.replace(/\s+/g, ' ').slice(0, 180)
+  const normalized = value.replace(/\s+/g, ' ')
+
+  if (/pkce code verifier not found/i.test(normalized)) {
+    return 'That Google sign-in was opened from a different browser or stale tab. Start a fresh sign-in from this tab.'
+  }
+
+  return normalized.slice(0, 180)
 }
 
 function getLoginErrorUrl(requestUrl: URL, reason: string | null, next: string) {

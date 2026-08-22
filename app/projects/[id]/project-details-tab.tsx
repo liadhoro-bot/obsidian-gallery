@@ -7,6 +7,7 @@ import type {
   SerializableError,
 } from './types'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import styles from './project-detail-silver.module.css'
 
 type Props = {
   project: ProjectRow | null
@@ -43,37 +44,37 @@ export default function ProjectDetailsTab({
   deleteProjectImageAction,
 }: Props) {
   return (
-    <div className="mt-5 grid gap-5">
-      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
-        <p className="text-sm uppercase tracking-wider text-cyan-400">
+    <div className={styles.detailsStack}>
+      <section className={styles.panel}>
+        <p className={styles.eyebrow}>
           Description
         </p>
-        <h2 className="mt-1 text-xl font-semibold">Project Notes</h2>
-        <p className="mt-3 text-sm text-neutral-400">
+        <h2 className="mt-1 text-xl">Project Notes</h2>
+        <p className="mt-3 text-sm leading-6">
           {project?.description || 'No description'}
         </p>
       </section>
 
-      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
-        <p className="text-sm uppercase tracking-wider text-cyan-400">
+      <section className={styles.panel}>
+        <p className={styles.eyebrow}>
           Project Data
         </p>
-        <h2 className="mt-1 text-xl font-semibold">Stats</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">
+        <h2 className="mt-1 text-xl">Stats</h2>
+        <div className={styles.metricGrid}>
+          <div className={styles.metric}>
+            <p>
               Units
             </p>
-            <p className="mt-2 text-3xl font-semibold text-white">
+            <p className="mt-2 truncate">
               {projectUnitCount}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500">
+          <div className={styles.metric}>
+            <p>
               Time Spent
             </p>
-            <p className="mt-2 text-3xl font-semibold text-white">
+            <p className="mt-2 truncate">
               {formatSessionDuration(projectTotalSessionSeconds)}
             </p>
           </div>

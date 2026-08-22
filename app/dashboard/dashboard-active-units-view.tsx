@@ -12,6 +12,7 @@ import {
   OgProgressTrack,
 } from '@/src/components/v3'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import AppHamburgerMenu from '../components/app-hamburger-menu'
 import PrefetchLink from '../components/prefetch-link'
 import DashboardQuickActionStartButton from './dashboard-quick-action-start-button'
 import DashboardResumeButton from './dashboard-resume-button'
@@ -44,14 +45,6 @@ const statusOptions: StatusOption[] = [
 
 function isDisplayMode(value: string | null): value is DisplayMode {
   return value === 'cards' || value === 'tiles'
-}
-
-function MenuIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
-    </svg>
-  )
 }
 
 function HelpIcon() {
@@ -156,9 +149,10 @@ function MiniatureImage({
 function DashboardHeader() {
   return (
     <header className={styles.appHeader}>
-      <Link href="/settings" className={`${styles.headerControl} ${styles.menuControl}`} aria-label="Open menu">
-        <MenuIcon />
-      </Link>
+      <AppHamburgerMenu
+        buttonClassName={`${styles.headerControl} ${styles.menuControl}`}
+        aria-label="Open dashboard menu"
+      />
 
       <h1 className={styles.appTitle}>Dashboard</h1>
 

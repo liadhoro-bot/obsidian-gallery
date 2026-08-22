@@ -4,6 +4,7 @@ import Image from 'next/image'
 import type { FormEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
+import styles from './unit-v3-silver.module.css'
 
 type UnitV3PreviewProps = {
   id: string
@@ -270,11 +271,12 @@ export default function UnitV3Preview({
 
   return (
     <main
-      className="fixed inset-0 z-[60] overflow-y-auto bg-[#05090b] text-white"
+      className={styles.unitSilver}
+      data-v3-unit-indicator="root"
       data-v3-unit-source={liveUnit ? 'live' : 'fallback'}
     >
       <V3PerfIndicator surface="unit" detail={activeTab} />
-      <div className="mx-auto min-h-dvh w-full max-w-md pb-10">
+      <div className="mx-auto min-h-dvh w-full max-w-md pb-10" data-v3-unit-indicator="content">
         <section
           className="relative min-h-[252px] overflow-hidden"
           data-v3-unit-indicator="hero"
@@ -291,7 +293,10 @@ export default function UnitV3Preview({
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/18 to-[#05090b]" />
 
-          <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-5">
+          <div
+            className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-5"
+            data-v3-unit-indicator="hero-controls"
+          >
             <button
               type="button"
               onClick={goBack}
@@ -312,7 +317,7 @@ export default function UnitV3Preview({
               </svg>
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" data-v3-unit-indicator="hero-actions">
               <button
                 type="button"
                 aria-label="Edit unit"
@@ -333,13 +338,16 @@ export default function UnitV3Preview({
                 </svg>
               </button>
 
-              <span className="rounded-full bg-cyan-300 px-3 py-2 text-[10px] font-black text-black">
+              <span
+                className="rounded-full bg-cyan-300 px-3 py-2 text-[10px] font-black text-black"
+                data-v3-unit-indicator="unit-label"
+              >
                 {unit.label}
               </span>
             </div>
           </div>
 
-          <div className="absolute inset-x-0 bottom-4 z-10 px-4">
+          <div className="absolute inset-x-0 bottom-4 z-10 px-4" data-v3-unit-indicator="hero-title">
             <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300">
               Unit
             </p>
@@ -352,6 +360,7 @@ export default function UnitV3Preview({
         <div className="px-3">
           <div
             className="grid grid-cols-3 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-1"
+            data-v3-unit-indicator="unit-tabs"
             role="tablist"
             aria-label="Unit sections"
           >
@@ -374,7 +383,7 @@ export default function UnitV3Preview({
             ))}
           </div>
 
-          <div className="mt-4 grid gap-3">
+          <div className="mt-4 grid gap-3" data-v3-unit-indicator="tab-content">
             {activeTab === 'details' ? <DetailsTab unit={unit} /> : null}
             {activeTab === 'paint' ? <PaintTab unit={unit} /> : null}
             {activeTab === 'progress' ? <ProgressTab unit={unit} /> : null}
@@ -430,7 +439,10 @@ function DetailsTab({ unit }: { unit: PreviewUnit }) {
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/26">
               Parent Project
             </p>
-            <span className="mt-2 inline-flex rounded-full bg-cyan-300/12 px-3 py-1.5 text-[10px] font-black text-cyan-300">
+            <span
+              className="mt-2 inline-flex rounded-full bg-cyan-300/12 px-3 py-1.5 text-[10px] font-black text-cyan-300"
+              data-v3-unit-indicator="project-chip"
+            >
               {unit.project}
             </span>
           </div>
@@ -438,7 +450,10 @@ function DetailsTab({ unit }: { unit: PreviewUnit }) {
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/26">
               Status
             </p>
-            <button className="mt-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[10px] font-black text-white/76">
+            <button
+              className="mt-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[10px] font-black text-white/76"
+              data-v3-unit-indicator="status-control"
+            >
               {unit.status} v
             </button>
           </div>
@@ -1054,7 +1069,10 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
       </button>
 
       {isScheduleOpen ? (
-        <div className="fixed inset-0 z-[70] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-[70] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm"
+          data-v3-unit-indicator="schedule-scrim"
+        >
           <section
             role="dialog"
             aria-modal="true"
@@ -1303,6 +1321,7 @@ function StageToolButton({
   return (
     <button
       type="button"
+      data-v3-unit-indicator="stage-tool-button"
       className="flex h-11 min-w-0 items-center justify-center gap-2 rounded-full bg-white/[0.06] px-2 text-sm font-black text-white/44 transition hover:bg-white/[0.1] hover:text-cyan-200"
     >
       <StageToolIcon name={icon} />

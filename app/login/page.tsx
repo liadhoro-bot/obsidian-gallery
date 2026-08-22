@@ -16,6 +16,20 @@ type LoginPageProps = {
   }>
 }
 
+function getFriendlyAuthErrorReason(value: string | null | undefined) {
+  const reason = value?.replace(/\s+/g, ' ').trim()
+
+  if (!reason) {
+    return null
+  }
+
+  if (/pkce code verifier not found/i.test(reason)) {
+    return 'That Google sign-in was opened from a different browser or stale tab. For local preview, enter your account email below to sign in here.'
+  }
+
+  return reason
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const headerStore = await headers()
@@ -24,7 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const previewMode = explicitPreviewRequest || isV3DeploymentHost(host)
   const useLocalPreviewAuth =
     explicitPreviewRequest && isLocalV3PreviewHost(host)
-  const callbackReason = resolvedSearchParams?.reason?.trim()
+  const callbackReason = getFriendlyAuthErrorReason(resolvedSearchParams?.reason)
   const authError =
     resolvedSearchParams?.error === 'auth-callback'
       ? callbackReason

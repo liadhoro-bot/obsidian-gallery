@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ProjectDetailTab } from './project-detail-client'
+import styles from './project-detail-silver.module.css'
 
 type Props = {
   activeTab: ProjectDetailTab
@@ -18,7 +19,11 @@ export default function ProjectDetailTabs({ activeTab, projectId }: Props) {
   ]
 
   return (
-    <div className="mt-5 grid grid-cols-3 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+    <div
+      className={styles.tabList}
+      role="tablist"
+      aria-label="Project sections"
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key
 
@@ -26,11 +31,12 @@ export default function ProjectDetailTabs({ activeTab, projectId }: Props) {
           <Link
             key={tab.key}
             href={tab.href}
+            role="tab"
+            aria-selected={isActive}
             className={[
-              'rounded-xl px-2 py-3 text-center text-xs font-black transition',
-              isActive
-                ? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/50 shadow-[0_0_18px_rgba(34,211,238,0.18)]'
-                : 'text-white/45 hover:bg-white/5 hover:text-white/75',
+              styles.tab,
+              'px-2 py-2 transition',
+              isActive ? styles.tabActive : '',
             ].join(' ')}
           >
             {tab.label}

@@ -7,6 +7,7 @@ import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFr
 import SubmitButton from '../../components/SubmitButton'
 import type { ProjectImage, ProjectRow, SerializableError } from './types'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import styles from './project-detail-silver.module.css'
 
 export type ProjectGalleryCardProps = {
   project: ProjectRow | null
@@ -169,14 +170,14 @@ export default function ProjectGalleryCard({
   }
 
   return (
-    <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+    <section className={styles.panel}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm uppercase tracking-wider text-cyan-400">
+          <p className={styles.eyebrow}>
             Project Gallery
           </p>
-          <h2 className="mt-1 text-xl font-semibold">Images</h2>
-          <p className="mt-2 text-sm text-neutral-400">
+          <h2 className="mt-1 text-xl">Images</h2>
+          <p className="mt-2 text-sm">
             Upload project images and choose one for the page header.
           </p>
         </div>
@@ -184,11 +185,11 @@ export default function ProjectGalleryCard({
         <button
           type="button"
           onClick={() => setIsAddingImage((current) => !current)}
-          className="tap-press tap-target flex items-center justify-center rounded-full bg-neutral-800 text-lg text-white hover:bg-neutral-700"
+          className={`${styles.iconControl} tap-press tap-target`}
           aria-label={isAddingImage ? 'Close add image form' : 'Add image'}
           title={isAddingImage ? 'Close' : 'Add image'}
         >
-          {isAddingImage ? '×' : '+'}
+          <span>{isAddingImage ? '×' : '+'}</span>
         </button>
       </div>
 
@@ -196,13 +197,13 @@ export default function ProjectGalleryCard({
         <form
           action={handleUpload}
           encType="multipart/form-data"
-          className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-950 p-4"
+          className={`${styles.editPanel} mt-4`}
         >
           <input type="hidden" name="projectId" value={projectId} />
 
           <div className="grid gap-3">
             <div>
-              <span className="mb-2 block text-sm text-neutral-300">
+              <span className={`${styles.uploadLabel} mb-2 block`}>
                 Image
               </span>
               <input
@@ -228,14 +229,14 @@ export default function ProjectGalleryCard({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="tap-press mobile-upload-action rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-semibold text-white hover:border-cyan-400/50 hover:text-cyan-100"
+                  className={`${styles.secondaryAction} tap-press mobile-upload-action px-3 py-2 text-sm font-bold`}
                 >
                   Upload from Gallery
                 </button>
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="tap-press mobile-upload-action rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-black hover:bg-cyan-400"
+                  className={`${styles.primaryButton} tap-press mobile-upload-action px-3 py-2 text-sm font-bold`}
                 >
                   Take Photo
                 </button>
@@ -247,7 +248,7 @@ export default function ProjectGalleryCard({
                 {filePreviews.map((preview, index) => (
                   <div
                     key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
-                    className="relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900"
+                    className={`${styles.photoTile} relative overflow-hidden`}
                   >
                     <Image
                       src={preview.previewUrl}
@@ -260,10 +261,10 @@ export default function ProjectGalleryCard({
                     <button
                       type="button"
                       onClick={() => removePendingFile(index)}
-                      className="tap-press absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/75 text-xs font-bold text-white"
+                      className={`${styles.iconControl} tap-press absolute right-1 top-1 h-8 w-8 text-xs`}
                       aria-label={`Remove ${preview.file.name}`}
                     >
-                      X
+                      <span>X</span>
                     </button>
                   </div>
                 ))}
@@ -277,13 +278,13 @@ export default function ProjectGalleryCard({
             ) : null}
 
             <div>
-              <label className="mb-1 block text-sm text-neutral-300">
+              <label className={`${styles.uploadLabel} mb-1 block`}>
                 Alt text
               </label>
               <input
                 type="text"
                 name="altText"
-                className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-white"
+                className={`${styles.textInput} px-3 py-2`}
                 placeholder="Optional alt text"
               />
             </div>
@@ -300,7 +301,7 @@ export default function ProjectGalleryCard({
                   : 'Uploading image...'
               }
               disabled={selectedFiles.length === 0}
-              className="w-full rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-black"
+              className={`${styles.primaryButton} w-full px-4 py-3 text-sm font-bold`}
             />
           </div>
         </form>
@@ -321,7 +322,7 @@ export default function ProjectGalleryCard({
           {localImages.map((image) => (
             <div
               key={image.id}
-              className="rounded-2xl border border-neutral-800 bg-neutral-950 p-2"
+              className={styles.photoTile}
             >
               <div className="relative">
                 <button
@@ -335,13 +336,13 @@ export default function ProjectGalleryCard({
     width={180}
     height={112}
     sizes="(max-width: 768px) 33vw, 160px"
-    className="h-24 w-full rounded-xl object-cover transition hover:scale-[1.02]"
+    className="h-24 w-full object-cover transition hover:scale-[1.02]"
   />
 </button>
 
                 <div className="absolute right-2 top-2 flex items-center gap-2">
                   {image.is_featured ? (
-                    <span className="rounded-full bg-yellow-400 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-black">
+                    <span className={`${styles.primaryButton} px-2 py-1 text-[10px] font-bold uppercase tracking-wide`}>
                       Featured
                     </span>
                   ) : (
@@ -349,9 +350,9 @@ export default function ProjectGalleryCard({
                       type="button"
                       onClick={() => handleSetFeatured(image.id)}
                       disabled={isPending}
-                      className="tap-press flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white disabled:opacity-60"
+                      className={`${styles.iconControl} tap-press h-8 w-8 text-xs disabled:opacity-60`}
                     >
-                      *
+                      <span>*</span>
                     </button>
                   )}
 
@@ -362,10 +363,10 @@ export default function ProjectGalleryCard({
                         deleteConfirmImageId === image.id ? null : image.id
                       )
                     }
-                    className="tap-press flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                    className={`${styles.iconControl} tap-press h-8 w-8 text-xs`}
                     title="Delete image"
                   >
-                    X
+                    <span>X</span>
                   </button>
                 </div>
               </div>
@@ -387,7 +388,7 @@ export default function ProjectGalleryCard({
                     <button
                       type="button"
                       onClick={() => setDeleteConfirmImageId(null)}
-                      className="tap-press tap-target rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1 text-xs text-white"
+                      className={`${styles.secondaryAction} tap-press tap-target px-3 py-1 text-xs`}
                     >
                       Cancel
                     </button>
@@ -398,13 +399,13 @@ export default function ProjectGalleryCard({
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-sm text-neutral-500">
+        <p className="mt-4 text-sm">
           No gallery images yet.
         </p>
       )}
       {selectedImage && (
   <div
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
+    className={`${styles.dialogOverlay} fixed inset-0 z-50 flex items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]`}
     onClick={(event) => {
       if (event.target === event.currentTarget) {
         setSelectedImage(null)
@@ -428,9 +429,9 @@ export default function ProjectGalleryCard({
     <button
       type="button"
       onClick={() => setSelectedImage(null)}
-      className="tap-press mobile-close-button absolute right-4 top-4 rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur"
+      className={`${styles.secondaryButton} tap-press mobile-close-button absolute right-4 top-4`}
     >
-      Close
+      <span>Close</span>
     </button>
 
     <div
@@ -447,7 +448,7 @@ export default function ProjectGalleryCard({
         width={1400}
         height={1400}
         sizes="100vw"
-        className="max-h-[88dvh] rounded-2xl object-contain"
+        className={`${styles.dialogPanel} max-h-[88dvh] object-contain`}
       />
     </div>
   </div>

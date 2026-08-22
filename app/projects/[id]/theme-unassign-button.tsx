@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { unassignProjectTheme } from './actions'
 import { unassignUnitTheme } from '../../units/[id]/actions'
+import styles from './project-detail-silver.module.css'
 
 type Props = {
   projectId: string
@@ -54,7 +55,7 @@ export default function ThemeUnassignButton({
 
   if (isUnassigned) {
     return (
-      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
+      <span className={`${styles.secondaryAction} px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]`}>
         Unassigned
       </span>
     )
@@ -65,7 +66,7 @@ export default function ThemeUnassignButton({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="tap-press tap-target rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55 hover:border-red-400/35 hover:bg-red-500/10 hover:text-red-200"
+        className={`${styles.secondaryAction} tap-press tap-target px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]`}
       >
         Unassign
       </button>
@@ -73,12 +74,12 @@ export default function ThemeUnassignButton({
 
       {isOpen ? (
         <div
-          className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/75 backdrop-blur-sm"
+          className={`${styles.dialogOverlay} mobile-sheet-overlay fixed inset-0 z-50 flex justify-center`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="unassign-theme-title"
         >
-          <div className="mobile-sheet max-w-sm rounded-2xl border border-white/10 bg-[#10131a] p-4 shadow-2xl">
+          <div className={`${styles.dialogPanel} mobile-sheet max-w-sm p-4`}>
             <h2 id="unassign-theme-title" className="text-base font-bold">
               Unassign theme?
             </h2>
@@ -92,7 +93,7 @@ export default function ThemeUnassignButton({
                 type="button"
                 onClick={() => setIsOpen(false)}
                 disabled={isPending}
-                className="tap-press tap-target rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/70 hover:bg-white/[0.07] disabled:opacity-50"
+                className={`${styles.secondaryAction} tap-press tap-target px-4 py-3 text-sm font-semibold disabled:opacity-50`}
               >
                 Cancel
               </button>
@@ -100,7 +101,7 @@ export default function ThemeUnassignButton({
                 type="button"
                 onClick={confirmUnassign}
                 disabled={isPending}
-                className="tap-press tap-target rounded-xl bg-red-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-red-300 disabled:opacity-50"
+                className="tap-press tap-target rounded-[var(--og-radius-s)] bg-red-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-red-300 disabled:opacity-50"
               >
                 {isPending ? 'Unassigning...' : 'Unassign'}
               </button>

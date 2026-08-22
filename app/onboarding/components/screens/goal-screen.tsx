@@ -6,6 +6,7 @@ import {
   type OnboardingExperience,
   type OnboardingGoal,
 } from '../../actions'
+import styles from '../../../auth-flow-silver.module.css'
 
 type GoalScreenProps = {
   onContinue: (goal: OnboardingGoal) => void
@@ -17,8 +18,6 @@ const personaOptions: Array<{
   title: string
   text: string
   cta: string
-  tone: string
-  ring: string
   icon: 'brush' | 'grid' | 'broadcast'
 }> = [
   {
@@ -26,8 +25,6 @@ const personaOptions: Array<{
     title: 'Help me paint a miniature',
     text: "I'm getting started or want clear, step-by-step guidance.",
     cta: 'Start my first miniature',
-    tone: 'bg-cyan-300/12 text-cyan-300',
-    ring: 'border-cyan-300/60 bg-cyan-300/[0.08]',
     icon: 'brush',
   },
   {
@@ -35,8 +32,6 @@ const personaOptions: Array<{
     title: 'Help me organize my hobby',
     text: 'I want control over my projects, paints, progress and unfinished models.',
     cta: 'Organize my first unit',
-    tone: 'bg-sky-300/12 text-sky-300',
-    ring: 'border-sky-300/55 bg-sky-300/[0.07]',
     icon: 'grid',
   },
   {
@@ -44,8 +39,6 @@ const personaOptions: Array<{
     title: 'Help me create and share content',
     text: 'I publish tutorials, showcase my work or build an audience.',
     cta: 'Create my first guide',
-    tone: 'bg-violet-300/14 text-violet-200',
-    ring: 'border-violet-300/55 bg-violet-300/[0.08]',
     icon: 'broadcast',
   },
 ]
@@ -97,19 +90,19 @@ export default function GoalScreen({
   }
 
   return (
-    <section className="flex min-h-screen flex-col bg-[#05090a] px-4 pb-8 pt-9 text-white">
+    <section className={styles.paperScreen}>
       <StepDots activeIndex={1} />
 
-      <div className="mt-6 space-y-2">
-        <h1 className="max-w-xs text-[1.75rem] font-black leading-[1.02]">
+      <div className={styles.screenIntro}>
+        <h1 className={styles.screenTitle}>
           What would help you most right now?
         </h1>
-        <p className="max-w-sm text-sm font-medium leading-6 text-white/50">
+        <p className={styles.screenCopy}>
           Choose where to begin. You can use everything else whenever you need it.
         </p>
       </div>
 
-      <div className="mt-8 space-y-3">
+      <div className={styles.optionStack}>
         {personaOptions.map((option) => {
           const isSelected = selectedGoal === option.id
 
@@ -119,36 +112,30 @@ export default function GoalScreen({
               type="button"
               onClick={() => setSelectedGoal(option.id)}
               className={[
-                'grid min-h-[78px] w-full grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl border px-3 py-3 text-left transition active:scale-[0.99]',
-                isSelected
-                  ? option.ring
-                  : 'border-white/6 bg-[#111821] hover:border-white/16 hover:bg-[#151d28]',
+                'tap-card',
+                styles.personaCard,
+                isSelected ? styles.personaCardActive : '',
               ].join(' ')}
             >
               <span
-                className={[
-                  'flex h-12 w-12 items-center justify-center rounded-2xl',
-                  option.tone,
-                ].join(' ')}
+                className={styles.personaIcon}
               >
                 <PersonaIcon icon={option.icon} className="h-6 w-6" />
               </span>
 
-              <span className="min-w-0">
-                <span className="block text-sm font-black leading-5 text-white">
+              <span className={styles.personaText}>
+                <span className={styles.personaTitle}>
                   {option.title}
                 </span>
-                <span className="mt-1 block text-xs font-semibold leading-5 text-white/43">
+                <span className={styles.personaDescription}>
                   {option.text}
                 </span>
               </span>
 
               <span
                 className={[
-                  'h-5 w-5 rounded-full border transition',
-                  isSelected
-                    ? 'border-cyan-300 bg-cyan-300 shadow-[0_0_14px_rgba(34,211,238,0.55)]'
-                    : 'border-white/20',
+                  styles.radioMark,
+                  isSelected ? styles.radioMarkActive : '',
                 ].join(' ')}
                 aria-hidden="true"
               />
@@ -158,11 +145,11 @@ export default function GoalScreen({
       </div>
 
       <div className="mt-5">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+        <p className={styles.optionalLabel}>
           How experienced are you? optional
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className={styles.chipRow}>
           {experienceOptions.map((option) => {
             const isSelected = experience === option.id
 
@@ -176,10 +163,8 @@ export default function GoalScreen({
                   )
                 }
                 className={[
-                  'rounded-full px-3 py-2 text-xs font-black transition',
-                  isSelected
-                    ? 'bg-cyan-300 text-black'
-                    : 'bg-white/[0.07] text-white/45 hover:bg-white/[0.11] hover:text-white/65',
+                  styles.choiceChip,
+                  isSelected ? styles.choiceChipActive : '',
                 ].join(' ')}
               >
                 {option.label}
@@ -190,17 +175,17 @@ export default function GoalScreen({
       </div>
 
       {error ? (
-        <p className="mt-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
+        <p className={`${styles.message} ${styles.messageError}`}>
           {error}
         </p>
       ) : null}
 
-      <div className="mt-auto space-y-4 pt-8">
+      <div className={styles.bottomActions}>
         <button
           type="button"
           onClick={() => selectedGoal && saveAndContinue(selectedGoal)}
           disabled={!selectedGoal || isPending}
-          className="tap-press tap-target h-14 w-full rounded-2xl bg-cyan-400 text-sm font-black text-black shadow-[0_0_28px_rgba(34,211,238,0.24)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-white/[0.10] disabled:text-white/28 disabled:shadow-none"
+          className={`tap-press tap-target ${styles.ctaButton}`}
         >
           {isPending ? 'Saving...' : ctaLabel}
         </button>
@@ -209,7 +194,7 @@ export default function GoalScreen({
           type="button"
           disabled={isPending}
           onClick={() => saveAndContinue('look_around')}
-          className="tap-target mx-auto block rounded-full px-4 py-2 text-sm font-bold text-white/40 transition hover:bg-white/5 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+          className={`tap-target ${styles.backButton}`}
         >
           Let me look around first
         </button>
@@ -220,15 +205,13 @@ export default function GoalScreen({
 
 function StepDots({ activeIndex }: { activeIndex: number }) {
   return (
-    <div className="flex gap-2" aria-label="Onboarding step 2 of 3">
+    <div className={styles.stepDots} aria-label="Onboarding step 2 of 3">
       {[0, 1, 2].map((step) => (
         <span
           key={step}
           className={[
-            'h-2 rounded-full transition-all',
-            activeIndex === step
-              ? 'w-4 bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.7)]'
-              : 'w-2 bg-white/18',
+            styles.stepDot,
+            activeIndex === step ? styles.stepDotActive : '',
           ].join(' ')}
         />
       ))}

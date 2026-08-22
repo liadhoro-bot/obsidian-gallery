@@ -81,13 +81,13 @@
   height: 40px;
   place-items: center;
   overflow: hidden;
-  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 86%, var(--og-ink-950));
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
   border-radius: var(--og-radius-round);
   background-color: var(--og-walnut-950);
   background-image: var(--og-material-ebonized-control);
   background-position: center;
   background-repeat: no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 160px auto, 100% 100%;
+  background-size: 100% 100%, 180px auto, 100% 100%;
   color: var(--og-brass-500);
   text-decoration: none;
   box-shadow: var(--og-shadow-control-built);
@@ -134,18 +134,8 @@
 }
 
 .menuControl {
-  width: 36px;
-  height: 36px;
-  border-color: transparent;
-  border-radius: var(--og-radius-s);
-  background: transparent;
-  color: var(--og-paper-100);
-  box-shadow: none;
-}
-
-.menuControl::before,
-.menuControl::after {
-  display: none;
+  width: 40px;
+  height: 40px;
 }
 
 .tabBand {

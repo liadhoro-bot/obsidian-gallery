@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import AppHamburgerMenu from '../components/app-hamburger-menu'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import styles from './paints-v3-silver.module.css'
 import type { PaintsV3Payload } from './paints-v3-data'
 
 type PaintRecord = {
@@ -501,19 +503,6 @@ export default function PaintsV3Preview({
       return true
     })
   }, [initialPayload])
-  const basePaintStateById = useMemo(
-    () =>
-      new Map(
-        basePaints.map((paint) => [
-          paint.id,
-          {
-            owned: paint.owned,
-            wish: paint.wish,
-          },
-        ])
-      ),
-    [basePaints]
-  )
   const allPaints = useMemo(
     () => applyPaintStateOverrides(basePaints, paintStateOverrides),
     [basePaints, paintStateOverrides]
@@ -522,24 +511,6 @@ export default function PaintsV3Preview({
     () => applyPaintStateOverrides(libraryBasePaints, paintStateOverrides),
     [libraryBasePaints, paintStateOverrides]
   )
-  const ownedCount =
-    (initialPayload?.counts.owned ??
-      fallbackPaints.filter((paint) => paint.owned).length) +
-    Object.entries(paintStateOverrides).reduce((sum, [paintId, override]) => {
-      if (isCustomPaintId(paintId)) return sum
-      const previousOwned = basePaintStateById.get(paintId)?.owned ?? false
-      if (previousOwned === override.owned) return sum
-      return sum + (override.owned ? 1 : -1)
-    }, 0)
-  const wishlistCount =
-    (initialPayload?.counts.wishlist ??
-      fallbackPaints.filter((paint) => paint.wish).length) +
-    Object.entries(paintStateOverrides).reduce((sum, [paintId, override]) => {
-      if (isCustomPaintId(paintId)) return sum
-      const previousWishlist = basePaintStateById.get(paintId)?.wish ?? false
-      if (previousWishlist === override.wish) return sum
-      return sum + (override.wish ? 1 : -1)
-    }, 0)
   const brandOptions =
     initialPayload?.filters.brands.length
       ? initialPayload.filters.brands
@@ -723,75 +694,29 @@ export default function PaintsV3Preview({
 
   return (
     <main
-      className="min-h-screen bg-[#05090b] text-white"
+      className={styles.paintsSilver}
       data-v3-paints-indicator="root"
       data-v3-paints-source={initialPayload ? 'live' : 'fallback'}
     >
       <V3PerfIndicator surface="paints" detail={activeTab} />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-48 pt-6">
-        <TopNav />
-
-        <header className="relative">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-[28px] font-black leading-none tracking-normal">
-                Paint Vault
-              </h1>
-              <p className="mt-2 text-[11px] font-black text-white/34">
-                {ownedCount} owned{' '}
-                <span className="mx-1 text-white/18">-</span> {wishlistCount} on
-                wishlist
-              </p>
-            </div>
-
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                aria-expanded={isHelpOpen}
-                aria-controls="paints-help"
-                aria-label="About paint vault"
-                onClick={() => {
-                  setIsFilterOpen(false)
-                  setIsExportOpen(false)
-                  setIsHelpOpen((open) => !open)
-                }}
-                className="grid h-9 w-9 place-items-center rounded-full bg-[#11171d] text-sm font-black text-white/58 transition hover:bg-white/12 hover:text-cyan-300"
-              >
-                ?
-              </button>
-              <button
-                type="button"
-                aria-label="Create custom mix"
-                onClick={() => {
-                  setIsHelpOpen(false)
-                  setIsFilterOpen(false)
-                  setIsExportOpen(false)
-                  setIsMixOpen(true)
-                }}
-                className="grid h-9 w-9 place-items-center rounded-full bg-cyan-300 text-xl font-black leading-none text-black shadow-[0_0_24px_rgba(34,211,238,0.26)] transition hover:bg-cyan-200"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {isHelpOpen ? (
-            <aside
-              id="paints-help"
-              className="absolute right-12 top-12 z-20 w-[min(300px,calc(100vw-40px))] rounded-[8px] border border-cyan-300/20 bg-[#11171d] p-4 shadow-2xl shadow-black/45"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
-                Paint Vault
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/70">
-                Keep track of every paint you own or want, and the custom mixes
-                you&apos;ve created. Manage your collection, avoid buying
-                duplicates, export with ease, and seamlessly connect to your
-                guides and themes.
-              </p>
-            </aside>
-          ) : null}
-        </header>
+      <div
+        className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-48 pt-6"
+        data-v3-paints-indicator="content"
+      >
+        <TopNav
+          isHelpOpen={isHelpOpen}
+          onCreate={() => {
+            setIsHelpOpen(false)
+            setIsFilterOpen(false)
+            setIsExportOpen(false)
+            setIsMixOpen(true)
+          }}
+          onHelpToggle={() => {
+            setIsFilterOpen(false)
+            setIsExportOpen(false)
+            setIsHelpOpen((open) => !open)
+          }}
+        />
 
         <div
           className="grid grid-cols-2 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-0.5"
@@ -828,7 +753,10 @@ export default function PaintsV3Preview({
           </button>
         </div>
 
-        <section className="relative">
+        <section
+          className="relative"
+          data-v3-paints-indicator="search-filter-toolbar"
+        >
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <label className="relative block">
               <span className="sr-only">Search paints</span>
@@ -888,6 +816,7 @@ export default function PaintsV3Preview({
           {isFilterOpen ? (
             <div
               id="paint-filters"
+              data-v3-paints-indicator="filter-panel"
               className="absolute inset-x-0 top-14 z-20 grid gap-4 rounded-[8px] border border-white/10 bg-[#071015] p-3 shadow-2xl shadow-black/45"
             >
               <div className="grid grid-cols-3 gap-3">
@@ -1029,7 +958,10 @@ export default function PaintsV3Preview({
           ) : null}
         </section>
 
-        <section className="grid grid-cols-[1fr_auto_auto] gap-2">
+        <section
+          className="grid grid-cols-[1fr_auto_auto] gap-2"
+          data-v3-paints-indicator="actions-toolbar"
+        >
           <button className="flex h-9 items-center justify-between rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/45">
             Name A-Z
             <span className="text-white/28">v</span>
@@ -1063,8 +995,14 @@ export default function PaintsV3Preview({
             Export
           </button>
 
-          <div className="flex h-9 rounded-[8px] border border-white/10 bg-[#111821] p-1">
-            <span className="grid w-8 place-items-center rounded-[6px] bg-cyan-300/10 text-cyan-300">
+          <div
+            className="flex h-9 rounded-[8px] border border-white/10 bg-[#111821] p-1"
+            data-v3-paints-indicator="view-toggle"
+          >
+            <span
+              className="grid w-8 place-items-center rounded-[6px] bg-cyan-300/10 text-cyan-300"
+              data-active="true"
+            >
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
@@ -1123,7 +1061,10 @@ export default function PaintsV3Preview({
             </div>
           )}
 
-          <div className="absolute bottom-0 right-0 top-0 flex w-6 flex-col items-center justify-between rounded-full border border-white/10 bg-[#111821]/92 py-2">
+          <div
+            className="absolute bottom-0 right-0 top-0 flex w-6 flex-col items-center justify-between rounded-full border border-white/10 bg-[#111821]/92 py-2"
+            data-v3-paints-indicator="pagination-rail"
+          >
             <button
               type="button"
               aria-label="Previous paints"
@@ -1296,68 +1237,60 @@ export default function PaintsV3Preview({
   )
 }
 
-function TopNav() {
+function TopNav({
+  isHelpOpen,
+  onCreate,
+  onHelpToggle,
+}: {
+  isHelpOpen: boolean
+  onCreate: () => void
+  onHelpToggle: () => void
+}) {
   return (
-    <header className="flex items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/10">
-          <Image
-            src="/curator/the-curator.png"
-            alt=""
-            fill
-            sizes="36px"
-            className="object-cover"
-            priority
-          />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[8px] font-black uppercase tracking-[0.28em] text-white/28">
-            Obsidian Gallery
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="shrink-0 text-xs font-black text-cyan-300">
-              Lv.4
-            </span>
-            <div
-              className="flex gap-1"
-              aria-label="Level progress 4 out of 300"
-            >
-              {Array.from({ length: 10 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={[
-                    'h-1.5 w-3 rounded-full',
-                    index === 0 ? 'bg-cyan-300/85' : 'bg-white/10',
-                  ].join(' ')}
-                />
-              ))}
-            </div>
-            <span className="shrink-0 text-[10px] font-black text-white/30">
-              4/300
-            </span>
-          </div>
-        </div>
+    <header data-v3-paints-indicator="app-header">
+      <AppHamburgerMenu
+        data-v3-paints-indicator="menu-control"
+        aria-label="Open paint vault menu"
+      />
+
+      <h1 data-v3-paints-indicator="app-title">Paint Vault</h1>
+
+      <div data-v3-paints-indicator="app-header-actions">
+        <button
+          type="button"
+          aria-expanded={isHelpOpen}
+          aria-controls="paints-help"
+          aria-label="About paint vault"
+          onClick={onHelpToggle}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+            <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
+            <path d="M12 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          aria-label="Create custom mix"
+          onClick={onCreate}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+          </svg>
+        </button>
       </div>
 
-      <a
-        href="/settings?preview=1"
-        aria-label="Settings"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.04] bg-white/[0.055] text-white/42 transition hover:text-cyan-300"
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
-          <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.8 1.8 0 0 0 15 19.45a1.8 1.8 0 0 0-1 .55 1.8 1.8 0 0 0-.5 1.3V21a2 2 0 0 1-4 0v-.09a1.8 1.8 0 0 0-.5-1.3 1.8 1.8 0 0 0-1-.55 1.8 1.8 0 0 0-1.98.36l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.8 1.8 0 0 0 3.55 15a1.8 1.8 0 0 0-.55-1 1.8 1.8 0 0 0-1.3-.5H1.5a2 2 0 0 1 0-4h.2A1.8 1.8 0 0 0 3 9a1.8 1.8 0 0 0 .55-1 1.8 1.8 0 0 0-.36-1.98l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.8 1.8 0 0 0 8 3.55a1.8 1.8 0 0 0 1-.55 1.8 1.8 0 0 0 .5-1.3V1.5a2 2 0 0 1 4 0v.2A1.8 1.8 0 0 0 14 3a1.8 1.8 0 0 0 1 .55 1.8 1.8 0 0 0 1.98-.36l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.8 1.8 0 0 0 19.45 8a1.8 1.8 0 0 0 .55 1 1.8 1.8 0 0 0 1.3.5h.2a2 2 0 0 1 0 4h-.2a1.8 1.8 0 0 0-1.3.5 1.8 1.8 0 0 0-.6 1Z" />
-        </svg>
-      </a>
+      {isHelpOpen ? (
+        <aside id="paints-help" data-v3-paints-indicator="help-popover">
+          <p>Paint Vault</p>
+          <p>
+            Keep track of every paint you own or want, and the custom mixes
+            you&apos;ve created. Manage your collection, avoid buying
+            duplicates, export with ease, and seamlessly connect to your guides
+            and themes.
+          </p>
+        </aside>
+      ) : null}
     </header>
   )
 }
@@ -1376,6 +1309,7 @@ function PaintSwatch({
       type="button"
       onClick={onSelect}
       aria-pressed={isSelected}
+      data-v3-paints-indicator="paint-swatch"
       className={[
         'relative h-[86px] overflow-hidden rounded-[8px] border bg-[#111821] text-left transition',
         isSelected
@@ -1398,7 +1332,10 @@ function PaintSwatch({
         ) : null}
       </span>
       {(paint.owned || paint.wish) && (
-        <span className="absolute right-2 top-2 grid h-4 w-4 place-items-center rounded-full bg-cyan-300 text-[10px] font-black text-black">
+        <span
+          className="absolute right-2 top-2 grid h-4 w-4 place-items-center rounded-full bg-cyan-300 text-[10px] font-black text-black"
+          data-v3-paints-indicator="paint-state-badge"
+        >
           {paint.owned ? (
             <svg
               aria-hidden="true"
@@ -1445,7 +1382,10 @@ function PaintInfoPanel({
   const isWishlistPending = pendingAction === 'wishlist'
 
   return (
-    <aside className="fixed inset-x-2 bottom-16 z-40 mx-auto max-w-md overflow-hidden rounded-[8px] border border-cyan-300/18 bg-[#10161d]/96 shadow-2xl shadow-black/50 backdrop-blur">
+    <aside
+      className="fixed inset-x-2 bottom-16 z-40 mx-auto max-w-md overflow-hidden rounded-[8px] border border-cyan-300/18 bg-[#10161d]/96 shadow-2xl shadow-black/50 backdrop-blur"
+      data-v3-paints-indicator="paint-info-panel"
+    >
       <div className="grid grid-cols-[64px_1fr]">
         <div
           className="relative overflow-hidden"
@@ -1471,7 +1411,10 @@ function PaintInfoPanel({
                 {paint.line}
               </p>
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div
+              className="grid shrink-0 grid-cols-2 gap-2"
+              data-v3-paints-indicator="ownership-actions"
+            >
               <button
                 type="button"
                 onClick={onToggleOwned}
@@ -1516,7 +1459,10 @@ function PaintInfoPanel({
             {paint.notes}
           </p>
 
-          <button className="mt-2 h-8 w-full rounded-[8px] border border-white/10 bg-black/20 text-[10px] font-black text-white/52 transition hover:border-cyan-300/45 hover:text-cyan-300">
+          <button
+            className="mt-2 h-8 w-full rounded-[8px] border border-white/10 bg-black/20 text-[10px] font-black text-white/52 transition hover:border-cyan-300/45 hover:text-cyan-300"
+            data-v3-paints-indicator="paint-details-button"
+          >
             View Details -&gt;
           </button>
         </div>

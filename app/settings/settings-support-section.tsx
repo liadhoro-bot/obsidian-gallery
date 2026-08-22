@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import styles from '../settings-support-silver.module.css'
 
 function SupportCard({
   title,
@@ -14,35 +15,35 @@ function SupportCard({
   return (
     <Link
       href={href}
-      className="flex w-full items-center gap-4 rounded-2xl bg-black/20 p-4 text-left transition hover:bg-white/[0.06]"
+      className={styles.linkRow}
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-lg">
+      <div className={styles.linkIcon}>
         {icon}
       </div>
 
-      <div className="flex-1">
-        <div className="text-sm font-bold text-slate-200">{title}</div>
-        <div className="mt-1 text-xs text-slate-500">{description}</div>
+      <div className={styles.linkText}>
+        <div className={styles.linkTitle}>{title}</div>
+        <div className={styles.linkDescription}>{description}</div>
       </div>
 
-      <span className="text-slate-600">›</span>
+      <span className={styles.chevron}>›</span>
     </Link>
   )
 }
 
 export default async function SettingsSupportSection() {
   return (
-    <section className="rounded-3xl border border-white/5 bg-white/[0.04] p-5">
-      <h2 className="mb-1 flex items-center gap-3 text-base font-bold">
-        <span className="text-cyan-300">ⓘ</span>
+    <section className={styles.card}>
+      <h2 className={styles.sectionTitle}>
+        <span className={styles.sectionIcon}>ⓘ</span>
         App Info & Support
       </h2>
 
-      <p className="mb-4 text-sm text-slate-500">
+      <p className={styles.description}>
         Legal details, community rules, and ways to reach us.
       </p>
 
-      <div className="space-y-3">
+      <div className={styles.linkStack}>
         <SupportCard
           icon="📜"
           title="Terms & Conditions"

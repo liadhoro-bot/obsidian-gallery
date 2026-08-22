@@ -13,6 +13,7 @@ export type GuidesV3DeckStep = {
   title: string
   instructions: string
   image: string | null
+  paints: GuidesV3DeckStepPaint[]
 }
 
 export type GuidesV3DeckPaint = {
@@ -21,6 +22,11 @@ export type GuidesV3DeckPaint = {
   brand: string
   line: string
   color: string
+  swatchImageUrl: string | null
+}
+
+export type GuidesV3DeckStepPaint = GuidesV3DeckPaint & {
+  ratioText: string | null
 }
 
 export type GuidesV3DeckDetail = GuidesV3Deck & {
@@ -53,7 +59,10 @@ type StepRow = {
 }
 
 type StepPaintRow = {
+  id: string
   recipe_step_id: string
+  paint_order: number | null
+  ratio_text: string | null
   paint_source: string | null
   catalog_paint?: {
     id: string
@@ -61,12 +70,14 @@ type StepPaintRow = {
     line: string | null
     name: string | null
     hex_approx: string | null
+    swatch_image_url: string | null
   }[] | {
     id: string
     brand: string | null
     line: string | null
     name: string | null
     hex_approx: string | null
+    swatch_image_url: string | null
   } | null
   custom_paint?: {
     id: string
@@ -167,14 +178,18 @@ export const getGuidesV3DeckDetail = cache(
             .from('recipe_step_paints')
             .select(
               `
+              id,
               recipe_step_id,
+              paint_order,
+              ratio_text,
               paint_source,
               catalog_paint:paint_catalog_id (
                 id,
                 brand,
                 line,
                 name,
-                hex_approx
+                hex_approx,
+                swatch_image_url
               ),
               custom_paint:custom_paint_id (
                 id,
@@ -186,31 +201,46 @@ export const getGuidesV3DeckDetail = cache(
             `
             )
             .in('recipe_step_id', stepIds)
+            .order('paint_order', { ascending: true })
         : { data: [], error: null }
 
     if (stepPaintError) throw new Error(stepPaintError.message)
 
     const paintsById = new Map<string, GuidesV3DeckPaint>()
+    const paintsByStepId = new Map<string, GuidesV3DeckStepPaint[]>()
+
+    function addStepPaint(stepId: string, paint: GuidesV3DeckPaint, ratioText: string | null) {
+      paintsById.set(paint.id, paint)
+      const existing = paintsByStepId.get(stepId) ?? []
+      existing.push({
+        ...paint,
+        ratioText,
+      })
+      paintsByStepId.set(stepId, existing)
+    }
+
     for (const link of (stepPaintLinks ?? []) as StepPaintRow[]) {
       const catalogPaint = firstValue(link.catalog_paint)
       const customPaint = firstValue(link.custom_paint)
 
       if (catalogPaint) {
-        paintsById.set(`catalog:${catalogPaint.id}`, {
+        addStepPaint(link.recipe_step_id, {
           id: `catalog:${catalogPaint.id}`,
           name: clean(catalogPaint.name, 'Unnamed Paint'),
           brand: clean(catalogPaint.brand, 'Catalog'),
           line: clean(catalogPaint.line, 'Paint'),
           color: catalogPaint.hex_approx || '#17b9c2',
-        })
+          swatchImageUrl: catalogPaint.swatch_image_url,
+        }, link.ratio_text)
       } else if (customPaint) {
-        paintsById.set(`custom:${customPaint.id}`, {
+        addStepPaint(link.recipe_step_id, {
           id: `custom:${customPaint.id}`,
           name: clean(customPaint.name, 'Custom Paint'),
           brand: clean(customPaint.manufacturer, 'Custom'),
           line: clean(customPaint.series, 'Mix'),
           color: customPaint.color_hex || '#d8bd83',
-        })
+          swatchImageUrl: null,
+        }, link.ratio_text)
       }
     }
 
@@ -238,6 +268,7 @@ export const getGuidesV3DeckDetail = cache(
         title: clean(step.title, `Card ${index + 1}`),
         instructions: clean(step.instructions, 'No instructions yet.'),
         image: step.image_url ? getGuideDeckThumbnail(step.image_url, fallbackImage) : null,
+        paints: paintsByStepId.get(step.id) ?? [],
       })),
       paintList: paints,
     } satisfies GuidesV3DeckDetail

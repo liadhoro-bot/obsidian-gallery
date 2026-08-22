@@ -1,0 +1,67 @@
+.menuRoot {
+  position: relative;
+  z-index: 30;
+  display: inline-grid;
+  width: fit-content;
+}
+
+.menuButton {
+  appearance: none;
+}
+
+.menuPanel {
+  position: fixed;
+  inset-block-start: 72px;
+  inset-inline-start: max(14px, calc((100vw - var(--og-workbench-compact-max-width)) / 2 + 14px));
+  z-index: 40;
+  width: min(244px, calc(100vw - 28px));
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 260px auto, 100% 100%;
+  padding: 6px;
+  box-shadow: var(--og-shadow-large);
+}
+
+.menuLabel {
+  padding: 8px 10px 5px;
+  color: color-mix(in srgb, var(--og-brass-500) 78%, var(--og-ink-950));
+  font-family: var(--og-font-ui);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: var(--og-leading-caption);
+  text-transform: uppercase;
+}
+
+.menuItem {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-height: 42px;
+  border-radius: var(--og-radius-s);
+  color: var(--og-text-primary);
+  font-family: var(--og-font-ui);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background-color: color-mix(in srgb, var(--og-brass-500) 16%, var(--og-paper-50));
+  outline: none;
+}
+
+.menuItem svg {
+  width: 18px;
+  height: 18px;
+  color: var(--og-brass-500);
+}

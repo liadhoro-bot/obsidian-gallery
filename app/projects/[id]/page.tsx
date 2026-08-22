@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import ProjectDetailClient, { type ProjectDetailTab } from './project-detail-client'
 import { Suspense } from 'react'
-import DashboardTopBar from '../../dashboard/dashboard-top-bar'
 import { deleteProject } from './actions'
 import { captureServerEvent } from '../../../utils/analytics/server'
 import type { ProjectImage, ProjectRow, UnitImage, UnitStage } from './types'
@@ -16,7 +15,7 @@ import NominateForContestCard from '../../../components/contests/nominate-for-co
 import { getEligibleContestsForSource } from '../../../lib/contests/queries'
 import { isCurrentUserAdmin } from '../../../lib/admin'
 import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
-import ProjectV3Preview from './project-v3-preview'
+import styles from './project-detail-silver.module.css'
 
 function firstRelation<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
@@ -128,7 +127,7 @@ async function ProjectContestCard({
 
 function ProjectContestCardSkeleton() {
   return (
-    <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4 animate-pulse">
+    <section className={`${styles.panel} animate-pulse`}>
       <div className="h-6 w-44 rounded bg-white/10" />
       <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3">
         <div className="h-4 w-40 rounded bg-white/10" />
@@ -959,16 +958,16 @@ export default async function ProjectDetailPage({
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
   const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
 
-  if (isPreview) {
-    return <ProjectV3Preview id={id} />
-  }
-
   const supabase = await createClient()
 
   const user = await getSessionUser(supabase)
 
   if (!user) {
-    redirect('/login')
+    redirect(
+      isPreview
+        ? `/login?next=%2Fprojects%2F${encodeURIComponent(id)}%3Fpreview%3D1&preview=1`
+        : '/login'
+    )
   }
 
   if (!id || id === 'undefined') {
@@ -990,12 +989,8 @@ export default async function ProjectDetailPage({
   const canSeeContestNominationCard = await isCurrentUserAdmin(user.id)
 
   return (
-    <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-        <Suspense fallback={null}>
-          <DashboardTopBar userId={user.id} />
-        </Suspense>
-
+    <main className={styles.projectDetailSilver}>
+      <div className="flex flex-col">
         {data.project && canSeeContestNominationCard ? (
           <Suspense fallback={<ProjectContestCardSkeleton />}>
             <ProjectContestCard userId={user.id} projectId={id} />

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import TermsModal from './terms-modal'
 import { acceptTermsAction } from '../../actions'
+import styles from '../../../auth-flow-silver.module.css'
 
 type Props = {
   onAccepted: () => void
@@ -48,26 +49,26 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
   }
 
   return (
-    <section className="flex min-h-screen flex-col bg-[#05090a] px-4 pb-8 pt-9 text-white">
+    <section className={styles.paperScreen}>
       <StepDots activeIndex={0} />
 
-      <div className="mt-36 space-y-4">
-        <h1 className="text-2xl font-black leading-tight">
+      <div className={`${styles.screenIntro} ${styles.screenIntroLarge}`}>
+        <h1 className={styles.screenTitle}>
           Before we begin
         </h1>
-        <p className="max-w-sm text-sm font-medium leading-6 text-white/60">
+        <p className={styles.screenCopy}>
           To use Obsidian Gallery, please review and accept the Terms and
           Conditions and Privacy Policy.
         </p>
       </div>
 
-      <div className="mt-7 space-y-4">
-        <label className="flex cursor-pointer gap-3 rounded-lg border border-white/0 py-1 text-sm leading-6 text-white/88">
+      <div className={styles.checkStack}>
+        <label className={styles.checkLabel}>
           <input
             type="checkbox"
             checked={accepted}
             onChange={(event) => setAccepted(event.target.checked)}
-            className="mt-1 h-5 w-5 shrink-0 rounded border-white/20 bg-white/[0.06] accent-cyan-300"
+            className={styles.checkbox}
           />
 
           <span>
@@ -78,7 +79,7 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
                 event.preventDefault()
                 setShowTerms(true)
               }}
-              className="font-black text-cyan-300 underline decoration-cyan-300/50 underline-offset-2"
+              className={styles.textLink}
             >
               Terms and Conditions
             </button>
@@ -89,19 +90,19 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
                 event.preventDefault()
                 setShowTerms(true)
               }}
-              className="font-black text-cyan-300 underline decoration-cyan-300/50 underline-offset-2"
+              className={styles.textLink}
             >
               Privacy Policy.
             </button>
           </span>
         </label>
 
-        <label className="flex cursor-pointer gap-3 rounded-lg border border-white/0 py-1 text-sm leading-6 text-white/45">
+        <label className={`${styles.checkLabel} ${styles.mutedCheck}`}>
           <input
             type="checkbox"
             checked={marketingAccepted}
             onChange={(event) => setMarketingAccepted(event.target.checked)}
-            className="mt-1 h-5 w-5 shrink-0 rounded border-white/20 bg-white/[0.06] accent-cyan-300"
+            className={styles.checkbox}
           />
 
           <span>
@@ -112,17 +113,17 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
       </div>
 
       {error ? (
-        <p className="mt-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
+        <p className={`${styles.message} ${styles.messageError}`}>
           {error}
         </p>
       ) : null}
 
-      <div className="mt-auto space-y-4 pt-10">
+      <div className={styles.bottomActions}>
         <button
           type="button"
           disabled={!accepted || isSaving}
           onClick={continueAfterTerms}
-          className="tap-press tap-target h-14 w-full rounded-2xl bg-cyan-400 text-sm font-black text-black shadow-[0_0_28px_rgba(34,211,238,0.24)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-white/[0.10] disabled:text-white/28 disabled:shadow-none"
+          className={`tap-press tap-target ${styles.ctaButton}`}
         >
           {isSaving ? 'Saving...' : 'Accept and continue'}
         </button>
@@ -130,7 +131,7 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
         <button
           type="button"
           onClick={signOut}
-          className="tap-target mx-auto block rounded-full px-4 py-2 text-sm font-bold text-white/35 transition hover:bg-white/5 hover:text-white/65"
+          className={`tap-target ${styles.backButton}`}
         >
           Sign out
         </button>
@@ -143,15 +144,13 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
 
 function StepDots({ activeIndex }: { activeIndex: number }) {
   return (
-    <div className="flex gap-2" aria-label="Onboarding step 1 of 3">
+    <div className={styles.stepDots} aria-label="Onboarding step 1 of 3">
       {[0, 1, 2].map((step) => (
         <span
           key={step}
           className={[
-            'h-2 rounded-full transition-all',
-            activeIndex === step
-              ? 'w-4 bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.7)]'
-              : 'w-2 bg-white/18',
+            styles.stepDot,
+            activeIndex === step ? styles.stepDotActive : '',
           ].join(' ')}
         />
       ))}

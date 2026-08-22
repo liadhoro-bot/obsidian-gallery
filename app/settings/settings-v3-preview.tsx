@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import styles from '../settings-support-silver.module.css'
 
 type StartupPage = 'dashboard' | 'guides' | 'projects' | 'paints' | 'community'
 
@@ -51,22 +52,16 @@ export default function SettingsV3Preview() {
   const [startupPage, setStartupPage] = useState<StartupPage>('guides')
 
   return (
-    <main className="min-h-screen bg-[#05090b] text-white">
+    <main className={styles.root}>
       <V3PerfIndicator surface="settings" detail="main" />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6">
+      <div className={styles.shell}>
         <TopNav />
-
-        <header>
-          <h1 className="text-[28px] font-black leading-none tracking-normal">
-            Settings
-          </h1>
-        </header>
 
         <AccountCard />
 
-        <section className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
-          <div className="border-b border-white/[0.06] px-4 py-3">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
+        <section className={`${styles.panel} ${styles.previewPanel}`}>
+          <div className={styles.panelHeader}>
+            <h2 className={styles.panelLabel}>
               Preferences
             </h2>
           </div>
@@ -83,18 +78,18 @@ export default function SettingsV3Preview() {
             }
           />
 
-          <div className="border-t border-white/[0.06] px-4 py-4">
-            <div className="grid grid-cols-[48px_1fr] gap-3">
+          <div className={styles.preferenceBlock}>
+            <div className={styles.preferenceIntro}>
               <IconBadge name="home" />
-              <div className="min-w-0">
-                <h3 className="text-sm font-black">Startup Page</h3>
-                <p className="mt-1 truncate text-xs font-semibold text-white/44">
+              <div>
+                <h3 className={styles.linkTitle}>Startup Page</h3>
+                <p className={styles.linkDescription}>
                   Choose the page the app opens first.
                 </p>
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-5 overflow-hidden rounded-[8px] border border-white/10 bg-black/20">
+            <div className={styles.toggleGrid}>
               {startupPages.map((page) => (
                 <button
                   key={page.id}
@@ -102,10 +97,10 @@ export default function SettingsV3Preview() {
                   onClick={() => setStartupPage(page.id)}
                   aria-pressed={startupPage === page.id}
                   className={[
-                    'grid h-[58px] min-w-0 grid-rows-[22px_1fr] place-items-center gap-1 border-l border-white/10 px-1 py-2 text-[9px] font-black leading-none text-white/36 first:border-l-0',
+                    styles.toggleItem,
                     startupPage === page.id
-                      ? 'bg-cyan-300 text-black'
-                      : 'hover:bg-white/[0.05] hover:text-white/64',
+                      ? styles.toggleItemActive
+                      : '',
                   ].join(' ')}
                 >
                   <NavMiniIcon name={page.icon} />
@@ -117,7 +112,7 @@ export default function SettingsV3Preview() {
             </div>
           </div>
 
-          <div className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
+          <div className={styles.previewRows}>
             {settingsRows.map((row) => (
               <SettingsLinkRow key={row.title} row={row} />
             ))}
@@ -127,13 +122,13 @@ export default function SettingsV3Preview() {
         <form action="/login" className="grid">
           <button
             type="submit"
-            className="h-12 rounded-[8px] border border-red-400/24 bg-red-500/14 text-sm font-black text-red-200 transition hover:bg-red-500/20"
+            className={styles.dangerButton}
           >
             Sign Out
           </button>
         </form>
 
-        <footer className="pb-2 text-center text-xs font-semibold leading-5 text-white/30">
+        <footer className={styles.footer}>
           <p>App Version 3.0 preview</p>
           <p>2026 Obsidian Gallery. All rights reserved.</p>
         </footer>
@@ -144,11 +139,11 @@ export default function SettingsV3Preview() {
 
 function TopNav() {
   return (
-    <header className="flex items-center justify-between gap-4">
+    <header className={styles.previewTop}>
       <a
         href="/dashboard?preview=1"
         aria-label="Back to dashboard"
-        className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.055] text-white/52"
+        className={styles.roundControl}
       >
         <span className="grid gap-1">
           <span className="h-0.5 w-4 rounded-full bg-current" />
@@ -157,16 +152,9 @@ function TopNav() {
         </span>
       </a>
 
-      <div className="min-w-0 text-center">
-        <p className="text-[8px] font-black uppercase tracking-[0.28em] text-cyan-300">
-          Obsidian Gallery
-        </p>
-        <p className="mt-1 text-xs font-black uppercase tracking-[0.22em] text-white/30">
-          Settings
-        </p>
-      </div>
+      <h1 className={styles.previewTitle}>Settings</h1>
 
-      <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-cyan-300/24 bg-white/10">
+      <div className={styles.avatarControl}>
         <Image
           src="/curator/the-curator.png"
           alt=""
@@ -182,15 +170,15 @@ function TopNav() {
 
 function AccountCard() {
   return (
-    <section className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
-      <div className="border-b border-white/[0.06] px-4 py-3">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
+    <section className={`${styles.panel} ${styles.previewPanel}`}>
+      <div className={styles.panelHeader}>
+        <h2 className={styles.panelLabel}>
           Account
         </h2>
       </div>
-      <div className="p-4">
-        <div className="grid grid-cols-[94px_1fr] gap-4">
-          <div className="relative h-24 w-24 overflow-hidden rounded-full border border-cyan-300/20 bg-black">
+      <div className={styles.previewSectionBody}>
+        <div className={styles.previewAccountGrid}>
+          <div className={styles.previewAvatar}>
             <Image
               src="/curator/the-curator.png"
               alt=""
@@ -201,18 +189,18 @@ function AccountCard() {
             <button
               type="button"
               aria-label="Edit avatar"
-              className="absolute bottom-1 right-1 grid h-8 w-8 place-items-center rounded-full border border-cyan-300/24 bg-[#10161d] text-cyan-300"
+              className={styles.avatarEditControl}
             >
               <SvgIcon name="edit" />
             </button>
           </div>
 
           <div className="min-w-0 self-center">
-            <h3 className="truncate text-xl font-black">Alex Mortimer</h3>
-            <p className="mt-1 truncate text-sm font-semibold text-white/48">
+            <h3 className={`${styles.previewName} truncate`}>Alex Mortimer</h3>
+            <p className={`${styles.muted} truncate`}>
               alex.mortimer@example.com
             </p>
-            <div className="mt-4 flex items-center gap-2 border-t border-white/10 pt-3 text-xs font-semibold text-white/44">
+            <div className={styles.memberMeta}>
               <SvgIcon name="calendar" />
               <span>Member since March 2024</span>
             </div>
@@ -221,7 +209,7 @@ function AccountCard() {
 
         <button
           type="button"
-          className="mt-4 h-12 w-full rounded-[8px] bg-cyan-300 text-sm font-black text-black transition hover:bg-cyan-200"
+          className={styles.walnutButton}
         >
           Edit Profile
         </button>
@@ -242,11 +230,11 @@ function PreferenceRow({
   title: string
 }) {
   return (
-    <div className="grid grid-cols-[48px_1fr_auto] items-center gap-3 px-4 py-4">
+    <div className={styles.preferenceRow}>
       <IconBadge name={icon} />
-      <div className="min-w-0">
-        <h3 className="text-sm font-black">{title}</h3>
-        <p className="mt-1 text-xs font-semibold leading-5 text-white/44">
+      <div>
+        <h3 className={styles.linkTitle}>{title}</h3>
+        <p className={styles.linkDescription}>
           {description}
         </p>
       </div>
@@ -268,16 +256,16 @@ function SettingsLinkRow({
   return (
     <a
       href={row.href}
-      className="grid grid-cols-[48px_1fr_auto] items-center gap-3 px-4 py-4 transition hover:bg-white/[0.035]"
+      className={styles.previewLinkRow}
     >
       <IconBadge name={row.icon} />
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-black">{row.title}</span>
-        <span className="mt-1 block truncate text-xs font-semibold text-white/44">
+      <span className={styles.linkText}>
+        <span className={`${styles.linkTitle} truncate`}>{row.title}</span>
+        <span className={styles.linkDescription}>
           {row.description}
         </span>
       </span>
-      <span className="text-lg font-black text-white/28">&gt;</span>
+      <span className={styles.chevron}>&gt;</span>
     </a>
   )
 }
@@ -296,17 +284,12 @@ function Toggle({
       aria-checked={enabled}
       onClick={onChange}
       className={[
-        'relative h-9 w-16 rounded-full border transition',
-        enabled
-          ? 'border-cyan-300/35 bg-cyan-300/22'
-          : 'border-white/10 bg-white/[0.06]',
+        styles.switch,
+        enabled ? styles.switchOn : '',
       ].join(' ')}
     >
       <span
-        className={[
-          'absolute top-1 grid h-7 w-7 place-items-center rounded-full bg-white text-[9px] font-black text-black transition',
-          enabled ? 'left-8' : 'left-1',
-        ].join(' ')}
+        className={styles.switchThumb}
       >
         {enabled ? 'ON' : 'OFF'}
       </span>
@@ -316,7 +299,7 @@ function Toggle({
 
 function IconBadge({ name }: { name: string }) {
   return (
-    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-cyan-300/18 bg-cyan-300/8 text-cyan-300">
+    <span className={styles.iconBadge}>
       <SvgIcon name={name} />
     </span>
   )

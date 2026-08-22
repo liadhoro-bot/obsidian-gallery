@@ -2,7 +2,9 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
+import AppHamburgerMenu from '../components/app-hamburger-menu'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import styles from './community-v3-silver.module.css'
 
 type CommunityTab = 'contests' | 'news'
 
@@ -57,16 +59,16 @@ export default function CommunityV3Preview() {
   const [activeTab, setActiveTab] = useState<CommunityTab>('contests')
 
   return (
-    <main className="min-h-screen bg-[#05090b] text-white">
+    <main
+      className={styles.communitySilver}
+      data-v3-community-indicator="root"
+    >
       <V3PerfIndicator surface="community" detail={activeTab} />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6">
+      <div
+        className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6"
+        data-v3-community-indicator="content"
+      >
         <TopNav />
-
-        <header>
-          <h1 className="text-[28px] font-black leading-none tracking-normal">
-            {activeTab === 'contests' ? 'Contests' : 'News'}
-          </h1>
-        </header>
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -79,42 +81,31 @@ export default function CommunityV3Preview() {
 
 function TopNav() {
   return (
-    <header className="flex items-center justify-between gap-4">
-      <button
-        type="button"
-        aria-label="Community menu"
-        className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.055] text-white/52"
-      >
-        <span className="grid gap-1">
-          <span className="h-0.5 w-4 rounded-full bg-current" />
-          <span className="h-0.5 w-4 rounded-full bg-current" />
-          <span className="h-0.5 w-4 rounded-full bg-current" />
-        </span>
-      </button>
+    <header data-v3-community-indicator="app-header">
+      <AppHamburgerMenu
+        data-v3-community-indicator="menu-control"
+        aria-label="Open community menu"
+      />
 
-      <div className="min-w-0 text-center">
-        <p className="text-[8px] font-black uppercase tracking-[0.28em] text-cyan-300">
-          Obsidian Gallery
-        </p>
-        <p className="mt-1 text-xs font-black uppercase tracking-[0.22em] text-white/30">
-          Community
-        </p>
+      <h1 data-v3-community-indicator="app-title">Community</h1>
+
+      <div data-v3-community-indicator="app-header-actions">
+        <a href="/settings?preview=1" aria-label="Profile">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+            <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.8 1.8 0 0 0 15 19.45a1.8 1.8 0 0 0-1 .55 1.8 1.8 0 0 0-.5 1.3V21a2 2 0 0 1-4 0v-.09a1.8 1.8 0 0 0-.5-1.3 1.8 1.8 0 0 0-1-.55 1.8 1.8 0 0 0-1.98.36l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.8 1.8 0 0 0 3.55 15a1.8 1.8 0 0 0-.55-1 1.8 1.8 0 0 0-1.3-.5H1.5a2 2 0 0 1 0-4h.2A1.8 1.8 0 0 0 3 9a1.8 1.8 0 0 0 .55-1 1.8 1.8 0 0 0-.36-1.98l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.8 1.8 0 0 0 8 3.55a1.8 1.8 0 0 0 1-.55 1.8 1.8 0 0 0 .5-1.3V1.5a2 2 0 0 1 4 0v.2A1.8 1.8 0 0 0 14 3a1.8 1.8 0 0 0 1 .55 1.8 1.8 0 0 0 1.98-.36l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.8 1.8 0 0 0 19.45 8a1.8 1.8 0 0 0 .55 1 1.8 1.8 0 0 0 1.3.5h.2a2 2 0 0 1 0 4h-.2a1.8 1.8 0 0 0-1.3.5 1.8 1.8 0 0 0-.6 1Z" />
+          </svg>
+        </a>
       </div>
-
-      <a
-        href="/settings?preview=1"
-        aria-label="Profile"
-        className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-cyan-300/24 bg-white/10"
-      >
-        <Image
-          src="/curator/the-curator.png"
-          alt=""
-          fill
-          sizes="36px"
-          className="object-cover"
-          priority
-        />
-      </a>
     </header>
   )
 }
@@ -128,9 +119,10 @@ function Tabs({
 }) {
   return (
     <div
-      className="grid grid-cols-2 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-0.5"
+      className="grid grid-cols-2"
       role="tablist"
       aria-label="Community sections"
+      data-v3-community-indicator="tabs"
     >
       {tabs.map((tab) => (
         <button
@@ -139,12 +131,7 @@ function Tabs({
           role="tab"
           aria-selected={activeTab === tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={[
-            'h-9 rounded-[6px] text-xs font-black transition',
-            activeTab === tab.id
-              ? 'bg-[#101822] text-cyan-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.06)]'
-              : 'text-white/38 hover:text-white/70',
-          ].join(' ')}
+          className="capitalize transition"
         >
           {tab.label}
         </button>
@@ -238,7 +225,10 @@ function HeroCard({
   title: string
 }) {
   return (
-    <article className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
+    <article
+      className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
+      data-v3-community-indicator="hero-card"
+    >
       <div className="relative h-52 bg-black">
         <Image
           src={image}
@@ -280,7 +270,10 @@ function SectionCard({
   title: string
 }) {
   return (
-    <section className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
+    <section
+      className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
+      data-v3-community-indicator="section-card"
+    >
       <div className="flex items-center justify-between px-4 py-3">
         <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
           {title}
@@ -299,7 +292,10 @@ function SectionCard({
 
 function NewsRow({ item }: { item: (typeof newsItems)[number] }) {
   return (
-    <article className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-4 py-3">
+    <article
+      className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-4 py-3"
+      data-v3-community-indicator="news-row"
+    >
       <span className="relative h-14 w-16 overflow-hidden rounded-[8px] bg-black">
         <Image src={item.image} alt="" fill sizes="64px" className="object-cover" />
       </span>
@@ -318,7 +314,10 @@ function NewsRow({ item }: { item: (typeof newsItems)[number] }) {
 
 function ChallengeRow({ contest }: { contest: (typeof contests)[number] }) {
   return (
-    <article className="grid grid-cols-[48px_1fr_auto] items-center gap-3 px-4 py-3">
+    <article
+      className="grid grid-cols-[48px_1fr_auto] items-center gap-3 px-4 py-3"
+      data-v3-community-indicator="challenge-row"
+    >
       <span className="grid h-10 w-10 place-items-center rounded-[8px] border border-cyan-300/20 bg-cyan-300/8 text-cyan-300">
         #
       </span>
@@ -347,7 +346,10 @@ function SavedEntry({
   title: string
 }) {
   return (
-    <article className="grid grid-cols-[74px_1fr_auto] items-center gap-3 px-4 py-3">
+    <article
+      className="grid grid-cols-[74px_1fr_auto] items-center gap-3 px-4 py-3"
+      data-v3-community-indicator="saved-entry"
+    >
       <span className="relative h-14 w-[74px] overflow-hidden rounded-[8px] bg-black">
         <Image src={image} alt="" fill sizes="74px" className="object-cover" />
       </span>
@@ -369,7 +371,10 @@ function SavedEntry({
 
 function CreatorSpotlight() {
   return (
-    <article className="grid grid-cols-[88px_1fr] gap-4 rounded-[8px] border border-white/[0.06] bg-[#111821] p-4">
+    <article
+      className="grid grid-cols-[88px_1fr] gap-4 rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
+      data-v3-community-indicator="spotlight-card"
+    >
       <span className="relative h-20 w-20 overflow-hidden rounded-full border border-cyan-300/20 bg-black">
         <Image
           src="/curator/the-curator.png"
@@ -398,7 +403,10 @@ function CreatorSpotlight() {
 
 function ForYouCard() {
   return (
-    <article className="grid grid-cols-[88px_1fr] gap-4 rounded-[8px] border border-white/[0.06] bg-[#111821] p-4">
+    <article
+      className="grid grid-cols-[88px_1fr] gap-4 rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
+      data-v3-community-indicator="for-you-card"
+    >
       <span className="relative h-24 overflow-hidden rounded-[8px] bg-black">
         <Image
           src="/onboarding/pains/paint-management.jpeg"

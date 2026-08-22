@@ -1,19 +1,21 @@
 'use client'
 
+import styles from '../../../auth-flow-silver.module.css'
+
 type Props = {
   onClose: () => void
 }
 
 export default function TermsModal({ onClose }: Props) {
   return (
-    <div className="mobile-sheet-overlay fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm">
-      <div className="mobile-sheet max-w-lg rounded-[2rem] border border-cyan-300/20 bg-[#081018] shadow-2xl shadow-cyan-950/40">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+    <div className={`mobile-sheet-overlay ${styles.modalOverlay}`}>
+      <div className={`mobile-sheet ${styles.modalSheet}`}>
+        <div className={styles.modalHeader}>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">
+            <p className={styles.eyebrow}>
               Legal
             </p>
-            <h3 className="mt-1 text-xl font-black text-white">
+            <h3 className={styles.modalTitle}>
               Terms & Conditions
             </h3>
           </div>
@@ -21,35 +23,35 @@ export default function TermsModal({ onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="tap-press mobile-close-button rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm font-bold text-white/60 hover:bg-white/[0.08] hover:text-white"
+            className={`tap-press mobile-close-button ${styles.headerButton}`}
           >
             Close
           </button>
         </div>
 
-        <div className="mobile-scroll terms-scroll min-h-0 overflow-y-auto px-5 py-5 pr-6 text-sm leading-7 text-white/85">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
+        <div className={`mobile-scroll terms-scroll ${styles.modalContent}`}>
+          <div className={styles.modalCard}>
+            <p className={styles.eyebrow}>
               Legal
             </p>
-            <h4 className="mt-3 text-2xl font-black text-white">
+            <h4 className={styles.screenTitle}>
               Terms & Conditions
             </h4>
-            <p className="mt-2 text-sm text-white/60">
+            <p className="mt-2 text-sm text-[color:var(--og-text-secondary)]">
               Last Updated: May 13, 2026
             </p>
 <a
   href="/legal/obsidian-gallery-terms-and-conditions.pdf"
   target="_blank"
   rel="noopener noreferrer"
-  className="tap-press tap-target mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-black text-black shadow-[0_0_24px_rgba(34,211,238,0.24)]"
+  className={`tap-press tap-target mt-5 ${styles.downloadButton}`}
 >
   Download PDF
 </a>
           </div>
 
-          <section className="mt-5 space-y-4">
-            <h4 className="text-lg font-black text-white">1. Introduction</h4>
+          <section className={styles.modalSection}>
+            <h4>1. Introduction</h4>
             <p>
               Welcome to Obsidian Gallery. Obsidian Gallery is a miniature
               painting and hobby companion platform that allows users to manage
@@ -63,7 +65,7 @@ export default function TermsModal({ onClose }: Props) {
               Service.
             </p>
 
-            <h4 className="text-lg font-black text-white">2. Eligibility</h4>
+            <h4>2. Eligibility</h4>
             <p>
               You must be at least 13 years old to use the Service. If you are
               using the Service on behalf of another person or organization, you
@@ -71,14 +73,14 @@ export default function TermsModal({ onClose }: Props) {
               behalf.
             </p>
 
-            <h4 className="text-lg font-black text-white">3. User Accounts</h4>
+            <h4>3. User Accounts</h4>
             <p>
               You are responsible for maintaining the security of your account
               and for all activity that occurs under it. You agree to provide
               accurate information and to keep your account credentials secure.
             </p>
 
-            <h4 className="text-lg font-black text-white">
+            <h4>
               4. User Content
             </h4>
             <p>
@@ -94,7 +96,7 @@ export default function TermsModal({ onClose }: Props) {
               abusive, infringing, or disruptive material.
             </p>
 
-            <h4 className="text-lg font-black text-white">
+            <h4>
               5. Community Standards
             </h4>
             <p>
@@ -104,7 +106,7 @@ export default function TermsModal({ onClose }: Props) {
               prohibited.
             </p>
 
-            <h4 className="text-lg font-black text-white">
+            <h4>
               6. Public Sharing
             </h4>
             <p>
@@ -113,7 +115,7 @@ export default function TermsModal({ onClose }: Props) {
               users. You are responsible for anything you choose to make public.
             </p>
 
-            <h4 className="text-lg font-black text-white">
+            <h4>
               7. Service Changes
             </h4>
             <p>
@@ -122,7 +124,7 @@ export default function TermsModal({ onClose }: Props) {
               and some data or functionality may be experimental.
             </p>
 
-            <h4 className="text-lg font-black text-white">
+            <h4>
               8. Termination
             </h4>
             <p>
@@ -131,7 +133,7 @@ export default function TermsModal({ onClose }: Props) {
               harms the community or operation of the Service.
             </p>
 
-            <h4 className="text-lg font-black text-white">
+            <h4>
               9. Disclaimer
             </h4>
             <p>
@@ -140,7 +142,7 @@ export default function TermsModal({ onClose }: Props) {
               operation, or permanent availability of any specific feature.
             </p>
 
-            <h4 className="text-lg font-black text-white">
+            <h4>
               10. Contact
             </h4>
             <p>
@@ -154,7 +156,7 @@ export default function TermsModal({ onClose }: Props) {
       <style jsx>{`
         .terms-scroll {
           scrollbar-width: thin;
-          scrollbar-color: rgba(34, 211, 238, 0.9) transparent;
+          scrollbar-color: color-mix(in srgb, var(--og-brass-500) 80%, var(--og-walnut-950)) transparent;
         }
 
         .terms-scroll::-webkit-scrollbar {
@@ -167,16 +169,12 @@ export default function TermsModal({ onClose }: Props) {
 
         .terms-scroll::-webkit-scrollbar-thumb {
           border-radius: 999px;
-          background: linear-gradient(
-            180deg,
-            rgba(103, 232, 249, 0.98),
-            rgba(34, 211, 238, 0.78)
-          );
-          box-shadow: 0 0 12px rgba(34, 211, 238, 0.35);
+          background: var(--og-material-brass);
+          box-shadow: var(--og-shadow-brass-plate);
         }
 
         .terms-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(103, 232, 249, 1);
+          filter: brightness(1.08);
         }
       `}</style>
     </div>

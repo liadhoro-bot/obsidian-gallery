@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
+import styles from '../auth-flow-silver.module.css'
 const GoogleLoginButton = dynamic(() => import('./google-login-button'))
 
 type LoginAudience = 'new' | 'returning'
@@ -114,7 +115,7 @@ export default function LoginForm({
 
   return (
     <section
-      className="w-full max-w-md rounded-3xl border border-white/10 bg-[#06090d]/96 p-4 shadow-[0_24px_80px_rgba(0,0,0,0.65)] backdrop-blur-xl"
+      className={styles.formPanel}
       data-v3-login-indicator="form"
       data-v3-login-mode={
         useLocalPreviewAuth
@@ -125,15 +126,15 @@ export default function LoginForm({
       }
     >
       <div className="px-1 pb-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-300">
+        <p className={styles.eyebrow}>
           Obsidian Gallery
         </p>
-        <h1 className="mt-2 text-2xl font-black leading-tight text-white">
+        <h1 className={styles.formHeading}>
           Your miniature workspace. Organized to perfection.
         </h1>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 rounded-2xl bg-white/[0.08] p-1">
+      <div className={styles.segmentControl}>
         {[
           { key: 'new' as const, label: 'New painter' },
           { key: 'returning' as const, label: 'Returning' },
@@ -146,10 +147,10 @@ export default function LoginForm({
               type="button"
               onClick={() => onAudienceChange(option.key)}
               className={[
-                'h-10 rounded-xl text-xs font-black transition',
+                styles.segmentButton,
                 isActive
-                  ? 'bg-[#101722] text-white shadow-sm'
-                  : 'text-white/38 hover:text-white/70',
+                  ? styles.segmentActive
+                  : styles.segmentInactive,
               ].join(' ')}
             >
               {option.label}
@@ -158,16 +159,20 @@ export default function LoginForm({
         })}
       </div>
 
-      <form onSubmit={handleLogin} className="mt-4 space-y-4">
-        <GoogleLoginButton nextPath={effectiveNextPath} />
+      <form onSubmit={handleLogin} className={styles.formStack}>
+        {useLocalPreviewAuth ? (
+          <p className={styles.notice}>
+            Local preview sign-in uses your account email in this browser.
+          </p>
+        ) : (
+          <>
+            <GoogleLoginButton nextPath={effectiveNextPath} />
 
-        <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-white/10" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
-            Or continue with email
-          </span>
-          <div className="h-px flex-1 bg-white/10" />
-        </div>
+            <div className={styles.divider}>
+              <span>Or continue with email</span>
+            </div>
+          </>
+        )}
 
         <label className="block">
           <span className="sr-only">Email</span>
@@ -178,7 +183,7 @@ export default function LoginForm({
             required
             autoComplete="email"
             inputMode="email"
-            className="min-h-12 w-full rounded-2xl border border-white/10 bg-[#101722] px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/28 focus:border-cyan-300/55 focus:bg-[#121c29]"
+            className={styles.input}
             placeholder="you@example.com"
           />
         </label>
@@ -186,22 +191,24 @@ export default function LoginForm({
         <button
           type="submit"
           disabled={loading}
-          className="tap-press tap-target inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-cyan-400 px-4 py-4 text-sm font-black text-black shadow-[0_0_28px_rgba(34,211,238,0.26)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:shadow-none"
+          className={`tap-press tap-target ${styles.ctaButton}`}
         >
           {loading ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <span className={styles.spin} />
           ) : null}
           <span>
             {loading
               ? useLocalPreviewAuth
                 ? 'Signing in...'
                 : 'Sending...'
-              : 'Send Magic Link'}
+              : useLocalPreviewAuth
+                ? 'Sign in to Preview'
+                : 'Send Magic Link'}
           </span>
         </button>
       </form>
 
-      <p className="mt-4 text-center text-[11px] font-bold leading-5 text-white/38">
+      <p className={styles.helperText}>
         {audience === 'new'
             ? "First time? You'll be guided through setup after signing in."
             : 'Welcome back. We will take you where you were headed.'}
@@ -209,10 +216,10 @@ export default function LoginForm({
 
       {message ? (
         <p
-          className={`mt-4 rounded-2xl border px-3 py-2 text-sm ${
+          className={`${styles.message} ${
             message.kind === 'error'
-              ? 'border-red-400/25 bg-red-500/10 text-red-100'
-              : 'border-cyan-400/25 bg-cyan-500/10 text-cyan-100'
+              ? styles.messageError
+              : styles.messageSuccess
           }`}
         >
           {message.text}
@@ -222,7 +229,7 @@ export default function LoginForm({
       <button
         type="button"
         onClick={onBack}
-        className="tap-target mx-auto mt-4 block rounded-full px-4 py-2 text-sm font-bold text-white/40 transition hover:bg-white/5 hover:text-white/70"
+        className={`tap-target ${styles.backButton}`}
       >
         &larr; Back
       </button>

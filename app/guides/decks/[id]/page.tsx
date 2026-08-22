@@ -1,15 +1,85 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
+import type { Recipe, RecipeImage, RecipeStep } from '../../../recipes/[id]/components/types'
+import {
+  RecipeGuideCoverCard,
+  RecipeGuideDescriptiveStepCard,
+  RecipeGuideImageStepCard,
+} from '../../../recipes/[id]/components/recipe-guide-cards'
 import V3PerfIndicator from '../../../components/v3-perf-indicator'
 import { hasV3PreviewSession } from '../../../../lib/v3-preview-server'
 import { createPerfTimer } from '../../../../utils/perf/server'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
-import { getGuidesV3DeckDetail } from '../../guides-v3-detail-data'
+import {
+  getGuidesV3DeckDetail,
+  type GuidesV3DeckDetail,
+  type GuidesV3DeckStep,
+} from '../../guides-v3-detail-data'
+import styles from '../../guide-detail-silver.module.css'
 
 type DeckDetailPageProps = {
   params: Promise<{ id: string }>
   searchParams?: Promise<{ preview?: string }>
+}
+
+type DeckGuidePaint = {
+  id: string
+  brand: string | null
+  line: string | null
+  name: string | null
+  hex_approx: string | null
+  swatch_image_url: string | null
+  ratio_text?: string | null
+}
+
+function isUsableImageUrl(value?: string | null) {
+  const url = typeof value === 'string' ? value.trim() : ''
+  return url.startsWith('http://') || url.startsWith('https://')
+}
+
+function toRecipe(deck: GuidesV3DeckDetail): Recipe {
+  return {
+    id: deck.id,
+    name: deck.title,
+    description: deck.description,
+    inventory_required: null,
+    expert_tips: null,
+    youtube_url: null,
+    is_public: deck.isPublic,
+  }
+}
+
+function toFeaturedImage(deck: GuidesV3DeckDetail): RecipeImage | null {
+  if (!isUsableImageUrl(deck.image)) return null
+
+  return {
+    id: `${deck.id}-cover`,
+    image_url: deck.image,
+    is_featured: true,
+    alt_text: deck.title,
+  }
+}
+
+function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
+  return {
+    id: step.id,
+    step_number: step.number,
+    title: step.title,
+    instructions: step.instructions,
+    image_url: step.image,
+  }
+}
+
+function toRecipePaints(step: GuidesV3DeckStep): DeckGuidePaint[] {
+  return step.paints.map((paint) => ({
+    id: paint.id,
+    brand: paint.brand,
+    line: paint.line,
+    name: paint.name,
+    hex_approx: paint.color,
+    swatch_image_url: paint.swatchImageUrl,
+    ratio_text: paint.ratioText,
+  }))
 }
 
 export default async function DeckDetailPage({
@@ -44,124 +114,63 @@ export default async function DeckDetailPage({
 
   if (!deck) notFound()
 
+  const recipe = toRecipe(deck)
+  const featuredImage = toFeaturedImage(deck)
+  const paintCount = deck.paintList.length
+  const recipeSteps = deck.steps.map(toRecipeStep)
+
   return (
-    <main className="min-h-screen bg-[#05090b] text-white">
+    <main className={styles.root}>
       <V3PerfIndicator surface="deck-detail" detail="main" />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-3 pb-28 pt-5">
-        <header className="flex items-center justify-between">
+      <div className={styles.shell}>
+        <header className={styles.topBar}>
           <Link
             href="/guides?preview=1"
-            className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06] text-xl text-white/70"
+            className={styles.backButton}
             aria-label="Back to guides"
           >
-            &lt;
+            <span>&lt;</span>
           </Link>
-          <span className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300">
+          <span className={styles.topLabel}>
             Deck
           </span>
+          <span className={styles.topSpacer} aria-hidden="true" />
         </header>
 
-        <section className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
-          <div className="relative h-56 bg-black">
-            <Image
-              src={deck.image}
-              alt=""
-              fill
-              sizes="(max-width: 480px) 100vw, 420px"
-              className="object-cover"
-              priority
+        <section className={styles.cardStack} aria-label={`${deck.title} cards`}>
+          <div className={styles.shareCardMount}>
+            <RecipeGuideCoverCard
+              recipe={recipe}
+              featuredImage={featuredImage}
+              stepCount={recipeSteps.length}
+              paintCount={paintCount}
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/90" />
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">
-                Deck Detail
-              </p>
-              <h1 className="mt-1 text-3xl font-black leading-tight">
-                {deck.title}
-              </h1>
-              <p className="mt-2 text-xs font-black text-white/42">
-                {deck.category} - {deck.ownerLabel}
-              </p>
-            </div>
           </div>
-          <div className="grid grid-cols-3 border-t border-white/[0.06] text-center text-[10px] font-black text-white/46">
-            <span className="p-3">{deck.cards} cards</span>
-            <span className="border-x border-white/[0.06] p-3">
-              {deck.paints} paints
-            </span>
-            <span className="p-3">{deck.isPublic ? 'Public' : 'Private'}</span>
-          </div>
-        </section>
-
-        <section className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-            Description
-          </h2>
-          <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
-            {deck.description}
-          </p>
-        </section>
-
-        <section className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-            Paints
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {deck.paintList.length ? (
-              deck.paintList.map((paint) => (
-                <span
-                  key={paint.id}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pl-1 pr-3 text-[10px] font-black text-white/52"
-                >
-                  <span
-                    className="h-5 w-5 rounded-full border border-white/10"
-                    style={{ backgroundColor: paint.color }}
-                  />
-                  {paint.name}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs font-semibold text-white/42">
-                No paints linked yet.
-              </span>
-            )}
-          </div>
-        </section>
-
-        <section className="grid gap-3">
-          <h2 className="px-1 text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-            Cards
-          </h2>
           {deck.steps.length ? (
-            deck.steps.map((step) => (
-              <article
-                key={step.id}
-                className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
-              >
-                {step.image ? (
-                  <div className="relative h-36 bg-black">
-                    <Image
-                      src={step.image}
-                      alt=""
-                      fill
-                      sizes="(max-width: 480px) 100vw, 420px"
-                      className="object-cover"
+            deck.steps.map((step) => {
+              const recipeStep = toRecipeStep(step)
+              const paints = toRecipePaints(step)
+
+              return (
+                <div key={step.id} className={styles.shareCardMount}>
+                  {isUsableImageUrl(recipeStep.image_url) ? (
+                    <RecipeGuideImageStepCard
+                      step={recipeStep}
+                      stepsLength={recipeSteps.length}
+                      paints={paints}
                     />
-                  </div>
-                ) : null}
-                <div className="p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
-                    Card {step.number}
-                  </p>
-                  <h3 className="mt-1 text-lg font-black">{step.title}</h3>
-                  <p className="mt-3 text-sm font-semibold leading-6 text-white/58">
-                    {step.instructions}
-                  </p>
+                  ) : (
+                    <RecipeGuideDescriptiveStepCard
+                      step={recipeStep}
+                      stepsLength={recipeSteps.length}
+                      paints={paints}
+                    />
+                  )}
                 </div>
-              </article>
-            ))
+              )
+            })
           ) : (
-            <div className="rounded-[8px] border border-dashed border-white/10 bg-[#111821] p-5 text-center text-sm font-semibold text-white/42">
+            <div className={styles.emptyPanel}>
               No cards have been added to this deck yet.
             </div>
           )}

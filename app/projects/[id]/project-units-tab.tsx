@@ -2,6 +2,7 @@ import Image from 'next/image'
 import PrefetchLink from '../../components/prefetch-link'
 import UnitListView from '../../../components/units/unit-list-view'
 import type { ProjectUnit, SerializableError, UnitImage, UnitStage } from './types'
+import styles from './project-detail-silver.module.css'
 
 type Props = {
   units: ProjectUnit[]
@@ -81,9 +82,9 @@ export default function ProjectUnitsTab({
           return (
             <PrefetchLink
               key={heroUnit.id}
-              href={`/units/${heroUnit.id}`}
+              href={`/units/${heroUnit.id}?preview=1`}
               viewportPrefetch
-              className="block overflow-hidden rounded-3xl border border-white/10 bg-white/[0.05] transition active:scale-[0.98] active:opacity-70"
+              className={`${styles.unitHeroCard} block transition active:scale-[0.98] active:opacity-70`}
             >
               <div className="relative min-h-[220px]">
                 {primaryImage ? (
@@ -95,18 +96,18 @@ export default function ProjectUnitsTab({
                       sizes="(max-width: 768px) 100vw, 420px"
                       className="object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#081018] via-[#081018]/60 to-transparent" />
+                    <div className={styles.unitImageOverlay} />
                   </>
                 ) : (
-                  <div className="absolute inset-0 bg-neutral-900" />
+                  <div className={styles.projectHeroFallback} />
                 )}
 
                 <div className="relative z-10 flex h-full flex-col justify-end p-5">
-                  <p className="text-xs uppercase tracking-wider text-orange-400">
+                  <p className={styles.eyebrow}>
                     Most Recent
                   </p>
 
-                  <h2 className="mt-2 text-2xl font-semibold text-white">
+                  <h2 className="mt-2 text-2xl text-white">
                     {heroUnit.name}
                   </h2>
 
@@ -114,7 +115,7 @@ export default function ProjectUnitsTab({
                     Last session: -
                   </p>
 
-                  <p className="text-sm font-semibold text-orange-400">
+                  <p className="text-sm font-semibold text-[color:var(--og-brass-500)]">
                     Deadline:{' '}
                     {heroUnit.deadline
                       ? new Date(heroUnit.deadline).toLocaleDateString()
@@ -122,20 +123,20 @@ export default function ProjectUnitsTab({
                   </p>
 
                   <div className="mt-4">
-                    <p className="text-[11px] font-semibold uppercase text-cyan-300">
+                    <p className="text-[11px] font-semibold uppercase text-[color:var(--og-brass-500)]">
                       PROGRESS: {percent}%
                     </p>
 
-                    <div className="mt-1.5 h-1.5 w-full rounded-full bg-white/10">
+                    <div className={`${styles.progressTrack} mt-1.5`}>
                       <div
-                        className="h-1.5 rounded-full bg-cyan-400"
+                        className={styles.progressFill}
                         style={{ width: `${percent}%` }}
                       />
                     </div>
                   </div>
 
                   <div className="mt-5">
-                    <span className="inline-flex rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-semibold text-slate-950">
+                    <span className={`${styles.primaryButton} inline-flex px-5 py-3 text-sm font-bold`}>
                       Resume Painting
                     </span>
                   </div>
@@ -152,9 +153,9 @@ export default function ProjectUnitsTab({
           return (
             <PrefetchLink
               key={unit.id}
-              href={`/units/${unit.id}`}
+              href={`/units/${unit.id}?preview=1`}
               viewportPrefetch
-              className="flex overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] transition active:scale-[0.98] active:opacity-70 hover:bg-white/[0.08]"
+              className={`${styles.unitRowCard} flex transition active:scale-[0.98] active:opacity-70`}
             >
               <div className="relative min-h-[110px] w-[30%]">
                 {primaryImage ? (
@@ -166,16 +167,16 @@ export default function ProjectUnitsTab({
                       sizes="120px"
                       className="object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#081018] via-[#081018]/60 to-transparent" />
+                    <div className={styles.unitImageOverlay} />
                   </>
                 ) : (
-                  <div className="absolute inset-0 bg-neutral-900" />
+                  <div className={styles.projectHeroFallback} />
                 )}
               </div>
 
               <div className="flex flex-1 flex-col justify-between p-4">
                 <div>
-                  <p className="text-lg font-semibold text-white">
+                  <p className="text-lg font-semibold text-[color:var(--og-text-primary)]">
                     {unit.name}
                   </p>
 
@@ -183,7 +184,7 @@ export default function ProjectUnitsTab({
                     Last session: -
                   </p>
 
-                  <p className="text-xs font-semibold text-orange-400">
+                  <p className="text-xs font-semibold text-[color:var(--og-brass-500)]">
                     Deadline:{' '}
                     {unit.deadline
                       ? new Date(unit.deadline).toLocaleDateString()
@@ -192,13 +193,13 @@ export default function ProjectUnitsTab({
                 </div>
 
                 <div className="mt-3">
-                  <p className="text-[11px] font-semibold text-cyan-300">
+                  <p className="text-[11px] font-semibold text-[color:var(--og-brass-500)]">
                     PROGRESS: {percent}%
                   </p>
 
-                  <div className="mt-1.5 h-1.5 w-full rounded-full bg-white/10">
+                  <div className={`${styles.progressTrack} mt-1.5`}>
                     <div
-                      className="h-1.5 rounded-full bg-cyan-400"
+                      className={styles.progressFill}
                       style={{ width: `${percent}%` }}
                     />
                   </div>
@@ -209,14 +210,14 @@ export default function ProjectUnitsTab({
         })}
       </div>
     ) : (
-      <p className="text-neutral-400">No units yet.</p>
+      <p className="text-[color:var(--og-text-secondary)]">No units yet.</p>
     )
 
   return (
-    <section className="mt-5 rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+    <section className={`${styles.unitViewSection} mt-3`}>
       {unitsError ? (
         <>
-          <h2 className="text-xl font-semibold text-white">Project Units</h2>
+          <h2 className="text-xl">Project Units</h2>
           <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
             {JSON.stringify(unitsError, null, 2)}
           </pre>
@@ -237,7 +238,7 @@ export default function ProjectUnitsTab({
           emptyMessage="No units yet."
           header={(toggle) => (
             <div className="mb-5 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-xl">
                 Project Units
               </h2>
               <div className="shrink-0">{toggle}</div>
@@ -246,8 +247,8 @@ export default function ProjectUnitsTab({
         />
       ) : (
         <>
-          <h2 className="text-xl font-semibold text-white">Project Units</h2>
-          <p className="mt-4 text-neutral-400">No units yet.</p>
+          <h2 className="text-xl">Project Units</h2>
+          <p className="mt-4 text-[color:var(--og-text-secondary)]">No units yet.</p>
         </>
       )}
     </section>

@@ -5,6 +5,7 @@ import ProjectPaletteStarter from './project-palette-starter'
 import { calculateProjectPaletteAction } from './actions'
 import { calculateUnitPaletteAction } from '../../units/[id]/actions'
 import ThemeUnassignButton from './theme-unassign-button'
+import styles from './project-detail-silver.module.css'
 
 type ThemePaint = {
   id: string
@@ -48,14 +49,14 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
 
   if (!theme) {
     return (
-      <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
-        <p className="text-sm uppercase tracking-wider text-cyan-400">
+      <section className={styles.panel}>
+        <p className={styles.eyebrow}>
           {paletteLabel}
         </p>
 
-        <h2 className="mt-1 text-xl font-semibold">No theme selected</h2>
+        <h2 className="mt-1 text-xl">No theme selected</h2>
 
-        <p className="mt-2 text-sm text-neutral-400">
+        <p className="mt-2 text-sm">
           Define the visual identity of this {unitId ? 'unit' : 'project'}.
         </p>
 
@@ -67,7 +68,7 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
   {projectId ? (
     <Link
       href={`/themes?tab=mine&selectForProject=${projectId}`}
-      className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-neutral-950 transition active:scale-95"
+      className={`${styles.primaryButton} inline-flex px-4 py-2 text-sm font-bold transition active:scale-95`}
     >
       Choose Theme
     </Link>
@@ -83,7 +84,7 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
     <SubmitButton
       idleText="Magic Palette"
       pendingText="Calculating..."
-      className="inline-flex rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-300 transition active:scale-95"
+      className={`${styles.secondaryAction} inline-flex px-4 py-2 text-sm font-bold transition active:scale-95`}
     />
   </form>
 </div>
@@ -92,9 +93,9 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
   }
 
   return (
-    <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+    <section className={styles.panel}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm uppercase tracking-wider text-cyan-400">
+        <p className={styles.eyebrow}>
           {paletteLabel}
         </p>
 
@@ -105,15 +106,15 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
         />
       </div>
 
-      <h2 className="mt-1 text-xl font-semibold">
+      <h2 className="mt-1 text-xl">
         {theme.name || 'Untitled Theme'}
       </h2>
 
-      <p className="mt-2 text-sm text-neutral-400">
+      <p className="mt-2 text-sm">
         {displayDescription(theme.description) || 'No description'}
       </p>
 
-      <div className="mt-4 grid grid-cols-5 gap-2">
+      <div className={styles.paletteGrid}>
         {Array.from({ length: 5 }).map((_, index) => {
           const paint = swatches[index]
 
@@ -152,16 +153,16 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
                   width={96}
                   height={96}
                   sizes="64px"
-                  className="aspect-square w-full rounded-xl border border-white/10 object-cover shadow-inner"
+                  className={`${styles.swatch} w-full object-cover`}
                 />
               ) : (
                 <div
-                  className="aspect-square rounded-xl border border-white/10 shadow-inner"
+                  className={styles.swatch}
                   style={{ backgroundColor: displayHex || '#262626' }}
                 />
               )}
 
-              <p className="mt-1 truncate text-center text-[10px] font-semibold text-white/60">
+              <p className="mt-1 truncate text-center text-[10px] font-semibold text-[color:var(--og-text-secondary)]">
                 {displayName || 'Color'}
               </p>
             </div>
@@ -171,7 +172,7 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
 
       <Link
         href={`/themes/${theme.id}`}
-        className="mt-4 inline-flex text-xs font-semibold text-cyan-300"
+        className="mt-4 inline-flex text-xs font-semibold text-[color:var(--og-brass-500)]"
       >
         Open full theme →
       </Link>

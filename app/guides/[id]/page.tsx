@@ -6,6 +6,7 @@ import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
 import { createPerfTimer } from '../../../utils/perf/server'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import { getGuidesV3GuideDetail } from '../guides-v3-detail-data'
+import styles from '../guide-detail-silver.module.css'
 
 type GuideDetailPageProps = {
   params: Promise<{ id: string }>
@@ -45,24 +46,25 @@ export default async function GuideDetailPage({
   if (!guide) notFound()
 
   return (
-    <main className="min-h-screen bg-[#05090b] text-white">
+    <main className={styles.root}>
       <V3PerfIndicator surface="guide-detail" detail="main" />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-3 pb-28 pt-5">
-        <header className="flex items-center justify-between">
+      <div className={styles.shell}>
+        <header className={styles.topBar}>
           <Link
             href="/guides?preview=1"
-            className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06] text-xl text-white/70"
+            className={styles.backButton}
             aria-label="Back to guides"
           >
-            &lt;
+            <span>&lt;</span>
           </Link>
-          <span className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300">
+          <span className={styles.topLabel}>
             Guide
           </span>
+          <span className={styles.topSpacer} aria-hidden="true" />
         </header>
 
-        <section className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
-          <div className="relative h-48 bg-black">
+        <section className={styles.heroCard}>
+          <div className={`${styles.heroImage} ${styles.guideHeroImage}`}>
             <Image
               src={guide.image}
               alt=""
@@ -71,58 +73,58 @@ export default async function GuideDetailPage({
               className="object-cover"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/88" />
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">
+            <div className={styles.heroScrim} />
+            <div className={styles.heroContent}>
+              <p className={styles.eyebrow}>
                 Guide Detail
               </p>
-              <h1 className="mt-1 text-3xl font-black leading-tight">
+              <h1 className={styles.heroTitle}>
                 {guide.title}
               </h1>
             </div>
           </div>
-          <div className="grid grid-cols-3 border-t border-white/[0.06] text-center text-[10px] font-black text-white/46">
-            <span className="p-3">{guide.decks} decks</span>
-            <span className="border-x border-white/[0.06] p-3">
+          <div className={styles.statGrid}>
+            <span>{guide.decks} decks</span>
+            <span>
               {guide.cards} cards
             </span>
-            <span className="p-3">{guide.level}</span>
+            <span>{guide.level}</span>
           </div>
         </section>
 
-        <section className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
+        <section className={styles.panel}>
+          <h2 className={styles.sectionHeading}>
             Description
           </h2>
-          <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
+          <p className={styles.bodyText}>
             {guide.subtitle}
           </p>
-          <div className="mt-4 flex gap-2">
+          <div className={styles.paletteRow}>
             {guide.palette.map((color, index) => (
               <span
                 key={`${guide.id}-${color}-${index}`}
-                className="h-5 w-5 rounded-full border border-white/10"
+                className={styles.swatch}
                 style={{ backgroundColor: color }}
               />
             ))}
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]">
-          <div className="px-4 py-4">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
+        <section className={`${styles.panel} ${styles.deckList}`}>
+          <div className={styles.panelHeader}>
+            <h2 className={styles.sectionHeading}>
               Decks In This Guide
             </h2>
           </div>
-          <div className="divide-y divide-white/[0.06]">
+          <div className={styles.rows}>
             {guide.decksList.length ? (
               guide.decksList.map((deck) => (
                 <Link
                   key={deck.id}
                   href={`/guides/decks/${deck.id}?preview=1`}
-                  className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.035]"
+                  className={styles.deckRow}
                 >
-                  <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-black">
+                  <span className={styles.deckThumb}>
                     <Image
                       src={deck.image}
                       alt=""
@@ -131,19 +133,19 @@ export default async function GuideDetailPage({
                       className="object-cover"
                     />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-black">
+                  <span className={styles.deckText}>
+                    <span className={styles.deckTitle}>
                       {deck.title}
                     </span>
-                    <span className="mt-1 block text-[10px] font-semibold text-white/38">
+                    <span className={styles.deckMeta}>
                       {deck.cards} cards - {deck.paints} paints
                     </span>
                   </span>
-                  <span className="text-white/24">&gt;</span>
+                  <span className={styles.chevron}>&gt;</span>
                 </Link>
               ))
             ) : (
-              <div className="p-4 text-sm font-semibold text-white/42">
+              <div className={styles.emptyPanel}>
                 No decks have been added yet.
               </div>
             )}

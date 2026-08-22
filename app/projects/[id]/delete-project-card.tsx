@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import SubmitButton from '../../components/SubmitButton'
+import styles from './project-detail-silver.module.css'
 
 type Props = {
   projectId: string
@@ -17,16 +18,16 @@ export default function DeleteProjectCard({
 
   if (!isConfirming) {
     return (
-      <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-5">
+      <section className={styles.dangerPanel}>
         <p className="text-sm font-bold uppercase tracking-wider text-red-400">
           Danger Zone
         </p>
 
-        <h2 className="mt-2 text-xl font-semibold text-white">
+        <h2 className="mt-2 text-xl">
           Delete Project
         </h2>
 
-        <p className="mt-3 text-sm text-neutral-400">
+        <p className="mt-3 text-sm">
           Permanently delete this project from your gallery.
         </p>
 
@@ -36,7 +37,7 @@ export default function DeleteProjectCard({
             setIsConfirming(true)
             setIsDeleteArmed(false)
           }}
-          className="mt-5 w-full rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-400 transition hover:bg-red-500/20"
+          className="mt-5 w-full rounded-[var(--og-radius-s)] border border-red-500/30 bg-red-500/10 px-5 py-4 text-sm font-bold text-red-500 transition hover:bg-red-500/20"
         >
           Delete Project
         </button>
@@ -45,16 +46,16 @@ export default function DeleteProjectCard({
   }
 
   return (
-    <section className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5">
+    <section className={styles.dangerPanel}>
       <p className="text-sm font-bold uppercase tracking-wider text-red-400">
         Confirm Deletion
       </p>
 
-      <h2 className="mt-2 text-xl font-semibold text-white">
+      <h2 className="mt-2 text-xl">
         Are you sure?
       </h2>
 
-      <p className="mt-3 text-sm leading-6 text-neutral-300">
+      <p className="mt-3 text-sm leading-6">
         If you delete this project, it will be removed along with all the units,
         info, and images it contains. This action cannot be undone.
       </p>
@@ -66,7 +67,7 @@ export default function DeleteProjectCard({
             setIsConfirming(false)
             setIsDeleteArmed(false)
           }}
-          className="rounded-2xl border border-white/10 bg-white/10 px-5 py-4 text-sm font-bold text-slate-200 transition hover:bg-white/15"
+          className={`${styles.secondaryAction} px-5 py-4 text-sm font-bold`}
         >
           Cancel
         </button>
@@ -84,7 +85,7 @@ export default function DeleteProjectCard({
               }
             }}
             className={[
-              'w-full rounded-2xl border px-5 py-4 text-sm font-black transition',
+              'w-full rounded-[var(--og-radius-s)] border px-5 py-4 text-sm font-black transition',
               isDeleteArmed
                 ? 'border-red-400 bg-red-600 text-white shadow-[0_0_24px_rgba(239,68,68,0.35)] hover:bg-red-500'
                 : 'border-red-500/40 bg-red-500/20 text-red-300 hover:bg-red-500/30',

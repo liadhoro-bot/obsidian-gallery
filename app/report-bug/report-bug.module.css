@@ -1,0 +1,183 @@
+.root {
+  min-height: 100dvh;
+  background-color: var(--og-bg-workbench);
+  background-image: var(--og-material-walnut-board);
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, 900px auto, 100% 100%;
+  color: var(--og-text-primary);
+  font-family: var(--og-font-ui);
+  padding-bottom: calc(var(--og-control-h-lg) + env(safe-area-inset-bottom));
+}
+
+.shell {
+  width: 100%;
+  max-width: var(--og-workbench-compact-max-width);
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: 18px 14px calc(80px + env(safe-area-inset-bottom));
+}
+
+.header,
+.panel {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-border-subtle));
+  border-radius: var(--og-radius-l);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 320px auto, 100% 100%;
+  box-shadow: var(--og-shadow-constructed-panel);
+}
+
+.header {
+  position: relative;
+  padding: 64px 18px 18px;
+}
+
+.backButton {
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-start: 14px;
+  border-color: color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  color: var(--og-paper-100);
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.eyebrow,
+.fieldLabel {
+  color: color-mix(in srgb, var(--og-brass-500) 78%, var(--og-ink-950));
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: var(--og-leading-caption);
+  text-transform: uppercase;
+}
+
+.title {
+  margin-block-start: 7px;
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: var(--og-leading-title);
+}
+
+.copy {
+  margin-block-start: var(--og-space-3);
+  color: var(--og-text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: var(--og-leading-body);
+}
+
+.panel {
+  margin-block-start: var(--og-space-3);
+  padding: 18px;
+}
+
+.form {
+  display: grid;
+  gap: var(--og-space-5);
+}
+
+.fieldGroup {
+  display: grid;
+  gap: var(--og-space-2);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-ink-950));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  color: var(--og-paper-50);
+  font-size: 0.95rem;
+  font-weight: 700;
+  outline: none;
+  padding: 12px 14px;
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.input {
+  min-height: 48px;
+}
+
+.textarea {
+  min-height: 164px;
+  resize: vertical;
+  line-height: var(--og-leading-body);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: color-mix(in srgb, var(--og-paper-100) 45%, transparent);
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: color-mix(in srgb, var(--og-brass-500) 72%, var(--og-paper-50));
+}
+
+.message {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 48%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.38;
+}
+
+.messageSuccess {
+  border-color: color-mix(in srgb, var(--og-status-success) 64%, var(--og-brass-700));
+  color: color-mix(in srgb, var(--og-status-success) 70%, var(--og-ink-950));
+}
+
+.messageError {
+  border-color: color-mix(in srgb, var(--og-status-danger) 64%, var(--og-brass-700));
+  color: color-mix(in srgb, var(--og-status-danger) 82%, var(--og-ink-950));
+}
+
+.submitButton {
+  display: inline-flex;
+  min-height: 52px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-walnut-control);
+  color: var(--og-paper-50);
+  font-size: 0.94rem;
+  font-weight: 800;
+  box-shadow: var(--og-shadow-walnut-control);
+}
+
+.submitButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--og-radius-round);
+  animation: og-report-spin 760ms linear infinite;
+}
+
+@keyframes og-report-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

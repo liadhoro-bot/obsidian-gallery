@@ -53,7 +53,13 @@ export default function MobileNav() {
     pathname.startsWith('/settings/terms')
 
   const getNavHref = useCallback(
-    (href: string) => (isPreview ? `${href}?preview=1` : href),
+    (href: string) => {
+      if (href === '/dashboard') {
+        return href
+      }
+
+      return isPreview ? `${href}?preview=1` : href
+    },
     [isPreview]
   )
 

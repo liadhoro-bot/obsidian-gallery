@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState, useTransition } from 'react'
 import { createOnboardingGuideAction } from '../../actions'
+import styles from '../../../auth-flow-silver.module.css'
 
 type GuideCreationScreenProps = {
   onCreated: (guideId: string | null) => void
@@ -53,31 +54,31 @@ export default function GuideCreationScreen({
   }
 
   return (
-    <section className="flex min-h-screen flex-col bg-[#05090a] px-4 pb-8 pt-9 text-white">
+    <section className={styles.paperScreen}>
       <StepDots activeIndex={2} />
 
-      <div className="mt-24 space-y-3">
-        <h1 className="text-2xl font-black leading-tight">
+      <div className={`${styles.screenIntro} ${styles.screenIntroLarge}`}>
+        <h1 className={styles.screenTitle}>
           Start with one guide
         </h1>
-        <p className="max-w-sm text-sm font-medium leading-6 text-white/55">
+        <p className={styles.screenCopy}>
           Save the technique, recipe, or showcase idea you want to build first.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-1 flex-col">
-        <label className="relative flex min-h-36 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed border-white/16 bg-[#121923] px-5 py-6 text-center transition hover:border-violet-300/50 hover:bg-violet-300/[0.05]">
+        <label className={styles.uploadTray}>
           {imagePreview ? (
             <Image
               src={imagePreview}
               alt=""
               fill
-              className="object-cover opacity-75"
+              className={styles.previewImage}
               unoptimized
             />
           ) : null}
 
-          <span className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-white/42">
+          <span className={styles.uploadIcon}>
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
               <path
                 d="M6 4.5h9.5L18 7v12.5H6V4.5Z"
@@ -94,10 +95,10 @@ export default function GuideCreationScreen({
             </svg>
           </span>
 
-          <span className="relative z-10 mt-4 text-sm font-black text-white/72">
+          <span className={styles.uploadTitle}>
             Add a cover photo
           </span>
-          <span className="relative z-10 mt-2 text-[10px] font-black uppercase tracking-[0.18em] text-violet-200/45">
+          <span className={styles.uploadHint}>
             Optional - useful for tutorials and showcases
           </span>
 
@@ -110,8 +111,8 @@ export default function GuideCreationScreen({
           />
         </label>
 
-        <label className="mt-8 block space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
+        <label className={styles.fieldGroup}>
+          <span className={styles.fieldLabel}>
             Guide name
           </span>
           <input
@@ -119,13 +120,13 @@ export default function GuideCreationScreen({
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
-            className="min-h-12 w-full rounded-2xl border border-white/10 bg-[#101722] px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/26 focus:border-violet-300/55 focus:bg-[#121c29]"
+            className={styles.input}
             placeholder="e.g. Grimdark brass armor, Snowy urban bases..."
           />
         </label>
 
-        <label className="mt-5 block space-y-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/35">
+        <label className={styles.fieldGroup}>
+          <span className={styles.fieldLabel}>
             Notes
           </span>
           <textarea
@@ -133,22 +134,22 @@ export default function GuideCreationScreen({
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             rows={4}
-            className="w-full resize-none rounded-2xl border border-white/10 bg-[#101722] px-4 py-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-white/26 focus:border-violet-300/55 focus:bg-[#121c29]"
+            className={`${styles.textarea} resize-none`}
             placeholder="Optional: audience, paint list, process notes, or the finished look."
           />
         </label>
 
         {error ? (
-          <p className="mt-5 rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
+          <p className={`${styles.message} ${styles.messageError}`}>
             {error}
           </p>
         ) : null}
 
-        <div className="mt-auto space-y-4 pt-10">
+        <div className={styles.bottomActions}>
           <button
             type="submit"
             disabled={!canSubmit}
-            className="tap-press tap-target h-14 w-full rounded-2xl bg-cyan-400 text-sm font-black text-black shadow-[0_0_28px_rgba(34,211,238,0.24)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:bg-white/[0.10] disabled:text-white/28 disabled:shadow-none"
+            className={`tap-press tap-target ${styles.ctaButton}`}
           >
             {isPending ? 'Creating...' : 'Build my first guide -&gt;'}
           </button>
@@ -157,7 +158,7 @@ export default function GuideCreationScreen({
             type="button"
             disabled={isPending}
             onClick={onSkip}
-            className="tap-target mx-auto block rounded-full px-4 py-2 text-sm font-bold text-white/40 transition hover:bg-white/5 hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`tap-target ${styles.backButton}`}
           >
             I&apos;ll create it later
           </button>
@@ -169,15 +170,13 @@ export default function GuideCreationScreen({
 
 function StepDots({ activeIndex }: { activeIndex: number }) {
   return (
-    <div className="flex gap-2" aria-label="Onboarding step 3 of 3">
+    <div className={styles.stepDots} aria-label="Onboarding step 3 of 3">
       {[0, 1, 2].map((step) => (
         <span
           key={step}
           className={[
-            'h-2 rounded-full transition-all',
-            activeIndex === step
-              ? 'w-4 bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.7)]'
-              : 'w-2 bg-white/18',
+            styles.stepDot,
+            activeIndex === step ? styles.stepDotActive : '',
           ].join(' ')}
         />
       ))}

@@ -2,10 +2,11 @@
 
 import dynamic from 'next/dynamic'
 import type { ProjectGalleryCardProps } from './project-gallery-card'
+import styles from './project-detail-silver.module.css'
 
 const LazyProjectGalleryCard = dynamic(() => import('./project-gallery-card'), {
   loading: () => (
-    <section className="rounded-2xl border border-neutral-800 bg-gradient-to-br from-neutral-900 to-neutral-950 p-5 shadow-sm">
+    <section className={`${styles.panel} animate-pulse`}>
       <div className="space-y-2">
         <div className="h-4 w-28 rounded bg-white/10" />
         <div className="h-7 w-20 rounded bg-white/10" />

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import styles from '../auth-flow-silver.module.css'
 
 function GoogleIcon() {
   return (
@@ -69,20 +70,9 @@ export default function GoogleLoginButton({
         type="button"
         onClick={handleGoogleLogin}
         disabled={isLoading}
-        className="
-          tap-press tap-target group relative flex w-full items-center justify-center gap-3 overflow-hidden
-          rounded-2xl border border-cyan-300/20
-          bg-white/[0.08] px-5 py-4
-          text-sm font-black text-white
-          shadow-[0_18px_55px_rgba(0,0,0,0.35)]
-          backdrop-blur-xl
-          hover:border-cyan-300/45 hover:bg-cyan-300/[0.10]
-          disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70
-        "
+        className={`tap-press tap-target ${styles.googleButton}`}
       >
-        <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-300/10 to-purple-400/0 opacity-0 transition group-hover:opacity-100" />
-
-        <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg shadow-black/20">
+        <span className={styles.googleIcon}>
           <GoogleIcon />
         </span>
 
@@ -99,7 +89,7 @@ export default function GoogleLoginButton({
       </button>
 
       {errorMessage && (
-        <p className="text-center text-xs font-semibold text-red-300">
+        <p className={styles.googleError}>
           {errorMessage}
         </p>
       )}

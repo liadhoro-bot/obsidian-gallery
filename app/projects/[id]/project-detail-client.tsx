@@ -19,6 +19,7 @@ import type {
   UnitStage,
 } from './types'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import styles from './project-detail-silver.module.css'
 
 type Props = {
   activeTab: ProjectDetailTab
@@ -84,8 +85,8 @@ export default function ProjectDetailClient({
   }
 
   return (
-    <div className="w-full">
-      <div className="relative h-64 overflow-hidden rounded-3xl border border-neutral-800 bg-neutral-900">
+    <div className={styles.projectDetailClient}>
+      <div className={styles.projectHero}>
         {featuredProjectImage ? (
           <Image
             src={featuredProjectImage.image_url}
@@ -96,60 +97,60 @@ export default function ProjectDetailClient({
             className="object-cover"
           />
         ) : (
-          <div className="h-full w-full bg-[#0b1622]" />
+          <div className={styles.projectHeroFallback} />
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#050b12]" />
+        <div className={styles.projectHeroOverlay} />
 
-        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 pt-4">
-          <BackButton fallbackHref="/projects" />
+        <div className={styles.heroControls}>
+          <BackButton fallbackHref="/projects" className={styles.headerControl} />
 
           <button
             type="button"
             onClick={() => setIsEditingHeader((current) => !current)}
-            className="rounded-full border border-white/10 bg-black/40 px-4 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-black/60"
+            className={styles.secondaryButton}
           >
-            {isEditingHeader ? 'Close' : 'Edit'}
+            <span>{isEditingHeader ? 'Close' : 'Edit'}</span>
           </button>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-6">
-          <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
+        <div className={styles.heroTitle}>
+          <p className={styles.eyebrow}>
             Project Detail
           </p>
-          <h1 className="mt-2 text-4xl font-bold leading-tight text-white">
+          <h1>
             {projectName}
           </h1>
         </div>
       </div>
 
       {isEditingHeader ? (
-        <section className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+        <section className={`${styles.editPanel} mt-4`}>
           <form action={handleUpdateHeader}>
             <input type="hidden" name="projectId" value={projectId} />
 
             <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-sm text-neutral-300">
+              <div className={styles.formField}>
+                <label className="mb-1 block">
                   Name
                 </label>
                 <input
                   name="name"
                   defaultValue={projectName}
                   required
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+                  className="px-3 py-2"
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm text-neutral-300">
+              <div className={styles.formField}>
+                <label className="mb-1 block">
                   Description
                 </label>
                 <textarea
                   name="description"
                   defaultValue={project?.description || ''}
                   rows={3}
-                  className="w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
+                  className="px-3 py-2"
                 />
               </div>
 
@@ -157,7 +158,7 @@ export default function ProjectDetailClient({
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+                  className={`${styles.primaryButton} inline-flex items-center justify-center gap-2 px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-70`}
                 >
                   {isPending ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -168,7 +169,7 @@ export default function ProjectDetailClient({
                 <button
                   type="button"
                   onClick={() => setIsEditingHeader(false)}
-                  className="rounded-xl border border-neutral-700 px-4 py-2 text-white"
+                  className={`${styles.secondaryAction} px-4 py-2 font-bold`}
                 >
                   Cancel
                 </button>
@@ -176,7 +177,7 @@ export default function ProjectDetailClient({
             </div>
           </form>
 
-          <div className="mt-4 border-t border-neutral-800 pt-4">
+          <div className="mt-4 border-t border-[color:var(--og-border-subtle)] pt-4">
             <DeleteProjectCard
               projectId={projectId}
               deleteProjectAction={deleteProjectAction}

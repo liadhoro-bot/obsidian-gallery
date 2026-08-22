@@ -2,7 +2,9 @@
 
 import Image from 'next/image'
 import { FormEvent, useMemo, useState } from 'react'
+import AppHamburgerMenu from '../components/app-hamburger-menu'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import styles from './projects-v3-silver.module.css'
 import type {
   ProjectsV3Project,
   ProjectsV3Unit,
@@ -326,60 +328,18 @@ export default function ProjectsV3Preview({
 
   return (
     <main
-      className="min-h-screen bg-[#05090b] text-white"
+      className={styles.projectsSilver}
       data-v3-projects-indicator="root"
       data-v3-projects-source={liveProjects || liveUnits ? 'live' : 'fallback'}
     >
       <V3PerfIndicator surface="projects" detail={activeTab} />
       <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6">
-        <TopNav />
-
-        <header className="relative">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-[28px] font-black leading-none tracking-normal">
-                Projects
-              </h1>
-            </div>
-
-            <div className="flex shrink-0 gap-2">
-              <button
-                type="button"
-                aria-expanded={isHelpOpen}
-                aria-controls="projects-help"
-                aria-label="About projects and units"
-                onClick={() => setIsHelpOpen((open) => !open)}
-                className="grid h-9 w-9 place-items-center rounded-full bg-[#11171d] text-sm font-black text-white/58 transition hover:bg-white/12 hover:text-cyan-300"
-              >
-                ?
-              </button>
-              <button
-                type="button"
-                aria-label={activeTab === 'projects' ? 'Create project' : 'Create unit'}
-                onClick={openCreate}
-                className="grid h-9 w-9 place-items-center rounded-full bg-cyan-300 text-xl font-black leading-none text-black shadow-[0_0_24px_rgba(34,211,238,0.22)] transition hover:bg-cyan-200"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {isHelpOpen ? (
-            <aside
-              id="projects-help"
-              className="absolute right-12 top-12 z-20 w-[min(312px,calc(100vw-40px))] rounded-[8px] border border-cyan-300/20 bg-[#11171d] p-4 shadow-2xl shadow-black/45"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
-                Projects and Units
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/70">
-                Projects are collections of units, like folders for armies,
-                warbands, display forces, or tables. Units are the direct model
-                library, visible beside projects and sortable on their own.
-              </p>
-            </aside>
-          ) : null}
-        </header>
+        <ProjectsHeader
+          activeTab={activeTab}
+          isHelpOpen={isHelpOpen}
+          onCreate={openCreate}
+          onHelpToggle={() => setIsHelpOpen((open) => !open)}
+        />
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -471,68 +431,76 @@ export default function ProjectsV3Preview({
   )
 }
 
-function TopNav() {
+function HelpIcon() {
   return (
-    <header className="flex items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/10">
-          <Image
-            src="/curator/the-curator.png"
-            alt=""
-            fill
-            sizes="36px"
-            className="object-cover"
-            priority
-          />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[8px] font-black uppercase tracking-[0.28em] text-white/28">
-            Obsidian Gallery
-          </p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="shrink-0 text-xs font-black text-cyan-300">
-              Lv.4
-            </span>
-            <div
-              className="flex gap-1"
-              aria-label="Level progress 4 out of 300"
-            >
-              {Array.from({ length: 10 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={[
-                    'h-1.5 w-3 rounded-full',
-                    index === 0 ? 'bg-cyan-300/85' : 'bg-white/10',
-                  ].join(' ')}
-                />
-              ))}
-            </div>
-            <span className="shrink-0 text-[10px] font-black text-white/30">
-              4/300
-            </span>
-          </div>
-        </div>
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
+      <path d="M12 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function ProjectsHeader({
+  activeTab,
+  isHelpOpen,
+  onCreate,
+  onHelpToggle,
+}: {
+  activeTab: ProjectsTab
+  isHelpOpen: boolean
+  onCreate: () => void
+  onHelpToggle: () => void
+}) {
+  return (
+    <header data-v3-projects-indicator="app-header">
+      <AppHamburgerMenu
+        data-v3-projects-indicator="menu-control"
+        aria-label="Open projects menu"
+      />
+
+      <h1 data-v3-projects-indicator="app-title">Projects</h1>
+
+      <div data-v3-projects-indicator="app-header-actions">
+        <button
+          type="button"
+          aria-expanded={isHelpOpen}
+          aria-controls="projects-help"
+          aria-label="About projects and units"
+          onClick={onHelpToggle}
+        >
+          <HelpIcon />
+        </button>
+        <button
+          type="button"
+          aria-label={activeTab === 'projects' ? 'Create project' : 'Create unit'}
+          onClick={onCreate}
+        >
+          <PlusIcon />
+        </button>
       </div>
 
-      <a
-        href="/settings?preview=1"
-        aria-label="Settings"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/[0.04] bg-white/[0.055] text-white/42 transition hover:text-cyan-300"
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      {isHelpOpen ? (
+        <aside
+          id="projects-help"
+          data-v3-projects-indicator="help-popover"
         >
-          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
-          <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.8 1.8 0 0 0 15 19.45a1.8 1.8 0 0 0-1 .55 1.8 1.8 0 0 0-.5 1.3V21a2 2 0 0 1-4 0v-.09a1.8 1.8 0 0 0-.5-1.3 1.8 1.8 0 0 0-1-.55 1.8 1.8 0 0 0-1.98.36l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.8 1.8 0 0 0 3.55 15a1.8 1.8 0 0 0-.55-1 1.8 1.8 0 0 0-1.3-.5H1.5a2 2 0 0 1 0-4h.2A1.8 1.8 0 0 0 3 9a1.8 1.8 0 0 0 .55-1 1.8 1.8 0 0 0-.36-1.98l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.8 1.8 0 0 0 8 3.55a1.8 1.8 0 0 0 1-.55 1.8 1.8 0 0 0 .5-1.3V1.5a2 2 0 0 1 4 0v.2A1.8 1.8 0 0 0 14 3a1.8 1.8 0 0 0 1 .55 1.8 1.8 0 0 0 1.98-.36l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.8 1.8 0 0 0 19.45 8a1.8 1.8 0 0 0 .55 1 1.8 1.8 0 0 0 1.3.5h.2a2 2 0 0 1 0 4h-.2a1.8 1.8 0 0 0-1.3.5 1.8 1.8 0 0 0-.6 1Z" />
-        </svg>
-      </a>
+          <p>Projects and Units</p>
+          <p>
+            Projects are collections of units, like folders for armies,
+            warbands, display forces, or tables. Units are the direct model
+            library, visible beside projects and sortable on their own.
+          </p>
+        </aside>
+      ) : null}
     </header>
   )
 }
@@ -652,7 +620,10 @@ function SearchSortToolbar({
       </div>
 
       {isSortOpen ? (
-        <div className="grid gap-2 rounded-[8px] border border-white/[0.06] bg-[#111821] p-2">
+        <div
+          className="grid gap-2 rounded-[8px] border border-white/[0.06] bg-[#111821] p-2"
+          data-v3-projects-indicator="sort-panel"
+        >
           <div className="flex items-center gap-3">
             <label className="min-w-0 flex-1">
               <span className="sr-only">Sort projects and units</span>
@@ -669,11 +640,15 @@ function SearchSortToolbar({
               </select>
             </label>
 
-            <div className="grid grid-cols-2 overflow-hidden rounded-[8px] border border-white/10">
+            <div
+              className="grid grid-cols-2 overflow-hidden rounded-[8px] border border-white/10"
+              data-v3-projects-indicator="view-toggle"
+            >
               <button
                 type="button"
                 aria-label="Grid view"
                 onClick={() => onViewChange('grid')}
+                data-active={view === 'grid'}
                 className={[
                   'grid h-10 w-10 place-items-center text-sm font-black transition',
                   view === 'grid' ? 'bg-cyan-300 text-black' : 'text-white/42 hover:text-white',
@@ -685,6 +660,7 @@ function SearchSortToolbar({
                 type="button"
                 aria-label="Card view"
                 onClick={() => onViewChange('cards')}
+                data-active={view === 'cards'}
                 className={[
                   'grid h-10 w-10 place-items-center border-l border-white/10 text-sm font-black transition',
                   view === 'cards' ? 'bg-cyan-300 text-black' : 'text-white/42 hover:text-white',
@@ -730,7 +706,10 @@ function PaginatedResultFrame({
       {children}
 
       {hasPages ? (
-        <div className="absolute bottom-0 right-0 top-0 flex w-6 flex-col items-center justify-between rounded-full border border-white/10 bg-[#111821]/92 py-2">
+        <div
+          className="absolute bottom-0 right-0 top-0 flex w-6 flex-col items-center justify-between rounded-full border border-white/10 bg-[#111821]/92 py-2"
+          data-v3-projects-indicator="pagination-rail"
+        >
           <button
             type="button"
             aria-label={previousLabel}
@@ -881,33 +860,20 @@ function ProjectFileCard({
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/48" />
         </div>
         <div className="min-w-0 py-1">
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-cyan-300">
-            {project.type}
-          </p>
-          <h2 className="mt-1 line-clamp-2 text-lg font-black leading-tight text-white">
+          <h2 className="line-clamp-2 text-lg font-black leading-tight text-white">
             {project.name}
           </h2>
           <p className="mt-2 line-clamp-2 text-xs font-semibold leading-4 text-white/52">
             {project.description}
           </p>
-          <div className="mt-3 flex gap-1">
-            {project.palette.map((color, index) => (
-              <span
-                key={`${project.id}-${color}-${index}`}
-                className="h-3 w-3 rounded-full border border-white/10"
-                style={{ backgroundColor: color }}
-              />
-            ))}
+          <div
+            className="mt-3 flex flex-wrap items-center gap-2"
+            data-v3-projects-indicator="project-card-stats"
+          >
+            <span>{units.length} Units</span>
+            <span>{totalProgress}% Avg</span>
           </div>
         </div>
-      </div>
-      <div className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2 border-t border-white/[0.06] px-3 py-3 text-[10px] font-black text-white/38">
-        <span>{units.length} Units</span>
-        <span>{totalProgress}% Avg</span>
-        <span>{project.due ? formatShortDate(project.due) : 'No date'}</span>
-        <span className="rounded-full border border-cyan-300/35 bg-cyan-300/10 px-2 py-1 text-cyan-300">
-          Open
-        </span>
       </div>
     </a>
   )
@@ -938,10 +904,7 @@ function ProjectGridCard({
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/22 to-black/86" />
         <div className="absolute bottom-3 left-3 right-3">
-          <p className="text-[8px] font-black uppercase tracking-[0.16em] text-cyan-300">
-            {project.type}
-          </p>
-          <h2 className="mt-1 line-clamp-2 text-sm font-black leading-tight text-white">
+          <h2 className="line-clamp-2 text-sm font-black leading-tight text-white">
             {project.name}
           </h2>
         </div>
@@ -956,15 +919,6 @@ function ProjectGridCard({
             className="h-full rounded-full bg-cyan-300"
             style={{ width: `${Math.max(totalProgress, units.length ? 4 : 0)}%` }}
           />
-        </div>
-        <div className="flex gap-1">
-          {project.palette.slice(0, 5).map((color, index) => (
-            <span
-              key={`${project.id}-${color}-${index}`}
-              className="h-2.5 w-2.5 rounded-full border border-white/10"
-              style={{ backgroundColor: color }}
-            />
-          ))}
         </div>
       </div>
     </a>
@@ -1014,7 +968,10 @@ function UnitsTab({
         onSortChange={onSortChange}
         onViewChange={onViewChange}
       >
-        <div className="flex flex-wrap gap-2">
+        <div
+          className="flex flex-wrap gap-2"
+          data-v3-projects-indicator="project-filter-chips"
+        >
           {projects.map((project) => (
             <button
               key={project.id}
@@ -1049,7 +1006,11 @@ function UnitsTab({
             </p>
           </section>
         ) : view === 'grid' ? (
-          <section className="grid grid-cols-2 gap-3" aria-label="Units">
+          <section
+            className="grid grid-cols-2 gap-3"
+            aria-label="Units"
+            data-v3-projects-indicator="units-grid"
+          >
             {units.map((unit) => (
               <UnitCard
                 key={unit.id}
@@ -1062,6 +1023,7 @@ function UnitsTab({
           <section
             className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
             aria-label="Units"
+            data-v3-projects-indicator="units-list"
           >
             <div className="divide-y divide-white/[0.06]">
               {units.map((unit) => (
@@ -1160,7 +1122,10 @@ function UnitListRow({
 
 function ProgressRing({ progress }: { progress: number }) {
   return (
-    <div className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-black/48">
+    <div
+      className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-black/48"
+      data-v3-projects-indicator="progress-ring"
+    >
       <div
         className="grid h-8 w-8 place-items-center rounded-full text-[9px] font-black text-white"
         style={{
@@ -1401,7 +1366,10 @@ function PreviewCard({
   title: string
 }) {
   return (
-    <div className="overflow-hidden rounded-[8px] border border-cyan-300/20 bg-black/24">
+    <div
+      className="overflow-hidden rounded-[8px] border border-cyan-300/20 bg-black/24"
+      data-v3-projects-indicator="preview-card"
+    >
       <div className="relative h-28">
         <Image
           src={image}

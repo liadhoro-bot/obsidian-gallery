@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { setProjectPaletteSlot } from './actions'
 import { setUnitPaletteSlot } from '../../units/[id]/actions'
+import styles from './project-detail-silver.module.css'
 
 type PaintOption = {
   id: string
@@ -131,7 +132,7 @@ export default function ProjectPaletteStarter({
                   setActiveSlot(index)
                   setQuery('')
                 }}
-                className="flex aspect-square w-full min-w-0 items-center justify-center rounded-xl border border-dashed border-white/20 bg-white/[0.03] text-lg font-semibold text-white/30 transition hover:border-cyan-400/50 hover:text-cyan-300 active:scale-95"
+                className={`${styles.secondaryAction} flex aspect-square w-full min-w-0 items-center justify-center text-lg font-semibold transition active:scale-95`}
               >
                 {selectedPaint ? (
                   selectedPaint.swatch_image_url ? (
@@ -161,16 +162,16 @@ export default function ProjectPaletteStarter({
 
       {activeSlot !== null ? (
         <div className="fixed inset-0 z-50 flex items-end bg-black/70 px-4 pb-4 sm:items-center">
-          <div className="mx-auto max-h-[80vh] w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#10131a] p-4 shadow-2xl">
+          <div className={`${styles.dialogPanel} mx-auto max-h-[80vh] w-full max-w-md overflow-hidden p-4`}>
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">
+              <h3 className="text-sm font-semibold">
                 Choose Color {activeSlot + 1}
               </h3>
 
               <button
                 type="button"
                 onClick={closePicker}
-                className="text-sm text-white/50"
+                className="text-sm font-bold text-[color:var(--og-brass-500)]"
               >
                 Close
               </button>
@@ -181,10 +182,10 @@ export default function ProjectPaletteStarter({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by name, brand, line, or SKU..."
-              className="mb-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none"
+              className={`${styles.textInput} mb-2 px-4 py-3 text-sm`}
             />
 
-            <p className="mb-3 text-xs text-white/35">
+            <p className="mb-3 text-xs text-[color:var(--og-text-secondary)]">
               {isSearching
                 ? 'Searching paints...'
                 : `Showing ${filteredPaints.length} matching paints`}
@@ -197,7 +198,7 @@ export default function ProjectPaletteStarter({
                   type="button"
                   disabled={isPending}
                   onClick={() => choosePaint(paint)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-2 text-left hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:bg-neutral-700/70 disabled:text-white/60 disabled:opacity-70"
+                  className={`${styles.secondaryAction} flex w-full items-center gap-3 p-2 text-left disabled:cursor-not-allowed disabled:opacity-70`}
                 >
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
                     {paint.swatch_image_url ? (
@@ -218,10 +219,10 @@ export default function ProjectPaletteStarter({
                   </div>
 
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">
+                    <p className="truncate text-sm font-semibold text-[color:var(--og-paper-50)]">
                       {paint.name}
                     </p>
-                    <p className="truncate text-xs text-white/40">
+                    <p className="truncate text-xs text-[color:var(--og-paper-200)]">
                       {[paint.brand, paint.line, paint.sku]
                         .filter(Boolean)
                         .join(' · ')}
