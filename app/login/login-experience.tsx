@@ -43,8 +43,6 @@ export default function LoginExperience({
 
         <div className={styles.loginShade} />
 
-        <FloatingSwatches />
-
         <div className={styles.loginContent}>
           <header className={styles.loginHeader}>
             <span className={styles.wordmark}>
@@ -97,15 +95,5 @@ export default function LoginExperience({
         ) : null}
       </div>
     </main>
-  )
-}
-
-function FloatingSwatches() {
-  return (
-    <div aria-hidden="true" className={styles.paintObjects}>
-      <div className={`${styles.paintChip} ${styles.paintChipOne}`} />
-      <div className={`${styles.paintChip} ${styles.paintChipTwo}`} />
-      <div className={`${styles.paintChip} ${styles.paintChipThree}`} />
-    </div>
   )
 }

@@ -46,12 +46,39 @@ function getSafeReason(value: string | null) {
   return normalized.slice(0, 180)
 }
 
+function isDashboardNextWithoutPreview(value: string) {
+  try {
+    const nextUrl = new URL(value, 'https://obsidian-gallery-v3.vercel.app')
+    return (
+      nextUrl.pathname === '/dashboard' &&
+      !isV3PreviewValue(nextUrl.searchParams.get('preview'))
+    )
+  } catch {
+    return value === '/dashboard' || value.startsWith('/dashboard?')
+  }
+}
+
+function shouldForceV3PreviewPath(requestUrl: URL, next: string) {
+  if (isV3PreviewValue(requestUrl.searchParams.get('preview'))) {
+    return true
+  }
+
+  if (!isV3DeploymentHost(requestUrl.host)) {
+    return false
+  }
+
+  return !isDashboardNextWithoutPreview(next)
+}
+
+function getCallbackNextPath(requestUrl: URL, requestedNext: string) {
+  return shouldForceV3PreviewPath(requestUrl, requestedNext)
+    ? ensureV3PreviewPath(requestedNext)
+    : requestedNext
+}
+
 function getLoginErrorUrl(requestUrl: URL, reason: string | null, next: string) {
   const loginUrl = new URL('/login', requestUrl.origin)
-  const isV3Callback =
-    isV3DeploymentHost(requestUrl.host) ||
-    isV3PreviewValue(requestUrl.searchParams.get('preview'))
-  const loginNext = isV3Callback ? ensureV3PreviewPath(next) : next
+  const loginNext = getCallbackNextPath(requestUrl, next)
 
   loginUrl.searchParams.set('error', 'auth-callback')
 
@@ -62,10 +89,7 @@ function getLoginErrorUrl(requestUrl: URL, reason: string | null, next: string) 
   try {
     const nextUrl = new URL(loginNext, requestUrl.origin)
 
-    if (
-      isV3Callback ||
-      isV3PreviewValue(nextUrl.searchParams.get('preview'))
-    ) {
+    if (isV3PreviewValue(nextUrl.searchParams.get('preview'))) {
       loginUrl.searchParams.set('preview', '1')
     }
   } catch {
@@ -81,13 +105,8 @@ function getLoginErrorUrl(requestUrl: URL, reason: string | null, next: string) 
 
 export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl.clone()
-  const isV3Callback =
-    isV3DeploymentHost(requestUrl.host) ||
-    isV3PreviewValue(requestUrl.searchParams.get('preview'))
   const requestedNext = safeNextPath(requestUrl.searchParams.get('next'))
-  const next = isV3Callback
-    ? ensureV3PreviewPath(requestedNext)
-    : requestedNext
+  const next = getCallbackNextPath(requestUrl, requestedNext)
   const providerError =
     requestUrl.searchParams.get('error_description') ??
     requestUrl.searchParams.get('error_code') ??

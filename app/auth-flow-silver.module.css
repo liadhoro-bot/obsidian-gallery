@@ -44,61 +44,6 @@
     radial-gradient(circle at 42% 74%, color-mix(in srgb, var(--og-brass-500) 24%, transparent), transparent 34%);
 }
 
-.paintObjects {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-}
-
-.paintChip {
-  position: absolute;
-  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 54%, var(--og-ink-950));
-  border-radius: var(--og-radius-m);
-  background-image: var(--og-material-paper-card);
-  box-shadow: var(--og-shadow-photo-mount);
-}
-
-.paintChip::after {
-  content: '';
-  position: absolute;
-  inset: 8px;
-  border-radius: var(--og-radius-s);
-  background: linear-gradient(135deg, #744b30, #b43930 48%, #d7bd78);
-  opacity: 0.86;
-}
-
-.paintChipOne {
-  top: 104px;
-  left: -16px;
-  width: 58px;
-  height: 46px;
-  rotate: 11deg;
-}
-
-.paintChipTwo {
-  top: 196px;
-  right: -18px;
-  width: 52px;
-  height: 42px;
-  rotate: -10deg;
-}
-
-.paintChipTwo::after {
-  background: linear-gradient(135deg, #263a47, #5f6f48 48%, #d9c09e);
-}
-
-.paintChipThree {
-  bottom: 172px;
-  left: 18px;
-  width: 44px;
-  height: 38px;
-  rotate: -18deg;
-}
-
-.paintChipThree::after {
-  background: linear-gradient(135deg, #201713, #6f5576 52%, #9f7136);
-}
-
 .loginContent {
   position: relative;
   z-index: 1;

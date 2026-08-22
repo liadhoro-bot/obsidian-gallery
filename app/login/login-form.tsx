@@ -89,7 +89,7 @@ export default function LoginForm({
     const supabase = createClient()
     const callbackUrl = new URL('/auth/callback', window.location.origin)
     callbackUrl.searchParams.set('next', effectiveNextPath)
-    if (previewMode) {
+    if (isPreviewNextPath(effectiveNextPath)) {
       callbackUrl.searchParams.set('preview', '1')
     }
 
@@ -249,4 +249,13 @@ function getEffectiveNextPath(nextPath: string, previewMode: boolean) {
   const search = params.toString()
 
   return `${pathname}${search ? `?${search}` : ''}${hash ? `#${hash}` : ''}`
+}
+
+function isPreviewNextPath(nextPath: string) {
+  try {
+    const url = new URL(nextPath, 'https://obsidian-gallery-v3.vercel.app')
+    return url.searchParams.get('preview') === '1'
+  } catch {
+    return false
+  }
 }
