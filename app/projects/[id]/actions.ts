@@ -8,6 +8,7 @@ import {
   extractPaletteFromImage,
   findNearestUniquePaints,
 } from '../../../utils/color-matching'
+import { completeOnboardingAction } from '../../../lib/onboarding/completion'
 
 type StoredImageAsset = {
   storage_bucket: string | null
@@ -314,12 +315,22 @@ export async function setProjectPaletteSlot(
     .eq('theme_id', themeId)
     .eq('sort_order', sortOrder)
 
-  await supabase.from('theme_paints').insert({
+  const { error: insertError } = await supabase.from('theme_paints').insert({
     theme_id: themeId,
     paint_source: paintSource,
     paint_catalog_id: paintSource === 'catalog' ? paintId : null,
     custom_paint_id: paintSource === 'custom' ? paintId : null,
     sort_order: sortOrder,
+  })
+
+  if (insertError) {
+    throw insertError
+  }
+
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'create_project_palette',
+    subjectProjectId: projectId,
   })
 
   revalidatePath(`/projects/${projectId}`)
@@ -408,7 +419,17 @@ export async function calculateProjectPaletteAction(formData: FormData) {
   await supabase.from('theme_paints').delete().eq('theme_id', themeId)
 
 if (paintRows.length > 0) {
-  await supabase.from('theme_paints').insert(paintRows)
+  const { error: insertError } = await supabase.from('theme_paints').insert(paintRows)
+
+  if (insertError) {
+    throw insertError
+  }
+
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'create_project_palette',
+    subjectProjectId: projectId,
+  })
 }
 
 await captureServerEvent({

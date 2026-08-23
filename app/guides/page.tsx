@@ -4,6 +4,8 @@ import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
 import { getGuidesV3Payload } from './guides-v3-data'
+import { getFeatureGuidesForPage } from '../components/feature-guide-data'
+import { guidesFeatureGuides } from '../components/feature-guide-presets'
 
 type GuidesPageProps = {
   searchParams?: Promise<{
@@ -28,10 +30,13 @@ export default async function GuidesPage({ searchParams }: GuidesPageProps) {
     redirect('/login?next=%2Fguides%3Fpreview%3D1&preview=1')
   }
 
-  const payload = await perf.measure('v3 guides data', () =>
-    getGuidesV3Payload(user.id)
+  const [payload, featureGuides] = await perf.measure('v3 guides data', () =>
+    Promise.all([
+      getGuidesV3Payload(user.id),
+      getFeatureGuidesForPage('/guides', guidesFeatureGuides),
+    ])
   )
 
   perf.total()
-  return <GuidesV3Preview initialPayload={payload} />
+  return <GuidesV3Preview featureGuides={featureGuides} initialPayload={payload} />
 }

@@ -14,6 +14,7 @@ import {
 import RecipeDetailTabs, { RecipeDetailTab } from './recipe-detail-tabs'
 import RecipeDetailsTab from './recipe-details-tab'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import { markRecipePreviewed } from './recipe-actions'
 
 const RecipeGuideDialog = dynamic(() => import('./recipe-guide-dialog'))
 const RecipeStepsTab = dynamic(() => import('./recipe-steps-tab'), {
@@ -122,6 +123,14 @@ export default function RecipeDetailClient({
     return map
   }, [stepPaintLinks])
 
+  function openRecipeGuidePreview() {
+    setIsRecipeGuideOpen(true)
+
+    if (isOwner) {
+      void markRecipePreviewed(recipe.id).catch(() => {})
+    }
+  }
+
   return (
     <div className="w-full">
       <RecipeHero
@@ -140,7 +149,7 @@ export default function RecipeDetailClient({
   activeTab={activeTab}
   setActiveTab={setActiveTab}
   isOwner={isOwner}
-  onRecipeStepsClick={() => setIsRecipeGuideOpen(true)}
+  onRecipeStepsClick={openRecipeGuidePreview}
 />
 
       <RecipeGuideDialog

@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState } from 'react'
-import type { ReactNode } from 'react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { OgButton, OgCaption, SurfacePanel } from '@/src/components/v3'
 import PrefetchLink from '../components/prefetch-link'
 import styles from './dashboard-og.module.css'
@@ -9,16 +9,18 @@ import styles from './dashboard-og.module.css'
 export default function DashboardQuickActionStartButton({
   className,
   children,
+  ...buttonProps
 }: {
   className: string
   children: ReactNode
-}) {
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className' | 'children'>) {
   const [showStartOptions, setShowStartOptions] = useState(false)
 
   return (
     <>
       <button
         type="button"
+        {...buttonProps}
         onClick={() => setShowStartOptions(true)}
         className={className}
       >

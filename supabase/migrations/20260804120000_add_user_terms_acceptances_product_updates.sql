@@ -10,6 +10,12 @@ create table if not exists public.user_terms_acceptances (
 alter table public.user_terms_acceptances
   add column if not exists product_updates_approved_at timestamptz;
 
+alter table public.profiles
+  add column if not exists terms_accepted_at timestamptz;
+
+alter table public.profiles
+  add column if not exists terms_version text;
+
 alter table public.user_terms_acceptances
   enable row level security;
 

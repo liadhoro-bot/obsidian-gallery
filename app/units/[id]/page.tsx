@@ -13,6 +13,12 @@ import { TopBarSkeleton } from '../../dashboard/dashboard-skeletons'
 import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
 import { getSupabaseImageUrl } from '../../../utils/images/supabase-image'
 import UnitV3Preview, { type UnitV3LiveUnit } from './unit-v3-preview'
+import { getFeatureGuidesForPage } from '../../components/feature-guide-data'
+import {
+  unitDetailFeatureGuides,
+  unitPreviewFeatureGuides,
+} from '../../components/feature-guide-presets'
+import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -21,6 +27,7 @@ type PageProps = {
     tab?: string
     autostart?: string
     preview?: string
+    edit?: string
   }>
 }
 
@@ -390,6 +397,7 @@ async function UnitDetailBody({
   initialTab,
   showSessionStartedNotice,
   autoStartSession,
+  featureGuides,
 }: {
   id: string
   userId: string
@@ -397,6 +405,7 @@ async function UnitDetailBody({
   initialTab: 'overview' | 'progress'
   showSessionStartedNotice: boolean
   autoStartSession: boolean
+  featureGuides: FeatureGuideEntry[]
 }) {
   const perf = createPerfTimer('/units/[id]:details')
   const supabase = await createClient()
@@ -730,6 +739,7 @@ async function UnitDetailBody({
       currentUserId={userId}
       autoStartSession={autoStartSession}
       showSessionStartedNotice={showSessionStartedNotice}
+      featureGuides={featureGuides}
     />
   )
 }
@@ -804,7 +814,11 @@ function UnitContestCardSkeleton() {
 export default async function UnitDetailPage({ params, searchParams }: PageProps) {
   const perf = createPerfTimer('/units/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
-  const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
+  const isPreview =
+    resolvedSearchParams.edit !== 'details' &&
+    resolvedSearchParams.edit !== 'header' &&
+    resolvedSearchParams.edit !== 'gallery' &&
+    (await hasV3PreviewSession(resolvedSearchParams.preview))
 
   if (isPreview) {
     const previewTab =
@@ -813,9 +827,20 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
         ? resolvedSearchParams.tab
         : 'details'
     const liveUnit = await getUnitV3PreviewUnit(id)
+    const featureGuides = await getFeatureGuidesForPage(
+      '/units/[id]',
+      unitPreviewFeatureGuides
+    )
 
     perf.total()
-    return <UnitV3Preview id={id} initialTab={previewTab} liveUnit={liveUnit} />
+    return (
+      <UnitV3Preview
+        id={id}
+        featureGuides={featureGuides}
+        initialTab={previewTab}
+        liveUnit={liveUnit}
+      />
+    )
   }
 
   const showSessionStartedNotice = resolvedSearchParams.session === 'started'
@@ -993,6 +1018,10 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   perf.mark('main Supabase query')
 
   const { data: featuredImage } = await featuredImagePromise
+  const featureGuides = await getFeatureGuidesForPage(
+    '/units/[id]',
+    unitDetailFeatureGuides
+  )
   perf.mark('image/gallery queries')
   perf.total()
   return (
@@ -1022,6 +1051,7 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
               unit={unit}
               initialTab={initialTab}
               autoStartSession={autoStartSession}
+              featureGuides={featureGuides}
               showSessionStartedNotice={showSessionStartedNotice}
             />
           </Suspense>

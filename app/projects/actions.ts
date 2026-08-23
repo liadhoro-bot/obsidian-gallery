@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
+import { completeOnboardingAction } from '../../lib/onboarding/completion'
 import {
   getSafeImageExtension,
   validateGalleryImageFile,
@@ -90,6 +91,12 @@ export async function addProject(formData: FormData) {
   }
 
   revalidatePath('/projects')
+
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'create_project',
+    subjectProjectId: newProject.id,
+  })
 
   redirect(`/projects/${newProject.id}`)
 }

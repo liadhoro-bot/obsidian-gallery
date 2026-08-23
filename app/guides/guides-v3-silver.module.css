@@ -186,38 +186,6 @@
   color: var(--og-text-secondary);
 }
 
-.guidesSilver [data-v3-guides-indicator="help-popover"] {
-  position: absolute;
-  inset-block-start: calc(100% + var(--og-space-2));
-  inset-inline-end: var(--og-space-3);
-  z-index: 20;
-  width: min(312px, calc(100vw - 40px));
-  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
-  border-radius: var(--og-radius-m);
-  background-color: var(--og-surface-secondary-light);
-  background-image: var(--og-material-paper-card);
-  color: var(--og-text-primary);
-  padding: var(--og-space-4);
-  box-shadow: var(--og-shadow-large);
-}
-
-.guidesSilver [data-v3-guides-indicator="help-popover"] p:first-child {
-  color: color-mix(in srgb, var(--og-status-warning) 78%, var(--og-ink-800));
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  line-height: var(--og-leading-caption);
-  text-transform: uppercase;
-}
-
-.guidesSilver [data-v3-guides-indicator="help-popover"] p:last-child {
-  margin-block-start: var(--og-space-2);
-  color: var(--og-text-secondary);
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: var(--og-leading-body);
-}
-
 .guidesSilver [role="tablist"] {
   min-height: 42px;
   overflow: hidden;

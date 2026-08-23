@@ -33,76 +33,89 @@ type DashboardPageProps = {
 }
 
 const dashboardFeatureGuideOrder = [
-  'dashboard.help',
-  'dashboard.add_next_action',
+  'dashboard.page',
+  'dashboard.tabs.active_units',
+  'dashboard.tabs.my_progress',
   'dashboard.next_actions.panel',
   'dashboard.featured_unit',
-  'dashboard.resume_painting',
+  'dashboard.up_next.panel',
 ] as const
 
 const dashboardFeatureGuideFallbacks: Record<
   (typeof dashboardFeatureGuideOrder)[number],
   DashboardFeatureGuide
 > = {
-  'dashboard.help': {
-    uid: 'dashboard.help',
-    feature_name: 'Dashboard explainer',
-    location_reference: 'Dashboard header > ?',
+  'dashboard.page': {
+    uid: 'dashboard.page',
+    feature_name: 'Dashboard',
+    location_reference: 'Dashboard header > title',
     component_reference: 'app/dashboard/dashboard-v3-preview.tsx',
     explanation:
-      'Explains what the dashboard is for: a quick check-in view for active units, next actions, and painting progress.',
+      'The Dashboard is the home workbench: it gives you the quickest route back into active units, shows the next concrete actions to take, and keeps your painting progress visible.',
     place_in_page: 'Dashboard header',
-    coach_mark_area: 'The question mark button in the Dashboard header',
+    coach_mark_area: 'The Dashboard page title',
     popup_placement: 'bottom-end',
+    display_order: 100,
+  },
+  'dashboard.tabs.active_units': {
+    uid: 'dashboard.tabs.active_units',
+    feature_name: 'Active Units',
+    location_reference: 'Dashboard > tabs > Active Units',
+    component_reference: 'app/dashboard/dashboard-v3-preview.tsx',
+    explanation:
+      'Active Units is the working tab. It contains your Next Actions, the Featured Unit you are focused on, and the Up Next card for switching between unit statuses and layouts.',
+    place_in_page: 'Dashboard tab row',
+    coach_mark_area: 'The Active Units tab',
+    popup_placement: 'bottom',
     display_order: 110,
   },
-  'dashboard.add_next_action': {
-    uid: 'dashboard.add_next_action',
-    feature_name: 'Add next action',
-    location_reference: 'Dashboard header > +',
+  'dashboard.tabs.my_progress': {
+    uid: 'dashboard.tabs.my_progress',
+    feature_name: 'My Progress',
+    location_reference: 'Dashboard > tabs > My Progress',
     component_reference: 'app/dashboard/dashboard-v3-preview.tsx',
     explanation:
-      'Adds a new dashboard task to the next action list so the user has one more concrete step to follow.',
-    place_in_page: 'Dashboard header',
-    coach_mark_area: 'The plus button beside the Dashboard help button',
-    popup_placement: 'bottom-end',
+      'My Progress is your hobby record. It gathers your Path to Grandmastery XP bar, paint streak, earned badges, and personal stats into one progress view.',
+    place_in_page: 'Dashboard tab row',
+    coach_mark_area: 'The My Progress tab',
+    popup_placement: 'bottom',
     display_order: 120,
   },
   'dashboard.next_actions.panel': {
     uid: 'dashboard.next_actions.panel',
-    feature_name: 'Next actions panel',
+    feature_name: 'Next Actions',
     location_reference: 'Dashboard > Next Actions',
     component_reference: 'app/dashboard/dashboard-next-actions-card.tsx',
     explanation:
-      'A short guided checklist chosen from the user onboarding goal. Each action has a completion control, a breadcrumb, and a route to the exact place to act.',
-    place_in_page: 'Near top of Active Units dashboard',
+      'Next Actions turns the dashboard into a checklist. Each action shows where it belongs in the app, the check control marks it done, and the Go button takes you directly to the place where that action happens.',
+    place_in_page: 'Top of the Active Units tab',
     coach_mark_area: 'The whole next actions card',
     popup_placement: 'bottom',
-    display_order: 150,
+    display_order: 130,
   },
   'dashboard.featured_unit': {
     uid: 'dashboard.featured_unit',
-    feature_name: 'Featured unit',
+    feature_name: 'Featured Unit',
     location_reference: 'Dashboard > Featured Unit',
     component_reference: 'app/dashboard/dashboard-unit-in-progress.tsx',
     explanation:
-      'Highlights the unit the user is currently focusing on, including progress, stage, time logged, and a resume route.',
-    place_in_page: 'Active Units dashboard',
+      'Featured Unit is the main miniature you are working on now. It shows its image, stage, status, and progress. The Resume button opens that unit and starts the painting clock so you can continue immediately.',
+    place_in_page: 'Middle of the Active Units tab',
     coach_mark_area: 'The large featured unit card',
     popup_placement: 'top',
-    display_order: 210,
+    display_order: 140,
   },
-  'dashboard.resume_painting': {
-    uid: 'dashboard.resume_painting',
-    feature_name: 'Resume painting',
-    location_reference: 'Dashboard > Featured Unit > Resume',
-    component_reference: 'app/dashboard/dashboard-resume-button.tsx',
+  'dashboard.up_next.panel': {
+    uid: 'dashboard.up_next.panel',
+    feature_name: 'Up Next',
+    location_reference: 'Dashboard > Up Next',
+    component_reference: 'app/dashboard/dashboard-active-units-view.tsx',
     explanation:
-      'Opens the active unit so the user can continue recording stages, photos, paints, and sessions.',
-    place_in_page: 'Featured unit card',
-    coach_mark_area: 'The Resume button on a unit card',
-    popup_placement: 'left',
-    display_order: 220,
+      'Up Next is your active unit shelf. Use the status menu to switch between unit states, toggle grid or card view, and press any unit card to open that unit page.',
+    place_in_page: 'Bottom of the Active Units tab',
+    coach_mark_area: 'The whole Up Next card',
+    popup_placement: 'top',
+    display_order: 150,
   },
 }
 
@@ -214,6 +227,7 @@ export default async function DashboardPage({
     ) : (
       <Suspense fallback={profileShell}>{profileContent}</Suspense>
     )
+  const featureGuides = await getDashboardFeatureGuides()
 
   return (
     <WorkbenchShell
@@ -222,6 +236,7 @@ export default async function DashboardPage({
       maxWidth="var(--og-workbench-compact-max-width)"
     >
       <DashboardActiveUnitsScreen
+        featureGuides={featureGuides}
         initialTab={activeTab}
         profilePanel={profilePanel}
         userId={user.id}
@@ -252,9 +267,10 @@ async function getDashboardFeatureGuides(): Promise<DashboardFeatureGuide[]> {
       data.map((guide) => [guide.uid, guide as DashboardFeatureGuide])
     )
 
-    return dashboardFeatureGuideOrder.map(
-      (uid) => guideMap.get(uid) ?? dashboardFeatureGuideFallbacks[uid]
-    )
+    return dashboardFeatureGuideOrder.map((uid) => ({
+      ...guideMap.get(uid),
+      ...dashboardFeatureGuideFallbacks[uid],
+    }))
   } catch {
     return fallbackGuides
   }

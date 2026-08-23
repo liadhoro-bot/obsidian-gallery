@@ -15,7 +15,13 @@ import NominateForContestCard from '../../../components/contests/nominate-for-co
 import { getEligibleContestsForSource } from '../../../lib/contests/queries'
 import { isCurrentUserAdmin } from '../../../lib/admin'
 import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
+import { getFeatureGuidesForPage } from '../../components/feature-guide-data'
+import { projectDetailFeatureGuides } from '../../components/feature-guide-presets'
 import styles from './project-detail-silver.module.css'
+import {
+  completeOnboardingAction,
+  completeOnboardingActions,
+} from '../../../lib/onboarding/completion'
 
 function firstRelation<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
@@ -277,6 +283,8 @@ async function addUnit(formData: FormData) {
     console.error('Error creating legacy unit stages:', legacyStageError)
   }
 
+  let persistedUnitImage = false
+
   if (imageFile instanceof File && imageFile.size > 0) {
     const validationError = validateGalleryImageFile(imageFile)
 
@@ -321,7 +329,22 @@ async function addUnit(formData: FormData) {
       await supabase.storage.from('obsidian-images').remove([filePath])
       throw new Error(imageError.message)
     }
+
+    persistedUnitImage = true
   }
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectProjectId: projectId,
+    subjectUnitId: insertedUnit.id,
+    actionKeys: [
+      'create_unit',
+      'name_unit',
+      'add_project_unit',
+      ...(notes || deadline || modelCount ? ['complete_unit_info'] : []),
+      ...(persistedUnitImage ? ['add_unit_image'] : []),
+    ],
+  })
 
   revalidatePath(`/projects/${projectId}`)
 }
@@ -402,6 +425,13 @@ async function setFeaturedUnit(formData: FormData) {
     console.error('Error setting featured unit:', setError)
     return
   }
+
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'feature_unit',
+    subjectProjectId: projectId,
+    subjectUnitId: unitId,
+  })
 
   revalidatePath(`/projects/${projectId}`)
   revalidatePath('/dashboard')
@@ -986,6 +1016,10 @@ export default async function ProjectDetailPage({
     userId: user.id,
     activeTab,
   })
+  const featureGuides = await getFeatureGuidesForPage(
+    '/projects/[id]',
+    projectDetailFeatureGuides
+  )
   const canSeeContestNominationCard = await isCurrentUserAdmin(user.id)
 
   return (
@@ -1021,6 +1055,7 @@ export default async function ProjectDetailPage({
           setFeaturedProjectImageAction={setFeaturedProjectImage}
           deleteProjectImageAction={deleteProjectImage}
           deleteProjectAction={deleteProject}
+          featureGuides={featureGuides}
         />
       </div>
     </main>

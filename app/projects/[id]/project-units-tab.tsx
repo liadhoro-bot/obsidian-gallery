@@ -214,7 +214,10 @@ export default function ProjectUnitsTab({
     )
 
   return (
-    <section className={`${styles.unitViewSection} mt-3`}>
+    <section
+      className={`${styles.unitViewSection} mt-3`}
+      data-feature-guide-target="projects.detail.units"
+    >
       {unitsError ? (
         <>
           <h2 className="text-xl">Project Units</h2>

@@ -3,12 +3,16 @@
 import Image from 'next/image'
 import type { FormEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
+import FeatureGuideTour from '../../components/feature-guide-tour'
+import { unitPreviewFeatureGuides } from '../../components/feature-guide-presets'
+import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
 import styles from './unit-v3-silver.module.css'
 
 type UnitV3PreviewProps = {
   id: string
   initialTab?: UnitTab
+  featureGuides?: FeatureGuideEntry[]
   liveUnit?: PreviewUnit | null
 }
 
@@ -249,9 +253,11 @@ const weekDayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 export default function UnitV3Preview({
   id,
   initialTab = 'details',
+  featureGuides = unitPreviewFeatureGuides,
   liveUnit = null,
 }: UnitV3PreviewProps) {
   const [activeTab, setActiveTab] = useState<UnitTab>(initialTab)
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const unit = useMemo(
     () =>
       liveUnit ??
@@ -259,6 +265,22 @@ export default function UnitV3Preview({
       previewUnits[0],
     [id, liveUnit]
   )
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+
+  function showGuideAt(index: number) {
+    const guide = featureGuides[index]
+    if (guide?.uid === 'units.detail.tabs.paint') setActiveTab('paint')
+    if (guide?.uid === 'units.detail.tabs.progress') setActiveTab('progress')
+    if (
+      guide?.uid === 'units.detail.tabs.details' ||
+      guide?.uid === 'units.detail.details' ||
+      guide?.uid === 'units.detail.gallery'
+    ) {
+      setActiveTab('details')
+    }
+    setActiveGuideIndex(index)
+  }
 
   function goBack() {
     if (window.history.length > 1) {
@@ -267,6 +289,10 @@ export default function UnitV3Preview({
     }
 
     window.location.assign('/dashboard?preview=1')
+  }
+
+  function openLiveEditor(target: 'details' | 'header' | 'gallery') {
+    window.location.assign(`/units/${encodeURIComponent(unit.id)}?edit=${target}`)
   }
 
   return (
@@ -320,7 +346,17 @@ export default function UnitV3Preview({
             <div className="flex items-center gap-2" data-v3-unit-indicator="hero-actions">
               <button
                 type="button"
+                aria-expanded={activeGuide !== null}
+                aria-label="Show unit explanation"
+                onClick={() => showGuideAt(0)}
+                className="grid h-10 w-10 place-items-center rounded-full bg-[#111827]/88 text-white backdrop-blur-md transition hover:text-cyan-300"
+              >
+                ?
+              </button>
+              <button
+                type="button"
                 aria-label="Edit unit"
+                onClick={() => openLiveEditor('header')}
                 className="grid h-10 w-10 place-items-center rounded-full bg-[#111827]/88 text-white backdrop-blur-md transition hover:text-cyan-300"
               >
                 <svg
@@ -351,7 +387,10 @@ export default function UnitV3Preview({
             <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300">
               Unit
             </p>
-            <h1 className="mt-1 text-[26px] font-black leading-none tracking-normal">
+            <h1
+              className="mt-1 text-[26px] font-black leading-none tracking-normal"
+              data-feature-guide-target="units.detail.page"
+            >
               {unit.name}
             </h1>
           </div>
@@ -370,6 +409,7 @@ export default function UnitV3Preview({
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab}
+                data-feature-guide-target={`units.detail.tabs.${tab}`}
                 onClick={() => setActiveTab(tab)}
                 className={[
                   'h-10 rounded-[6px] text-xs font-black capitalize transition',
@@ -384,28 +424,61 @@ export default function UnitV3Preview({
           </div>
 
           <div className="mt-4 grid gap-3" data-v3-unit-indicator="tab-content">
-            {activeTab === 'details' ? <DetailsTab unit={unit} /> : null}
+            {activeTab === 'details' ? (
+              <DetailsTab
+                unit={unit}
+                onEditDetails={() => openLiveEditor('details')}
+                onEditGallery={() => openLiveEditor('gallery')}
+              />
+            ) : null}
             {activeTab === 'paint' ? <PaintTab unit={unit} /> : null}
             {activeTab === 'progress' ? <ProgressTab unit={unit} /> : null}
           </div>
         </div>
       </div>
+
+      {activeGuide ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex ?? 0}
+          guide={activeGuide}
+          onClose={() => setActiveGuideIndex(null)}
+          onNext={() =>
+            showGuideAt(
+              Math.min(featureGuides.length - 1, (activeGuideIndex ?? 0) + 1)
+            )
+          }
+          onPrevious={() => showGuideAt(Math.max(0, (activeGuideIndex ?? 0) - 1))}
+          totalGuides={featureGuides.length}
+        />
+      ) : null}
     </main>
   )
 }
 
-function DetailsTab({ unit }: { unit: PreviewUnit }) {
+function DetailsTab({
+  unit,
+  onEditDetails,
+  onEditGallery,
+}: {
+  unit: PreviewUnit
+  onEditDetails: () => void
+  onEditGallery: () => void
+}) {
   const galleryImages = getGalleryImages(unit)
 
   return (
     <>
-      <section className="rounded-[8px] border border-white/[0.06] bg-[#111821]">
+      <section
+        className="rounded-[8px] border border-white/[0.06] bg-[#111821]"
+        data-feature-guide-target="units.detail.details"
+      >
         <div className="flex items-center justify-between px-4 py-4">
           <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/26">
             Unit Details
           </h2>
           <button
             type="button"
+            onClick={onEditDetails}
             className="rounded-full px-2 py-1 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-300/10"
           >
             Edit
@@ -451,6 +524,8 @@ function DetailsTab({ unit }: { unit: PreviewUnit }) {
               Status
             </p>
             <button
+              type="button"
+              onClick={onEditDetails}
               className="mt-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[10px] font-black text-white/76"
               data-v3-unit-indicator="status-control"
             >
@@ -532,13 +607,17 @@ function DetailsTab({ unit }: { unit: PreviewUnit }) {
         </div>
       </section>
 
-      <section className="rounded-[18px] border border-white/[0.06] bg-[#111821] p-4">
+      <section
+        className="rounded-[18px] border border-white/[0.06] bg-[#111821] p-4"
+        data-feature-guide-target="units.detail.gallery"
+      >
         <div className="flex items-center justify-between">
           <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/26">
             Gallery
           </h2>
           <button
             type="button"
+            onClick={onEditGallery}
             className="rounded-full px-2 py-1 text-[10px] font-black text-white/38 transition hover:bg-white/[0.06] hover:text-cyan-300"
           >
             See all -&gt;
@@ -550,6 +629,7 @@ function DetailsTab({ unit }: { unit: PreviewUnit }) {
             <button
               key={image.id}
               type="button"
+              onClick={onEditGallery}
               aria-label={`${unit.name} gallery image ${index + 1}`}
               className="relative aspect-[1.32] min-w-0 overflow-hidden rounded-[12px] bg-black transition hover:ring-1 hover:ring-cyan-300/60"
             >
@@ -571,6 +651,7 @@ function DetailsTab({ unit }: { unit: PreviewUnit }) {
 
           <button
             type="button"
+            onClick={onEditGallery}
             aria-label="Add gallery image"
             className="aspect-[1.32] rounded-[12px] border border-dashed border-white/14 bg-white/[0.02] text-xl font-black text-white/16 transition hover:border-cyan-300/45 hover:text-cyan-300"
           >

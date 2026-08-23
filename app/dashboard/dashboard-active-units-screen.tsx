@@ -14,6 +14,7 @@ import DashboardMetadataCards, {
 } from './dashboard-metadata-cards'
 import styles from './dashboard-og.module.css'
 import { DashboardXpLedgerCard } from './dashboard-xp-card'
+import type { DashboardFeatureGuide } from './feature-guide-types'
 
 type ActiveTab = 'profile' | 'painting-table'
 
@@ -27,10 +28,12 @@ const fixtureMetadataItems: DashboardMetadataItem[] = [
 ]
 
 export async function DashboardActiveUnitsScreen({
+  featureGuides = [],
   initialTab,
   profilePanel,
   userId,
 }: {
+  featureGuides?: DashboardFeatureGuide[]
   initialTab: ActiveTab
   profilePanel: ReactNode
   userId: string
@@ -46,6 +49,7 @@ export async function DashboardActiveUnitsScreen({
 
   return (
     <DashboardActiveUnitsView
+      featureGuides={featureGuides}
       initialTab={initialTab}
       model={createDashboardActiveUnitsViewModel({ feed, nextActions })}
       profilePanel={profilePanel}

@@ -7,6 +7,9 @@ import {
   RecipeGuideImageStepCard,
 } from '../../../recipes/[id]/components/recipe-guide-cards'
 import V3PerfIndicator from '../../../components/v3-perf-indicator'
+import FeatureGuideLauncher from '../../../components/feature-guide-launcher'
+import { getFeatureGuidesForPage } from '../../../components/feature-guide-data'
+import { deckDetailFeatureGuides } from '../../../components/feature-guide-presets'
 import { hasV3PreviewSession } from '../../../../lib/v3-preview-server'
 import { createPerfTimer } from '../../../../utils/perf/server'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
@@ -110,6 +113,10 @@ export default async function DeckDetailPage({
   const deck = await perf.measure('v3 deck detail data', () =>
     getGuidesV3DeckDetail(id, user.id)
   )
+  const featureGuides = await getFeatureGuidesForPage(
+    '/guides/decks/[id]',
+    deckDetailFeatureGuides
+  )
   perf.total()
 
   if (!deck) notFound()
@@ -131,14 +138,24 @@ export default async function DeckDetailPage({
           >
             <span>&lt;</span>
           </Link>
-          <span className={styles.topLabel}>
+          <span
+            className={styles.topLabel}
+            data-feature-guide-target="guides.deck.page"
+          >
             Deck
           </span>
-          <span className={styles.topSpacer} aria-hidden="true" />
+          <FeatureGuideLauncher
+            buttonClassName={styles.backButton}
+            guides={featureGuides}
+            label="Show deck detail explanation"
+          />
         </header>
 
         <section className={styles.cardStack} aria-label={`${deck.title} cards`}>
-          <div className={styles.shareCardMount}>
+          <div
+            className={styles.shareCardMount}
+            data-feature-guide-target="guides.deck.cover"
+          >
             <RecipeGuideCoverCard
               recipe={recipe}
               featuredImage={featuredImage}
@@ -152,7 +169,11 @@ export default async function DeckDetailPage({
               const paints = toRecipePaints(step)
 
               return (
-                <div key={step.id} className={styles.shareCardMount}>
+                <div
+                  key={step.id}
+                  className={styles.shareCardMount}
+                  data-feature-guide-target="guides.deck.steps"
+                >
                   {isUsableImageUrl(recipeStep.image_url) ? (
                     <RecipeGuideImageStepCard
                       step={recipeStep}

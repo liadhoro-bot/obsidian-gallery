@@ -4,8 +4,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ReactNode, useEffect, useState } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
+import FeatureGuideTour from '../components/feature-guide-tour'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './guides-v3-silver.module.css'
+import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type {
   GuidesV3Deck,
   GuidesV3GuideFile,
@@ -321,10 +323,12 @@ const defaultForgeDecks: ForgeDeck[] = [
 ]
 
 type GuidesV3PreviewProps = {
+  featureGuides?: FeatureGuideEntry[]
   initialPayload?: GuidesV3Payload
 }
 
 export default function GuidesV3Preview({
+  featureGuides = [],
   initialPayload,
 }: GuidesV3PreviewProps) {
   const seedGuideFiles =
@@ -345,7 +349,7 @@ export default function GuidesV3Preview({
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks, setDecks] = useState(seedDecks)
   const [query, setQuery] = useState('')
-  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false)
   const [forgeMode, setForgeMode] = useState<ForgeMode>('guide')
   const [forgeScreen, setForgeScreen] = useState<ForgeScreen | null>(null)
@@ -410,11 +414,35 @@ export default function GuidesV3Preview({
           ? 'Photo Built Guide'
           : sourceKind === 'paints'
             ? 'Paint List Guide'
-            : selectedTemplate
+          : selectedTemplate
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   function openCreateChoice() {
-    setIsHelpOpen(false)
+    setActiveGuideIndex(null)
     setIsCreateChoiceOpen(true)
+  }
+
+  function startFeatureTour() {
+    if (!featureGuides.length) return
+    setIsCreateChoiceOpen(false)
+    setActiveGuideIndex(0)
+  }
+
+  function closeFeatureTour() {
+    setActiveGuideIndex(null)
+  }
+
+  function showPreviousGuide() {
+    setActiveGuideIndex((current) =>
+      current === null ? 0 : Math.max(0, current - 1)
+    )
+  }
+
+  function showNextGuide() {
+    setActiveGuideIndex((current) =>
+      current === null ? 0 : Math.min(featureGuides.length - 1, current + 1)
+    )
   }
 
   function startCreate(mode: ForgeMode) {
@@ -747,12 +775,9 @@ export default function GuidesV3Preview({
         data-v3-guides-indicator="content"
       >
         <TopNav
-          isHelpOpen={isHelpOpen}
+          isHelpOpen={activeGuide !== null}
           onCreate={openCreateChoice}
-          onHelpToggle={() => {
-            setIsCreateChoiceOpen(false)
-            setIsHelpOpen((open) => !open)
-          }}
+          onHelpToggle={startFeatureTour}
         />
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -778,6 +803,17 @@ export default function GuidesV3Preview({
         <CreateChoiceSheet
           onClose={() => setIsCreateChoiceOpen(false)}
           onStartCreate={startCreate}
+        />
+      ) : null}
+
+      {activeGuide !== null && activeGuideIndex !== null ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex}
+          guide={activeGuide}
+          onClose={closeFeatureTour}
+          onNext={showNextGuide}
+          onPrevious={showPreviousGuide}
+          totalGuides={featureGuides.length}
         />
       ) : null}
     </main>
@@ -814,7 +850,12 @@ function TopNav({
         aria-label="Open guides menu"
       />
 
-      <h1 data-v3-guides-indicator="app-title">Guides</h1>
+      <h1
+        data-v3-guides-indicator="app-title"
+        data-feature-guide-target="guides.page"
+      >
+        Guides
+      </h1>
 
       <div data-v3-guides-indicator="app-header-actions">
         <button
@@ -823,6 +864,7 @@ function TopNav({
           aria-controls="guides-help"
           aria-label="About guides"
           onClick={onHelpToggle}
+          data-feature-guide-target="guides.help"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
             <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
@@ -834,23 +876,13 @@ function TopNav({
           type="button"
           aria-label="Create guide or deck"
           onClick={onCreate}
+          data-feature-guide-target="guides.create_button"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
           </svg>
         </button>
       </div>
-
-      {isHelpOpen ? (
-        <aside id="guides-help" data-v3-guides-indicator="help-popover">
-          <p>Guides, Decks, Library</p>
-          <p>
-            Guides are collections of decks. Decks are step-card sequences for
-            a material, technique, or result. Library is where public guides
-            and decks can be found and saved.
-          </p>
-        </aside>
-      ) : null}
     </header>
   )
 }
@@ -1868,6 +1900,7 @@ function Tabs({
           type="button"
           role="tab"
           aria-selected={activeTab === tab}
+          data-feature-guide-target={`guides.tabs.${tab}`}
           onClick={() => onTabChange(tab)}
           className={[
             'h-9 rounded-[6px] text-xs font-black capitalize transition',
@@ -1889,6 +1922,7 @@ function GuidesTab({ guideFiles }: { guideFiles: GuideFile[] }) {
       className="grid gap-3"
       aria-label="Guide files"
       data-v3-guides-indicator="guides-list"
+      data-feature-guide-target="guides.tabs.guides"
     >
       {guideFiles.length ? (
         guideFiles.map((guide) => <GuideFileCard key={guide.id} guide={guide} />)
@@ -1913,6 +1947,7 @@ function DecksTab({
     <section
       className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
       data-v3-guides-indicator="decks-list"
+      data-feature-guide-target="guides.tabs.decks"
     >
       <div className="flex items-center justify-between px-4 py-4">
         <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
@@ -1994,7 +2029,10 @@ function LibraryTab({
         )}
       </LibrarySection>
       <LibrarySection title="Public Decks" action="See all ->">
-        <div data-v3-guides-indicator="library-decks-list">
+        <div
+          data-v3-guides-indicator="library-decks-list"
+          data-feature-guide-target="guides.tabs.library"
+        >
           {decks.length ? (
             decks.map((deck) => (
               <DeckRow
@@ -2028,6 +2066,7 @@ function GuideFileCard({ guide }: { guide: GuideFile }) {
     <Link
       href={`/guides/${guide.id}?preview=1`}
       data-v3-guides-indicator="guide-card"
+      data-feature-guide-target="guides.tabs.guides"
       className="block overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45"
     >
       <div className="grid grid-cols-[110px_1fr] gap-3 p-3">
@@ -2076,6 +2115,7 @@ function CompactGuideCard({ guide }: { guide: GuideFile }) {
     <Link
       href={`/guides/${guide.id}?preview=1`}
       data-v3-guides-indicator="compact-guide-card"
+      data-feature-guide-target="guides.tabs.library"
       className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.035]"
     >
       <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[8px] bg-black">
@@ -2105,6 +2145,7 @@ function DeckRow({
     <article
       className="flex items-center gap-3 px-4 py-3"
       data-v3-guides-indicator="deck-row"
+      data-feature-guide-target="guides.tabs.decks"
     >
       <Link
         href={`/guides/decks/${deck.id}?preview=1`}
@@ -2133,6 +2174,7 @@ function DeckRow({
         href={`/recipes/${deck.id}`}
         aria-label={`Edit ${deck.title}`}
         data-v3-guides-indicator="deck-edit-link"
+        data-feature-guide-target="guides.deck_save"
         className="grid h-9 w-9 shrink-0 place-items-center rounded-full border text-lg font-black transition"
       >
         <EditIcon />
@@ -2242,7 +2284,11 @@ function SearchInput({
   value?: string
 }) {
   return (
-    <label className="relative block" data-v3-guides-indicator="search-input">
+    <label
+      className="relative block"
+      data-v3-guides-indicator="search-input"
+      data-feature-guide-target="guides.library_search"
+    >
       <span className="sr-only">{placeholder}</span>
       <svg
         aria-hidden="true"

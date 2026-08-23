@@ -18,15 +18,29 @@ export type DashboardActiveUnitsNextActionViewModel = {
   label: string
   breadcrumb: string
   href: string
+  order: number
+  isActive: boolean
   completedAt: string | null
 }
 
+export type DashboardActiveUnitsMilestoneViewModel = {
+  key: string
+  label: string
+  order: number
+  totalCount: number
+  completedCount: number
+  actions: DashboardActiveUnitsNextActionViewModel[]
+}
+
 export type DashboardActiveUnitsNextActionsViewModel = {
+  flowName: string | null
   title: string
+  description: string | null
   copy: string
   totalCount: number
   completedCount: number
   actions: DashboardActiveUnitsNextActionViewModel[]
+  milestones: DashboardActiveUnitsMilestoneViewModel[]
   canMutate: boolean
 }
 
@@ -117,6 +131,8 @@ function mapNextActions(
 
     return {
       title: 'Next Actions',
+      flowName: null,
+      description: null,
       copy: `Resume ${featuredUnit.name}`,
       totalCount: 1,
       completedCount: 0,
@@ -127,7 +143,29 @@ function mapNextActions(
           label: 'Resume painting',
           breadcrumb: 'Dashboard / Featured Unit',
           href: `/units/${featuredUnit.id}?session=started&autostart=1`,
+          order: 1,
+          isActive: true,
           completedAt: null,
+        },
+      ],
+      milestones: [
+        {
+          key: 'resume',
+          label: 'Continue painting',
+          order: 1,
+          totalCount: 1,
+          completedCount: 0,
+          actions: [
+            {
+              id: `resume-featured-${featuredUnit.id}`,
+              label: 'Resume painting',
+              breadcrumb: 'Dashboard / Featured Unit',
+              href: `/units/${featuredUnit.id}?session=started&autostart=1`,
+              order: 1,
+              isActive: true,
+              completedAt: null,
+            },
+          ],
         },
       ],
     }
@@ -135,19 +173,41 @@ function mapNextActions(
 
   const firstOpenAction = state.actions.find((action) => !action.completedAt)
   const copy = firstOpenAction?.label ?? 'All next actions complete'
+  const activeActionId = firstOpenAction?.id ?? null
+  const mappedActions = state.actions.map((action) => ({
+    id: action.id,
+    label: action.label,
+    breadcrumb: action.breadcrumb,
+    href: action.href,
+    order: action.order,
+    isActive: action.id === activeActionId,
+    completedAt: action.completedAt,
+  }))
+  const mappedActionsById = new Map(
+    mappedActions.map((action) => [action.id, action])
+  )
 
   return {
+    flowName: state.flowName,
     title: state.title || 'Next Actions',
+    description: state.description,
     copy,
     totalCount: state.totalCount,
     completedCount: state.completedCount,
     canMutate: true,
-    actions: state.actions.map((action) => ({
-      id: action.id,
-      label: action.label,
-      breadcrumb: action.breadcrumb,
-      href: action.href,
-      completedAt: action.completedAt,
+    actions: mappedActions,
+    milestones: state.milestones.map((milestone) => ({
+      key: milestone.key,
+      label: milestone.label,
+      order: milestone.order,
+      totalCount: milestone.totalCount,
+      completedCount: milestone.completedCount,
+      actions: milestone.actions
+        .map((action) => mappedActionsById.get(action.id))
+        .filter(
+          (action): action is DashboardActiveUnitsNextActionViewModel =>
+            Boolean(action)
+        ),
     })),
   }
 }

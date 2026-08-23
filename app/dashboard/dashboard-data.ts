@@ -7,6 +7,7 @@ import {
   getSessionAccessToken,
   getSessionUser,
 } from '../../utils/supabase/server'
+import { resolveOnboardingActionDestination } from '../../lib/onboarding/action-destinations'
 
 export type DashboardProfile = {
   avatar_url: string | null
@@ -132,12 +133,17 @@ type DashboardMetricsRow = {
 
 type UserOnboardingFlowRow = {
   flow_name: string | null
+  subject_unit_id?: string | null
+  subject_project_id?: string | null
+  subject_guide_id?: string | null
+  subject_session_id?: string | null
   completed_at: string | null
   dismissed_at: string | null
 }
 
 type OnboardingActionFlowRow = {
   title: string | null
+  description?: string | null
 }
 
 type OnboardingFlowActionRow = {
@@ -147,6 +153,9 @@ type OnboardingFlowActionRow = {
   breadcrumb: string | null
   ref_page: string | null
   ref_component: string | null
+  milestone_key?: string | null
+  milestone_label?: string | null
+  milestone_order?: number | null
 }
 
 type OnboardingActionCompletionRow = {
@@ -160,14 +169,29 @@ export type DashboardNextActionItem = {
   order: number
   breadcrumb: string
   href: string
+  milestoneKey: string
+  milestoneLabel: string
+  milestoneOrder: number
   completedAt: string | null
 }
 
-export type DashboardNextActionsState = {
-  title: string
+export type DashboardNextActionMilestone = {
+  key: string
+  label: string
+  order: number
   totalCount: number
   completedCount: number
   actions: DashboardNextActionItem[]
+}
+
+export type DashboardNextActionsState = {
+  flowName: string
+  title: string
+  description: string | null
+  totalCount: number
+  completedCount: number
+  actions: DashboardNextActionItem[]
+  milestones: DashboardNextActionMilestone[]
 }
 
 const UNIT_STATUSES: DashboardStatus[] = [
@@ -190,6 +214,17 @@ const DASHBOARD_PROGRESS_STEP_KEYS = [
   'fine_details',
   'base_rim',
 ] as const
+
+function isMissingOnboardingMilestoneColumn(error: { code?: string; message?: string } | null) {
+  if (!error) return false
+
+  return (
+    error.code === 'PGRST204' ||
+    /schema cache/i.test(error.message ?? '') ||
+    /milestone_/i.test(error.message ?? '') ||
+    /subject_.*_id/i.test(error.message ?? '')
+  )
+}
 
 function formatDuration(totalSeconds: number) {
   const totalHours = Math.floor(totalSeconds / 3600)
@@ -865,41 +900,70 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
 export const getDashboardNextActions = cache(async (userId: string) => {
   const supabase = await createClient()
 
-  const userFlowResult = await supabase
+  let userFlowResult = await supabase
     .from('user_onboarding_flows')
-    .select('flow_name, completed_at, dismissed_at')
+    .select(
+      'flow_name, subject_unit_id, subject_project_id, subject_guide_id, subject_session_id, completed_at, dismissed_at'
+    )
     .eq('user_id', userId)
     .maybeSingle<UserOnboardingFlowRow>()
+
+  if (isMissingOnboardingMilestoneColumn(userFlowResult.error)) {
+    userFlowResult = await supabase
+      .from('user_onboarding_flows')
+      .select('flow_name, completed_at, dismissed_at')
+      .eq('user_id', userId)
+      .maybeSingle<UserOnboardingFlowRow>()
+  }
 
   if (userFlowResult.error || !userFlowResult.data?.flow_name) {
     return null
   }
 
   const userFlow = userFlowResult.data
+  const activeFlowName = userFlow.flow_name
 
-  if (userFlow.dismissed_at || userFlow.completed_at) {
+  if (!activeFlowName || userFlow.dismissed_at || userFlow.completed_at) {
     return null
   }
 
   const [flowResult, actionsResult] = await Promise.all([
     supabase
       .from('onboarding_action_flows')
-      .select('title')
-      .eq('name', userFlow.flow_name)
+      .select('title, description')
+      .eq('name', activeFlowName)
       .maybeSingle<OnboardingActionFlowRow>(),
     supabase
       .from('onboarding_flow_actions')
-      .select('id, action_label, action_order, breadcrumb, ref_page, ref_component')
-      .eq('flow_name', userFlow.flow_name)
+      .select(
+        'id, action_label, action_order, breadcrumb, ref_page, ref_component, milestone_key, milestone_label, milestone_order'
+      )
+      .eq('flow_name', activeFlowName)
       .order('action_order', { ascending: true })
-      .limit(3),
   ])
 
-  if (flowResult.error || actionsResult.error || !actionsResult.data?.length) {
+  let actionRows = (actionsResult.data ?? []) as OnboardingFlowActionRow[]
+
+  if (isMissingOnboardingMilestoneColumn(actionsResult.error)) {
+    const fallbackActionsResult = await supabase
+      .from('onboarding_flow_actions')
+      .select('id, action_label, action_order, breadcrumb, ref_page, ref_component')
+      .eq('flow_name', activeFlowName)
+      .order('action_order', { ascending: true })
+
+    if (fallbackActionsResult.error) {
+      return null
+    }
+
+    actionRows = (fallbackActionsResult.data ?? []) as OnboardingFlowActionRow[]
+  } else if (actionsResult.error) {
     return null
   }
 
-  const actionRows = actionsResult.data as OnboardingFlowActionRow[]
+  if (flowResult.error || !actionRows.length) {
+    return null
+  }
+
   const actionIds = actionRows.map((action) => action.id)
 
   const completionResult = await supabase
@@ -919,25 +983,71 @@ export const getDashboardNextActions = cache(async (userId: string) => {
   )
 
   const actions = actionRows.map((action) => {
-    const refPage = action.ref_page || '/dashboard'
-    const href = action.ref_component
-      ? `${refPage}#${action.ref_component}`
-      : refPage
+    const order = action.action_order ?? 1
+    const milestoneOrder = action.milestone_order ?? Math.ceil(order / 5)
+    const milestoneKey = action.milestone_key || `milestone_${milestoneOrder}`
+    const milestoneLabel =
+      action.milestone_label || `Milestone ${milestoneOrder}`
 
     return {
       id: action.id,
       label: action.action_label || 'Next action',
-      order: action.action_order ?? 1,
+      order,
       breadcrumb: action.breadcrumb || 'Dashboard',
-      href,
+      href: resolveOnboardingActionDestination(
+        {
+          refPage: action.ref_page,
+          refComponent: action.ref_component,
+        },
+        {
+          subjectUnitId: userFlow.subject_unit_id,
+          subjectProjectId: userFlow.subject_project_id,
+          subjectGuideId: userFlow.subject_guide_id,
+          subjectSessionId: userFlow.subject_session_id,
+        }
+      ),
+      milestoneKey,
+      milestoneLabel,
+      milestoneOrder,
       completedAt: completions.get(action.id) ?? null,
     } satisfies DashboardNextActionItem
   })
+  const incompleteActions = actions.filter((action) => !action.completedAt)
+  const visibleActions = incompleteActions.length
+    ? incompleteActions.slice(0, 3)
+    : actions.slice(-3)
+
+  const milestones = Array.from(
+    visibleActions
+      .reduce<Map<string, DashboardNextActionMilestone>>((milestoneMap, action) => {
+        const current =
+          milestoneMap.get(action.milestoneKey) ??
+          {
+            key: action.milestoneKey,
+            label: action.milestoneLabel,
+            order: action.milestoneOrder,
+            totalCount: 0,
+            completedCount: 0,
+            actions: [],
+          }
+
+        current.totalCount += 1
+        current.completedCount += action.completedAt ? 1 : 0
+        current.actions.push(action)
+        milestoneMap.set(action.milestoneKey, current)
+
+        return milestoneMap
+      }, new Map())
+      .values()
+  ).sort((first, second) => first.order - second.order)
 
   return {
+    flowName: activeFlowName,
     title: flowResult.data?.title || 'Next actions',
+    description: flowResult.data?.description ?? null,
     totalCount: actions.length,
     completedCount: actions.filter((action) => action.completedAt).length,
-    actions,
+    actions: visibleActions,
+    milestones,
   } satisfies DashboardNextActionsState
 })

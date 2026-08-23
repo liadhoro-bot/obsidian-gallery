@@ -33,6 +33,7 @@ export default function ProjectDetailTabs({ activeTab, projectId }: Props) {
             href={tab.href}
             role="tab"
             aria-selected={isActive}
+            data-feature-guide-target={`projects.detail.tabs.${tab.key}`}
             className={[
               styles.tab,
               'px-2 py-2 transition',

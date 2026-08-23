@@ -2,7 +2,9 @@ import type { DashboardActiveUnitsViewModel } from './dashboard-active-units-mod
 
 export const dashboardActiveUnitsFixture: DashboardActiveUnitsViewModel = {
   nextActions: {
+    flowName: 'fixture-first-miniature',
     title: 'Next Actions',
+    description: 'A short practice flow for the golden dashboard fixture.',
     copy: 'Your first miniature',
     completedCount: 1,
     totalCount: 3,
@@ -13,6 +15,8 @@ export const dashboardActiveUnitsFixture: DashboardActiveUnitsViewModel = {
         label: 'Prime and basecoat your first miniature',
         breadcrumb: 'Dashboard / First miniature',
         href: '/dashboard?golden=dashboard-active-units',
+        order: 1,
+        isActive: false,
         completedAt: '2026-08-08T00:00:00.000Z',
       },
       {
@@ -20,6 +24,8 @@ export const dashboardActiveUnitsFixture: DashboardActiveUnitsViewModel = {
         label: 'Paint armor panels and first highlights',
         breadcrumb: 'Units / Stormward Veteran',
         href: '/dashboard?golden=dashboard-active-units',
+        order: 2,
+        isActive: true,
         completedAt: null,
       },
       {
@@ -27,7 +33,47 @@ export const dashboardActiveUnitsFixture: DashboardActiveUnitsViewModel = {
         label: 'Finish base texture and rim',
         breadcrumb: 'Guides / Battle-ready finish',
         href: '/dashboard?golden=dashboard-active-units',
+        order: 3,
+        isActive: false,
         completedAt: null,
+      },
+    ],
+    milestones: [
+      {
+        key: 'fixture-progress',
+        label: 'Paint the miniature',
+        order: 1,
+        completedCount: 1,
+        totalCount: 3,
+        actions: [
+          {
+            id: 'fixture-prime',
+            label: 'Prime and basecoat your first miniature',
+            breadcrumb: 'Dashboard / First miniature',
+            href: '/dashboard?golden=dashboard-active-units',
+            order: 1,
+            isActive: false,
+            completedAt: '2026-08-08T00:00:00.000Z',
+          },
+          {
+            id: 'fixture-layer',
+            label: 'Paint armor panels and first highlights',
+            breadcrumb: 'Units / Stormward Veteran',
+            href: '/dashboard?golden=dashboard-active-units',
+            order: 2,
+            isActive: true,
+            completedAt: null,
+          },
+          {
+            id: 'fixture-base',
+            label: 'Finish base texture and rim',
+            breadcrumb: 'Guides / Battle-ready finish',
+            href: '/dashboard?golden=dashboard-active-units',
+            order: 3,
+            isActive: false,
+            completedAt: null,
+          },
+        ],
       },
     ],
   },

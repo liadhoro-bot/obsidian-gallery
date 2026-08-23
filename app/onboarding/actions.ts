@@ -8,6 +8,11 @@ import {
   getSafeImageExtension,
   validateGalleryImageFile,
 } from '../../utils/images/gallery-upload'
+import {
+  completeOnboardingActions,
+  reconcileOnboardingFlowStart,
+} from '../../lib/onboarding/completion'
+import type { OnboardingFlowName } from '../../lib/onboarding/action-definitions'
 
 const IMAGE_BUCKET = 'obsidian-images'
 
@@ -23,7 +28,7 @@ export type OnboardingExperience =
   | 'experienced'
   | 'professional'
 
-const goalFlowMap: Record<OnboardingGoal, string | null> = {
+const goalFlowMap: Record<OnboardingGoal, OnboardingFlowName | null> = {
   paint_miniature: 'paint_miniature',
   organize_hobby: 'organize_hobby',
   create_content: 'create_content',
@@ -81,6 +86,21 @@ export async function saveOnboardingGoalAction(
       error: completionError.message,
     }
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: flowName ? 'onboarding_flow_started' : 'onboarding_flow_dismissed',
+    properties: {
+      flow_name: flowName,
+      goal_key: goal,
+      experience_level: experienceLevel,
+    },
+  })
+
+  await reconcileOnboardingFlowStart({
+    userId: user.id,
+    flowName,
+  })
 
   return { ok: true }
 }
@@ -202,6 +222,8 @@ export async function createFirstProjectUnitAction(
   }
 
   const projectName = rawProjectName || 'Onboarding Bench'
+
+  let persistedUnitImage = false
 
   if (image instanceof File && image.size > 0) {
     const validationError = validateGalleryImageFile(image)
@@ -342,11 +364,27 @@ export async function createFirstProjectUnitAction(
             'Failed to create onboarding image asset:',
             imageAssetError
           )
+        } else {
+          persistedUnitImage = true
         }
         perf.mark('image/gallery queries')
       }
     }
   }
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectProjectId: project.id,
+    subjectUnitId: unit.id,
+    actionKeys: [
+      'create_unit',
+      'name_unit',
+      ...(persistedUnitImage ? ['add_unit_image'] : []),
+      'create_project',
+      'add_project_unit',
+      'feature_unit',
+    ],
+  })
 
   perf.total()
   revalidatePath('/dashboard')
@@ -470,6 +508,17 @@ export async function createOnboardingGuideAction(
     },
   })
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectGuideId: guide.id,
+    actionKeys: [
+      'choose_guide_source',
+      'create_guide',
+      'name_guide',
+      ...(imageUrl ? ['add_guide_cover'] : []),
+    ],
+  })
+
   revalidatePath('/dashboard')
   revalidatePath('/recipes')
   revalidatePath(`/recipes/${guide.id}`)
@@ -481,6 +530,18 @@ export async function createOnboardingGuideAction(
 }
 const TERMS_VERSION = '2026-05-13'
 const TERMS_ACCEPTANCE_TABLE = 'user_terms_acceptances'
+
+function isMissingSchemaObjectError(error: { code?: string; message?: string }) {
+  const message = error.message ?? ''
+
+  return (
+    error.code === 'PGRST204' ||
+    error.code === 'PGRST205' ||
+    /schema cache/i.test(message) ||
+    /could not find/i.test(message) ||
+    /does not exist/i.test(message)
+  )
+}
 
 export async function acceptTermsAction({
   productUpdatesApproved = false,
@@ -503,6 +564,37 @@ export async function acceptTermsAction({
   const acceptedAt = new Date().toISOString()
   const productUpdatesApprovedAt = productUpdatesApproved ? acceptedAt : null
 
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      terms_accepted_at: acceptedAt,
+      terms_version: TERMS_VERSION,
+    })
+    .eq('id', user.id)
+
+  if (profileError && !isMissingSchemaObjectError(profileError)) {
+    return {
+      ok: false,
+      error: profileError.message,
+    }
+  }
+
+  if (profileError) {
+    const { error: fallbackProfileError } = await supabase
+      .from('profiles')
+      .update({
+        terms_accepted_at: acceptedAt,
+      })
+      .eq('id', user.id)
+
+    if (fallbackProfileError) {
+      return {
+        ok: false,
+        error: fallbackProfileError.message,
+      }
+    }
+  }
+
   const { error: acceptanceError } = await supabase
     .from(TERMS_ACCEPTANCE_TABLE)
     .insert({
@@ -512,26 +604,8 @@ export async function acceptTermsAction({
       product_updates_approved_at: productUpdatesApprovedAt,
     })
 
-  if (acceptanceError) {
-    return {
-      ok: false,
-      error: acceptanceError.message,
-    }
-  }
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      terms_accepted_at: acceptedAt,
-      terms_version: TERMS_VERSION,
-    })
-    .eq('id', user.id)
-
-  if (error) {
-    return {
-      ok: false,
-      error: error.message,
-    }
+  if (acceptanceError && !isMissingSchemaObjectError(acceptanceError)) {
+    console.error('Failed to record terms acceptance audit row:', acceptanceError)
   }
 
   return { ok: true }

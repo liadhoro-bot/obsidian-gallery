@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
+import { completeOnboardingActions } from '../../lib/onboarding/completion'
 
 export async function createRecipe(formData: FormData) {
   const supabase = await createClient()
@@ -70,6 +71,17 @@ export async function createRecipe(formData: FormData) {
       has_image: Boolean(recipe.image_url),
       source: 'recipes_custom_tab',
     },
+  })
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectGuideId: recipe.id,
+    actionKeys: [
+      'choose_guide_source',
+      'create_guide',
+      'name_guide',
+      ...(recipe.image_url ? ['add_guide_cover'] : []),
+    ],
   })
 
   revalidatePath('/recipes')

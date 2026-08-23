@@ -16,7 +16,10 @@ playwright-report/
 
 .codex-*.log
 .codex-*.png
+.codex/
+.claude/
 .codex-remote-attachments/
 downloads/
 debug.log
+perf-debug-flows.log
 *.tsbuildinfo

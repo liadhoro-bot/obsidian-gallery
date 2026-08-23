@@ -110,7 +110,10 @@ export default function UnitHeroClient({
         <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
           Unit
         </p>
-        <h1 className="mt-2 text-4xl font-bold leading-tight">
+        <h1
+          className="mt-2 text-4xl font-bold leading-tight"
+          data-feature-guide-target="units.detail.page"
+        >
           {unit.name}
         </h1>
       </div>

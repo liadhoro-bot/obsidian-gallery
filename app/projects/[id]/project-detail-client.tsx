@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import BackButton from '../../components/back-button'
+import FeatureGuideTour from '../../components/feature-guide-tour'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
@@ -19,6 +20,7 @@ import type {
   UnitStage,
 } from './types'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import styles from './project-detail-silver.module.css'
 
 type Props = {
@@ -45,6 +47,7 @@ type Props = {
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectAction: (formData: FormData) => Promise<void>
+  featureGuides?: FeatureGuideEntry[]
 }
 
 export type ProjectDetailTab = 'details' | 'units' | 'add'
@@ -70,11 +73,15 @@ export default function ProjectDetailClient({
   setFeaturedProjectImageAction,
   deleteProjectImageAction,
   deleteProjectAction,
+  featureGuides = [],
 }: Props) {
   const router = useRouter()
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const projectName = project?.name || 'Untitled Project'
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   function handleUpdateHeader(formData: FormData) {
     startTransition(async () => {
@@ -107,6 +114,18 @@ export default function ProjectDetailClient({
 
           <button
             type="button"
+            aria-expanded={activeGuide !== null}
+            aria-label="Show project explanation"
+            onClick={() => {
+              if (featureGuides.length) setActiveGuideIndex(0)
+            }}
+            className={styles.secondaryButton}
+          >
+            <span>?</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsEditingHeader((current) => !current)}
             className={styles.secondaryButton}
           >
@@ -118,7 +137,7 @@ export default function ProjectDetailClient({
           <p className={styles.eyebrow}>
             Project Detail
           </p>
-          <h1>
+          <h1 data-feature-guide-target="projects.detail.page">
             {projectName}
           </h1>
         </div>
@@ -222,6 +241,27 @@ export default function ProjectDetailClient({
         <ProjectAddUnitTab
           projectId={projectId}
           addUnitAction={addUnitAction}
+        />
+      ) : null}
+
+      {activeGuide ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex ?? 0}
+          guide={activeGuide}
+          onClose={() => setActiveGuideIndex(null)}
+          onNext={() =>
+            setActiveGuideIndex((current) =>
+              current === null
+                ? 0
+                : Math.min(featureGuides.length - 1, current + 1)
+            )
+          }
+          onPrevious={() =>
+            setActiveGuideIndex((current) =>
+              current === null ? 0 : Math.max(0, current - 1)
+            )
+          }
+          totalGuides={featureGuides.length}
         />
       ) : null}
     </div>

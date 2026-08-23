@@ -39,18 +39,24 @@
 }
 
 .menuItem {
+  appearance: none;
   display: grid;
   grid-template-columns: 24px 1fr;
   align-items: center;
   gap: var(--og-space-2);
+  width: 100%;
   min-height: 42px;
+  border: 0;
   border-radius: var(--og-radius-s);
+  background: transparent;
   color: var(--og-text-primary);
+  cursor: pointer;
   font-family: var(--og-font-ui);
   font-size: 0.92rem;
   font-weight: 800;
   line-height: 1.2;
   padding: 8px 10px;
+  text-align: start;
   text-decoration: none;
 }
 
@@ -64,4 +70,18 @@
   width: 18px;
   height: 18px;
   color: var(--og-brass-500);
+}
+
+.signOutForm {
+  margin-block-start: 6px;
+  border-block-start: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 32%, transparent);
+  padding-block-start: 6px;
+}
+
+.signOutItem {
+  color: color-mix(in srgb, var(--og-status-danger) 76%, var(--og-text-primary));
+}
+
+.signOutItem svg {
+  color: color-mix(in srgb, var(--og-status-danger) 78%, var(--og-brass-500));
 }

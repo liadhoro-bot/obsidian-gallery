@@ -16,6 +16,8 @@ import {
   publishDashboardUnitPatch,
   type DashboardSyncStatus,
 } from '../../dashboard/dashboard-sync'
+import FeatureGuideTour from '../../components/feature-guide-tour'
+import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import {
   deleteUnitImage,
   deleteUnit,
@@ -244,6 +246,7 @@ type Props = {
   availableProjects: ParentProject[]
   selectedProjectIds: string[]
   showSessionStartedNotice?: boolean
+  featureGuides?: FeatureGuideEntry[]
 }
 
 type StagePaintActionResult =
@@ -352,10 +355,12 @@ export default function UnitDetailClient({
   availableProjects,
   selectedProjectIds,
   showSessionStartedNotice = false,
+  featureGuides = [],
 }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const requestedEditTarget = searchParams.get('edit')
   const [isPending, startTransition] = useTransition()
   const refreshTimeoutRef = useRef<number | null>(null)
   const hasPublishedDashboardUnitPatchRef = useRef(false)
@@ -379,7 +384,9 @@ export default function UnitDetailClient({
   const [selectedGalleryImageIds, setSelectedGalleryImageIds] = useState<
     string[]
   >([])
-  const [isEditingGalleryImages, setIsEditingGalleryImages] = useState(false)
+  const [isEditingGalleryImages, setIsEditingGalleryImages] = useState(
+    requestedEditTarget === 'gallery'
+  )
   const [isConfirmingGalleryDelete, setIsConfirmingGalleryDelete] =
     useState(false)
   const [localStagePaints, setLocalStagePaints] = useState(stagePaints)
@@ -406,8 +413,12 @@ export default function UnitDetailClient({
       })),
     [selectedGalleryFiles]
   )
-  const [isEditingHeader, setIsEditingHeader] = useState(false)
-  const [isEditingDetails, setIsEditingDetails] = useState(false)
+  const [isEditingHeader, setIsEditingHeader] = useState(
+    requestedEditTarget === 'header'
+  )
+  const [isEditingDetails, setIsEditingDetails] = useState(
+    requestedEditTarget === 'details'
+  )
   const [complexityInput, setComplexityInput] = useState(
     unit.complexity ? String(unit.complexity) : ''
   )
@@ -417,12 +428,32 @@ export default function UnitDetailClient({
   const [deadlineInput, setDeadlineInput] = useState(unit.deadline || '')
   const [statusValue, setStatusValue] = useState<UnitStatus>(unit.status)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const requestedTab = searchParams.get('tab')
   const resolvedTab =
     requestedTab === 'progress' || requestedTab === 'overview'
       ? requestedTab
       : initialTab
   const [currentTab, setCurrentTab] = useState<'overview' | 'progress'>(resolvedTab)
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+
+  function showGuideAt(index: number) {
+    const guide = featureGuides[index]
+    if (guide?.uid === 'units.detail.tabs.progress') {
+      handleTabChange('progress')
+    }
+    if (
+      guide?.uid === 'units.detail.tabs.overview' ||
+      guide?.uid === 'units.detail.details' ||
+      guide?.uid === 'units.detail.session_tracker' ||
+      guide?.uid === 'units.detail.scheduler' ||
+      guide?.uid === 'units.detail.gallery'
+    ) {
+      handleTabChange('overview')
+    }
+    setActiveGuideIndex(index)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -569,6 +600,28 @@ export default function UnitDetailClient({
       window.removeEventListener('unit-header:edit', openHeaderEditor)
     }
   }, [])
+
+  useEffect(() => {
+    if (
+      requestedEditTarget !== 'details' &&
+      requestedEditTarget !== 'header' &&
+      requestedEditTarget !== 'gallery'
+    ) {
+      return
+    }
+
+    requestAnimationFrame(() => {
+      document
+        .getElementById(
+          requestedEditTarget === 'header'
+            ? 'unit-header-editor'
+            : requestedEditTarget === 'gallery'
+              ? 'unit-gallery-editor'
+              : 'unit-details-editor'
+        )
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [requestedEditTarget])
 
   const handleSessionStateChange = useCallback(
     ({
@@ -1329,6 +1382,18 @@ const handleRemoveStagePhoto = (imageId: string) => {
       ) : null}
 
     <div className="mt-4 grid gap-5">
+  <div className="grid grid-cols-[auto_1fr] gap-2">
+    <button
+      type="button"
+      aria-expanded={activeGuide !== null}
+      aria-label="Show unit explanation"
+      onClick={() => {
+        if (featureGuides.length) showGuideAt(0)
+      }}
+      className="grid h-full min-h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-slate-950/70 text-sm font-black text-white/70 shadow-[0_0_24px_rgba(34,211,238,0.08)] transition hover:text-cyan-300"
+    >
+      ?
+    </button>
   <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
     {[
       { key: 'overview' as const, label: 'Overview' },
@@ -1344,6 +1409,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
           key={tab.key}
           type="button"
           onClick={() => handleTabChange(tab.key)}
+          data-feature-guide-target={`units.detail.tabs.${tab.key}`}
           className={[
             'rounded-xl px-2 py-3 text-center text-xs font-black transition',
             isActive
@@ -1357,12 +1423,14 @@ const handleRemoveStagePhoto = (imageId: string) => {
     })}
 </div>
 </div>
+</div>
 
       <div hidden={currentTab !== 'overview'} aria-hidden={currentTab !== 'overview'}>
         <div>
           <div
             id="unit-details-editor"
             className="mt-4 scroll-mt-4 rounded-2xl border border-white/10 bg-white/5 p-4"
+            data-feature-guide-target="units.detail.details"
           >
             <div className="mb-3 flex items-center justify-between">
               <div className="text-[11px] uppercase tracking-wide text-white/50">
@@ -1575,23 +1643,27 @@ const handleRemoveStagePhoto = (imageId: string) => {
             )}
           </div>
 
-          <LazyUnitSessionTracker
-            unitId={unit.id}
-            activeSession={localActiveSessionState}
-            sessions={localSessionsState}
-            totalLoggedSeconds={localTotalLoggedSecondsState}
-            autoStart={autoStartSession}
-            onMutationCommitted={queueBackgroundRefresh}
-            onStateChange={handleSessionStateChange}
-          />
+          <div data-feature-guide-target="units.detail.session_tracker">
+            <LazyUnitSessionTracker
+              unitId={unit.id}
+              activeSession={localActiveSessionState}
+              sessions={localSessionsState}
+              totalLoggedSeconds={localTotalLoggedSecondsState}
+              autoStart={autoStartSession}
+              onMutationCommitted={queueBackgroundRefresh}
+              onStateChange={handleSessionStateChange}
+            />
+          </div>
 
-          <UnitSessionScheduler
-            unitId={unit.id}
-            loggedSessions={localSessionsState}
-            scheduledSessions={localScheduledSessionsState}
-            onMutationCommitted={queueBackgroundRefresh}
-            onScheduledSessionsChange={setLocalScheduledSessionsState}
-          />
+          <div data-feature-guide-target="units.detail.scheduler">
+            <UnitSessionScheduler
+              unitId={unit.id}
+              loggedSessions={localSessionsState}
+              scheduledSessions={localScheduledSessionsState}
+              onMutationCommitted={queueBackgroundRefresh}
+              onScheduledSessionsChange={setLocalScheduledSessionsState}
+            />
+          </div>
 
           <section className="mt-6">
             <ProjectPaletteCard
@@ -1602,6 +1674,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
           </section>
 
           <UnitGallerySection
+            featureGuideTarget="units.detail.gallery"
             images={localImages}
             isPending={isPending}
             galleryFilePreviews={galleryFilePreviews}
@@ -1685,6 +1758,19 @@ const handleRemoveStagePhoto = (imageId: string) => {
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
       />
+
+      {activeGuide ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex ?? 0}
+          guide={activeGuide}
+          onClose={() => setActiveGuideIndex(null)}
+          onNext={() =>
+            showGuideAt(Math.min(featureGuides.length - 1, (activeGuideIndex ?? 0) + 1))
+          }
+          onPrevious={() => showGuideAt(Math.max(0, (activeGuideIndex ?? 0) - 1))}
+          totalGuides={featureGuides.length}
+        />
+      ) : null}
 
     </div>
   )

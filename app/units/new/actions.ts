@@ -8,6 +8,7 @@ import {
 } from '../../../utils/images/gallery-upload'
 import { createPerfTimer } from '../../../utils/perf/server'
 import { createClient } from '../../../utils/supabase/server'
+import { completeOnboardingActions } from '../../../lib/onboarding/completion'
 
 type CreateUnitResult =
   | {
@@ -77,6 +78,8 @@ export async function createStandaloneUnitAction(
   }
 
   const modelCount = Number(modelCountValue || '1')
+
+  let persistedUnitImage = false
 
   if (image instanceof File && image.size > 0) {
     const validationError = validateGalleryImageFile(image)
@@ -240,8 +243,24 @@ export async function createStandaloneUnitAction(
         error: imageError.message,
       }
     }
+    persistedUnitImage = true
     perf.mark('image upload flow')
   }
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectProjectId: primaryProjectId,
+    subjectUnitId: unit.id,
+    actionKeys: [
+      'create_unit',
+      'name_unit',
+      ...(notes || deadline || modelCount ? ['complete_unit_info'] : []),
+      ...(persistedUnitImage ? ['add_unit_image'] : []),
+      ...(projectMode === 'new' ? ['create_project'] : []),
+      'add_project_unit',
+      'feature_unit',
+    ],
+  })
 
   revalidatePath('/dashboard')
   revalidatePath('/projects')

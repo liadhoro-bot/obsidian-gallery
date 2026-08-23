@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { ButtonHTMLAttributes } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { logout } from '../settings/settings-actions'
 import styles from './app-hamburger-menu.module.css'
 
 type AppHamburgerMenuProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -83,6 +84,12 @@ export default function AppHamburgerMenu({
             <BugIcon />
             <span>Report a bug</span>
           </Link>
+          <form action={logout} className={styles.signOutForm}>
+            <button type="submit" className={`${styles.menuItem} ${styles.signOutItem}`} role="menuitem">
+              <SignOutIcon />
+              <span>Sign out</span>
+            </button>
+          </form>
         </nav>
       ) : null}
     </div>
@@ -119,6 +126,15 @@ function BugIcon() {
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M8 8.4A4 4 0 0 1 12 5a4 4 0 0 1 4 3.4v5.2A4 4 0 0 1 12 17a4 4 0 0 1-4-3.4V8.4Z" stroke="currentColor" strokeWidth="1.7" />
       <path d="M8 10H4M20 10h-4M8 14H4M20 14h-4M9.5 5 8 3M14.5 5 16 3M12 8.5v6" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+    </svg>
+  )
+}
+
+function SignOutIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M10 6H6.8A1.8 1.8 0 0 0 5 7.8v8.4A1.8 1.8 0 0 0 6.8 18H10" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+      <path d="M14 8l4 4-4 4M18 12H9" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
     </svg>
   )
 }

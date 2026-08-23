@@ -10,6 +10,8 @@ import { getDashboardProfile } from '../dashboard/dashboard-data'
 import ProjectsV3Preview from './projects-v3-preview'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import { getProjectsV3Payload } from './projects-v3-data'
+import { getFeatureGuidesForPage } from '../components/feature-guide-data'
+import { projectsFeatureGuides } from '../components/feature-guide-presets'
 
 type ProjectsPageProps = {
   searchParams: Promise<{
@@ -169,12 +171,21 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   }
 
   if (isPreview) {
-    const payload = await perf.measure('v3 projects data', () =>
-      getProjectsV3Payload(user.id)
+    const [payload, featureGuides] = await perf.measure('v3 projects data', () =>
+      Promise.all([
+        getProjectsV3Payload(user.id),
+        getFeatureGuidesForPage('/projects', projectsFeatureGuides),
+      ])
     )
 
     perf.total()
-    return <ProjectsV3Preview initialProjects={payload.projects} initialUnits={payload.units} />
+    return (
+      <ProjectsV3Preview
+        featureGuides={featureGuides}
+        initialProjects={payload.projects}
+        initialUnits={payload.units}
+      />
+    )
   }
 
   const profilePromise = (async () => ({

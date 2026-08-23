@@ -184,7 +184,6 @@
   color: var(--og-text-secondary);
 }
 
-.paintsSilver [data-v3-paints-indicator="help-popover"],
 .paintsSilver [data-v3-paints-indicator="filter-panel"] {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
   border-radius: var(--og-radius-m);
@@ -192,16 +191,6 @@
   background-image: var(--og-material-paper-card);
   color: var(--og-text-primary);
   box-shadow: var(--og-shadow-large);
-}
-
-.paintsSilver [data-v3-paints-indicator="help-popover"] p:first-child {
-  color: color-mix(in srgb, var(--og-status-warning) 78%, var(--og-ink-800));
-  font-size: 0.64rem;
-  letter-spacing: 0.16em;
-}
-
-.paintsSilver [data-v3-paints-indicator="help-popover"] p:last-child {
-  color: var(--og-text-secondary);
 }
 
 .paintsSilver [role="tablist"] {
@@ -279,7 +268,7 @@
 .paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] button,
 .paintsSilver [data-v3-paints-indicator="actions-toolbar"] button,
 .paintsSilver [data-v3-paints-indicator="pagination-rail"] button,
-.paintsSilver [role="dialog"] button,
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) button,
 .paintsSilver [data-v3-paints-indicator="paint-info-panel"] button {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
   border-radius: var(--og-radius-s);
@@ -496,7 +485,7 @@
   font-weight: 600;
 }
 
-.paintsSilver [role="dialog"] {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
   border-radius: var(--og-radius-l);
   background-color: var(--og-surface-primary);
@@ -508,20 +497,20 @@
   box-shadow: var(--og-shadow-large);
 }
 
-.paintsSilver [role="dialog"] p:first-child,
-.paintsSilver [role="dialog"] label span {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) p:first-child,
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) label span {
   color: color-mix(in srgb, var(--og-status-warning) 80%, var(--og-ink-800));
 }
 
-.paintsSilver [role="dialog"] p {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) p {
   color: var(--og-text-secondary);
 }
 
-.paintsSilver [role="dialog"] h2 {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) h2 {
   font-size: 1.75rem;
 }
 
-.paintsSilver [role="dialog"] button[type="submit"] {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) button[type="submit"] {
   border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
   background-color: var(--og-walnut-950);
   background-image: var(--og-material-walnut-control);
@@ -531,7 +520,7 @@
   font-weight: 600;
 }
 
-.paintsSilver [role="dialog"] div:nth-of-type(2) > button {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) div:nth-of-type(2) > button {
   min-height: 92px;
   border-color: color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
   background-color: var(--og-surface-secondary-light);
@@ -540,13 +529,13 @@
   box-shadow: var(--og-shadow-constructed-card);
 }
 
-.paintsSilver [role="dialog"] div:nth-of-type(2) > button span:first-child {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) div:nth-of-type(2) > button span:first-child {
   color: var(--og-text-primary);
   font-family: var(--og-font-display);
   font-weight: 600;
 }
 
-.paintsSilver [role="dialog"] div:nth-of-type(2) > button span:last-child {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) div:nth-of-type(2) > button span:last-child {
   color: var(--og-text-secondary);
 }
 

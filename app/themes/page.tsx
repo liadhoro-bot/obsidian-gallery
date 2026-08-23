@@ -10,6 +10,7 @@ import {
 import { createPerfTimer } from '../../utils/perf/server'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
+import { getFeatureGuidesForPage } from '../components/feature-guide-data'
 import ThemesV3Preview from './themes-v3-preview'
 
 type Props = {
@@ -415,8 +416,9 @@ export default async function ThemesPage({ searchParams }: Props) {
   const isPreview = await hasV3PreviewSession(params?.preview)
 
   if (isPreview) {
+    const featureGuides = await getFeatureGuidesForPage('/themes')
     perf.total()
-    return <ThemesV3Preview />
+    return <ThemesV3Preview featureGuides={featureGuides} />
   }
 
   const themeSearch = params?.q?.trim() || ''

@@ -23,6 +23,7 @@ type GalleryPreview = {
 
 export default function UnitGallerySection({
   images,
+  featureGuideTarget,
   isPending,
   galleryFilePreviews,
   selectedGalleryFiles,
@@ -47,6 +48,7 @@ export default function UnitGallerySection({
   onToggleFeatured,
 }: {
   images: UnitImage[]
+  featureGuideTarget?: string
   isPending: boolean
   galleryFilePreviews: GalleryPreview[]
   selectedGalleryFiles: File[]
@@ -74,7 +76,11 @@ export default function UnitGallerySection({
   onToggleFeatured: (imageId: string) => void
 }) {
   return (
-    <section className="mt-10">
+    <section
+      id="unit-gallery-editor"
+      className="mt-10 scroll-mt-4"
+      data-feature-guide-target={featureGuideTarget}
+    >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold">Inspiration & Art Gallery</h2>

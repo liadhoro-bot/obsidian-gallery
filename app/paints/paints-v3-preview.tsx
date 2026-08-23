@@ -3,8 +3,10 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
+import FeatureGuideTour from '../components/feature-guide-tour'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './paints-v3-silver.module.css'
+import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type { PaintsV3Payload } from './paints-v3-data'
 
 type PaintRecord = {
@@ -463,15 +465,17 @@ function applyPaintStateOverrides(
 }
 
 type PaintsV3PreviewProps = {
+  featureGuides?: FeatureGuideEntry[]
   initialPayload?: PaintsV3Payload
 }
 
 export default function PaintsV3Preview({
+  featureGuides = [],
   initialPayload,
 }: PaintsV3PreviewProps) {
   const [activeTab, setActiveTab] = useState<'owned' | 'library'>('owned')
   const [query, setQuery] = useState('')
-  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isMixOpen, setIsMixOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
@@ -584,6 +588,8 @@ export default function PaintsV3Preview({
     allPaints.find((paint) => paint.id === selectedPaintId) ??
     filteredPaints[0] ??
     allPaints[0]
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   function showPreviousPage() {
     setPageIndex((current) => (current === 0 ? pageCount - 1 : current - 1))
@@ -704,9 +710,9 @@ export default function PaintsV3Preview({
         data-v3-paints-indicator="content"
       >
         <TopNav
-          isHelpOpen={isHelpOpen}
+          isHelpOpen={activeGuide !== null}
           onCreate={() => {
-            setIsHelpOpen(false)
+            setActiveGuideIndex(null)
             setIsFilterOpen(false)
             setIsExportOpen(false)
             setIsMixOpen(true)
@@ -714,7 +720,9 @@ export default function PaintsV3Preview({
           onHelpToggle={() => {
             setIsFilterOpen(false)
             setIsExportOpen(false)
-            setIsHelpOpen((open) => !open)
+            setIsMixOpen(false)
+            if (!featureGuides.length) return
+            setActiveGuideIndex(0)
           }}
         />
 
@@ -727,6 +735,7 @@ export default function PaintsV3Preview({
             type="button"
             role="tab"
             aria-selected={activeTab === 'owned'}
+            data-feature-guide-target="paints.tabs.my_paints"
             onClick={() => handleTabChange('owned')}
             className={[
               'h-9 rounded-[6px] text-xs font-black transition',
@@ -741,6 +750,7 @@ export default function PaintsV3Preview({
             type="button"
             role="tab"
             aria-selected={activeTab === 'library'}
+            data-feature-guide-target="paints.tabs.library"
             onClick={() => handleTabChange('library')}
             className={[
               'h-9 rounded-[6px] text-xs font-black transition',
@@ -758,7 +768,10 @@ export default function PaintsV3Preview({
           data-v3-paints-indicator="search-filter-toolbar"
         >
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <label className="relative block">
+            <label
+              className="relative block"
+              data-feature-guide-target="paints.search"
+            >
               <span className="sr-only">Search paints</span>
               <svg
                 aria-hidden="true"
@@ -789,11 +802,12 @@ export default function PaintsV3Preview({
               aria-expanded={isFilterOpen}
               aria-controls="paint-filters"
               onClick={() => {
-                setIsHelpOpen(false)
+                setActiveGuideIndex(null)
                 setIsExportOpen(false)
                 setIsFilterOpen((open) => !open)
               }}
               className="flex h-12 items-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-4 text-xs font-black text-white/48 transition hover:text-cyan-300"
+              data-feature-guide-target="paints.filters"
             >
               <svg
                 aria-hidden="true"
@@ -817,6 +831,7 @@ export default function PaintsV3Preview({
             <div
               id="paint-filters"
               data-v3-paints-indicator="filter-panel"
+              data-feature-guide-target="paints.filters"
               className="absolute inset-x-0 top-14 z-20 grid gap-4 rounded-[8px] border border-white/10 bg-[#071015] p-3 shadow-2xl shadow-black/45"
             >
               <div className="grid grid-cols-3 gap-3">
@@ -915,8 +930,9 @@ export default function PaintsV3Preview({
                     'relative flex h-11 cursor-pointer items-center gap-2 rounded-[8px] border px-3 text-sm font-black transition',
                     matchColor
                       ? 'border-cyan-300/60 bg-cyan-300/10 text-cyan-100'
-                      : 'border-[#22304a] bg-[#02051a] text-white',
+                    : 'border-[#22304a] bg-[#02051a] text-white',
                   ].join(' ')}
+                  data-feature-guide-target="paints.match_color"
                 >
                   <span
                     aria-hidden="true"
@@ -972,11 +988,12 @@ export default function PaintsV3Preview({
             aria-haspopup="dialog"
             aria-expanded={isExportOpen}
             onClick={() => {
-              setIsHelpOpen(false)
+              setActiveGuideIndex(null)
               setIsFilterOpen(false)
               setIsExportOpen(true)
             }}
             className="flex h-9 items-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/48 transition hover:border-cyan-300/45 hover:text-cyan-300"
+            data-feature-guide-target="paints.export"
           >
             <svg
               aria-hidden="true"
@@ -1034,6 +1051,7 @@ export default function PaintsV3Preview({
             <div
               className="grid grid-cols-3 gap-2"
               aria-label="Paint swatches"
+              data-feature-guide-target="paints.swatch_grid"
               data-v3-paints-indicator={
                 activeTab === 'owned' ? 'my-paints-grid' : 'library-grid'
               }
@@ -1233,6 +1251,25 @@ export default function PaintsV3Preview({
           </section>
         </div>
       ) : null}
+
+      {activeGuide !== null && activeGuideIndex !== null ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex}
+          guide={activeGuide}
+          onClose={() => setActiveGuideIndex(null)}
+          onNext={() =>
+            setActiveGuideIndex((current) =>
+              current === null ? 0 : Math.min(featureGuides.length - 1, current + 1)
+            )
+          }
+          onPrevious={() =>
+            setActiveGuideIndex((current) =>
+              current === null ? 0 : Math.max(0, current - 1)
+            )
+          }
+          totalGuides={featureGuides.length}
+        />
+      ) : null}
     </main>
   )
 }
@@ -1253,7 +1290,12 @@ function TopNav({
         aria-label="Open paint vault menu"
       />
 
-      <h1 data-v3-paints-indicator="app-title">Paint Vault</h1>
+      <h1
+        data-v3-paints-indicator="app-title"
+        data-feature-guide-target="paints.page"
+      >
+        Paint Vault
+      </h1>
 
       <div data-v3-paints-indicator="app-header-actions">
         <button
@@ -1262,6 +1304,7 @@ function TopNav({
           aria-controls="paints-help"
           aria-label="About paint vault"
           onClick={onHelpToggle}
+          data-feature-guide-target="paints.help"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
             <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
@@ -1273,24 +1316,13 @@ function TopNav({
           type="button"
           aria-label="Create custom mix"
           onClick={onCreate}
+          data-feature-guide-target="paints.create_custom_mix"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
           </svg>
         </button>
       </div>
-
-      {isHelpOpen ? (
-        <aside id="paints-help" data-v3-paints-indicator="help-popover">
-          <p>Paint Vault</p>
-          <p>
-            Keep track of every paint you own or want, and the custom mixes
-            you&apos;ve created. Manage your collection, avoid buying
-            duplicates, export with ease, and seamlessly connect to your guides
-            and themes.
-          </p>
-        </aside>
-      ) : null}
     </header>
   )
 }
@@ -1385,6 +1417,7 @@ function PaintInfoPanel({
     <aside
       className="fixed inset-x-2 bottom-16 z-40 mx-auto max-w-md overflow-hidden rounded-[8px] border border-cyan-300/18 bg-[#10161d]/96 shadow-2xl shadow-black/50 backdrop-blur"
       data-v3-paints-indicator="paint-info-panel"
+      data-feature-guide-target="paints.paint_info_panel"
     >
       <div className="grid grid-cols-[64px_1fr]">
         <div

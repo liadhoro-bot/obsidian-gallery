@@ -1,9 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import {
   OgButton,
@@ -13,16 +12,17 @@ import {
 } from '@/src/components/v3'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
+import FeatureGuideTour from '../components/feature-guide-tour'
 import PrefetchLink from '../components/prefetch-link'
 import DashboardQuickActionStartButton from './dashboard-quick-action-start-button'
 import DashboardResumeButton from './dashboard-resume-button'
+import type { DashboardFeatureGuide } from './feature-guide-types'
 import type {
   DashboardActiveUnitCardViewModel,
   DashboardActiveUnitViewStatus,
   DashboardActiveUnitsNextActionViewModel,
   DashboardActiveUnitsViewModel,
 } from './dashboard-active-units-model'
-import { setDashboardNextActionDone } from './actions'
 import styles from './dashboard-og.module.css'
 
 type ActiveTab = 'profile' | 'painting-table'
@@ -146,7 +146,13 @@ function MiniatureImage({
   )
 }
 
-function DashboardHeader() {
+function DashboardHeader({
+  helpExpanded,
+  onHelp,
+}: {
+  helpExpanded: boolean
+  onHelp: () => void
+}) {
   return (
     <header className={styles.appHeader}>
       <AppHamburgerMenu
@@ -154,13 +160,25 @@ function DashboardHeader() {
         aria-label="Open dashboard menu"
       />
 
-      <h1 className={styles.appTitle}>Dashboard</h1>
+      <h1 className={styles.appTitle} data-feature-guide-target="dashboard.page">
+        Dashboard
+      </h1>
 
       <div className={styles.appHeaderActions}>
-        <Link href="/support" className={styles.headerControl} aria-label="Open help">
+        <button
+          type="button"
+          className={styles.headerControl}
+          aria-expanded={helpExpanded}
+          aria-label="Show dashboard explanation"
+          onClick={onHelp}
+          data-feature-guide-target="dashboard.help"
+        >
           <HelpIcon />
-        </Link>
-        <DashboardQuickActionStartButton className={styles.headerControl}>
+        </button>
+        <DashboardQuickActionStartButton
+          className={styles.headerControl}
+          data-feature-guide-target="dashboard.add_next_action"
+        >
           <PlusIcon />
           <span className="sr-only">Create project or unit</span>
         </DashboardQuickActionStartButton>
@@ -178,6 +196,7 @@ function DashboardTabs({ currentTab, onChange }: { currentTab: ActiveTab; onChan
         aria-selected={currentTab === 'painting-table'}
         className={styles.primaryTab}
         data-active={currentTab === 'painting-table'}
+        data-feature-guide-target="dashboard.tabs.active_units"
         onClick={() => onChange('painting-table')}
       >
         Active Units
@@ -188,6 +207,7 @@ function DashboardTabs({ currentTab, onChange }: { currentTab: ActiveTab; onChan
         aria-selected={currentTab === 'profile'}
         className={styles.primaryTab}
         data-active={currentTab === 'profile'}
+        data-feature-guide-target="dashboard.tabs.my_progress"
         onClick={() => onChange('profile')}
       >
         My Progress
@@ -198,46 +218,22 @@ function DashboardTabs({ currentTab, onChange }: { currentTab: ActiveTab; onChan
 
 function NextActionsObject({ nextActions }: { nextActions: NonNullable<DashboardActiveUnitsViewModel['nextActions']> | null }) {
   const [isOpen, setIsOpen] = useState(true)
-  const [completionOverrides, setCompletionOverrides] = useState(() => new Map<string, boolean>())
-  const [isPending, startTransition] = useTransition()
 
   if (!nextActions) {
     return null
   }
 
   const isActionDone = (action: DashboardActiveUnitsNextActionViewModel) =>
-    completionOverrides.get(action.id) ?? Boolean(action.completedAt)
-  const completedCount = nextActions.actions.filter(isActionDone).length
+    Boolean(action.completedAt)
+  const completedCount = nextActions.completedCount
   const totalCount = Math.max(1, nextActions.totalCount)
   const progress = Math.round((completedCount / totalCount) * 100)
-
-  function toggleAction(action: DashboardActiveUnitsNextActionViewModel) {
-    const nextDone = !isActionDone(action)
-    setCompletionOverrides((current) => {
-      const next = new Map(current)
-      next.set(action.id, nextDone)
-      return next
-    })
-
-    if (!nextActions?.canMutate) return
-
-    startTransition(async () => {
-      const result = await setDashboardNextActionDone(action.id, nextDone)
-      if (!result.ok) {
-        setCompletionOverrides((current) => {
-          const next = new Map(current)
-          next.set(action.id, !nextDone)
-          return next
-        })
-      }
-    })
-  }
 
   return (
     <section
       className={styles.nextActionObject}
-      data-pending={isPending}
       data-v3-dashboard-indicator="next-actions"
+      data-feature-guide-target="dashboard.next_actions.panel"
       data-v3-dashboard-next-actions-source={
         nextActions.canMutate ? 'onboarding-flow' : 'featured-unit-fallback'
       }
@@ -248,7 +244,7 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
           <BottleIcon />
         </span>
         <span className={styles.nextActionCopy}>
-          <strong>Next Actions</strong>
+          <strong>{nextActions.title}</strong>
           <span>{nextActions.copy}</span>
         </span>
         <span className={styles.nextActionProgress} aria-label={`${completedCount} of ${nextActions.totalCount} complete`}>
@@ -264,30 +260,52 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
 
       {isOpen ? (
         <div className={styles.nextActionDrawer}>
-          {nextActions.actions.map((action) => {
-            const isDone = isActionDone(action)
-            return (
-              <div key={action.id} className={styles.nextActionRow}>
-                <button
-                  type="button"
-                  className={styles.nextActionCheck}
-                  data-done={isDone}
-                  aria-pressed={isDone}
-                  disabled={!nextActions.canMutate}
-                  onClick={() => toggleAction(action)}
-                >
-                  <CheckIcon />
-                </button>
-                <div className={styles.nextActionRowText}>
-                  <span data-done={isDone}>{action.label}</span>
-                  <small>{action.breadcrumb}</small>
-                </div>
-                <PrefetchLink href={action.href} className={styles.nextActionGo} aria-label={`Go to ${action.label}`}>
-                  Go
-                </PrefetchLink>
+          {nextActions.description ? (
+            <p className={styles.nextActionDescription}>
+              {nextActions.description}
+            </p>
+          ) : null}
+
+          {nextActions.milestones.map((milestone) => (
+            <section key={milestone.key} className={styles.nextActionMilestone}>
+              <div className={styles.nextActionMilestoneHeader}>
+                <strong>{milestone.label}</strong>
+                <span>
+                  {milestone.completedCount}/{milestone.totalCount} complete
+                </span>
               </div>
-            )
-          })}
+
+              <div className={styles.nextActionMilestoneRows}>
+                {milestone.actions.map((action) => {
+                  const isDone = isActionDone(action)
+
+                  return (
+                    <div
+                      key={action.id}
+                      className={styles.nextActionRow}
+                      data-active={action.isActive}
+                      data-complete={isDone}
+                    >
+                      <span
+                        className={styles.nextActionCheck}
+                        data-done={isDone}
+                        aria-hidden="true"
+                      >
+                        <CheckIcon />
+                      </span>
+                      <div className={styles.nextActionRowText}>
+                        <span data-done={isDone}>{action.label}</span>
+                        <small>{action.breadcrumb}</small>
+                      </div>
+                      <PrefetchLink href={action.href} className={styles.nextActionGo} aria-label={`Go to ${action.label}`}>
+                        Go
+                      </PrefetchLink>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       ) : null}
     </section>
@@ -301,6 +319,7 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
         className={styles.featuredPanel}
         id="featured-unit"
         data-v3-dashboard-indicator="featured-unit-empty"
+        data-feature-guide-target="dashboard.featured_unit"
       >
         <OgPlaque className={styles.panelPlaque}>Featured Unit</OgPlaque>
         <div className={styles.emptyFeatured}>
@@ -316,6 +335,7 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
       className={styles.featuredPanel}
       id="featured-unit"
       data-v3-dashboard-indicator="featured-unit"
+      data-feature-guide-target="dashboard.featured_unit"
     >
       <OgPlaque className={styles.panelPlaque}>Featured Unit</OgPlaque>
       <PrefetchLink href={`/units/${unit.id}`} className={styles.featuredImageMount} aria-label={`Open ${unit.name}`}>
@@ -344,7 +364,9 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
         </div>
 
         <div className={styles.resumeAction}>
-          <DashboardResumeButton unitId={unit.id} icon={<PlayIcon />} label="Resume" />
+          <span data-feature-guide-target="dashboard.resume_painting">
+            <DashboardResumeButton unitId={unit.id} icon={<PlayIcon />} label="Resume" />
+          </span>
         </div>
       </div>
     </section>
@@ -405,7 +427,10 @@ function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[]
   )
 
   return (
-    <section className={styles.activeUnitsPanel}>
+    <section
+      className={styles.activeUnitsPanel}
+      data-feature-guide-target="dashboard.up_next.panel"
+    >
       <OgPlaque className={styles.panelPlaque}>Up Next</OgPlaque>
       <div className={styles.activeUnitsControls}>
           <div className={styles.statusMenuWrap}>
@@ -479,11 +504,13 @@ function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[]
 }
 
 export default function DashboardActiveUnitsView({
+  featureGuides = [],
   initialTab,
   model,
   profilePanel,
   source = 'live',
 }: {
+  featureGuides?: DashboardFeatureGuide[]
   initialTab: ActiveTab
   model: DashboardActiveUnitsViewModel
   profilePanel: ReactNode
@@ -493,12 +520,70 @@ export default function DashboardActiveUnitsView({
   const searchParams = useSearchParams()
   const requestedTab = searchParams.get('tab')
   const currentTab = requestedTab === 'profile' || requestedTab === 'painting-table' ? requestedTab : initialTab
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+
+  function getGuideTab(uid: string): ActiveTab {
+    if (
+      uid === 'dashboard.tabs.my_progress' ||
+      uid === 'dashboard.xp_card' ||
+      uid === 'dashboard.paint_streak' ||
+      uid === 'dashboard.hobby_badges' ||
+      uid === 'dashboard.stats'
+    ) {
+      return 'profile'
+    }
+
+    if (
+      uid === 'dashboard.tabs.active_units' ||
+      uid === 'dashboard.next_actions.panel' ||
+      uid === 'dashboard.featured_unit' ||
+      uid === 'dashboard.resume_painting' ||
+      uid === 'dashboard.up_next.panel'
+    ) {
+      return 'painting-table'
+    }
+
+    return currentTab
+  }
+
+  function showGuideAt(index: number) {
+    const guide = featureGuides[index]
+    if (guide) {
+      navigate(getGuideTab(guide.uid))
+    }
+    setActiveGuideIndex(index)
+  }
 
   function navigate(nextTab: ActiveTab) {
     if (nextTab === currentTab) return
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', nextTab)
     window.history.replaceState(null, '', `${pathname}?${params.toString()}`)
+  }
+
+  function startFeatureTour() {
+    if (!featureGuides.length) return
+    showGuideAt(0)
+  }
+
+  function closeFeatureTour() {
+    setActiveGuideIndex(null)
+  }
+
+  function showPreviousGuide() {
+    const nextIndex =
+      activeGuideIndex === null ? 0 : Math.max(0, activeGuideIndex - 1)
+    showGuideAt(nextIndex)
+  }
+
+  function showNextGuide() {
+    const nextIndex =
+      activeGuideIndex === null
+        ? 0
+        : Math.min(featureGuides.length - 1, activeGuideIndex + 1)
+    showGuideAt(nextIndex)
   }
 
   return (
@@ -511,7 +596,10 @@ export default function DashboardActiveUnitsView({
         surface="dashboard"
         detail={currentTab === 'profile' ? 'my-progress' : 'active-units'}
       />
-      <DashboardHeader />
+      <DashboardHeader
+        helpExpanded={activeGuide !== null}
+        onHelp={startFeatureTour}
+      />
       <div className={styles.tabBand}>
         <DashboardTabs currentTab={currentTab} onChange={navigate} />
       </div>
@@ -536,6 +624,17 @@ export default function DashboardActiveUnitsView({
       >
         {profilePanel}
       </div>
+
+      {activeGuide !== null && activeGuideIndex !== null ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex}
+          guide={activeGuide}
+          onClose={closeFeatureTour}
+          onNext={showNextGuide}
+          onPrevious={showPreviousGuide}
+          totalGuides={featureGuides.length}
+        />
+      ) : null}
     </div>
   )
 }

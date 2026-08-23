@@ -2,8 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import FeatureGuideTour from '../components/feature-guide-tour'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { setDashboardNextActionDone } from './actions'
 import type { DashboardFeatureGuide } from './feature-guide-types'
@@ -350,6 +351,39 @@ export default function DashboardV3Preview({
 
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+
+  function getGuideTab(uid: string): DashboardTab {
+    if (
+      uid === 'dashboard.tabs.my_progress' ||
+      uid === 'dashboard.xp_card' ||
+      uid === 'dashboard.paint_streak' ||
+      uid === 'dashboard.hobby_badges' ||
+      uid === 'dashboard.stats'
+    ) {
+      return 'my-progress'
+    }
+
+    if (
+      uid === 'dashboard.tabs.active_units' ||
+      uid === 'dashboard.next_actions.panel' ||
+      uid === 'dashboard.featured_unit' ||
+      uid === 'dashboard.resume_painting' ||
+      uid === 'dashboard.up_next.panel'
+    ) {
+      return 'active-units'
+    }
+
+    return activeTab
+  }
+
+  function showGuideAt(index: number) {
+    const guide = featureGuides[index]
+    if (guide) {
+      setActiveTab(getGuideTab(guide.uid))
+    }
+    setActiveGuideIndex(index)
+  }
+
   const realUnits = useMemo(() => mapDashboardUnits(feed?.units ?? []), [feed])
   const displayUnits = realUnits.length ? realUnits : fallbackActiveUnits
   const heroUnit =
@@ -363,8 +397,8 @@ export default function DashboardV3Preview({
   )
 
   function startFeatureTour() {
-    setActiveTab('active-units')
-    setActiveGuideIndex(0)
+    if (!featureGuides.length) return
+    showGuideAt(0)
   }
 
   function closeFeatureTour() {
@@ -372,17 +406,17 @@ export default function DashboardV3Preview({
   }
 
   function showPreviousGuide() {
-    setActiveTab('active-units')
-    setActiveGuideIndex((current) =>
-      current === null ? 0 : Math.max(0, current - 1)
-    )
+    const nextIndex =
+      activeGuideIndex === null ? 0 : Math.max(0, activeGuideIndex - 1)
+    showGuideAt(nextIndex)
   }
 
   function showNextGuide() {
-    setActiveTab('active-units')
-    setActiveGuideIndex((current) =>
-      current === null ? 0 : Math.min(featureGuides.length - 1, current + 1)
-    )
+    const nextIndex =
+      activeGuideIndex === null
+        ? 0
+        : Math.min(featureGuides.length - 1, activeGuideIndex + 1)
+    showGuideAt(nextIndex)
   }
 
   function addDashboardTask() {
@@ -429,6 +463,7 @@ export default function DashboardV3Preview({
               role="tab"
               aria-selected={activeTab === 'active-units'}
               onClick={() => setActiveTab('active-units')}
+              data-feature-guide-target="dashboard.tabs.active_units"
               className={[
                 'h-10 rounded-[8px] text-sm font-semibold transition',
                 activeTab === 'active-units'
@@ -443,6 +478,7 @@ export default function DashboardV3Preview({
               role="tab"
               aria-selected={activeTab === 'my-progress'}
               onClick={() => setActiveTab('my-progress')}
+              data-feature-guide-target="dashboard.tabs.my_progress"
               className={[
                 'h-10 rounded-[8px] text-sm font-semibold transition',
                 activeTab === 'my-progress'
@@ -480,203 +516,6 @@ export default function DashboardV3Preview({
   )
 }
 
-type TourRect = {
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
-type TourPosition = {
-  ring: TourRect
-  popup: TourRect
-}
-
-function FeatureGuideTour({
-  guide,
-  activeIndex,
-  totalGuides,
-  onPrevious,
-  onNext,
-  onClose,
-}: {
-  guide: DashboardFeatureGuide
-  activeIndex: number
-  totalGuides: number
-  onPrevious: () => void
-  onNext: () => void
-  onClose: () => void
-}) {
-  const [position, setPosition] = useState<TourPosition | null>(null)
-  const isFirstGuide = activeIndex === 0
-  const isLastGuide = activeIndex === totalGuides - 1
-
-  const updatePosition = useCallback(() => {
-    const target = document.querySelector<HTMLElement>(
-      `[data-feature-guide-target="${guide.uid}"]`
-    )
-
-    if (!target) {
-      setPosition(null)
-      return
-    }
-
-    const rect = target.getBoundingClientRect()
-    const viewportMargin = 12
-    const gap = 12
-    const popupWidth = Math.min(320, window.innerWidth - viewportMargin * 2)
-    const popupHeight = Math.min(240, window.innerHeight - viewportMargin * 2)
-    const ringPadding = 6
-    let left = rect.right + gap
-    let top = rect.top + rect.height / 2 - popupHeight / 2
-
-    if (guide.popup_placement.includes('left')) {
-      left = rect.left - popupWidth - gap
-    } else if (guide.popup_placement.includes('top')) {
-      left = rect.left + rect.width / 2 - popupWidth / 2
-      top = rect.top - popupHeight - gap
-    } else if (guide.popup_placement.includes('bottom')) {
-      left = guide.popup_placement.includes('end')
-        ? rect.right - popupWidth
-        : rect.left + rect.width / 2 - popupWidth / 2
-      top = rect.bottom + gap
-    }
-
-    left = Math.max(
-      viewportMargin,
-      Math.min(left, window.innerWidth - popupWidth - viewportMargin)
-    )
-    top = Math.max(
-      viewportMargin,
-      Math.min(top, window.innerHeight - popupHeight - viewportMargin)
-    )
-
-    setPosition({
-      ring: {
-        left: Math.max(viewportMargin, rect.left - ringPadding),
-        top: Math.max(viewportMargin, rect.top - ringPadding),
-        width: rect.width + ringPadding * 2,
-        height: rect.height + ringPadding * 2,
-      },
-      popup: {
-        left,
-        top,
-        width: popupWidth,
-        height: popupHeight,
-      },
-    })
-  }, [guide])
-
-  useEffect(() => {
-    const target = document.querySelector<HTMLElement>(
-      `[data-feature-guide-target="${guide.uid}"]`
-    )
-
-    target?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'nearest',
-    })
-
-    const frame = window.requestAnimationFrame(updatePosition)
-    const timer = window.setTimeout(updatePosition, 260)
-
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition, true)
-
-    return () => {
-      window.cancelAnimationFrame(frame)
-      window.clearTimeout(timer)
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition, true)
-    }
-  }, [guide, updatePosition])
-
-  return (
-    <div className="pointer-events-none fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/38" />
-
-      {position ? (
-        <div
-          aria-hidden="true"
-          className="fixed rounded-[12px] border-2 border-cyan-300 shadow-[0_0_0_9999px_rgba(0,0,0,0.34),0_0_28px_rgba(34,211,238,0.68)]"
-          style={{
-            left: position.ring.left,
-            top: position.ring.top,
-            width: position.ring.width,
-            height: position.ring.height,
-          }}
-        />
-      ) : null}
-
-      <aside
-        role="dialog"
-        aria-live="polite"
-        aria-label={`${guide.feature_name} feature guide`}
-        className="pointer-events-auto fixed flex flex-col overflow-hidden rounded-[10px] border border-cyan-300/25 bg-[#11171d] text-white shadow-2xl shadow-black/60"
-        style={{
-          left: position?.popup.left ?? 16,
-          top: position?.popup.top ?? 88,
-          width: position?.popup.width ?? 'calc(100vw - 32px)',
-          maxWidth: 320,
-          maxHeight: position?.popup.height ?? 'calc(100vh - 24px)',
-        }}
-      >
-        <div className="border-b border-white/[0.06] px-4 py-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-lg font-black leading-tight text-white">
-                {guide.feature_name}
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close feature guide"
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-sm font-black text-white/48 transition hover:border-cyan-300/35 hover:text-cyan-300"
-            >
-              x
-            </button>
-          </div>
-        </div>
-
-        <div className="min-h-0 overflow-y-auto px-4 py-4">
-          <div className="mb-3 flex items-center gap-3">
-            <span className="rounded-full bg-cyan-300 px-2.5 py-1 text-[10px] font-black text-black">
-              {activeIndex + 1}/{totalGuides}
-            </span>
-          </div>
-
-          <p className="text-xs font-semibold leading-5 text-white/66">
-            {guide.explanation}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 border-t border-white/[0.06] p-3">
-          <button
-            type="button"
-            onClick={onPrevious}
-            disabled={isFirstGuide}
-            aria-label="Previous feature guide"
-            className="h-10 rounded-[8px] border border-white/10 bg-white/[0.045] text-sm font-black text-white/60 transition hover:border-cyan-300/35 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:border-white/10 disabled:hover:text-white/60"
-          >
-            &lt;-
-          </button>
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={isLastGuide}
-            aria-label="Next feature guide"
-            className="h-10 rounded-[8px] bg-cyan-300 text-sm font-black text-black transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-cyan-300"
-          >
-            -&gt;
-          </button>
-        </div>
-      </aside>
-    </div>
-  )
-}
-
 function DashboardHeader({
   helpExpanded,
   onHelp,
@@ -707,7 +546,10 @@ function DashboardHeader({
           <path d="M5 17h14" />
         </svg>
       </button>
-      <h1 className="min-w-0 text-center font-serif text-[38px] font-semibold leading-none tracking-normal text-[#f4e4c6] drop-shadow-[0_2px_1px_rgba(0,0,0,0.72)] sm:text-[42px]">
+      <h1
+        className="min-w-0 text-center font-serif text-[38px] font-semibold leading-none tracking-normal text-[#f4e4c6] drop-shadow-[0_2px_1px_rgba(0,0,0,0.72)] sm:text-[42px]"
+        data-feature-guide-target="dashboard.page"
+      >
         Dashboard
       </h1>
       <div className="flex shrink-0 items-center gap-2">
@@ -1294,7 +1136,10 @@ function ActiveUnits({ units }: { units: DashboardV3UnitCard[] }) {
   const visibleUnits = filteredUnits.slice(0, viewMode === 'grid' ? 3 : 2)
 
   return (
-    <section className="v3-parchment-panel rounded-[14px] border p-4 text-[#2b2117] sm:p-5">
+    <section
+      className="v3-parchment-panel rounded-[14px] border p-4 text-[#2b2117] sm:p-5"
+      data-feature-guide-target="dashboard.up_next.panel"
+    >
       <div className="v3-brass-plaque mb-3 inline-flex rounded-[5px] border border-[#6e4d25] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#26180b] shadow-[inset_0_1px_0_rgba(255,239,190,0.25),0_2px_4px_rgba(55,34,15,0.32)]">
         Up Next
       </div>

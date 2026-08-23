@@ -3,7 +3,9 @@
 import Image from 'next/image'
 import { FormEvent, useMemo, useState } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
+import FeatureGuideTour from '../components/feature-guide-tour'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import styles from './projects-v3-silver.module.css'
 import type {
   ProjectsV3Project,
@@ -142,9 +144,11 @@ const initialUnits: PreviewUnit[] = [
 ]
 
 export default function ProjectsV3Preview({
+  featureGuides = [],
   initialProjects: liveProjects,
   initialUnits: liveUnits,
 }: {
+  featureGuides?: FeatureGuideEntry[]
   initialProjects?: PreviewProject[]
   initialUnits?: PreviewUnit[]
 }) {
@@ -158,7 +162,7 @@ export default function ProjectsV3Preview({
   const [units, setUnits] = useState(
     liveUnits ?? initialUnits
   )
-  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
   const [projectType, setProjectType] = useState('Warband')
@@ -254,10 +258,34 @@ export default function ProjectsV3Preview({
 
   const projectPreviewName = projectName.trim() || 'New Project'
   const unitPreviewName = unitName.trim() || 'New Unit'
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   function openCreate() {
-    setIsHelpOpen(false)
+    setActiveGuideIndex(null)
     setIsCreateOpen(true)
+  }
+
+  function startFeatureTour() {
+    if (!featureGuides.length) return
+    setIsCreateOpen(false)
+    setActiveGuideIndex(0)
+  }
+
+  function closeFeatureTour() {
+    setActiveGuideIndex(null)
+  }
+
+  function showPreviousGuide() {
+    setActiveGuideIndex((current) =>
+      current === null ? 0 : Math.max(0, current - 1)
+    )
+  }
+
+  function showNextGuide() {
+    setActiveGuideIndex((current) =>
+      current === null ? 0 : Math.min(featureGuides.length - 1, current + 1)
+    )
   }
 
   function showPreviousProjectsPage() {
@@ -333,12 +361,14 @@ export default function ProjectsV3Preview({
       data-v3-projects-source={liveProjects || liveUnits ? 'live' : 'fallback'}
     >
       <V3PerfIndicator surface="projects" detail={activeTab} />
-      <div className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6">
+      <div
+        className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6"
+      >
         <ProjectsHeader
           activeTab={activeTab}
-          isHelpOpen={isHelpOpen}
+          isHelpOpen={activeGuide !== null}
           onCreate={openCreate}
-          onHelpToggle={() => setIsHelpOpen((open) => !open)}
+          onHelpToggle={startFeatureTour}
         />
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -427,6 +457,17 @@ export default function ProjectsV3Preview({
           />
         )
       ) : null}
+
+      {activeGuide !== null && activeGuideIndex !== null ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex}
+          guide={activeGuide}
+          onClose={closeFeatureTour}
+          onNext={showNextGuide}
+          onPrevious={showPreviousGuide}
+          totalGuides={featureGuides.length}
+        />
+      ) : null}
     </main>
   )
 }
@@ -467,7 +508,12 @@ function ProjectsHeader({
         aria-label="Open projects menu"
       />
 
-      <h1 data-v3-projects-indicator="app-title">Projects</h1>
+      <h1
+        data-v3-projects-indicator="app-title"
+        data-feature-guide-target="projects.page"
+      >
+        Projects
+      </h1>
 
       <div data-v3-projects-indicator="app-header-actions">
         <button
@@ -476,6 +522,7 @@ function ProjectsHeader({
           aria-controls="projects-help"
           aria-label="About projects and units"
           onClick={onHelpToggle}
+          data-feature-guide-target="projects.help"
         >
           <HelpIcon />
         </button>
@@ -483,24 +530,11 @@ function ProjectsHeader({
           type="button"
           aria-label={activeTab === 'projects' ? 'Create project' : 'Create unit'}
           onClick={onCreate}
+          data-feature-guide-target="projects.create_button"
         >
           <PlusIcon />
         </button>
       </div>
-
-      {isHelpOpen ? (
-        <aside
-          id="projects-help"
-          data-v3-projects-indicator="help-popover"
-        >
-          <p>Projects and Units</p>
-          <p>
-            Projects are collections of units, like folders for armies,
-            warbands, display forces, or tables. Units are the direct model
-            library, visible beside projects and sortable on their own.
-          </p>
-        </aside>
-      ) : null}
     </header>
   )
 }
@@ -524,6 +558,9 @@ function Tabs({
           type="button"
           role="tab"
           aria-selected={activeTab === tab}
+          data-feature-guide-target={
+            tab === 'projects' ? 'projects.tabs.projects' : 'projects.tabs.units'
+          }
           onClick={() => onTabChange(tab)}
           className={[
             'h-9 rounded-[6px] text-xs font-black capitalize transition',
@@ -573,7 +610,10 @@ function SearchSortToolbar({
   return (
     <div className="grid gap-2" data-v3-projects-indicator="search-sort-toolbar">
       <div className="grid grid-cols-[1fr_auto] gap-2">
-        <label className="relative block min-w-0">
+        <label
+          className="relative block min-w-0"
+          data-feature-guide-target="projects.search"
+        >
           <span className="sr-only">{searchLabel}</span>
           <svg
             aria-hidden="true"
@@ -602,6 +642,7 @@ function SearchSortToolbar({
           aria-label="Open sorting controls"
           onClick={() => setIsSortOpen((open) => !open)}
           className="grid h-11 grid-cols-[auto_auto] items-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-3 text-xs font-black text-white/70 transition hover:border-cyan-300/45 hover:text-cyan-300"
+          data-feature-guide-target="projects.sort"
         >
           <svg
             aria-hidden="true"
@@ -846,6 +887,7 @@ function ProjectFileCard({
     <a
       href={`/projects/${project.id}?preview=1`}
       data-v3-projects-indicator="project-card"
+      data-feature-guide-target="projects.card"
       className="block overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/35"
     >
       <div className="grid grid-cols-[110px_1fr] gap-3 p-3">
@@ -892,6 +934,7 @@ function ProjectGridCard({
     <a
       href={`/projects/${project.id}?preview=1`}
       data-v3-projects-indicator="project-grid-card"
+      data-feature-guide-target="projects.card"
       className="block overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] transition hover:border-cyan-300/35"
     >
       <div className="relative aspect-[1.08] overflow-hidden bg-black">
@@ -1164,7 +1207,11 @@ function CreateProjectSheet({
 }) {
   return (
     <Sheet title="Create project" eyebrow="New Project" onClose={onClose}>
-      <form onSubmit={onSubmit} className="grid gap-4">
+      <form
+        onSubmit={onSubmit}
+        className="grid gap-4"
+        data-feature-guide-target="projects.create_form"
+      >
         <TextField
           label="Project name"
           placeholder="e.g. Winter Warband"
@@ -1225,7 +1272,11 @@ function CreateUnitSheet({
 
   return (
     <Sheet title="Create unit" eyebrow="New Unit" onClose={onClose}>
-      <form onSubmit={onSubmit} className="grid gap-4">
+      <form
+        onSubmit={onSubmit}
+        className="grid gap-4"
+        data-feature-guide-target="projects.create_form"
+      >
         <TextField
           label="Unit name"
           placeholder="e.g. Skeleton Captain"

@@ -2,6 +2,8 @@
 
 import Image from 'next/image'
 import { FormEvent, useMemo, useState } from 'react'
+import FeatureGuideTour from '../components/feature-guide-tour'
+import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 
 type PreviewTheme = {
@@ -68,10 +70,14 @@ const initialThemes: PreviewTheme[] = [
   },
 ]
 
-export default function ThemesV3Preview() {
+export default function ThemesV3Preview({
+  featureGuides = [],
+}: {
+  featureGuides?: FeatureGuideEntry[]
+}) {
   const [themes, setThemes] = useState(initialThemes)
   const [activeTab, setActiveTab] = useState<'mine' | 'library'>('mine')
-  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [themeName, setThemeName] = useState('')
   const [themeMood, setThemeMood] = useState('Cinematic contrast')
@@ -85,6 +91,14 @@ export default function ThemesV3Preview() {
   const visibleThemes = themes.filter((theme) =>
     activeTab === 'mine' ? theme.saved : true
   )
+  const activeGuide =
+    activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+
+  function startFeatureTour() {
+    if (!featureGuides.length) return
+    setIsCreateOpen(false)
+    setActiveGuideIndex(0)
+  }
 
   function createPreviewTheme(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -111,7 +125,10 @@ export default function ThemesV3Preview() {
   }
 
   return (
-    <main className="min-h-screen bg-[#05090b] text-white">
+    <main
+      className="min-h-screen bg-[#05090b] text-white"
+      data-feature-guide-target="themes.page"
+    >
       <V3PerfIndicator surface="themes" detail={activeTab} />
       <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-3 pb-28 pt-8">
         <TopNav />
@@ -130,10 +147,10 @@ export default function ThemesV3Preview() {
             <div className="flex shrink-0 gap-2">
               <button
                 type="button"
-                aria-expanded={isHelpOpen}
-                aria-controls="themes-help"
-                aria-label="About themes"
-                onClick={() => setIsHelpOpen((open) => !open)}
+                aria-expanded={activeGuide !== null}
+                aria-label="Show themes explanation"
+                data-feature-guide-target="themes.help"
+                onClick={startFeatureTour}
                 className="grid h-10 w-10 place-items-center rounded-full bg-[#11171d] text-sm font-black text-white/58 transition hover:bg-white/12 hover:text-cyan-300"
               >
                 ?
@@ -141,8 +158,9 @@ export default function ThemesV3Preview() {
               <button
                 type="button"
                 aria-label="Create theme"
+                data-feature-guide-target="themes.create_button"
                 onClick={() => {
-                  setIsHelpOpen(false)
+                  setActiveGuideIndex(null)
                   setIsCreateOpen(true)
                 }}
                 className="grid h-10 w-10 place-items-center rounded-full bg-cyan-300 text-2xl font-black leading-none text-black shadow-[0_0_24px_rgba(34,211,238,0.22)] transition hover:bg-cyan-200"
@@ -151,23 +169,6 @@ export default function ThemesV3Preview() {
               </button>
             </div>
           </div>
-
-          {isHelpOpen ? (
-            <aside
-              id="themes-help"
-              className="absolute right-12 top-12 z-20 w-[min(300px,calc(100vw-40px))] rounded-[8px] border border-cyan-300/20 bg-[#11171d] p-4 shadow-2xl shadow-black/45"
-            >
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
-                Themes
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-6 text-white/70">
-                Themes let you capture color palettes, reference images, and
-                visual concepts in one place. Explore community schemes, create
-                your own, and give every project a clear artistic direction
-                before the first coat of paint.
-              </p>
-            </aside>
-          ) : null}
         </header>
 
         <div
@@ -180,6 +181,7 @@ export default function ThemesV3Preview() {
             role="tab"
             aria-selected={activeTab === 'mine'}
             onClick={() => setActiveTab('mine')}
+            data-feature-guide-target="themes.tabs.mine"
             className={[
               'h-10 rounded-[6px] text-xs font-black transition',
               activeTab === 'mine'
@@ -194,6 +196,7 @@ export default function ThemesV3Preview() {
             role="tab"
             aria-selected={activeTab === 'library'}
             onClick={() => setActiveTab('library')}
+            data-feature-guide-target="themes.tabs.library"
             className={[
               'h-10 rounded-[6px] text-xs font-black transition',
               activeTab === 'library'
@@ -218,6 +221,7 @@ export default function ThemesV3Preview() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-theme-title"
+            data-feature-guide-target="themes.form"
             className="w-full max-w-md rounded-[8px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
           >
             <div className="flex items-start justify-between gap-4">
@@ -327,6 +331,27 @@ export default function ThemesV3Preview() {
             </form>
           </section>
         </div>
+      ) : null}
+
+      {activeGuide ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex ?? 0}
+          guide={activeGuide}
+          onClose={() => setActiveGuideIndex(null)}
+          onNext={() =>
+            setActiveGuideIndex((current) =>
+              current === null
+                ? 0
+                : Math.min(featureGuides.length - 1, current + 1)
+            )
+          }
+          onPrevious={() =>
+            setActiveGuideIndex((current) =>
+              current === null ? 0 : Math.max(0, current - 1)
+            )
+          }
+          totalGuides={featureGuides.length}
+        />
       ) : null}
     </main>
   )

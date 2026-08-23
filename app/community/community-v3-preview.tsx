@@ -3,6 +3,8 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
+import FeatureGuideTour from '../components/feature-guide-tour'
+import { communityFeatureGuides } from '../components/feature-guide-presets'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './community-v3-silver.module.css'
 
@@ -57,6 +59,27 @@ const contests = [
 
 export default function CommunityV3Preview() {
   const [activeTab, setActiveTab] = useState<CommunityTab>('contests')
+  const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
+  const activeGuide =
+    activeGuideIndex === null
+      ? null
+      : communityFeatureGuides[activeGuideIndex] ?? null
+
+  function showGuideAt(index: number) {
+    const guide = communityFeatureGuides[index]
+    if (guide?.uid === 'community.tabs.news') {
+      setActiveTab('news')
+    }
+    if (
+      guide?.uid === 'community.tabs.contests' ||
+      guide?.uid === 'community.hero' ||
+      guide?.uid === 'community.primary_list' ||
+      guide?.uid === 'community.secondary_list'
+    ) {
+      setActiveTab('contests')
+    }
+    setActiveGuideIndex(index)
+  }
 
   return (
     <main
@@ -68,18 +91,45 @@ export default function CommunityV3Preview() {
         className="mx-auto flex w-full max-w-md flex-col gap-3 px-3 pb-28 pt-6"
         data-v3-community-indicator="content"
       >
-        <TopNav />
+        <TopNav
+          isHelpOpen={activeGuide !== null}
+          onHelp={() => showGuideAt(0)}
+        />
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === 'contests' ? <ContestsTab /> : null}
         {activeTab === 'news' ? <NewsTab /> : null}
       </div>
+
+      {activeGuide ? (
+        <FeatureGuideTour
+          activeIndex={activeGuideIndex ?? 0}
+          guide={activeGuide}
+          onClose={() => setActiveGuideIndex(null)}
+          onNext={() =>
+            showGuideAt(
+              Math.min(
+                communityFeatureGuides.length - 1,
+                (activeGuideIndex ?? 0) + 1
+              )
+            )
+          }
+          onPrevious={() => showGuideAt(Math.max(0, (activeGuideIndex ?? 0) - 1))}
+          totalGuides={communityFeatureGuides.length}
+        />
+      ) : null}
     </main>
   )
 }
 
-function TopNav() {
+function TopNav({
+  isHelpOpen,
+  onHelp,
+}: {
+  isHelpOpen: boolean
+  onHelp: () => void
+}) {
   return (
     <header data-v3-community-indicator="app-header">
       <AppHamburgerMenu
@@ -87,9 +137,22 @@ function TopNav() {
         aria-label="Open community menu"
       />
 
-      <h1 data-v3-community-indicator="app-title">Community</h1>
+      <h1
+        data-v3-community-indicator="app-title"
+        data-feature-guide-target="community.page"
+      >
+        Community
+      </h1>
 
       <div data-v3-community-indicator="app-header-actions">
+        <button
+          type="button"
+          aria-expanded={isHelpOpen}
+          aria-label="Show community explanation"
+          onClick={onHelp}
+        >
+          ?
+        </button>
         <a href="/settings?preview=1" aria-label="Profile">
           <svg
             aria-hidden="true"
@@ -131,6 +194,7 @@ function Tabs({
           role="tab"
           aria-selected={activeTab === tab.id}
           onClick={() => onTabChange(tab.id)}
+          data-feature-guide-target={`community.tabs.${tab.id}`}
           className="capitalize transition"
         >
           {tab.label}
@@ -228,6 +292,7 @@ function HeroCard({
     <article
       className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
       data-v3-community-indicator="hero-card"
+      data-feature-guide-target="community.hero"
     >
       <div className="relative h-52 bg-black">
         <Image
@@ -269,10 +334,16 @@ function SectionCard({
   children: React.ReactNode
   title: string
 }) {
+  const featureTarget =
+    title === 'Open Challenges' || title === 'Latest News'
+      ? 'community.primary_list'
+      : 'community.secondary_list'
+
   return (
     <section
       className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
       data-v3-community-indicator="section-card"
+      data-feature-guide-target={featureTarget}
     >
       <div className="flex items-center justify-between px-4 py-3">
         <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">

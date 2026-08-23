@@ -29,6 +29,10 @@ import { getEligibleContestsForSource } from '../../../lib/contests/queries'
 import { isCurrentUserAdmin } from '../../../lib/admin'
 import { TopBarSkeleton } from '../../dashboard/dashboard-skeletons'
 import { getDashboardProfile } from '../../dashboard/dashboard-data'
+import {
+  completeOnboardingAction,
+  completeOnboardingActions,
+} from '../../../lib/onboarding/completion'
 
 function parsePaintSelection(rawValue: string) {
   if (!rawValue) {
@@ -129,6 +133,12 @@ async function updateRecipeHeader(formData: FormData) {
     console.error('Error updating recipe header:', error)
     return
   }
+
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'name_guide',
+    subjectGuideId: recipeId,
+  })
 
   revalidateRecipeCaches(recipeId)
 }
@@ -345,6 +355,15 @@ async function addRecipeStep(formData: FormData) {
     }
   }
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectGuideId: recipeId,
+    actionKeys: [
+      nextStepNumber === 1 ? 'create_step_card' : 'add_second_guide_card',
+      ...(stepPaintsToInsert.length > 0 ? ['add_step_paints'] : []),
+    ],
+  })
+
   revalidateRecipeCaches(recipeId)
 }
 
@@ -491,6 +510,16 @@ async function updateRecipeStep(formData: FormData) {
       return
     }
   }
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectGuideId: recipeId,
+    actionKeys: [
+      'create_step_card',
+      ...(stepPaintsToInsert.length > 0 ? ['add_step_paints'] : []),
+      ...(imageUrl ? ['add_step_image'] : []),
+    ],
+  })
 
   revalidateRecipeCaches(recipeId)
 }
@@ -677,6 +706,12 @@ async function moveRecipeStep(formData: FormData) {
     }
   }
 
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'reorder_guide_cards',
+    subjectGuideId: recipeId,
+  })
+
   revalidateRecipeCaches(recipeId)
 }
 
@@ -792,6 +827,12 @@ async function uploadRecipeImage(formData: FormData) {
   }
 
   if (result.uploadedCount > 0) {
+    await completeOnboardingActions({
+      userId: user.id,
+      subjectGuideId: recipeId,
+      actionKeys: ['add_guide_cover', 'add_step_image'],
+    })
+
     revalidateRecipeCaches(recipeId)
   }
 

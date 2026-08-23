@@ -20,6 +20,10 @@ import {
   findNearestUniquePaints,
 } from '../../../utils/color-matching'
 import { createPerfTimer } from '../../../utils/perf/server'
+import {
+  completeOnboardingAction,
+  completeOnboardingActions,
+} from '../../../lib/onboarding/completion'
 
 const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
 const unitThemeDescription = (unitId: string, source: string) =>
@@ -79,7 +83,7 @@ export async function toggleUnitActive(unitId: string, nextValue: boolean) {
 export async function setFeaturedUnit(unitId: string) {
   const perf = createPerfTimer('action:setFeaturedUnit')
   const supabase = await createClient()
-  await requireSessionUser(supabase)
+  const user = await requireSessionUser(supabase)
 
   const { error } = await supabase.rpc('set_featured_unit', {
     p_unit_id: unitId,
@@ -88,6 +92,12 @@ export async function setFeaturedUnit(unitId: string) {
   if (error) {
     throw error
   }
+
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'feature_unit',
+    subjectUnitId: unitId,
+  })
 
   revalidatePath(`/units/${unitId}`)
   perf.mark('revalidation duration')
@@ -172,6 +182,17 @@ export async function updateUnitStatus(
     throw error
   }
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    actionKeys: [
+      'set_unit_status',
+      ...(status === 'bench' || status === 'active'
+        ? ['add_unit_to_active_bench']
+        : []),
+    ],
+  })
+
   revalidatePath(`/units/${unitId}`)
 
   return {
@@ -250,6 +271,14 @@ export async function startUnitSession(unitId: string) {
     },
   })
   perf.mark('analytics event')
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    subjectProjectId: unit?.project_id ?? null,
+    subjectSessionId: data.id,
+    actionKeys: ['start_first_session', 'start_session_from_dashboard'],
+  })
 
   revalidatePath(`/units/${unitId}`)
   perf.mark('revalidation duration')
@@ -338,6 +367,18 @@ export async function endUnitSession(unitId: string) {
   })
   perf.mark('analytics event')
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    subjectProjectId: unit?.project_id ?? null,
+    subjectSessionId: updatedSession.id,
+    actionKeys: [
+      'finish_first_session',
+      'organize_finish_session',
+      ...(updatedSession.notes ? ['record_session_note'] : []),
+    ],
+  })
+
   revalidatePath(`/units/${unitId}`)
   perf.mark('revalidation duration')
   perf.total()
@@ -419,6 +460,19 @@ export async function logManualUnitSession(formData: FormData) {
     },
   })
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    subjectProjectId: unit.project_id,
+    subjectSessionId: session.id,
+    actionKeys: [
+      'start_first_session',
+      'finish_first_session',
+      'organize_finish_session',
+      ...(notes ? ['record_session_note'] : []),
+    ],
+  })
+
   revalidatePath(`/units/${unitId}`)
 
   return session
@@ -431,6 +485,7 @@ export async function updateProgressStep(
   progress: number
 ) {
   const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
 
   const safeProgress = Math.max(0, Math.min(100, progress))
 
@@ -447,11 +502,22 @@ export async function updateProgressStep(
     throw error
   }
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    actionKeys: [
+      'set_unit_progress_stage',
+      'organize_set_progress_stage',
+      'update_unit_progress',
+    ],
+  })
+
   revalidatePath(`/units/${unitId}`)
 }
 
 export async function setFeaturedUnitImage(unitId: string, imageId: string) {
   const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
 
   const { error: clearError } = await supabase
     .from('image_assets')
@@ -473,6 +539,12 @@ export async function setFeaturedUnitImage(unitId: string, imageId: string) {
   if (setError) {
     throw setError
   }
+
+  await completeOnboardingAction({
+    userId: user.id,
+    actionKey: 'add_unit_image',
+    subjectUnitId: unitId,
+  })
 
   revalidatePath(`/units/${unitId}`)
 }
@@ -613,6 +685,13 @@ export async function calculateUnitPaletteAction(formData: FormData) {
       extracted_colors_count: extractedHexes.length,
       matched_paints_count: matchedPaints.length,
     },
+  })
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    subjectProjectId: unit.project_id,
+    actionKeys: ['add_unit_paints', 'use_project_palette'],
   })
 
   revalidateUnitThemePages(unitId, themeId)
@@ -802,6 +881,12 @@ export async function setUnitPaletteSlot(
     throw insertError
   }
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    actionKeys: ['add_unit_paints', 'use_project_palette'],
+  })
+
   revalidatePath(`/units/${unitId}`)
   revalidatePath(`/themes/${themeId}`)
 }
@@ -927,6 +1012,13 @@ export async function uploadUnitGalleryImages(
   }
 
   if (result.uploadedCount > 0) {
+    await completeOnboardingActions({
+      userId: user.id,
+      subjectUnitId: unitId,
+      subjectProjectId: unit.project_id,
+      actionKeys: ['add_unit_image', 'add_session_progress_photo'],
+    })
+
     revalidatePath(`/units/${unitId}`)
     if (unit.project_id) {
       revalidatePath(`/projects/${unit.project_id}`)
@@ -1080,6 +1172,16 @@ export async function updateUnitDetails(formData: FormData) {
     affectedProjectIds.add(unit.project_id)
   }
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    subjectProjectId: selectedProjectIds[0] ?? unit.project_id ?? null,
+    actionKeys: [
+      'complete_unit_info',
+      ...(selectedProjectIds.length > 0 ? ['add_project_unit'] : []),
+    ],
+  })
+
   revalidatePath(`/units/${unitId}`)
   affectedProjectIds.forEach((projectId) => {
     revalidatePath(`/projects/${projectId}`)
@@ -1114,6 +1216,16 @@ export async function updateUnitHeader(formData: FormData) {
   if (error) {
     throw error
   }
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    actionKeys: [
+      'set_unit_progress_stage',
+      'organize_set_progress_stage',
+      'update_unit_progress',
+    ],
+  })
 
   revalidatePath(`/units/${unitId}`)
 }
@@ -1383,6 +1495,16 @@ export async function toggleStepDone(formData: FormData) {
     await addXP(user.id, completionBonus)
   }
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    actionKeys: [
+      'set_unit_progress_stage',
+      'organize_set_progress_stage',
+      'update_unit_progress',
+    ],
+  })
+
   revalidatePath(`/units/${unitId}`)
 
   return {
@@ -1429,6 +1551,13 @@ export async function updateUnitSession(formData: FormData) {
     .single()
 
   if (error) throw error
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    subjectSessionId: session.id,
+    actionKeys: ['finish_first_session', 'organize_finish_session'],
+  })
 
   revalidatePath(`/units/${unitId}`)
 
@@ -1704,6 +1833,13 @@ export async function assignRecipeToStage(formData: FormData) {
     throw error
   }
 
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    subjectGuideId: recipeId,
+    actionKeys: ['choose_unit_guide', 'assign_guide_to_unit'],
+  })
+
   revalidatePath(`/units/${unitId}`)
 }
 
@@ -1898,6 +2034,12 @@ export async function addPaintToStage(formData: FormData) {
   if (error) {
     throw error
   }
+
+  await completeOnboardingActions({
+    userId: user.id,
+    subjectUnitId: unitId,
+    actionKeys: ['add_unit_paints', 'use_project_palette'],
+  })
 
   revalidatePath(`/units/${unitId}`)
   return stagePaint

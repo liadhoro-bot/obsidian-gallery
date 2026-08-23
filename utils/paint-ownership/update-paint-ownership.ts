@@ -2,6 +2,7 @@
 
 import { createClient } from '../supabase/server'
 import { captureServerEvent } from '../analytics/server'
+import { completeOnboardingActions } from '../../lib/onboarding/completion'
 
 type OwnershipAction =
   | 'owned'
@@ -119,6 +120,13 @@ export async function updatePaintOwnership({
       units_owned: updated.units_owned,
     },
   })
+
+  if (updated.is_owned) {
+    await completeOnboardingActions({
+      userId,
+      actionKeys: ['mark_paints_owned', 'add_owned_paints'],
+    })
+  }
 
   return updated
 }

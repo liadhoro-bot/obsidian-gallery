@@ -1,21 +1,15 @@
 ﻿'use client'
 
 import Link from 'next/link'
-import { useMemo, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import {
   OgCaption,
   OgIconButton,
   OgObjectTitle,
   SurfacePanel,
 } from '@/src/components/v3'
-import type {
-  DashboardNextActionItem,
-  DashboardNextActionsState,
-} from './dashboard-data'
-import {
-  dismissDashboardNextActions,
-  setDashboardNextActionDone,
-} from './actions'
+import type { DashboardNextActionsState } from './dashboard-data'
+import { dismissDashboardNextActions } from './actions'
 import styles from './dashboard-og.module.css'
 
 type Props = {
@@ -93,47 +87,11 @@ function ArrowIcon() {
 
 export default function DashboardNextActionsCard({ state }: Props) {
   const [hidden, setHidden] = useState(false)
-  const [completedIds, setCompletedIds] = useState(
-    () => new Set(state.actions.filter((action) => action.completedAt).map((action) => action.id))
-  )
   const [isPending, startTransition] = useTransition()
-
-  const completedCount = useMemo(
-    () => state.actions.filter((action) => completedIds.has(action.id)).length,
-    [completedIds, state.actions]
-  )
+  const completedCount = state.completedCount
 
   if (hidden) {
     return null
-  }
-
-  function toggleAction(action: DashboardNextActionItem) {
-    const nextDone = !completedIds.has(action.id)
-    setCompletedIds((current) => {
-      const next = new Set(current)
-      if (nextDone) {
-        next.add(action.id)
-      } else {
-        next.delete(action.id)
-      }
-      return next
-    })
-
-    startTransition(async () => {
-      const result = await setDashboardNextActionDone(action.id, nextDone)
-
-      if (!result.ok) {
-        setCompletedIds((current) => {
-          const next = new Set(current)
-          if (nextDone) {
-            next.delete(action.id)
-          } else {
-            next.add(action.id)
-          }
-          return next
-        })
-      }
-    })
   }
 
   function dismiss() {
@@ -172,7 +130,7 @@ export default function DashboardNextActionsCard({ state }: Props) {
               <span
                 key={action.id}
                 className={styles.progressDot}
-                data-complete={completedIds.has(action.id)}
+                data-complete={Boolean(action.completedAt)}
               />
             ))}
           </div>
@@ -185,24 +143,17 @@ export default function DashboardNextActionsCard({ state }: Props) {
 
       <div className={styles.actionRows}>
         {state.actions.map((action) => {
-          const isDone = completedIds.has(action.id)
+          const isDone = Boolean(action.completedAt)
 
           return (
             <div key={action.id} className={styles.actionRow}>
-              <button
-                type="button"
-                onClick={() => toggleAction(action)}
-                aria-pressed={isDone}
-                aria-label={
-                  isDone
-                    ? `Mark ${action.label} incomplete`
-                    : `Mark ${action.label} complete`
-                }
+              <span
                 className={styles.checkButton}
                 data-done={isDone}
+                aria-hidden="true"
               >
                 <CheckIcon className="h-3.5 w-3.5" />
-              </button>
+              </span>
 
               <div className={styles.actionText}>
                 <span className={styles.actionTitle} data-done={isDone}>

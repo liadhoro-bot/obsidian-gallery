@@ -2,6 +2,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
+import FeatureGuideLauncher from '../../components/feature-guide-launcher'
+import { getFeatureGuidesForPage } from '../../components/feature-guide-data'
+import { guideDetailFeatureGuides } from '../../components/feature-guide-presets'
 import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
 import { createPerfTimer } from '../../../utils/perf/server'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
@@ -41,6 +44,10 @@ export default async function GuideDetailPage({
   const guide = await perf.measure('v3 guide detail data', () =>
     getGuidesV3GuideDetail(id, user.id)
   )
+  const featureGuides = await getFeatureGuidesForPage(
+    '/guides/[id]',
+    guideDetailFeatureGuides
+  )
   perf.total()
 
   if (!guide) notFound()
@@ -60,7 +67,11 @@ export default async function GuideDetailPage({
           <span className={styles.topLabel}>
             Guide
           </span>
-          <span className={styles.topSpacer} aria-hidden="true" />
+          <FeatureGuideLauncher
+            buttonClassName={styles.backButton}
+            guides={featureGuides}
+            label="Show guide detail explanation"
+          />
         </header>
 
         <section className={styles.heroCard}>
@@ -78,7 +89,10 @@ export default async function GuideDetailPage({
               <p className={styles.eyebrow}>
                 Guide Detail
               </p>
-              <h1 className={styles.heroTitle}>
+              <h1
+                className={styles.heroTitle}
+                data-feature-guide-target="guides.detail.page"
+              >
                 {guide.title}
               </h1>
             </div>
@@ -92,7 +106,10 @@ export default async function GuideDetailPage({
           </div>
         </section>
 
-        <section className={styles.panel}>
+        <section
+          className={styles.panel}
+          data-feature-guide-target="guides.detail.description"
+        >
           <h2 className={styles.sectionHeading}>
             Description
           </h2>
@@ -110,7 +127,10 @@ export default async function GuideDetailPage({
           </div>
         </section>
 
-        <section className={`${styles.panel} ${styles.deckList}`}>
+        <section
+          className={`${styles.panel} ${styles.deckList}`}
+          data-feature-guide-target="guides.detail.decks"
+        >
           <div className={styles.panelHeader}>
             <h2 className={styles.sectionHeading}>
               Decks In This Guide
