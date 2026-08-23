@@ -17,6 +17,7 @@ import {
   type DashboardSyncStatus,
 } from '../../dashboard/dashboard-sync'
 import FeatureGuideTour from '../../components/feature-guide-tour'
+import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import {
   deleteUnitImage,
@@ -439,19 +440,6 @@ export default function UnitDetailClient({
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   function showGuideAt(index: number) {
-    const guide = featureGuides[index]
-    if (guide?.uid === 'units.detail.tabs.progress') {
-      handleTabChange('progress')
-    }
-    if (
-      guide?.uid === 'units.detail.tabs.overview' ||
-      guide?.uid === 'units.detail.details' ||
-      guide?.uid === 'units.detail.session_tracker' ||
-      guide?.uid === 'units.detail.scheduler' ||
-      guide?.uid === 'units.detail.gallery'
-    ) {
-      handleTabChange('overview')
-    }
     setActiveGuideIndex(index)
   }
 
@@ -1388,7 +1376,9 @@ const handleRemoveStagePhoto = (imageId: string) => {
       aria-expanded={activeGuide !== null}
       aria-label="Show unit explanation"
       onClick={() => {
-        if (featureGuides.length) showGuideAt(0)
+        if (featureGuides.length) {
+          showGuideAt(findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0)
+        }
       }}
       className="grid h-full min-h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-slate-950/70 text-sm font-black text-white/70 shadow-[0_0_24px_rgba(34,211,238,0.08)] transition hover:text-cyan-300"
     >
@@ -1765,9 +1755,19 @@ const handleRemoveStagePhoto = (imageId: string) => {
           guide={activeGuide}
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
-            showGuideAt(Math.min(featureGuides.length - 1, (activeGuideIndex ?? 0) + 1))
+            showGuideAt(
+              findVisibleFeatureGuideIndex(featureGuides, activeGuideIndex, 1) ??
+                activeGuideIndex ??
+                0
+            )
           }
-          onPrevious={() => showGuideAt(Math.max(0, (activeGuideIndex ?? 0) - 1))}
+          onPrevious={() =>
+            showGuideAt(
+              findVisibleFeatureGuideIndex(featureGuides, activeGuideIndex, -1) ??
+                activeGuideIndex ??
+                0
+            )
+          }
           totalGuides={featureGuides.length}
         />
       ) : null}

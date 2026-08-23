@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
+import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './paints-v3-silver.module.css'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
@@ -722,7 +723,9 @@ export default function PaintsV3Preview({
             setIsExportOpen(false)
             setIsMixOpen(false)
             if (!featureGuides.length) return
-            setActiveGuideIndex(0)
+            setActiveGuideIndex(
+              findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0
+            )
           }}
         />
 
@@ -1259,12 +1262,16 @@ export default function PaintsV3Preview({
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>
-              current === null ? 0 : Math.min(featureGuides.length - 1, current + 1)
+              findVisibleFeatureGuideIndex(featureGuides, current, 1) ??
+              current ??
+              0
             )
           }
           onPrevious={() =>
             setActiveGuideIndex((current) =>
-              current === null ? 0 : Math.max(0, current - 1)
+              findVisibleFeatureGuideIndex(featureGuides, current, -1) ??
+              current ??
+              0
             )
           }
           totalGuides={featureGuides.length}

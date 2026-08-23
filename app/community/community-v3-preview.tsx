@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
+import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import { communityFeatureGuides } from '../components/feature-guide-presets'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './community-v3-silver.module.css'
@@ -66,18 +67,6 @@ export default function CommunityV3Preview() {
       : communityFeatureGuides[activeGuideIndex] ?? null
 
   function showGuideAt(index: number) {
-    const guide = communityFeatureGuides[index]
-    if (guide?.uid === 'community.tabs.news') {
-      setActiveTab('news')
-    }
-    if (
-      guide?.uid === 'community.tabs.contests' ||
-      guide?.uid === 'community.hero' ||
-      guide?.uid === 'community.primary_list' ||
-      guide?.uid === 'community.secondary_list'
-    ) {
-      setActiveTab('contests')
-    }
     setActiveGuideIndex(index)
   }
 
@@ -93,7 +82,11 @@ export default function CommunityV3Preview() {
       >
         <TopNav
           isHelpOpen={activeGuide !== null}
-          onHelp={() => showGuideAt(0)}
+          onHelp={() =>
+            showGuideAt(
+              findVisibleFeatureGuideIndex(communityFeatureGuides, null, 1) ?? 0
+            )
+          }
         />
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -109,13 +102,26 @@ export default function CommunityV3Preview() {
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             showGuideAt(
-              Math.min(
-                communityFeatureGuides.length - 1,
-                (activeGuideIndex ?? 0) + 1
-              )
+              findVisibleFeatureGuideIndex(
+                communityFeatureGuides,
+                activeGuideIndex,
+                1
+              ) ??
+                activeGuideIndex ??
+                0
             )
           }
-          onPrevious={() => showGuideAt(Math.max(0, (activeGuideIndex ?? 0) - 1))}
+          onPrevious={() =>
+            showGuideAt(
+              findVisibleFeatureGuideIndex(
+                communityFeatureGuides,
+                activeGuideIndex,
+                -1
+              ) ??
+                activeGuideIndex ??
+                0
+            )
+          }
           totalGuides={communityFeatureGuides.length}
         />
       ) : null}

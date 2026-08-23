@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { FormEvent, useMemo, useState } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
+import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import styles from './projects-v3-silver.module.css'
@@ -269,7 +270,7 @@ export default function ProjectsV3Preview({
   function startFeatureTour() {
     if (!featureGuides.length) return
     setIsCreateOpen(false)
-    setActiveGuideIndex(0)
+    setActiveGuideIndex(findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0)
   }
 
   function closeFeatureTour() {
@@ -278,13 +279,13 @@ export default function ProjectsV3Preview({
 
   function showPreviousGuide() {
     setActiveGuideIndex((current) =>
-      current === null ? 0 : Math.max(0, current - 1)
+      findVisibleFeatureGuideIndex(featureGuides, current, -1) ?? current ?? 0
     )
   }
 
   function showNextGuide() {
     setActiveGuideIndex((current) =>
-      current === null ? 0 : Math.min(featureGuides.length - 1, current + 1)
+      findVisibleFeatureGuideIndex(featureGuides, current, 1) ?? current ?? 0
     )
   }
 

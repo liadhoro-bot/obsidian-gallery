@@ -4,6 +4,7 @@ import Image from 'next/image'
 import type { FormEvent, ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import FeatureGuideTour from '../../components/feature-guide-tour'
+import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
 import { unitPreviewFeatureGuides } from '../../components/feature-guide-presets'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
@@ -269,16 +270,6 @@ export default function UnitV3Preview({
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   function showGuideAt(index: number) {
-    const guide = featureGuides[index]
-    if (guide?.uid === 'units.detail.tabs.paint') setActiveTab('paint')
-    if (guide?.uid === 'units.detail.tabs.progress') setActiveTab('progress')
-    if (
-      guide?.uid === 'units.detail.tabs.details' ||
-      guide?.uid === 'units.detail.details' ||
-      guide?.uid === 'units.detail.gallery'
-    ) {
-      setActiveTab('details')
-    }
     setActiveGuideIndex(index)
   }
 
@@ -348,7 +339,11 @@ export default function UnitV3Preview({
                 type="button"
                 aria-expanded={activeGuide !== null}
                 aria-label="Show unit explanation"
-                onClick={() => showGuideAt(0)}
+                onClick={() =>
+                  showGuideAt(
+                    findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0
+                  )
+                }
                 className="grid h-10 w-10 place-items-center rounded-full bg-[#111827]/88 text-white backdrop-blur-md transition hover:text-cyan-300"
               >
                 ?
@@ -444,10 +439,18 @@ export default function UnitV3Preview({
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             showGuideAt(
-              Math.min(featureGuides.length - 1, (activeGuideIndex ?? 0) + 1)
+              findVisibleFeatureGuideIndex(featureGuides, activeGuideIndex, 1) ??
+                activeGuideIndex ??
+                0
             )
           }
-          onPrevious={() => showGuideAt(Math.max(0, (activeGuideIndex ?? 0) - 1))}
+          onPrevious={() =>
+            showGuideAt(
+              findVisibleFeatureGuideIndex(featureGuides, activeGuideIndex, -1) ??
+                activeGuideIndex ??
+                0
+            )
+          }
           totalGuides={featureGuides.length}
         />
       ) : null}

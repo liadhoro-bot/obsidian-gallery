@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { findVisibleFeatureGuideIndex } from './feature-guide-navigation'
 import FeatureGuideTour from './feature-guide-tour'
 import type { FeatureGuideEntry } from './feature-guide-types'
 
@@ -25,7 +26,11 @@ export default function FeatureGuideLauncher({
         aria-label={label}
         className={buttonClassName}
         onClick={() => {
-          if (guides.length) setActiveGuideIndex(0)
+          if (guides.length) {
+            setActiveGuideIndex(
+              findVisibleFeatureGuideIndex(guides, null, 1) ?? 0
+            )
+          }
         }}
       >
         ?
@@ -37,14 +42,14 @@ export default function FeatureGuideLauncher({
           guide={activeGuide}
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
-            setActiveGuideIndex((current) =>
-              current === null ? 0 : Math.min(guides.length - 1, current + 1)
-            )
+            setActiveGuideIndex((current) => {
+              return findVisibleFeatureGuideIndex(guides, current, 1) ?? current ?? 0
+            })
           }
           onPrevious={() =>
-            setActiveGuideIndex((current) =>
-              current === null ? 0 : Math.max(0, current - 1)
-            )
+            setActiveGuideIndex((current) => {
+              return findVisibleFeatureGuideIndex(guides, current, -1) ?? current ?? 0
+            })
           }
           totalGuides={guides.length}
         />

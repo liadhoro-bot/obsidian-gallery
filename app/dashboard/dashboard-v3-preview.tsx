@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import FeatureGuideTour from '../components/feature-guide-tour'
+import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { setDashboardNextActionDone } from './actions'
 import type { DashboardFeatureGuide } from './feature-guide-types'
@@ -352,35 +353,7 @@ export default function DashboardV3Preview({
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
-  function getGuideTab(uid: string): DashboardTab {
-    if (
-      uid === 'dashboard.tabs.my_progress' ||
-      uid === 'dashboard.xp_card' ||
-      uid === 'dashboard.paint_streak' ||
-      uid === 'dashboard.hobby_badges' ||
-      uid === 'dashboard.stats'
-    ) {
-      return 'my-progress'
-    }
-
-    if (
-      uid === 'dashboard.tabs.active_units' ||
-      uid === 'dashboard.next_actions.panel' ||
-      uid === 'dashboard.featured_unit' ||
-      uid === 'dashboard.resume_painting' ||
-      uid === 'dashboard.up_next.panel'
-    ) {
-      return 'active-units'
-    }
-
-    return activeTab
-  }
-
   function showGuideAt(index: number) {
-    const guide = featureGuides[index]
-    if (guide) {
-      setActiveTab(getGuideTab(guide.uid))
-    }
     setActiveGuideIndex(index)
   }
 
@@ -398,7 +371,7 @@ export default function DashboardV3Preview({
 
   function startFeatureTour() {
     if (!featureGuides.length) return
-    showGuideAt(0)
+    showGuideAt(findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0)
   }
 
   function closeFeatureTour() {
@@ -407,15 +380,17 @@ export default function DashboardV3Preview({
 
   function showPreviousGuide() {
     const nextIndex =
-      activeGuideIndex === null ? 0 : Math.max(0, activeGuideIndex - 1)
+      findVisibleFeatureGuideIndex(featureGuides, activeGuideIndex, -1) ??
+      activeGuideIndex ??
+      0
     showGuideAt(nextIndex)
   }
 
   function showNextGuide() {
     const nextIndex =
-      activeGuideIndex === null
-        ? 0
-        : Math.min(featureGuides.length - 1, activeGuideIndex + 1)
+      findVisibleFeatureGuideIndex(featureGuides, activeGuideIndex, 1) ??
+      activeGuideIndex ??
+      0
     showGuideAt(nextIndex)
   }
 

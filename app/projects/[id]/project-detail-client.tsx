@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import BackButton from '../../components/back-button'
 import FeatureGuideTour from '../../components/feature-guide-tour'
+import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
@@ -117,7 +118,11 @@ export default function ProjectDetailClient({
             aria-expanded={activeGuide !== null}
             aria-label="Show project explanation"
             onClick={() => {
-              if (featureGuides.length) setActiveGuideIndex(0)
+              if (featureGuides.length) {
+                setActiveGuideIndex(
+                  findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0
+                )
+              }
             }}
             className={styles.secondaryButton}
           >
@@ -251,14 +256,16 @@ export default function ProjectDetailClient({
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>
-              current === null
-                ? 0
-                : Math.min(featureGuides.length - 1, current + 1)
+              findVisibleFeatureGuideIndex(featureGuides, current, 1) ??
+              current ??
+              0
             )
           }
           onPrevious={() =>
             setActiveGuideIndex((current) =>
-              current === null ? 0 : Math.max(0, current - 1)
+              findVisibleFeatureGuideIndex(featureGuides, current, -1) ??
+              current ??
+              0
             )
           }
           totalGuides={featureGuides.length}
