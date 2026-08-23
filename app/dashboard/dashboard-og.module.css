@@ -703,6 +703,8 @@
 }
 
 .activeUnitsControls {
+  position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -720,7 +722,7 @@
 
 .statusMenuWrap {
   position: relative;
-  z-index: 10;
+  z-index: 40;
   display: inline-flex;
   align-items: center;
   gap: var(--og-space-3);
@@ -741,7 +743,7 @@
   position: absolute;
   inset-block-start: 100%;
   inset-inline-start: 0;
-  z-index: 40;
+  z-index: 50;
   display: grid;
   min-width: 140px;
   gap: var(--og-space-1);
@@ -817,6 +819,8 @@
 }
 
 .unitGrid {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 8px;
   overflow-x: auto;
@@ -834,6 +838,8 @@
 }
 
 .unitStack {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: var(--og-space-2);
 }
