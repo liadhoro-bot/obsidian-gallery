@@ -13,12 +13,6 @@ import DashboardPaintingTable from './dashboard-painting-table'
 import DashboardQuickActions from './dashboard-quick-actions'
 import DashboardHobbyBadges from './dashboard-hobby-badges'
 import type { DashboardFeatureGuide } from './feature-guide-types'
-import {
-  getDashboardMetadataSummary,
-  getDashboardNextActions,
-  getDashboardPaintingTableFeed,
-  getDashboardXpState,
-} from './dashboard-data'
 
 import {
   BenchUnitsSkeleton,
@@ -167,27 +161,48 @@ export default async function DashboardPage({
   }
 
   if (isPreview) {
-    const { default: DashboardV3Preview } = await import('./dashboard-v3-preview')
-    const [featureGuides, feed, metadata, nextActions, xpState] =
-      await perf.measure('v3 dashboard data', () =>
-        Promise.all([
-          getDashboardFeatureGuides(),
-          getDashboardPaintingTableFeed(user.id),
-          getDashboardMetadataSummary(user.id),
-          getDashboardNextActions(user.id),
-          getDashboardXpState(user.id),
-        ])
-      )
+    const [
+      { WorkbenchShell },
+      { DashboardActiveUnitsScreen },
+      { default: styles },
+      featureGuides,
+    ] = await perf.measure('v3 dashboard shell', () =>
+      Promise.all([
+        import('@/src/components/v3'),
+        import('./dashboard-active-units-screen'),
+        import('./dashboard-og.module.css'),
+        getDashboardFeatureGuides(),
+      ])
+    )
+
+    const activeTab =
+      resolvedSearchParams?.tab === 'profile' ? 'profile' : 'painting-table'
+    const previewProfilePanel = (
+      <div className={styles.profileStack}>
+        <Suspense fallback={<StatsSkeleton />}>
+          <DashboardXpCard userId={user.id} />
+        </Suspense>
+        <DashboardHobbyBadges />
+        <Suspense fallback={<StatsSkeleton />}>
+          <DashboardMetadataGrid userId={user.id} />
+        </Suspense>
+      </div>
+    )
 
     perf.total()
     return (
-      <DashboardV3Preview
-        featureGuides={featureGuides}
-        feed={feed}
-        metadata={metadata}
-        nextActions={nextActions}
-        xpState={xpState}
-      />
+      <WorkbenchShell
+        contentClassName={styles.dashboardFrame}
+        gutter="none"
+        maxWidth="var(--og-workbench-compact-max-width)"
+      >
+        <DashboardActiveUnitsScreen
+          featureGuides={featureGuides}
+          initialTab={activeTab}
+          profilePanel={previewProfilePanel}
+          userId={user.id}
+        />
+      </WorkbenchShell>
     )
   }
 
