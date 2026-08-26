@@ -39,6 +39,13 @@ export function canUseV3PreviewCookie(host: string | null | undefined) {
   return isV3DeploymentHost(host) || isLocalV3PreviewHost(host)
 }
 
+export function canUseV3PreviewParam(
+  host: string | null | undefined,
+  value: string | null | undefined
+) {
+  return isV3PreviewValue(value) && canUseV3PreviewCookie(host)
+}
+
 export function ensureV3PreviewPath(value: string | null | undefined) {
   const fallback = '/dashboard?preview=1'
 

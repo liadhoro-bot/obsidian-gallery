@@ -4,15 +4,16 @@ import {
   V3_PREVIEW_COOKIE,
   V3_PREVIEW_COOKIE_MAX_AGE,
   canUseV3PreviewCookie,
+  canUseV3PreviewParam,
   isV3DeploymentHost,
-  isV3PreviewValue,
 } from './lib/v3-preview'
 
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const hasInspectionPreviewCookie =
     request.cookies.get(V3_PREVIEW_COOKIE)?.value === '1'
-  const hasInspectionPreviewParam = isV3PreviewValue(
+  const hasInspectionPreviewParam = canUseV3PreviewParam(
+    request.nextUrl.host,
     request.nextUrl.searchParams.get('preview')
   )
   const hasInspectionPreviewHost = isV3DeploymentHost(request.nextUrl.host)

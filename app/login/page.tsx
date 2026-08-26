@@ -1,9 +1,17 @@
+import { headers } from 'next/headers'
+import {
+  ensureV3PreviewPath,
+  isLocalV3PreviewHost,
+  isV3PreviewValue,
+} from '../../lib/v3-preview'
+import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import LoginForm from './login-form'
 
 type LoginPageProps = {
   searchParams?: Promise<{
     error?: string
     next?: string
+    preview?: string
     reason?: string
   }>
 }
@@ -24,6 +32,7 @@ function getFriendlyAuthErrorReason(value: string | null | undefined) {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const previewMode = await hasV3PreviewSession(resolvedSearchParams?.preview)
   const requestedNext = resolvedSearchParams?.next ?? '/dashboard'
   const nextPath = requestedNext.startsWith('/') ? requestedNext : '/dashboard'
   const callbackReason = getFriendlyAuthErrorReason(resolvedSearchParams?.reason)
@@ -33,6 +42,24 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ? `Sign-in failed: ${callbackReason}`
         : 'That magic link expired or was opened somewhere else. Send yourself a new one to get back in.'
       : null
+
+  if (previewMode) {
+    const { default: LoginExperience } = await import('./login-experience')
+    const headerStore = await headers()
+    const host = headerStore.get('host')
+    const useLocalPreviewAuth =
+      isV3PreviewValue(resolvedSearchParams?.preview) &&
+      isLocalV3PreviewHost(host)
+
+    return (
+      <LoginExperience
+        nextPath={ensureV3PreviewPath(nextPath)}
+        authError={authError}
+        previewMode
+        useLocalPreviewAuth={useLocalPreviewAuth}
+      />
+    )
+  }
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-neutral-950 p-6 text-white">
