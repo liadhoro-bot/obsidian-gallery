@@ -35,6 +35,10 @@ export function isLocalV3PreviewHost(host: string | null | undefined) {
   )
 }
 
+export function canUseV3PreviewCookie(host: string | null | undefined) {
+  return isV3DeploymentHost(host) || isLocalV3PreviewHost(host)
+}
+
 export function ensureV3PreviewPath(value: string | null | undefined) {
   const fallback = '/dashboard?preview=1'
 
@@ -56,4 +60,11 @@ export function hasV3PreviewDocumentCookie(cookieValue: string) {
   return cookieValue
     .split(';')
     .some((entry) => entry.trim() === `${V3_PREVIEW_COOKIE}=1`)
+}
+
+export function hasV3PreviewDocumentSession(
+  cookieValue: string,
+  host: string | null | undefined
+) {
+  return canUseV3PreviewCookie(host) && hasV3PreviewDocumentCookie(cookieValue)
 }

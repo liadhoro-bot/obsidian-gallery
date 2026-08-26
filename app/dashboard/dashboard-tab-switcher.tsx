@@ -1,8 +1,7 @@
-﻿'use client'
+'use client'
 
 import type { ReactNode } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import styles from './dashboard-og.module.css'
 
 type ActiveTab = 'profile' | 'painting-table'
 
@@ -10,17 +9,16 @@ type DashboardTabSwitcherProps = {
   initialTab: ActiveTab
   profilePanel: ReactNode
   paintingTablePanel: ReactNode
-  nextActionsPanel?: ReactNode
 }
 
 const tabs: {
   key: ActiveTab
   label: string
 }[] = [
-  { key: 'profile', label: 'My Progress' },
+  { key: 'profile', label: 'My Stats' },
   {
     key: 'painting-table',
-    label: 'Active Units',
+    label: 'Painting Table',
   },
 ]
 
@@ -28,7 +26,6 @@ export default function DashboardTabSwitcher({
   initialTab,
   profilePanel,
   paintingTablePanel,
-  nextActionsPanel,
 }: DashboardTabSwitcherProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -52,7 +49,7 @@ export default function DashboardTabSwitcher({
 
   return (
     <>
-      <div className={styles.tabSurface} role="tablist" aria-label="Dashboard sections">
+      <div className="grid grid-cols-2 rounded-2xl border border-white/10 bg-slate-950/70 p-1 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.key
 
@@ -60,19 +57,22 @@ export default function DashboardTabSwitcher({
             <button
               key={tab.key}
               type="button"
-              role="tab"
               onClick={() => navigate(tab.key)}
-              aria-selected={isActive}
-              className={styles.tabButton}
-              data-active={isActive}
+              aria-pressed={isActive}
+              className={[
+                'rounded-xl px-2 py-3 text-center text-xs font-black transition active:scale-[0.98] active:opacity-70',
+                isActive
+                  ? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/50 shadow-[0_0_18px_rgba(34,211,238,0.18)]'
+                  : 'text-white/45 hover:bg-white/5 hover:text-white/75',
+              ].join(' ')}
             >
-              {tab.label}
+              <span className="relative inline-flex items-center justify-center">
+                {tab.label}
+              </span>
             </button>
           )
         })}
       </div>
-
-      {nextActionsPanel}
 
       <div
         hidden={currentTab !== 'profile'}

@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useSyncExternalStore, useTransition } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { hasV3PreviewDocumentCookie, isV3PreviewValue } from '../../lib/v3-preview'
+import {
+  hasV3PreviewDocumentSession,
+  isV3PreviewValue,
+} from '../../lib/v3-preview'
 import { prefetchRoute } from './route-prefetch'
 import styles from './mobile-nav.module.css'
 
@@ -26,7 +29,7 @@ function subscribeToUrlChanges(callback: () => void) {
 function getPreviewSnapshot() {
   return (
     isV3PreviewValue(new URLSearchParams(window.location.search).get('preview')) ||
-    hasV3PreviewDocumentCookie(document.cookie)
+    hasV3PreviewDocumentSession(document.cookie, window.location.host)
   )
 }
 
@@ -50,7 +53,8 @@ export default function MobileNav() {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/offline') ||
     pathname.startsWith('/support') ||
-    pathname.startsWith('/settings/terms')
+    pathname.startsWith('/settings/terms') ||
+    pathname.startsWith('/guides/decks')
 
   const getNavHref = useCallback(
     (href: string) => {

@@ -1,13 +1,12 @@
-﻿import { OgPageTitle, OgSubtitle } from '@/src/components/v3'
-import styles from './dashboard-og.module.css'
-
 export default function DashboardWelcome() {
   return (
-    <section className={styles.welcome}>
-      <OgPageTitle className={styles.welcomeTitle}>Welcome, Painter</OgPageTitle>
-      <OgSubtitle className={styles.welcomeSubtitle}>
+    <section className="space-y-2">
+      <h1 className="text-4xl font-semibold leading-tight text-white">
+        Welcome, Painter
+      </h1>
+      <p className="text-base text-white/65">
         Are you ready to slay some grey today?
-      </OgSubtitle>
+      </p>
     </section>
   )
 }

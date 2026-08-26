@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState, useSyncExternalStore } from 'react'
-import styles from './dashboard-og.module.css'
 
 const STORAGE_KEY = 'obsidian-gallery:hidden-dashboard-metadata'
 const STORAGE_CHANGE_EVENT = 'dashboard-metadata-visibility-change'
@@ -10,12 +9,14 @@ export type DashboardMetadataItem = {
   id: string
   label: string
   value: string
-  accent: 'neutral' | 'warm'
-}
-
-export type DashboardPaintStreakCardProps = {
-  paintStreak: string
-  sessionLabel: string
+  accent: string
+  paintingTimeBuckets?: Array<{
+    id: string
+    label: string
+    count: number
+    percent: number
+    color: string
+  }>
 }
 
 function parseHiddenItemIds(value: string | null) {
@@ -77,47 +78,6 @@ function MetadataVisibilityIcon({ isHidden }: { isHidden: boolean }) {
   )
 }
 
-function StreakIcon() {
-  return (
-    <svg
-      className={styles.streakIcon}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-      aria-hidden="true"
-    >
-      <path d="M12 3c1.7 2.4 4.5 5.4 4.5 9a4.5 4.5 0 0 1-9 0C7.5 8.4 10.3 5.4 12 3Z" />
-      <path d="M9.9 13.2c.5 1.2 1.3 1.8 2.1 1.8s1.6-.6 2.1-1.8" />
-    </svg>
-  )
-}
-
-export function DashboardPaintStreakCard({
-  paintStreak,
-  sessionLabel,
-}: DashboardPaintStreakCardProps) {
-  return (
-    <section className={styles.paintStreakCard}>
-      <div className={styles.paintStreakCopy}>
-        <span className={styles.streakIconPlate}>
-          <StreakIcon />
-        </span>
-        <div>
-          <p className={styles.profileSectionEyebrow}>Paint Streak</p>
-          <h2>{paintStreak}</h2>
-        </div>
-      </div>
-      <div className={styles.lastSessionBlock}>
-        <p>Last Session</p>
-        <span>{sessionLabel}</span>
-      </div>
-    </section>
-  )
-}
-
 export default function DashboardMetadataCards({
   items,
 }: {
@@ -161,19 +121,21 @@ export default function DashboardMetadataCards({
   }
 
   return (
-    <section className={styles.metadataPanel}>
-      <div className={styles.metadataHeader}>
-        <h2 className={styles.profileSectionTitle}>Stats</h2>
+    <section className="grid gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xs font-black uppercase tracking-[0.16em] text-white/45">
+          Metadata
+        </h2>
         <button
           type="button"
           onClick={() => setIsEditing((current) => !current)}
-          className={styles.metadataEditButton}
+          className="tap-press rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/70 transition hover:border-cyan-300/50 hover:bg-cyan-300/10 hover:text-cyan-200 active:scale-[0.98]"
         >
           {isEditing ? 'Done' : 'Edit'}
         </button>
       </div>
 
-      <div className={styles.metadataGrid}>
+      <div className="grid grid-cols-3 gap-3">
         {visibleItems.map((item) => {
           const isHidden = validHiddenItemIds.includes(item.id)
           const canHide = !isHidden && visibleItemCount <= 1
@@ -185,27 +147,58 @@ export default function DashboardMetadataCards({
               onClick={isEditing ? () => toggleItem(item.id) : undefined}
               disabled={!isEditing || canHide}
               aria-pressed={isEditing ? !isHidden : undefined}
-              className={styles.metadataCard}
-              data-editing={isEditing}
-              data-hidden={isHidden}
-              data-tone={item.accent}
+              className={[
+                'min-h-[86px] rounded-xl border border-white/10 bg-white/5 p-3 text-left transition',
+                isEditing
+                  ? 'cursor-pointer hover:border-cyan-300/45 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-60'
+                  : 'cursor-default',
+                isHidden ? 'opacity-45' : 'opacity-100',
+              ].join(' ')}
             >
-              <div className={styles.metadataCardTopline}>
-                <p>{item.label}</p>
+              <div className="flex items-start justify-between gap-1.5">
+                <p className="min-w-0 text-[9px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/45">
+                  {item.label}
+                </p>
                 {isEditing ? (
                   <span
-                    className={styles.metadataVisibilityIcon}
-                    data-hidden={isHidden}
+                    className={[
+                      'mt-0.5 flex-none',
+                      isHidden ? 'text-white/25' : 'text-cyan-200',
+                    ].join(' ')}
                     aria-hidden="true"
                   >
                     <MetadataVisibilityIcon isHidden={isHidden} />
                   </span>
                 ) : null}
               </div>
-              <p className={styles.metadataValue}>{item.value}</p>
+              <p className={`mt-2 text-xl font-semibold leading-none ${item.accent}`}>
+                {item.value}
+              </p>
             </button>
           )
         })}
+      </div>
+    </section>
+  )
+}
+
+export function DashboardPaintStreakCard({
+  paintStreak,
+  sessionLabel,
+}: {
+  paintStreak: string
+  sessionLabel: string
+}) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+        Paint Streak
+      </p>
+      <div className="mt-3 flex items-end justify-between gap-4">
+        <p className="text-3xl font-semibold text-white">{paintStreak}</p>
+        <p className="text-sm text-white/55">
+          Last session {sessionLabel}
+        </p>
       </div>
     </section>
   )

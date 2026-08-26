@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import {
   V3_PREVIEW_COOKIE,
   V3_PREVIEW_COOKIE_MAX_AGE,
+  canUseV3PreviewCookie,
   isV3DeploymentHost,
   isV3PreviewValue,
 } from './lib/v3-preview'
@@ -15,19 +16,37 @@ export default async function proxy(request: NextRequest) {
     request.nextUrl.searchParams.get('preview')
   )
   const hasInspectionPreviewHost = isV3DeploymentHost(request.nextUrl.host)
+  const canPersistInspectionPreview = canUseV3PreviewCookie(
+    request.nextUrl.host
+  )
   const isInspectionPreview =
     hasInspectionPreviewParam ||
-    hasInspectionPreviewCookie ||
+    (canPersistInspectionPreview && hasInspectionPreviewCookie) ||
     hasInspectionPreviewHost
+  const shouldClearInspectionPreviewCookie =
+    hasInspectionPreviewCookie && !canPersistInspectionPreview
+  const finalizeResponse = (response: NextResponse) => {
+    if (shouldClearInspectionPreviewCookie) {
+      response.cookies.set(V3_PREVIEW_COOKIE, '', {
+        maxAge: 0,
+        path: '/',
+        sameSite: 'lax',
+      })
+    }
+
+    return response
+  }
 
   const isGoldenDashboardFixture =
     pathname === '/dashboard' &&
     request.nextUrl.searchParams.get('golden') === 'dashboard-active-units'
 
   if (isGoldenDashboardFixture) {
-    return NextResponse.next({
-      request,
-    })
+    return finalizeResponse(
+      NextResponse.next({
+        request,
+      })
+    )
   }
 
   const isInspectionPreviewRoute =
@@ -47,6 +66,7 @@ export default async function proxy(request: NextRequest) {
 
     if (
       (hasInspectionPreviewParam || hasInspectionPreviewHost) &&
+      canPersistInspectionPreview &&
       !hasInspectionPreviewCookie
     ) {
       response.cookies.set(V3_PREVIEW_COOKIE, '1', {
@@ -56,7 +76,7 @@ export default async function proxy(request: NextRequest) {
       })
     }
 
-    return response
+    return finalizeResponse(response)
   }
 
   const isPublicRoute =
@@ -66,6 +86,7 @@ export default async function proxy(request: NextRequest) {
     pathname === '/onboarding' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
+    pathname === '/contests/dice-roll' ||
     pathname === '/guides' ||
     pathname.startsWith('/guides/') ||
     pathname === '/recipes' ||
@@ -82,9 +103,11 @@ export default async function proxy(request: NextRequest) {
   const shouldCheckSession = !isPublicRoute || pathname === '/onboarding'
 
   if (!shouldCheckSession) {
-    return NextResponse.next({
-      request,
-    })
+    return finalizeResponse(
+      NextResponse.next({
+        request,
+      })
+    )
   }
 
   let response = NextResponse.next({
@@ -125,13 +148,16 @@ export default async function proxy(request: NextRequest) {
     if (!isPublicRoute) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
-      if (hasInspectionPreviewParam || hasInspectionPreviewCookie) {
+      if (
+        hasInspectionPreviewParam ||
+        (canPersistInspectionPreview && hasInspectionPreviewCookie)
+      ) {
         loginUrl.searchParams.set('preview', '1')
       }
-      return NextResponse.redirect(loginUrl)
+      return finalizeResponse(NextResponse.redirect(loginUrl))
     }
 
-    return response
+    return finalizeResponse(response)
   }
 
   const { data: profile } = await supabase
@@ -143,10 +169,12 @@ export default async function proxy(request: NextRequest) {
   const hasAcceptedTerms = Boolean(profile?.terms_accepted_at)
 
   if (!hasAcceptedTerms && !isPublicRoute) {
-    return NextResponse.redirect(new URL('/onboarding', request.url))
+    return finalizeResponse(
+      NextResponse.redirect(new URL('/onboarding', request.url))
+    )
   }
 
-  return response
+  return finalizeResponse(response)
 }
 
 export const config = {

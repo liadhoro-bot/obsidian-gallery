@@ -1,9 +1,8 @@
-﻿import type { DashboardFeedUnit } from './dashboard-data'
+import type { DashboardFeedUnit } from './dashboard-data'
 import DashboardUnitStatusList, {
   type DashboardStatusUnit,
   type UnitStatus,
 } from './dashboard-unit-status-list'
-import styles from './dashboard-og.module.css'
 
 export default function DashboardActiveBench({
   units,
@@ -57,9 +56,8 @@ export default function DashboardActiveBench({
     }))
 
   return (
-    <section className={styles.stack}>
+    <section className="min-h-[188px]">
       <DashboardUnitStatusList units={displayUnits} />
     </section>
   )
 }
-

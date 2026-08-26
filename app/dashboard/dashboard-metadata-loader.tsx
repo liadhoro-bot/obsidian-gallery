@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import DashboardMetadataCards, {
-  DashboardPaintStreakCard,
   type DashboardMetadataItem,
 } from './dashboard-metadata-cards'
 import {
@@ -77,45 +76,55 @@ function formatTimeSince(dateString: string | null) {
   return `${days}d ${hours}h`
 }
 
-export type DashboardMetadataSummaryView = DashboardMetadataSummary
-
 function buildItems(summary: DashboardMetadataSummary): DashboardMetadataItem[] {
   return [
     {
       id: 'total-units',
       label: 'Total Units',
       value: String(summary.totalUnits),
-      accent: 'neutral',
+      accent: 'text-white',
+    },
+    {
+      id: 'added-last-30-days',
+      label: 'Added Last 30 Days',
+      value: `+${summary.recentUnits}`,
+      accent: 'text-orange-400',
     },
     {
       id: 'time-logged',
       label: 'Time Logged',
       value: summary.timeLogged,
-      accent: 'neutral',
-    },
-    {
-      id: 'colors',
-      label: 'Colors',
-      value: String(summary.ownedColors),
-      accent: 'neutral',
+      accent: 'text-white',
     },
     {
       id: 'average-session-length',
-      label: 'Avg Session',
+      label: 'Avg Session Length',
       value: summary.averageSessionLength,
-      accent: 'neutral',
+      accent: 'text-white',
     },
     {
       id: 'weekly-sessions',
-      label: 'Sessions/Wk',
+      label: 'Weekly Sessions',
       value: summary.weeklySessions,
-      accent: 'warm',
+      accent: 'text-orange-400',
     },
     {
-      id: 'completed',
-      label: 'Completed',
-      value: String(summary.completedSessionsCount),
-      accent: 'neutral',
+      id: 'colors-in-vault',
+      label: 'Colors in Paints',
+      value: String(summary.ownedColors),
+      accent: 'text-white',
+    },
+    {
+      id: 'since-last-session',
+      label: 'Since Last Session',
+      value: summary.timeSinceLastSession,
+      accent: 'text-white',
+    },
+    {
+      id: 'paint-streak',
+      label: 'Paint Streak',
+      value: summary.paintStreak,
+      accent: 'text-orange-400',
     },
   ]
 }
@@ -166,30 +175,6 @@ export default function DashboardMetadataLoader({
 }: {
   initialSummary: DashboardMetadataSummary
 }) {
-  const patchedSummary = usePatchedDashboardSummary(initialSummary)
-  const items = useMemo(() => buildItems(patchedSummary), [patchedSummary])
-
-  return <DashboardMetadataCards items={items} />
-}
-
-export function DashboardPaintStreakLoader({
-  initialSummary,
-}: {
-  initialSummary: DashboardMetadataSummary
-}) {
-  const patchedSummary = usePatchedDashboardSummary(initialSummary)
-
-  return (
-    <DashboardPaintStreakCard
-      paintStreak={
-        patchedSummary.paintStreakDays ? patchedSummary.paintStreak : 'No streak'
-      }
-      sessionLabel={patchedSummary.timeSinceLastSession}
-    />
-  )
-}
-
-function usePatchedDashboardSummary(initialSummary: DashboardMetadataSummary) {
   const [serverSummary, setServerSummary] = useState(initialSummary)
   const metadataPatchSnapshot = useSyncExternalStore(
     subscribeToDashboardSync,
@@ -204,8 +189,8 @@ function usePatchedDashboardSummary(initialSummary: DashboardMetadataSummary) {
       >,
     [metadataPatchSnapshot]
   )
-  const patchedSummary = useMemo(
-    () => applyMetadataPatch(serverSummary, pendingPatch),
+  const items = useMemo(
+    () => buildItems(applyMetadataPatch(serverSummary, pendingPatch)),
     [pendingPatch, serverSummary]
   )
 
@@ -241,5 +226,5 @@ function usePatchedDashboardSummary(initialSummary: DashboardMetadataSummary) {
     }
   }, [metadataPatchSnapshot])
 
-  return patchedSummary
+  return <DashboardMetadataCards items={items} />
 }

@@ -1,19 +1,11 @@
-﻿'use client'
+'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import {
-  OgButton,
-  OgCaption,
-  OgIconButton,
-  OgSectionHeading,
-  SurfacePanel,
-} from '@/src/components/v3'
+import { useMemo, useState } from 'react'
+import UnitListView from '../../components/units/unit-list-view'
 import DashboardBenchCards from './dashboard-bench-cards'
-import styles from './dashboard-og.module.css'
+import DashboardStartPaintingButton from './dashboard-start-painting-button'
 
 export type UnitStatus = 'complete' | 'active' | 'bench' | 'pile' | 'other'
-
-type DisplayMode = 'cards' | 'tiles'
 
 export type DashboardStatusUnit = {
   id: string
@@ -32,8 +24,6 @@ type StatusOption = {
   headingLabel: string
 }
 
-const STORAGE_KEY = 'og_unit_view_mode'
-
 const STATUS_OPTIONS: StatusOption[] = [
   { value: 'complete', label: 'Complete', headingLabel: 'complete' },
   { value: 'active', label: 'Active', headingLabel: 'active' },
@@ -42,37 +32,6 @@ const STATUS_OPTIONS: StatusOption[] = [
   { value: 'other', label: 'Other', headingLabel: 'other' },
 ]
 
-function isDisplayMode(value: string | null): value is DisplayMode {
-  return value === 'cards' || value === 'tiles'
-}
-
-function TilesIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path
-        d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"
-        stroke="currentColor"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-    </svg>
-  )
-}
-
-function CardsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path
-        d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-    </svg>
-  )
-}
-
 export default function DashboardUnitStatusList({
   units,
 }: {
@@ -80,30 +39,6 @@ export default function DashboardUnitStatusList({
 }) {
   const [selectedStatus, setSelectedStatus] = useState<UnitStatus>('active')
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false)
-  const [mode, setMode] = useState<DisplayMode>('tiles')
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      const storedMode = window.localStorage.getItem(STORAGE_KEY)
-      if (isDisplayMode(storedMode)) {
-        setMode(storedMode)
-      }
-    }, 0)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [])
-
-  function handleModeChange(nextMode: DisplayMode) {
-    setMode(nextMode)
-    window.localStorage.setItem(STORAGE_KEY, nextMode)
-    void import('../../utils/analytics/client').then(({ capturePostHog }) => {
-      void capturePostHog('display_mode_changed', {
-        entity: 'unit',
-        mode: nextMode,
-        surface: 'dashboard_active_bench',
-      })
-    })
-  }
 
   const selectedOption =
     STATUS_OPTIONS.find((option) => option.value === selectedStatus) ??
@@ -117,83 +52,73 @@ export default function DashboardUnitStatusList({
   const emptyMessage = `No ${selectedOption.headingLabel} units yet.`
 
   return (
-    <SurfacePanel density="default" elevation="contact">
-      <div className={styles.sectionHeader}>
-        <div className={styles.sectionTitleBlock}>
-          <OgCaption className={styles.sectionEyebrow}>Up next</OgCaption>
-          <OgSectionHeading as="h2">
-            Your{' '}
-            <span className={styles.statusMenuWrap}>
-              <OgButton
-                aria-expanded={isStatusMenuOpen}
-                aria-haspopup="menu"
-                aria-label={`Change unit status filter, currently showing ${selectedOption.headingLabel} units`}
-                className={styles.statusTrigger}
-                onClick={() => setIsStatusMenuOpen((isOpen) => !isOpen)}
-                size="compact"
-                variant="tertiary"
-              >
-                {selectedOption.headingLabel}
-              </OgButton>
-
-              {isStatusMenuOpen ? (
-                <div role="menu" className={styles.statusMenu}>
-                  {STATUS_OPTIONS.map((option) => {
-                    const isSelected = option.value === selectedStatus
-
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={isSelected}
-                        onClick={() => {
-                          setSelectedStatus(option.value)
-                          setIsStatusMenuOpen(false)
-                        }}
-                        className={styles.statusMenuItem}
-                        data-selected={isSelected}
-                      >
-                        {option.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : null}
-            </span>{' '}
-            units
-          </OgSectionHeading>
-        </div>
-
-        <div className={styles.viewToggle} aria-label="Display mode">
-          <OgIconButton
-            label="Show units as cards"
-            aria-pressed={mode === 'cards'}
-            className={styles.iconToggle}
-            data-selected={mode === 'cards'}
-            onClick={() => handleModeChange('cards')}
-            size="compact"
-          >
-            <CardsIcon />
-          </OgIconButton>
-          <OgIconButton
-            label="Show units as tiles"
-            aria-pressed={mode === 'tiles'}
-            className={styles.iconToggle}
-            data-selected={mode === 'tiles'}
-            onClick={() => handleModeChange('tiles')}
-            size="compact"
-          >
-            <TilesIcon />
-          </OgIconButton>
-        </div>
-      </div>
-
-      <DashboardBenchCards
-        units={displayUnits}
+    <section className="space-y-3">
+      <UnitListView
+        units={displayUnits.map((unit) => ({
+          id: unit.id,
+          name: unit.name,
+          imageUrl: unit.imageUrl,
+          action: <DashboardStartPaintingButton unitId={unit.id} />,
+        }))}
+        renderCards={() => (
+          <DashboardBenchCards units={displayUnits} emptyMessage={emptyMessage} />
+        )}
+        surface="dashboard_active_bench"
         emptyMessage={emptyMessage}
-        mode={mode}
+        initialMode="tiles"
+        header={(toggle) => (
+          <div className="relative z-40 mb-3 flex items-end justify-between gap-3">
+            <h2 className="min-w-0 text-xl font-semibold text-white">
+              Your{' '}
+              <span className="relative inline-flex">
+                <button
+                  type="button"
+                  onClick={() => setIsStatusMenuOpen((isOpen) => !isOpen)}
+                  className="rounded-lg text-cyan-300 underline decoration-cyan-300/35 underline-offset-4 transition hover:text-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+                  aria-expanded={isStatusMenuOpen}
+                  aria-haspopup="menu"
+                >
+                  {selectedOption.headingLabel}
+                </button>
+
+                {isStatusMenuOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/95 p-1 shadow-2xl shadow-black/45 backdrop-blur"
+                  >
+                    {STATUS_OPTIONS.map((option) => {
+                      const isSelected = option.value === selectedStatus
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setSelectedStatus(option.value)
+                            setIsStatusMenuOpen(false)
+                          }}
+                          className={[
+                            'block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold transition',
+                            isSelected
+                              ? 'bg-cyan-400/15 text-cyan-200'
+                              : 'text-white/70 hover:bg-white/5 hover:text-white',
+                          ].join(' ')}
+                        >
+                          {option.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </span>{' '}
+              units
+            </h2>
+
+            <div className="shrink-0">{toggle}</div>
+          </div>
+        )}
       />
-    </SurfacePanel>
+    </section>
   )
 }

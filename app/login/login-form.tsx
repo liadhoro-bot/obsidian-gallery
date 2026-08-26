@@ -1,97 +1,35 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useEffect, useState } from 'react'
-import styles from '../auth-flow-silver.module.css'
+import { useState } from 'react'
+
 const GoogleLoginButton = dynamic(() => import('./google-login-button'))
 
-type LoginAudience = 'new' | 'returning'
-
-type LoginMessage = {
-  kind: 'error' | 'success'
-  text: string
-}
-
 export default function LoginForm({
-  audience,
   authError,
   nextPath,
-  previewMode = false,
-  useLocalPreviewAuth = false,
-  onAudienceChange,
-  onBack,
 }: {
-  audience: LoginAudience
+  audience?: 'new' | 'returning'
   authError?: string | null
   nextPath: string
   previewMode?: boolean
   useLocalPreviewAuth?: boolean
-  onAudienceChange: (audience: LoginAudience) => void
-  onBack: () => void
+  onAudienceChange?: (audience: 'new' | 'returning') => void
+  onBack?: () => void
 }) {
   const [email, setEmail] = useState('')
-  const [message, setMessage] = useState<LoginMessage | null>(
-    authError ? { kind: 'error', text: authError } : null
-  )
+  const [message, setMessage] = useState(authError ?? '')
   const [loading, setLoading] = useState(false)
-  // `nextPath` was already resolved server-side (page.tsx), including the
-  // carve-out that keeps a plain /dashboard target out of preview mode -
-  // re-deriving preview-forcing from `previewMode` here would silently
-  // re-apply ?preview=1 and undo that carve-out. Only /onboarding (the
-  // 'new' audience target) needs preview-forcing computed client-side,
-  // since the server can't know in advance which audience the visitor picks.
-  const effectiveNextPath =
-    audience === 'new' ? getEffectiveNextPath('/onboarding', previewMode) : nextPath
-
-  useEffect(() => {
-    performance.mark('v3-login-form-hydrated')
-  }, [])
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    performance.mark('v3-login-submit')
-
     setLoading(true)
-    setMessage(null)
-
-    if (useLocalPreviewAuth) {
-      const response = await fetch('/auth/dev-preview-session?preview=1', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          next: effectiveNextPath,
-        }),
-      })
-      const result = (await response.json().catch(() => null)) as {
-        error?: string
-        redirectTo?: string
-      } | null
-
-      if (!response.ok || !result?.redirectTo) {
-        setMessage({
-          kind: 'error',
-          text:
-            result?.error ??
-            'Local preview sign-in did not complete. Check the email and try again.',
-        })
-        setLoading(false)
-        return
-      }
-
-      window.location.assign(result.redirectTo)
-      return
-    }
+    setMessage('')
 
     const { createClient } = await import('../../utils/supabase/client')
     const supabase = createClient()
     const callbackUrl = new URL('/auth/callback', window.location.origin)
-    callbackUrl.searchParams.set('next', effectiveNextPath)
-    if (isPreviewNextPath(effectiveNextPath)) {
-      callbackUrl.searchParams.set('preview', '1')
-    }
+    callbackUrl.searchParams.set('next', nextPath)
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -101,81 +39,21 @@ export default function LoginForm({
     })
 
     if (error) {
-      setMessage({
-        kind: 'error',
-        text: error.message,
-      })
+      setMessage(error.message)
       setLoading(false)
       return
     }
 
-    setMessage({ kind: 'success', text: 'Magic link sent. Check your email.' })
+    setMessage('Magic link sent. Check your email.')
     setLoading(false)
   }
 
   return (
-    <section
-      className={styles.formPanel}
-      data-v3-login-indicator="form"
-      data-v3-login-mode={
-        useLocalPreviewAuth
-          ? 'local-preview-auth'
-          : previewMode
-            ? 'v3-supabase-auth'
-            : 'production-auth'
-      }
-    >
-      <div className="px-1 pb-2">
-        <p className={styles.eyebrow}>
-          Obsidian Gallery
-        </p>
-        <h1 className={styles.formHeading}>
-          Your miniature workspace. Organized to perfection.
-        </h1>
-      </div>
+    <>
+      <form onSubmit={handleLogin} className="mt-6 space-y-4">
+        <div>
+          <label className="mb-2 block text-sm text-neutral-300">Email</label>
 
-      <div className={styles.segmentControl}>
-        {[
-          { key: 'new' as const, label: 'New painter' },
-          { key: 'returning' as const, label: 'Returning' },
-        ].map((option) => {
-          const isActive = audience === option.key
-
-          return (
-            <button
-              key={option.key}
-              type="button"
-              onClick={() => onAudienceChange(option.key)}
-              className={[
-                styles.segmentButton,
-                isActive
-                  ? styles.segmentActive
-                  : styles.segmentInactive,
-              ].join(' ')}
-            >
-              {option.label}
-            </button>
-          )
-        })}
-      </div>
-
-      <form onSubmit={handleLogin} className={styles.formStack}>
-        {useLocalPreviewAuth ? (
-          <p className={styles.notice}>
-            Local preview sign-in uses your account email in this browser.
-          </p>
-        ) : (
-          <>
-            <GoogleLoginButton nextPath={effectiveNextPath} />
-
-            <div className={styles.divider}>
-              <span>Or continue with email</span>
-            </div>
-          </>
-        )}
-
-        <label className="block">
-          <span className="sr-only">Email</span>
           <input
             type="email"
             value={email}
@@ -183,79 +61,34 @@ export default function LoginForm({
             required
             autoComplete="email"
             inputMode="email"
-            className={styles.input}
+            className="min-h-11 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
             placeholder="you@example.com"
           />
-        </label>
+        </div>
+
+        <GoogleLoginButton nextPath={nextPath} />
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-white/10" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
+            Or continue with email
+          </span>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
 
         <button
           type="submit"
           disabled={loading}
-          className={`tap-press tap-target ${styles.ctaButton}`}
+          className="tap-press tap-target inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
         >
           {loading ? (
-            <span className={styles.spin} />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : null}
-          <span>
-            {loading
-              ? useLocalPreviewAuth
-                ? 'Signing in...'
-                : 'Sending...'
-              : useLocalPreviewAuth
-                ? 'Sign in to Preview'
-                : 'Send Magic Link'}
-          </span>
+          <span>{loading ? 'Sending...' : 'Send Magic Link'}</span>
         </button>
       </form>
 
-      <p className={styles.helperText}>
-        {audience === 'new'
-            ? "First time? You'll be guided through setup after signing in."
-            : 'Welcome back. We will take you where you were headed.'}
-      </p>
-
-      {message ? (
-        <p
-          className={`${styles.message} ${
-            message.kind === 'error'
-              ? styles.messageError
-              : styles.messageSuccess
-          }`}
-        >
-          {message.text}
-        </p>
-      ) : null}
-
-      <button
-        type="button"
-        onClick={onBack}
-        className={`tap-target ${styles.backButton}`}
-      >
-        &larr; Back
-      </button>
-    </section>
+      {message ? <p className="mt-4 text-sm text-neutral-300">{message}</p> : null}
+    </>
   )
-}
-
-function getEffectiveNextPath(nextPath: string, previewMode: boolean) {
-  if (!previewMode) {
-    return nextPath
-  }
-
-  const [pathAndQuery, hash = ''] = nextPath.split('#')
-  const [pathname, query = ''] = pathAndQuery.split('?')
-  const params = new URLSearchParams(query)
-  params.set('preview', '1')
-  const search = params.toString()
-
-  return `${pathname}${search ? `?${search}` : ''}${hash ? `#${hash}` : ''}`
-}
-
-function isPreviewNextPath(nextPath: string) {
-  try {
-    const url = new URL(nextPath, 'https://obsidian-gallery-v3.vercel.app')
-    return url.searchParams.get('preview') === '1'
-  } catch {
-    return false
-  }
 }
