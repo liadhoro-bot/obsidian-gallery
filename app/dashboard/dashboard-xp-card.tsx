@@ -2,6 +2,47 @@ import {
   getDashboardCurrentUser,
   getDashboardXpState,
 } from './dashboard-data'
+import styles from './dashboard-og.module.css'
+
+export function DashboardXpLedgerCard({
+  currentLevel,
+  progressPercent,
+  xpIntoLevel,
+  xpNeededForLevel,
+  xpToNextLevel,
+}: {
+  currentLevel: number
+  progressPercent: number
+  xpIntoLevel: number
+  xpNeededForLevel: number
+  xpToNextLevel: number
+}) {
+  return (
+    <section className={styles.progressLedger}>
+      <div className={styles.progressLedgerHeader}>
+        <div>
+          <p className={styles.progressKicker}>Path to Grandmastery</p>
+          <h2 className={styles.progressLedgerTitle}>
+            {xpIntoLevel} / {xpNeededForLevel}
+          </h2>
+        </div>
+        <span className={styles.levelMedallion}>Lv. {currentLevel}</span>
+      </div>
+
+      <div className={styles.xpReadout}>
+        <span>{xpToNextLevel} XP to Level {currentLevel + 1}</span>
+        <span className={styles.xpValue}>{progressPercent}%</span>
+      </div>
+
+      <div className="h-3 w-full overflow-hidden rounded-full bg-black/15">
+        <div
+          className="h-full rounded-full bg-cyan-400"
+          style={{ width: `${Math.max(0, Math.min(100, progressPercent))}%` }}
+        />
+      </div>
+    </section>
+  )
+}
 
 export default async function DashboardXpCard({
   userId,
