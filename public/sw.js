@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-v3-pwa-2026-08-30'
+const CACHE_VERSION = 'obsidian-gallery-v3-pwa-framed-icons-2026-08-30'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'
@@ -15,6 +15,15 @@ const PRECACHE_URLS = [
   '/icon-384.png',
   '/icon-512.png',
   '/maskable-icon-512.png',
+  '/splash/apple-splash-750x1334.png',
+  '/splash/apple-splash-828x1792.png',
+  '/splash/apple-splash-1125x2436.png',
+  '/splash/apple-splash-1170x2532.png',
+  '/splash/apple-splash-1242x2688.png',
+  '/splash/apple-splash-1290x2796.png',
+  '/splash/apple-splash-1536x2048.png',
+  '/splash/apple-splash-1668x2388.png',
+  '/splash/apple-splash-2048x2732.png',
   '/bookmark.svg',
   '/icons/nav/dashboard.svg',
   '/icons/nav/projects.svg',
