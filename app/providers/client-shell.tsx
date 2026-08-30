@@ -34,6 +34,8 @@ export default function ClientShell({
     !pathname.startsWith('/guides/decks')
   const showInstallPrompt =
     !pathname.startsWith('/auth') &&
+    !pathname.startsWith('/login') &&
+    !pathname.startsWith('/onboarding') &&
     !pathname.startsWith('/offline') &&
     !pathname.startsWith('/settings/terms')
 
