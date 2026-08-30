@@ -10,6 +10,8 @@ type LoginAudience = 'new' | 'returning'
 
 type LoginExperienceProps = {
   authError?: string | null
+  currentUserEmail?: string | null
+  defaultOpen?: boolean
   nextPath: string
   previewMode?: boolean
   useLocalPreviewAuth?: boolean
@@ -17,11 +19,15 @@ type LoginExperienceProps = {
 
 export default function LoginExperience({
   authError,
+  currentUserEmail,
+  defaultOpen = false,
   nextPath,
   previewMode = false,
   useLocalPreviewAuth = false,
 }: LoginExperienceProps) {
-  const [showSignIn, setShowSignIn] = useState(Boolean(authError))
+  const [showSignIn, setShowSignIn] = useState(
+    Boolean(authError) || previewMode || defaultOpen || Boolean(currentUserEmail)
+  )
   const [audience, setAudience] = useState<LoginAudience>('new')
 
   function openSignIn(nextAudience: LoginAudience) {
@@ -43,7 +49,12 @@ export default function LoginExperience({
 
         <div className={styles.loginShade} />
 
-        <div className={styles.loginContent}>
+        <div
+          className={[
+            styles.loginContent,
+            showSignIn ? styles.loginContentWithOverlay : '',
+          ].join(' ')}
+        >
           <header className={styles.loginHeader}>
             <span className={styles.wordmark}>
               Obsidian Gallery
@@ -85,8 +96,10 @@ export default function LoginExperience({
             <LoginForm
               audience={audience}
               authError={authError}
+              currentUserEmail={currentUserEmail}
               nextPath={nextPath}
               previewMode={previewMode}
+              surface="v3"
               useLocalPreviewAuth={useLocalPreviewAuth}
               onAudienceChange={setAudience}
               onBack={() => setShowSignIn(false)}

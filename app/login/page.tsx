@@ -5,6 +5,7 @@ import {
   isV3PreviewValue,
 } from '../../lib/v3-preview'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import LoginForm from './login-form'
 
 type LoginPageProps = {
@@ -42,6 +43,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ? `Sign-in failed: ${callbackReason}`
         : 'That magic link expired or was opened somewhere else. Send yourself a new one to get back in.'
       : null
+  const supabase = await createClient()
+  const currentUser = await getSessionUser(supabase)
+  const currentUserEmail = currentUser?.email ?? null
 
   if (previewMode) {
     const { default: LoginExperience } = await import('./login-experience')
@@ -55,6 +59,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <LoginExperience
         nextPath={ensureV3PreviewPath(nextPath)}
         authError={authError}
+        currentUserEmail={currentUserEmail}
         previewMode
         useLocalPreviewAuth={useLocalPreviewAuth}
       />
@@ -74,7 +79,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Enter your email and we&apos;ll send you a magic link.
         </p>
 
-        <LoginForm authError={authError} nextPath={nextPath} />
+        <LoginForm
+          authError={authError}
+          currentUserEmail={currentUserEmail}
+          nextPath={nextPath}
+        />
       </div>
     </main>
   )

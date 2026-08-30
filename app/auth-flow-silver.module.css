@@ -95,6 +95,15 @@
 
 .loginHero {
   padding-block-end: 10px;
+  transition:
+    opacity var(--og-motion-fast) ease,
+    transform var(--og-motion-fast) ease;
+}
+
+.loginContentWithOverlay .loginHero {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
 }
 
 .heroTitle,
@@ -172,7 +181,8 @@
   display: flex;
   align-items: flex-end;
   padding: 14px;
-  background: color-mix(in srgb, var(--og-walnut-950) 52%, transparent);
+  background:
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--og-walnut-950) 62%, transparent) 46%, color-mix(in srgb, var(--og-walnut-950) 86%, transparent) 100%);
 }
 
 .formPanel,
@@ -190,6 +200,8 @@
 
 .formPanel {
   width: 100%;
+  max-height: calc(100dvh - 112px);
+  overflow-y: auto;
   border-radius: var(--og-radius-l);
   padding: 18px;
 }
