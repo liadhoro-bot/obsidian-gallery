@@ -31,8 +31,8 @@ Defines the ordered action list inside each flow.
 | `action_label` | `text not null` | User-facing action label. |
 | `action_order` | `integer not null` | Order inside the flow. Unique with `flow_name`. |
 | `breadcrumb` | `text not null` | Short route hint shown under the action. |
-| `ref_page` | `text not null` | Semantic route target resolved by `lib/onboarding/action-destinations.ts`. |
-| `ref_component` | `text` | Semantic component/anchor target appended as a URL hash. |
+| `ref_page` | `text not null` | Semantic route target resolved by `lib/onboarding/action-destinations.ts`. Use values like `units`, `unit_builder`, `unit_detail`, `projects`, `project_detail`, `vault`, `paint_detail`, `guide_forge`, `guide_builder`, `guide_detail`, `dashboard`, `active_session`, or `session_summary`. Do not store URL fragments here. |
+| `ref_component` | `text` | Semantic component/anchor target appended as one URL hash. Store only the component key, such as `unit_name`; do not include `#`. |
 | `created_at` | `timestamptz not null default now()` | Creation timestamp. |
 | `milestone_key` | `text` | Stable milestone group key. |
 | `milestone_label` | `text` | User-facing milestone heading. |

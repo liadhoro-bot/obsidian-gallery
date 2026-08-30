@@ -73,19 +73,49 @@ test.describe('authenticated app pages', () => {
   }
 })
 
-test('login form accepts an email and keeps the user on the auth surface', async ({
+test.describe('unauthenticated login', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('login form accepts an email and keeps the user on the auth surface', async ({
+    page,
+  }) => {
+    const errors = registerPageFailureGuards(page)
+
+    await expectHealthyPage(page, '/login')
+    await page.getByPlaceholder('you@example.com').fill('qa-check@example.com')
+    await expect(page.getByPlaceholder('you@example.com')).toHaveValue(
+      'qa-check@example.com'
+    )
+    await expect(
+      page.getByRole('button', { name: /send magic link/i })
+    ).toBeEnabled()
+
+    expect(errors, 'login browser errors').toEqual([])
+  })
+})
+
+test('signed-in login blocks a different email before account switch', async ({
   page,
 }) => {
   const errors = registerPageFailureGuards(page)
 
-  await expectHealthyPage(page, '/login')
-  await page.getByPlaceholder('you@example.com').fill('qa-check@example.com')
-  await expect(page.getByPlaceholder('you@example.com')).toHaveValue(
-    'qa-check@example.com'
-  )
-  await expect(page.getByRole('button', { name: /send magic link/i })).toBeEnabled()
+  await expectHealthyPage(page, '/login?next=%2Fdashboard%3Fpreview%3D1&preview=1')
+  await expect(page.getByText(/Currently signed in as/i)).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: /sign out to switch account/i })
+  ).toBeVisible()
 
-  expect(errors, 'login browser errors').toEqual([])
+  await page
+    .getByPlaceholder('you@example.com')
+    .fill('not-the-current-user@example.com')
+  await page.getByRole('button', { name: /continue as current account/i }).click()
+
+  await expect(page).toHaveURL(/\/login/)
+  await expect(
+    page.getByText(/Sign out before opening not-the-current-user@example\.com/i)
+  ).toBeVisible()
+
+  expect(errors, 'signed-in login browser errors').toEqual([])
 })
 
 test.describe('auth callback routing', () => {
@@ -123,6 +153,10 @@ test.describe('v3 login and dashboard wiring', () => {
 
       await expect(page.locator('[data-v3-login-indicator="form"]')).toBeVisible()
       await expect(page.locator('[data-v3-login-mode="preview-auth"]')).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: /new painter/i })
+      ).toBeVisible()
+      await expect(page.getByRole('button', { name: /returning/i })).toBeVisible()
       await expect(page.getByRole('button', { name: /open v3 preview/i })).toBeEnabled()
       await expect(page.getByRole('button', { name: /continue with google/i })).toHaveCount(0)
       await expect
@@ -158,12 +192,12 @@ test.describe('v3 login and dashboard wiring', () => {
       await page.getByRole('button', { name: /open v3 preview/i }).click()
 
       await expect
-        .poll(() => page.url())
-        .toContain('/dashboard?preview=1')
-      expect(requestBody).toEqual({
-        email: 'qa-check@example.com',
-        next: '/dashboard?preview=1',
-      })
+        .poll(() => requestBody)
+        .toEqual({
+          email: 'qa-check@example.com',
+          next: '/dashboard?preview=1',
+        })
+      await expect(page).toHaveURL(/\/login/)
 
       expect(errors, 'v3 local preview auth browser errors').toEqual([])
     })
@@ -194,40 +228,29 @@ test.describe('v3 login and dashboard wiring', () => {
       .poll(() =>
         page.locator('[data-v3-dashboard-indicator="active-unit"]').count()
       )
-      .toBeLessThanOrEqual(4)
-    await page.getByRole('button', { name: /show units as cards/i }).click()
+      .toBeLessThanOrEqual(8)
     await expect(
-      page.locator('[data-v3-dashboard-active-units-layout="cards"]')
-    ).toBeVisible()
-    await expect
-      .poll(() =>
-        page.locator('[data-v3-dashboard-indicator="active-unit"]').count()
-      )
-      .toBeLessThanOrEqual(2)
-    await expect(
-      page.getByRole('button', {
-        name: /currently showing active units/i,
-      })
-    ).toBeVisible()
+      page.getByRole('button', { name: /show units as cards/i })
+    ).toHaveCount(0)
     await page
-      .getByRole('button', { name: /currently showing active units/i })
+      .getByRole('button', { name: /change unit status filter, currently active/i })
       .click()
-    await page.getByRole('menuitemradio', { name: /pile of shame/i }).click()
+    await page.getByRole('menuitemradio', { name: /^pile$/i }).click()
     await expect(
       page.getByRole('button', {
-        name: /currently showing pile of shame units/i,
+        name: /change unit status filter, currently pile/i,
       })
     ).toBeVisible()
     await expect(page.locator('[data-v3-dashboard-indicator="next-actions"]')).toBeVisible()
     await page.getByRole('tab', { name: /my progress/i }).click()
     await expect(page.locator('[data-v3-dashboard-indicator="my-progress"]')).toBeVisible()
-    await expect(page.locator('[data-v3-dashboard-indicator="xp-card"]')).toBeVisible()
+    await expect(page.locator('[data-v3-dashboard-indicator="xp-card"]')).toHaveCount(0)
     await expect(
-      page.locator(
-        '[data-v3-dashboard-indicator="badge-earned"], [data-v3-dashboard-indicator="badge-locked"]'
-      ).first()
+      page.locator('[data-v3-dashboard-indicator="achievement-collection"]')
     ).toBeVisible()
-    await expect(page.getByText(/Total Units/i)).toBeVisible()
+    await expect(page.getByText(/View all seals/i)).toBeVisible()
+    await expect(page.getByText(/Painting Time/i)).toBeVisible()
+    await expect(page.getByText(/^Paint Streak$/i)).toHaveCount(0)
     await expect
       .poll(() =>
         page.evaluate(

@@ -104,7 +104,6 @@ export const getContestDirectory = cache(async (userId?: string | null) => {
     .from('contests')
     .select(contestSelect)
     .eq('publication_status', 'published')
-    .neq('visibility', 'private')
     .order('submissions_open_at', { ascending: false })
 
   if (isContestSchemaMissing(error)) {
@@ -211,6 +210,26 @@ export async function getContestNominations(contestId: string, allStatuses = fal
   }
 
   const { data, error } = await query
+
+  if (isContestSchemaMissing(error)) {
+    return []
+  }
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return (data ?? []) as ContestNomination[]
+}
+
+export async function getUserContestNominations(contestId: string, userId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('contest_nominations')
+    .select('*')
+    .eq('contest_id', contestId)
+    .eq('owner_user_id', userId)
+    .order('submitted_at', { ascending: false })
 
   if (isContestSchemaMissing(error)) {
     return []

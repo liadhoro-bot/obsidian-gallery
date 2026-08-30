@@ -3,9 +3,9 @@ import type { DashboardActiveUnitsViewModel } from './dashboard-active-units-mod
 export const dashboardActiveUnitsFixture: DashboardActiveUnitsViewModel = {
   nextActions: {
     flowName: 'fixture-first-miniature',
-    title: 'Next Actions',
-    description: 'A short practice flow for the golden dashboard fixture.',
-    copy: 'Your first miniature',
+    title: 'Next Action',
+    description: null,
+    copy: 'Paint the miniature',
     completedCount: 1,
     totalCount: 3,
     canMutate: false,

@@ -19,6 +19,11 @@ import {
   unitPreviewFeatureGuides,
 } from '../../components/feature-guide-presets'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
+import {
+  getGuidesV3DeckDetail,
+  type GuidesV3DeckDetail,
+} from '../../guides/guides-v3-detail-data'
+import { getGuidesV3Payload } from '../../guides/guides-v3-data'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -101,6 +106,32 @@ type UnitV3ScheduledSessionRow = {
   status: string
 }
 
+type UnitV3ProgressStepRow = {
+  id: string
+  step_key: string
+  step_label: string
+  step_order: number
+  status: 'pending' | 'in_progress' | 'done'
+  progress: number
+}
+
+type UnitV3StageGuideRow = {
+  id: string
+  progress_step_id: string
+  recipe_id: string
+  recipe?: {
+    id: string
+    name: string | null
+    description: string | null
+    image_url: string | null
+  }[] | {
+    id: string
+    name: string | null
+    description: string | null
+    image_url: string | null
+  } | null
+}
+
 type ProjectThemePaintRaw = {
   id: string
   sort_order: number | null
@@ -110,12 +141,16 @@ type ProjectThemePaintRaw = {
   catalog_paint?: {
     id: string
     name: string | null
+    brand?: string | null
+    line?: string | null
     hex_approx: string | null
     swatch_image_url: string | null
   }[] | null
   custom_paint?: {
     id: string
     name: string | null
+    manufacturer?: string | null
+    series?: string | null
     color_hex: string | null
   }[] | null
 }
@@ -222,21 +257,16 @@ function formatUnitV3Status(status: UnitDetailUnit['status']) {
   return 'Active'
 }
 
-async function getUnitV3PreviewUnit(id: string) {
+async function getUnitV3PreviewUnit(id: string, userId: string) {
   const supabase = await createClient()
-  const user = await getSessionUser(supabase)
-
-  if (!user) {
-    return null
-  }
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
     .select(
-      'id, name, complexity, unit_size, deadline, is_featured, status, project_id'
+      'id, name, notes, complexity, unit_size, deadline, is_featured, status, project_id'
     )
     .eq('id', id)
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .maybeSingle()
 
   if (unitError) {
@@ -251,8 +281,14 @@ async function getUnitV3PreviewUnit(id: string) {
     imagesResult,
     linkedProjectsResult,
     directProjectResult,
+    unitThemeResult,
     sessionsResult,
     scheduledSessionsResult,
+    availableProjectsResult,
+    initialStepsResult,
+    stagePaintsResult,
+    stageGuidesResult,
+    guidesPayload,
   ] =
     await Promise.all([
       supabase
@@ -260,7 +296,7 @@ async function getUnitV3PreviewUnit(id: string) {
         .select('id, image_url, is_featured, alt_text')
         .eq('entity_type', 'unit')
         .eq('entity_id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('is_featured', { ascending: false })
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false }),
@@ -276,21 +312,57 @@ async function getUnitV3PreviewUnit(id: string) {
         `
         )
         .eq('unit_id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .limit(1),
       unit.project_id
         ? supabase
             .from('projects')
             .select('id, name')
             .eq('id', unit.project_id)
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
+      supabase
+        .from('themes')
+        .select(
+          `
+          id,
+          name,
+          description,
+          theme_paints (
+            id,
+            sort_order,
+            paint_source,
+            paint_catalog_id,
+            custom_paint_id,
+            catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+              id,
+              name,
+              brand,
+              line,
+              hex_approx,
+              swatch_image_url
+            ),
+            custom_paint:paints!theme_paints_custom_paint_id_fkey (
+              id,
+              name,
+              manufacturer,
+              series,
+              color_hex
+            )
+          )
+        `
+        )
+        .eq('user_id', userId)
+        .ilike('description', `%${unitThemeMarker(id)}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
       supabase
         .from('unit_sessions')
         .select('id, started_at, duration_seconds, notes, entry_source')
         .eq('unit_id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gt('duration_seconds', 0)
         .order('started_at', { ascending: false })
         .limit(500),
@@ -298,10 +370,69 @@ async function getUnitV3PreviewUnit(id: string) {
         .from('unit_scheduled_sessions')
         .select('id, scheduled_start_at, focus, notify, status')
         .eq('unit_id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('status', 'scheduled')
         .order('scheduled_start_at', { ascending: true })
         .limit(250),
+      supabase
+        .from('projects')
+        .select('id, name')
+        .eq('user_id', userId)
+        .order('name', { ascending: true }),
+      supabase
+        .from('unit_progress_steps')
+        .select('id, step_key, step_label, step_order, status, progress')
+        .eq('unit_id', id)
+        .order('step_order', { ascending: true }),
+      supabase
+        .from('unit_stage_paints')
+        .select(
+          `
+          id,
+          unit_id,
+          progress_step_id,
+          paint_source,
+          paint_catalog_id,
+          custom_paint_id,
+          sort_order,
+          catalog_paint:paint_catalog (
+            id,
+            name,
+            brand,
+            line,
+            hex_approx,
+            swatch_image_url
+          ),
+          custom_paint:paints (
+            id,
+            name,
+            manufacturer,
+            series,
+            color_hex
+          )
+        `
+        )
+        .eq('unit_id', id)
+        .eq('user_id', userId)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('unit_stage_recipes')
+        .select(
+          `
+          id,
+          progress_step_id,
+          recipe_id,
+          recipe:recipes (
+            id,
+            name,
+            description,
+            image_url
+          )
+        `
+        )
+        .eq('unit_id', id)
+        .eq('user_id', userId),
+      getGuidesV3Payload(userId),
     ])
 
   if (imagesResult.error) {
@@ -309,6 +440,9 @@ async function getUnitV3PreviewUnit(id: string) {
   }
   if (sessionsResult.error) {
     throw new Error(sessionsResult.error.message)
+  }
+  if (unitThemeResult.error) {
+    throw new Error(unitThemeResult.error.message)
   }
   if (
     scheduledSessionsResult.error &&
@@ -318,11 +452,32 @@ async function getUnitV3PreviewUnit(id: string) {
   ) {
     throw new Error(scheduledSessionsResult.error.message)
   }
+  if (availableProjectsResult.error) {
+    throw new Error(availableProjectsResult.error.message)
+  }
+  if (initialStepsResult.error) {
+    throw new Error(initialStepsResult.error.message)
+  }
+  if (stagePaintsResult.error) {
+    throw new Error(stagePaintsResult.error.message)
+  }
+  if (stageGuidesResult.error) {
+    throw new Error(stageGuidesResult.error.message)
+  }
 
   const linkedProject = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
     .map((row) => firstRelation(row.project))
     .find((project): project is ParentProject => Boolean(project?.id))
   const directProject = directProjectResult.data as ParentProject | null
+  const linkedProjectIds = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
+    .map((row) => row.project_id)
+    .filter(Boolean)
+  const selectedProjectIds =
+    linkedProjectIds.length > 0
+      ? linkedProjectIds
+      : unit.project_id
+        ? [unit.project_id]
+        : []
   const projectName =
     linkedProject?.name ?? directProject?.name ?? 'Standalone unit'
   const galleryImages = ((imagesResult.data ?? []) as UnitV3ImageRow[])
@@ -338,6 +493,9 @@ async function getUnitV3PreviewUnit(id: string) {
         }) ?? image.image_url!,
       alt: image.alt_text || unit.name || 'Unit image',
       isFeatured: image.is_featured === true,
+      stageKey: image.alt_text?.startsWith('stage:')
+        ? image.alt_text.replace('stage:', '')
+        : null,
     }))
   const featuredImage =
     galleryImages.find((image) => image.isFeatured) ?? galleryImages[0]
@@ -368,25 +526,157 @@ async function getUnitV3PreviewUnit(id: string) {
           notify: session.notify,
         })
       )
+  const projectThemeRaw = unitThemeResult.data as ProjectThemeRaw | null
+  const projectTheme = projectThemeRaw
+    ? {
+        ...projectThemeRaw,
+        theme_paints:
+          projectThemeRaw.theme_paints?.map((paint) => ({
+            ...paint,
+            catalog_paint: firstRelation(paint.catalog_paint),
+            custom_paint: firstRelation(paint.custom_paint),
+          })) ?? [],
+      }
+    : null
+  const progressSteps = (initialStepsResult.data ?? []) as UnitV3ProgressStepRow[]
+  const stagePaints =
+    stagePaintsResult.data?.map((paint) => ({
+      ...paint,
+      catalog_paint: firstRelation(paint.catalog_paint),
+      custom_paint: firstRelation(paint.custom_paint),
+    })) ?? []
+  const assignedGuideRows = (stageGuidesResult.data ?? []) as UnitV3StageGuideRow[]
+  const assignedDeckDetails = (
+    await Promise.all(
+      assignedGuideRows.map(async (row) => {
+        const deck = await getGuidesV3DeckDetail(row.recipe_id, userId)
+        return deck ? { row, deck } : null
+      })
+    )
+  ).filter(
+    (item): item is { row: UnitV3StageGuideRow; deck: GuidesV3DeckDetail } =>
+      Boolean(item)
+  )
 
   return {
     id: unit.id,
     name: unit.name || 'Untitled Unit',
+    notes: unit.notes,
     label: unit.is_featured ? 'Featured' : status,
     image: featuredImage?.image ?? '/onboarding/first-project-bg.jpeg',
     galleryImages,
     project: projectName,
     deadline: formatUnitV3Deadline(unit.deadline),
     status,
-    progress: unit.status === 'complete' ? 100 : 0,
-    stage: unit.status === 'complete' ? 'Stage 6/6' : 'Stage 1/6',
+    rawStatus: unit.status,
+    progress:
+      unit.status === 'complete'
+        ? 100
+        : progressSteps.length
+          ? Math.round(
+              (progressSteps.filter((step) => step.status === 'done').length /
+                progressSteps.length) *
+                100
+            )
+          : 0,
+    stage: progressSteps.length
+      ? `Stage ${Math.min(
+          progressSteps.filter((step) => step.status === 'done').length + 1,
+          progressSteps.length
+        )}/${progressSteps.length}`
+      : unit.status === 'complete'
+        ? 'Stage 6/6'
+        : 'Stage 1/6',
     logged: formatUnitV3Duration(totalLoggedSeconds),
     lastPainted: paintSessions[0]?.dateKey ?? null,
     paintSessions,
     scheduledSessions,
     complexity: Math.max(1, Math.min(5, unit.complexity ?? 1)),
     modelCount: Math.max(1, unit.unit_size ?? 1),
-    palette: ['#a92322', '#d6b84d', '#171821', '#e1c58d', '#72c888'],
+    rawDeadline: unit.deadline,
+    palette:
+      projectTheme?.theme_paints
+        ?.slice()
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .slice(0, 5)
+        .map((paint) =>
+          paint.paint_source === 'custom'
+            ? paint.custom_paint?.color_hex || '#d8bd83'
+            : paint.catalog_paint?.hex_approx || '#d8bd83'
+        ) ?? ['#a92322', '#d6b84d', '#171821', '#e1c58d', '#72c888'],
+    palettePaints:
+      projectTheme?.theme_paints
+        ?.slice()
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .slice(0, 5)
+        .map((paint) => ({
+          id:
+            paint.paint_source === 'custom'
+              ? paint.custom_paint_id || paint.id
+              : paint.paint_catalog_id || paint.id,
+          source: paint.paint_source === 'custom' ? 'custom' : 'catalog',
+          name:
+            paint.paint_source === 'custom'
+              ? paint.custom_paint?.name || 'Custom paint'
+              : paint.catalog_paint?.name || 'Catalog paint',
+          brand:
+            paint.paint_source === 'custom'
+              ? paint.custom_paint?.manufacturer || paint.custom_paint?.series || null
+              : paint.catalog_paint?.brand || paint.catalog_paint?.line || null,
+          line:
+            paint.paint_source === 'custom'
+              ? paint.custom_paint?.series || null
+              : paint.catalog_paint?.line || null,
+          hex:
+            paint.paint_source === 'custom'
+              ? paint.custom_paint?.color_hex || null
+              : paint.catalog_paint?.hex_approx || null,
+          swatchImageUrl:
+            paint.paint_source === 'custom'
+              ? null
+              : paint.catalog_paint?.swatch_image_url || null,
+        })) ?? [],
+    availableProjects: availableProjectsResult.data ?? [],
+    selectedProjectIds,
+    progressSteps,
+    stagePaints,
+    assignedGuides: assignedDeckDetails.map(({ row, deck }) => ({
+      assignmentId: row.id,
+      progressStepId: row.progress_step_id,
+      id: deck.id,
+      title: deck.title,
+      subtitle: deck.description,
+      image: deck.image,
+      cards: deck.cards,
+      paints: deck.paints,
+      steps: deck.steps,
+      paintList: deck.paintList,
+    })),
+    availableGuideChoices: [
+      ...guidesPayload.guideFiles.map((guide) => ({
+        id: guide.id,
+        type: 'guide' as const,
+        title: guide.title,
+        subtitle: guide.subtitle,
+        image: guide.image,
+        cards: guide.cards,
+        paints: 0,
+        recipeId:
+          guide.id.startsWith('public-guide-')
+            ? guide.id.replace('public-guide-', '')
+            : guidesPayload.decks[0]?.id ?? '',
+      })),
+      ...guidesPayload.decks.map((deck) => ({
+        id: deck.id,
+        type: 'deck' as const,
+        title: deck.title,
+        subtitle: deck.category,
+        image: deck.image,
+        cards: deck.cards,
+        paints: deck.paints,
+        recipeId: deck.id,
+      })),
+    ].filter((choice) => choice.recipeId),
   } satisfies UnitV3LiveUnit
 }
 
@@ -441,12 +731,16 @@ async function UnitDetailBody({
       catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
         id,
         name,
+        brand,
+        line,
         hex_approx,
         swatch_image_url
       ),
       custom_paint:paints!theme_paints_custom_paint_id_fkey (
         id,
         name,
+        manufacturer,
+        series,
         color_hex
       )
     )
@@ -815,10 +1109,18 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   const perf = createPerfTimer('/units/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
   const isPreview =
-    resolvedSearchParams.edit !== 'details' &&
-    resolvedSearchParams.edit !== 'header' &&
-    resolvedSearchParams.edit !== 'gallery' &&
     (await hasV3PreviewSession(resolvedSearchParams.preview))
+  const supabase = await createClient()
+  const user = await getSessionUser(supabase)
+  perf.mark('auth/session fetch')
+
+  if (!user) {
+    redirect(
+      isPreview
+        ? `/login?next=${encodeURIComponent(`/units/${id}?preview=1`)}&preview=1`
+        : '/login'
+    )
+  }
 
   if (isPreview) {
     const previewTab =
@@ -826,7 +1128,18 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
       resolvedSearchParams.tab === 'progress'
         ? resolvedSearchParams.tab
         : 'details'
-    const liveUnit = await getUnitV3PreviewUnit(id)
+    const initialEditTarget =
+      resolvedSearchParams.edit === 'details' ||
+      resolvedSearchParams.edit === 'header' ||
+      resolvedSearchParams.edit === 'gallery'
+        ? resolvedSearchParams.edit
+        : null
+    const liveUnit = await getUnitV3PreviewUnit(id, user.id)
+
+    if (!liveUnit) {
+      notFound()
+    }
+
     const featureGuides = await getFeatureGuidesForPage(
       '/units/[id]',
       unitPreviewFeatureGuides
@@ -838,6 +1151,7 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
         id={id}
         featureGuides={featureGuides}
         initialTab={previewTab}
+        initialEditTarget={initialEditTarget}
         liveUnit={liveUnit}
       />
     )
@@ -847,15 +1161,6 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   const autoStartSession = resolvedSearchParams.autostart === '1'
   const initialTab =
     resolvedSearchParams.tab === 'progress' ? 'progress' : 'overview'
-
-  const supabase = await createClient()
-
-  const user = await getSessionUser(supabase)
-  perf.mark('auth/session fetch')
-
-  if (!user) {
-    redirect('/login')
-  }
 
   const profilePromise = perf.measure('topbar profile fetch', async () => ({
     data: await getDashboardProfile(user.id),

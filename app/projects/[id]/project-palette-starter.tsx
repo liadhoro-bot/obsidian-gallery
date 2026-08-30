@@ -15,18 +15,22 @@ type PaintOption = {
   sku?: string | null
   swatch_image_url: string | null
   hex: string | null
+  is_owned?: boolean | null
+  is_wishlist?: boolean | null
 }
 
 type Props = {
   projectId?: string
   unitId?: string
   slotIndex?: number
+  initialPaint?: PaintOption | null
 }
 
 export default function ProjectPaletteStarter({
   projectId,
   unitId,
   slotIndex,
+  initialPaint = null,
 }: Props) {
   const [activeSlot, setActiveSlot] = useState<number | null>(null)
   const [query, setQuery] = useState('')
@@ -122,7 +126,7 @@ export default function ProjectPaletteStarter({
         {Array.from({ length: slotIndex === undefined ? 5 : 1 }).map(
           (_, localIndex) => {
             const index = slotIndex ?? localIndex
-            const selectedPaint = selectedPaints[index]
+            const selectedPaint = selectedPaints[index] ?? initialPaint
 
             return (
               <button
@@ -198,9 +202,9 @@ export default function ProjectPaletteStarter({
                   type="button"
                   disabled={isPending}
                   onClick={() => choosePaint(paint)}
-                  className={`${styles.secondaryAction} flex w-full items-center gap-3 p-2 text-left disabled:cursor-not-allowed disabled:opacity-70`}
+                  className={`${styles.paintPickerRow} flex w-full items-center gap-3 p-2 text-left transition disabled:cursor-not-allowed disabled:opacity-70`}
                 >
-                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
+                  <div className={`${styles.paintPickerSwatch} h-10 w-10 shrink-0 overflow-hidden`}>
                     {paint.swatch_image_url ? (
                       <Image
                         src={paint.swatch_image_url}
@@ -219,14 +223,34 @@ export default function ProjectPaletteStarter({
                   </div>
 
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[color:var(--og-paper-50)]">
+                    <p className="truncate text-sm font-semibold text-[color:var(--og-text-primary)]">
                       {paint.name}
                     </p>
-                    <p className="truncate text-xs text-[color:var(--og-paper-200)]">
+                    <p className="truncate text-xs text-[color:var(--og-text-secondary)]">
                       {[paint.brand, paint.line, paint.sku]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <span
+                        className={
+                          paint.is_owned
+                            ? styles.paintOwnershipPillActive
+                            : styles.paintOwnershipPill
+                        }
+                      >
+                        Owned
+                      </span>
+                      <span
+                        className={
+                          paint.is_wishlist
+                            ? styles.paintWishlistPillActive
+                            : styles.paintOwnershipPill
+                        }
+                      >
+                        Wishlist
+                      </span>
+                    </div>
                   </div>
 
                   {isPending ? (

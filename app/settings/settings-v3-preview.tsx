@@ -3,9 +3,17 @@
 import Image from 'next/image'
 import { useState } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import { logout } from './settings-actions'
 import styles from '../settings-support-silver.module.css'
 
 type StartupPage = 'dashboard' | 'guides' | 'projects' | 'paints' | 'community'
+type SettingsV3User = {
+  avatarUrl: string | null
+  createdAt: string | null
+  displayName: string
+  email: string
+  username: string | null
+}
 
 const startupPages: Array<{
   id: StartupPage
@@ -47,7 +55,7 @@ const settingsRows = [
   },
 ]
 
-export default function SettingsV3Preview() {
+export default function SettingsV3Preview({ user }: { user: SettingsV3User }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [startupPage, setStartupPage] = useState<StartupPage>('guides')
 
@@ -55,9 +63,9 @@ export default function SettingsV3Preview() {
     <main className={styles.root}>
       <V3PerfIndicator surface="settings" detail="main" />
       <div className={styles.shell}>
-        <TopNav />
+        <TopNav avatarUrl={user.avatarUrl} displayName={user.displayName} />
 
-        <AccountCard />
+        <AccountCard user={user} />
 
         <section className={`${styles.panel} ${styles.previewPanel}`}>
           <div className={styles.panelHeader}>
@@ -119,7 +127,7 @@ export default function SettingsV3Preview() {
           </div>
         </section>
 
-        <form action="/login" className="grid">
+        <form action={logout} className="grid">
           <button
             type="submit"
             className={styles.dangerButton}
@@ -137,7 +145,13 @@ export default function SettingsV3Preview() {
   )
 }
 
-function TopNav() {
+function TopNav({
+  avatarUrl,
+  displayName,
+}: {
+  avatarUrl: string | null
+  displayName: string
+}) {
   return (
     <header className={styles.previewTop}>
       <a
@@ -156,8 +170,8 @@ function TopNav() {
 
       <div className={styles.avatarControl}>
         <Image
-          src="/curator/the-curator.png"
-          alt=""
+          src={avatarUrl || '/curator/the-curator.png'}
+          alt={avatarUrl ? displayName : ''}
           fill
           sizes="36px"
           className="object-cover"
@@ -168,7 +182,24 @@ function TopNav() {
   )
 }
 
-function AccountCard() {
+function formatMemberSince(value: string | null) {
+  if (!value) {
+    return 'Member'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Member'
+  }
+
+  return `Member since ${new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+  }).format(date)}`
+}
+
+function AccountCard({ user }: { user: SettingsV3User }) {
   return (
     <section className={`${styles.panel} ${styles.previewPanel}`}>
       <div className={styles.panelHeader}>
@@ -180,8 +211,8 @@ function AccountCard() {
         <div className={styles.previewAccountGrid}>
           <div className={styles.previewAvatar}>
             <Image
-              src="/curator/the-curator.png"
-              alt=""
+              src={user.avatarUrl || '/curator/the-curator.png'}
+              alt={user.avatarUrl ? user.displayName : ''}
               fill
               sizes="96px"
               className="object-cover"
@@ -196,13 +227,18 @@ function AccountCard() {
           </div>
 
           <div className="min-w-0 self-center">
-            <h3 className={`${styles.previewName} truncate`}>Alex Mortimer</h3>
+            <h3 className={`${styles.previewName} truncate`}>
+              {user.displayName}
+            </h3>
             <p className={`${styles.muted} truncate`}>
-              alex.mortimer@example.com
+              {user.email || 'No email on file'}
             </p>
+            {user.username ? (
+              <p className={`${styles.muted} truncate`}>@{user.username}</p>
+            ) : null}
             <div className={styles.memberMeta}>
               <SvgIcon name="calendar" />
-              <span>Member since March 2024</span>
+              <span>{formatMemberSince(user.createdAt)}</span>
             </div>
           </div>
         </div>

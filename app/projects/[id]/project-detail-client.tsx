@@ -9,7 +9,6 @@ import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-nav
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
-import ProjectAddUnitTab from './project-add-unit-tab'
 import DeleteProjectCard from './delete-project-card'
 import type {
   ProjectImage,
@@ -51,7 +50,7 @@ type Props = {
   featureGuides?: FeatureGuideEntry[]
 }
 
-export type ProjectDetailTab = 'details' | 'units' | 'add'
+export type ProjectDetailTab = 'details' | 'units'
 
 export default function ProjectDetailClient({
   activeTab,
@@ -117,6 +116,7 @@ export default function ProjectDetailClient({
             type="button"
             aria-expanded={activeGuide !== null}
             aria-label="Show project explanation"
+            data-feature-guide-launcher-button="true"
             onClick={() => {
               if (featureGuides.length) {
                 setActiveGuideIndex(
@@ -239,11 +239,6 @@ export default function ProjectDetailClient({
           unitsError={unitsError}
           stagesByUnitId={stagesByUnitId}
           imagesByUnitId={imagesByUnitId}
-        />
-      ) : null}
-
-      {activeTab === 'add' ? (
-        <ProjectAddUnitTab
           projectId={projectId}
           addUnitAction={addUnitAction}
         />

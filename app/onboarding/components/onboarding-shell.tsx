@@ -12,16 +12,20 @@ import LegalScreen from './screens/legal-screen'
 import type { OnboardingGoal } from '../actions'
 
 type OnboardingShellProps = {
+  initialStep?: OnboardingStep
   previewMode?: boolean
+  requireUnitSetup?: boolean
 }
 
 type OnboardingStep = 'terms' | 'persona' | 'creation' | 'curator'
 
 export default function OnboardingShell({
+  initialStep = 'terms',
   previewMode = false,
+  requireUnitSetup = false,
 }: OnboardingShellProps) {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>('terms')
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>(initialStep)
   const [selectedGoal, setSelectedGoal] =
     useState<OnboardingGoal>('paint_miniature')
 
@@ -41,10 +45,8 @@ export default function OnboardingShell({
   }
 
   function enterDashboard() {
-    // /dashboard has its own real (non-preview) implementation now (see
-    // app/login/page.tsx's requestedNextIsDashboard carve-out) - sending
-    // people here with ?preview=1 lands them on the old, abandoned
-    // DashboardV3Preview component instead.
+    // /dashboard is the launch dashboard. Keep onboarding exits on the
+    // canonical route so preview-only dashboard experiments cannot leak in.
     router.push('/dashboard')
   }
 
@@ -62,6 +64,7 @@ export default function OnboardingShell({
         {currentStep === 'persona' ? (
           <GoalScreen
             previewMode={previewMode}
+            requireUnitSetup={requireUnitSetup}
             onContinue={continueFromPersona}
           />
         ) : null}

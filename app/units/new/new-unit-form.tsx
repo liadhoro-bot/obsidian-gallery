@@ -91,7 +91,10 @@ export default function NewUnitForm({ projects }: NewUnitFormProps) {
 
   return (
     <form id="new-unit-form" onSubmit={handleSubmit} className="space-y-4">
-      <section className="rounded-2xl border border-cyan-300/25 bg-black/40 p-4 shadow-[0_0_22px_rgba(34,211,238,0.12)]">
+      <section
+        id="create_unit"
+        className="scroll-mt-6 rounded-2xl border border-cyan-300/25 bg-black/40 p-4 shadow-[0_0_22px_rgba(34,211,238,0.12)]"
+      >
         <div className="space-y-4">
           <input type="hidden" name="projectMode" value={projectMode} />
 
@@ -178,7 +181,7 @@ export default function NewUnitForm({ projects }: NewUnitFormProps) {
             </div>
           )}
 
-          <label className="block space-y-2">
+          <label id="unit_name" className="block scroll-mt-6 space-y-2">
             <span className="text-xs font-bold uppercase tracking-[0.22em] text-white/50">
               Unit Name
             </span>
@@ -221,7 +224,7 @@ export default function NewUnitForm({ projects }: NewUnitFormProps) {
             </label>
           </div>
 
-          <div className="space-y-2">
+          <div id="unit_image" className="scroll-mt-6 space-y-2">
             <span className="text-xs font-bold uppercase tracking-[0.22em] text-white/50">
               Thumbnail Picture
             </span>
@@ -256,7 +259,7 @@ export default function NewUnitForm({ projects }: NewUnitFormProps) {
             </div>
           </div>
 
-          <label className="block space-y-2">
+          <label id="unit_info" className="block scroll-mt-6 space-y-2">
             <span className="text-xs font-bold uppercase tracking-[0.22em] text-white/50">
               Notes
             </span>

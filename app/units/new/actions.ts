@@ -9,6 +9,7 @@ import {
 import { createPerfTimer } from '../../../utils/perf/server'
 import { createClient } from '../../../utils/supabase/server'
 import { completeOnboardingActions } from '../../../lib/onboarding/completion'
+import { safeEvaluateAchievements } from '../../../lib/achievements/evaluateAchievements'
 
 type CreateUnitResult =
   | {
@@ -260,6 +261,15 @@ export async function createStandaloneUnitAction(
       'add_project_unit',
       'feature_unit',
     ],
+  })
+
+  await safeEvaluateAchievements(user.id, {
+    triggers: [
+      'units_created_total',
+      ...(persistedUnitImage ? ['progress_photos_total'] : []),
+    ],
+    sourceType: 'unit_created',
+    sourceId: unit.id,
   })
 
   revalidatePath('/dashboard')

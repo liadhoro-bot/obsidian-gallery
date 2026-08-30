@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-v3-pwa-framed-icons-2026-08-30'
+const CACHE_VERSION = 'obsidian-gallery-v3-full-workbench-2026-08-30'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'

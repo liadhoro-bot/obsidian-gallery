@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { completeOnboardingActions } from '../../lib/onboarding/completion'
+import { safeEvaluateAchievements } from '../../lib/achievements/evaluateAchievements'
 
 export async function createRecipe(formData: FormData) {
   const supabase = await createClient()
@@ -82,6 +83,12 @@ export async function createRecipe(formData: FormData) {
       'name_guide',
       ...(recipe.image_url ? ['add_guide_cover'] : []),
     ],
+  })
+
+  await safeEvaluateAchievements(user.id, {
+    triggers: ['guides_created_total'],
+    sourceType: 'guide_created',
+    sourceId: recipe.id,
   })
 
   revalidatePath('/recipes')

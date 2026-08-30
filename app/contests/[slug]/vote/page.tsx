@@ -9,7 +9,7 @@ import {
   getContestNominations,
   getViewerBallot,
 } from '../../../../lib/contests/queries'
-import { canManageContest } from '../../../../lib/contests/permissions'
+import { canViewContest } from '../../../../lib/contests/permissions'
 
 export default async function ContestVotePage({
   params,
@@ -26,10 +26,7 @@ export default async function ContestVotePage({
   const contest = await getContestBySlug(slug)
   if (!contest) notFound()
 
-  if (
-    contest.visibility === 'private' &&
-    !(await canManageContest(user.id, contest.id))
-  ) {
+  if (!(await canViewContest(user.id, contest.id))) {
     notFound()
   }
 
@@ -39,7 +36,7 @@ export default async function ContestVotePage({
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-6 sm:max-w-5xl">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-6">
         <header>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">
             Vote

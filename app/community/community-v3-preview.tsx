@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useState } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
@@ -40,21 +41,20 @@ const newsItems = [
   },
 ]
 
-const contests = [
+const openChallenges = [
   {
-    title: 'Best Painted Unit',
-    text: 'Showcase the best painted unit on your desk.',
-    meta: 'Ends Jun 21 - 112 entries',
+    title: 'Path to Glory: Coolest Army',
+    text: 'A campaign-only ranked vote for invited Path to Glory army projects.',
+    meta: 'Limited seats',
+    href: '/contests/path-to-glory-coolest-army',
+    mark: '12',
   },
   {
-    title: 'Best Base',
-    text: 'Create a base that brings the miniature to life.',
-    meta: 'Ends Jun 18 - 66 entries',
-  },
-  {
-    title: 'Beginner Challenge',
-    text: 'A welcoming contest for newer painters.',
-    meta: 'Ends Jun 30 - 71 entries',
+    title: 'Remote Campaign Roll',
+    text: 'Roll and log 1d6 or 2d6 for the active campaign table.',
+    meta: 'Campaign tool',
+    href: '/contests/dice-roll',
+    mark: 'd6',
   },
 ]
 
@@ -155,6 +155,7 @@ function TopNav({
           type="button"
           aria-expanded={isHelpOpen}
           aria-label="Show community explanation"
+          data-feature-guide-launcher-button="true"
           onClick={onHelp}
         >
           ?
@@ -215,19 +216,20 @@ function ContestsTab() {
     <section className="grid gap-4">
       <HeroCard
         eyebrow="Featured Contest"
-        title="Golden Obsidian Showcase"
-        text="Show us your most heroic miniature worthy of the Golden Obsidian."
-        action="Enter now"
-        image="/onboarding/pains/fragmentation.jpeg"
+        title="Best Painting Guide"
+        text="Nominate a guide that teaches clearly, photographs the process, and helps another painter level up."
+        action="Open contest"
+        href="/contests/best-painting-guide"
+        image="/onboarding/pains/pile-of-shame.jpeg"
       />
 
-      <SectionCard title="Open Challenges" action="View all">
-        {contests.map((contest) => (
+      <SectionCard title="Open Challenges">
+        {openChallenges.map((contest) => (
           <ChallengeRow key={contest.title} contest={contest} />
         ))}
       </SectionCard>
 
-      <SectionCard title="Your Nominations" action="View all">
+      <SectionCard title="Your Nominations" preview>
         <SavedEntry
           title="My Entry: Ultramarines Veterans"
           meta="Submitted - Summer Showcase"
@@ -248,27 +250,9 @@ function ContestsTab() {
 function NewsTab() {
   return (
     <section className="grid gap-4">
-      <HeroCard
-        eyebrow="Featured Story"
-        title="Obsidian 2.8 Update"
-        text="New tools, smarter painting workflows, and community-requested features."
-        action="Read more"
-        image="/onboarding/pains/scheme-loss.jpeg"
-      />
+      <V3LaunchHero />
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {['App', 'Hobby', 'Paints', 'Creators', 'Releases'].map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            className="shrink-0 rounded-[8px] border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-black text-white/52 transition hover:border-cyan-300/45 hover:text-cyan-300"
-          >
-            {tag}
-          </button>
-        ))}
-      </div>
-
-      <SectionCard title="Latest News" action="View all">
+      <SectionCard title="Latest News" action="View all" preview>
         {newsItems.map((item) => (
           <NewsRow key={item.title} item={item} />
         ))}
@@ -281,15 +265,120 @@ function NewsTab() {
   )
 }
 
+function V3LaunchHero() {
+  return (
+    <article
+      data-v3-community-indicator="launch-hero"
+      data-feature-guide-target="community.hero"
+    >
+      <div className="relative h-40" data-v3-community-indicator="launch-hero-photo">
+        <Image
+          src="/onboarding/welcome-hero.jpeg"
+          alt=""
+          fill
+          sizes="(max-width: 640px) 100vw, 448px"
+          className="object-cover"
+        />
+        <span data-v3-community-indicator="launch-hero-tag">News Update</span>
+      </div>
+
+      <div data-v3-community-indicator="launch-hero-body">
+        <p data-v3-community-indicator="launch-hero-eyebrow">Obsidian Gallery V3</p>
+        <h2 data-v3-community-indicator="launch-hero-title">V3 is Live</h2>
+        <p data-v3-community-indicator="launch-hero-subtitle">
+          More than just a fresh coat of paint.
+        </p>
+        <span data-v3-community-indicator="launch-hero-divider" aria-hidden="true" />
+        <p data-v3-community-indicator="launch-hero-text">
+          Rebuilt with richer materials, sharper flows, and a smoother experience,
+          from the dashboard to quicker unit and guide forges.
+        </p>
+
+        <div data-v3-community-indicator="launch-hero-features">
+          <div data-v3-community-indicator="launch-hero-feature">
+            <span data-v3-community-indicator="launch-hero-feature-icon">
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+              </svg>
+            </span>
+            <p data-v3-community-indicator="launch-hero-feature-title">New UI</p>
+            <p data-v3-community-indicator="launch-hero-feature-text">
+              Worktable-inspired walnut, parchment, brass &amp; glass.
+            </p>
+          </div>
+
+          <div data-v3-community-indicator="launch-hero-feature">
+            <span data-v3-community-indicator="launch-hero-feature-icon">
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 7h4l3 10h4l3-10h4" />
+                <path d="M17 4l3 3-3 3" />
+              </svg>
+            </span>
+            <p data-v3-community-indicator="launch-hero-feature-title">Better Flows</p>
+            <p data-v3-community-indicator="launch-hero-feature-text">
+              Built around your next goal, with a clearer path to it.
+            </p>
+          </div>
+
+          <div data-v3-community-indicator="launch-hero-feature">
+            <span data-v3-community-indicator="launch-hero-feature-icon">
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 15a8 8 0 1 1 16 0" />
+                <path d="M12 15l4-5" />
+              </svg>
+            </span>
+            <p data-v3-community-indicator="launch-hero-feature-title">Smoother Feel</p>
+            <p data-v3-community-indicator="launch-hero-feature-text">
+              Cleaner pages, faster loads, a more intuitive process.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <span data-v3-community-indicator="launch-hero-badge">Live Now</span>
+    </article>
+  )
+}
+
 function HeroCard({
   action,
   eyebrow,
+  href,
   image,
   text,
   title,
 }: {
   action: string
   eyebrow: string
+  href?: string
   image: string
   text: string
   title: string
@@ -319,12 +408,22 @@ function HeroCard({
           <p className="mt-2 max-w-[16rem] text-sm font-semibold leading-5 text-white/62">
             {text}
           </p>
-          <button
-            type="button"
-            className="mt-4 h-10 w-fit rounded-[8px] bg-cyan-300 px-4 text-xs font-black text-black"
-          >
-            {action}
-          </button>
+          {href ? (
+            <Link
+              href={href}
+              className="mt-4 h-10 w-fit rounded-[8px] bg-cyan-300 px-4 text-xs font-black text-black"
+              data-v3-community-indicator="hero-action"
+            >
+              {action}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="mt-4 h-10 w-fit rounded-[8px] bg-cyan-300 px-4 text-xs font-black text-black"
+            >
+              {action}
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -334,10 +433,14 @@ function HeroCard({
 function SectionCard({
   action,
   children,
+  href,
+  preview = false,
   title,
 }: {
-  action: string
+  action?: string
   children: React.ReactNode
+  href?: string
+  preview?: boolean
   title: string
 }) {
   const featureTarget =
@@ -355,14 +458,34 @@ function SectionCard({
         <h2 className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
           {title}
         </h2>
-        <button
-          type="button"
-          className="text-[10px] font-black text-cyan-300 transition hover:text-cyan-200"
-        >
-          {action}
-        </button>
+        {preview && action ? (
+          <span className="text-[10px] font-black text-white/20">{action}</span>
+        ) : href && action ? (
+          <Link
+            href={href}
+            className="text-[10px] font-black text-cyan-300 transition hover:text-cyan-200"
+          >
+            {action}
+          </Link>
+        ) : action ? (
+          <button
+            type="button"
+            className="text-[10px] font-black text-cyan-300 transition hover:text-cyan-200"
+          >
+            {action}
+          </button>
+        ) : null}
       </div>
-      <div className="divide-y divide-white/[0.06]">{children}</div>
+      <div
+        className={
+          preview
+            ? 'pointer-events-none select-none divide-y divide-white/[0.06] blur-[5px]'
+            : 'divide-y divide-white/[0.06]'
+        }
+        aria-hidden={preview || undefined}
+      >
+        {children}
+      </div>
     </section>
   )
 }
@@ -389,14 +512,15 @@ function NewsRow({ item }: { item: (typeof newsItems)[number] }) {
   )
 }
 
-function ChallengeRow({ contest }: { contest: (typeof contests)[number] }) {
+function ChallengeRow({ contest }: { contest: (typeof openChallenges)[number] }) {
   return (
-    <article
+    <Link
+      href={contest.href}
       className="grid grid-cols-[48px_1fr_auto] items-center gap-3 px-4 py-3"
       data-v3-community-indicator="challenge-row"
     >
       <span className="grid h-10 w-10 place-items-center rounded-[8px] border border-cyan-300/20 bg-cyan-300/8 text-cyan-300">
-        #
+        {contest.mark}
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-black">{contest.title}</span>
@@ -407,7 +531,7 @@ function ChallengeRow({ contest }: { contest: (typeof contests)[number] }) {
       <span className="text-right text-[10px] font-black text-white/40">
         {contest.meta}
       </span>
-    </article>
+    </Link>
   )
 }
 
@@ -449,31 +573,39 @@ function SavedEntry({
 function CreatorSpotlight() {
   return (
     <article
-      className="grid grid-cols-[88px_1fr] gap-4 rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
+      className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
       data-v3-community-indicator="spotlight-card"
     >
-      <span className="relative h-20 w-20 overflow-hidden rounded-full border border-cyan-300/20 bg-black">
-        <Image
-          src="/curator/the-curator.png"
-          alt=""
-          fill
-          sizes="80px"
-          className="object-cover"
-        />
-      </span>
-      <span className="min-w-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
-          Creator Spotlight
-        </p>
-        <h2 className="mt-2 text-lg font-black">Duncan Rhodes</h2>
-        <p className="mt-1 text-xs font-semibold leading-5 text-white/50">
-          Painter, author, educator. A conversation about teaching, creativity,
-          and miniature painting.
-        </p>
-        <button type="button" className="mt-3 text-xs font-black text-cyan-300">
-          Read interview
-        </button>
-      </span>
+      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
+        Creator Spotlight
+      </p>
+      <div
+        className="pointer-events-none mt-3 grid grid-cols-[88px_1fr] gap-4 select-none blur-[5px]"
+        aria-hidden="true"
+      >
+        <span
+          className="relative h-20 w-20 overflow-hidden rounded-full"
+          data-v3-community-indicator="spotlight-photo"
+        >
+          <Image
+            src="/curator/the-curator.png"
+            alt=""
+            fill
+            sizes="80px"
+            className="object-cover"
+          />
+        </span>
+        <span className="min-w-0">
+          <h2 className="text-lg font-black">Duncan Rhodes</h2>
+          <p className="mt-1 text-xs font-semibold leading-5 text-white/50">
+            Painter, author, educator. A conversation about teaching,
+            creativity, and miniature painting.
+          </p>
+          <span className="mt-3 block text-xs font-black text-cyan-300">
+            Read interview
+          </span>
+        </span>
+      </div>
     </article>
   )
 }
@@ -481,30 +613,38 @@ function CreatorSpotlight() {
 function ForYouCard() {
   return (
     <article
-      className="grid grid-cols-[88px_1fr] gap-4 rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
+      className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
       data-v3-community-indicator="for-you-card"
     >
-      <span className="relative h-24 overflow-hidden rounded-[8px] bg-black">
-        <Image
-          src="/onboarding/pains/paint-management.jpeg"
-          alt=""
-          fill
-          sizes="88px"
-          className="object-cover"
-        />
-      </span>
-      <span className="min-w-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
-          For You
-        </p>
-        <h2 className="mt-2 text-base font-black">Weathered Metal Guide</h2>
-        <p className="mt-1 text-xs font-semibold leading-5 text-white/50">
-          This guide matches paints in your collection.
-        </p>
-        <button type="button" className="mt-3 text-xs font-black text-cyan-300">
-          See guide
-        </button>
-      </span>
+      <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/28">
+        For You
+      </p>
+      <div
+        className="pointer-events-none mt-3 grid grid-cols-[88px_1fr] gap-4 select-none blur-[5px]"
+        aria-hidden="true"
+      >
+        <span
+          className="relative h-24 overflow-hidden rounded-[8px]"
+          data-v3-community-indicator="for-you-photo"
+        >
+          <Image
+            src="/onboarding/pains/paint-management.jpeg"
+            alt=""
+            fill
+            sizes="88px"
+            className="object-cover"
+          />
+        </span>
+        <span className="min-w-0">
+          <h2 className="text-base font-black">Weathered Metal Guide</h2>
+          <p className="mt-1 text-xs font-semibold leading-5 text-white/50">
+            This guide matches paints in your collection.
+          </p>
+          <span className="mt-3 block text-xs font-black text-cyan-300">
+            See guide
+          </span>
+        </span>
+      </div>
     </article>
   )
 }

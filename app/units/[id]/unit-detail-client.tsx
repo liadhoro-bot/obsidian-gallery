@@ -1375,12 +1375,13 @@ const handleRemoveStagePhoto = (imageId: string) => {
       type="button"
       aria-expanded={activeGuide !== null}
       aria-label="Show unit explanation"
+      data-feature-guide-launcher-button="true"
       onClick={() => {
         if (featureGuides.length) {
           showGuideAt(findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0)
         }
       }}
-      className="grid h-full min-h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-slate-950/70 text-sm font-black text-white/70 shadow-[0_0_24px_rgba(34,211,238,0.08)] transition hover:text-cyan-300"
+      className="grid h-full min-h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-slate-950/70 text-lg font-black text-white/70 shadow-[0_0_24px_rgba(34,211,238,0.08)] transition hover:text-cyan-300"
     >
       ?
     </button>

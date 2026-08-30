@@ -237,7 +237,7 @@ export default function RecipeGuideDialog({
         height: EXPORT_CARD_HEIGHT,
         pixelRatio: EXPORT_PIXEL_RATIO,
         cacheBust: true,
-        backgroundColor: '#020806',
+        backgroundColor: '#e6d7b8',
         canvasWidth: EXPORT_CARD_WIDTH,
         canvasHeight: EXPORT_CARD_HEIGHT,
       })

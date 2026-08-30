@@ -12,7 +12,11 @@ export type OnboardingActionRouteContext = {
 }
 
 function withHash(path: string, component: string | null | undefined) {
-  return component ? `${path}#${encodeURIComponent(component)}` : path
+  const [pathWithoutHash] = path.split('#')
+
+  return component
+    ? `${pathWithoutHash}#${encodeURIComponent(component)}`
+    : pathWithoutHash
 }
 
 function unitPath(
@@ -55,6 +59,10 @@ export function resolveOnboardingActionDestination(
 ) {
   const refPage = action.refPage ?? ''
   const refComponent = action.refComponent ?? null
+
+  if (refPage.startsWith('/')) {
+    return withHash(refPage, refComponent)
+  }
 
   if (refPage === 'units') {
     return withHash('/units/new', refComponent)

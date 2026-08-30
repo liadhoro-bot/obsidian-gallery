@@ -197,30 +197,52 @@
 }
 
 .projectsSilver [data-v3-projects-indicator="search-sort-toolbar"] {
-  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 70%, var(--og-ink-950));
+  position: relative;
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.85);
   border-radius: var(--og-radius-m);
-  background-color: var(--og-surface-primary);
-  background-image: var(--og-material-parchment-panel);
-  background-position: center;
-  background-repeat: no-repeat, repeat, no-repeat;
-  background-size: 100% 100%, 260px auto, 100% 100%;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.3) 100%),
+    rgba(250, 246, 236, 0.32);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28),
+    inset 0 -2px 0 rgba(86, 55, 27, 0.18),
+    0 8px 20px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.06) contrast(0.97);
   padding: 8px;
-  box-shadow: var(--og-shadow-physical-panel);
+  overflow: hidden;
+}
+
+.projectsSilver [data-v3-projects-indicator="search-sort-toolbar"] > * {
+  position: relative;
+  z-index: 2;
 }
 
 .projectsSilver input,
 .projectsSilver select {
-  border: var(--og-border-width) solid var(--og-border-subtle);
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.9);
   border-radius: var(--og-radius-s);
-  background-color: var(--og-surface-secondary-light);
-  background-image: var(--og-material-paper-card);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 100%),
+    rgba(250, 246, 236, 0.36);
   color: var(--og-text-primary);
   font-family: var(--og-font-ui);
-  box-shadow: var(--og-shadow-pressed);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(86, 55, 27, 0.2),
+    0 4px 14px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
 }
 
 .projectsSilver input::placeholder {
   color: var(--og-text-muted);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .projectsSilver input:focus,
@@ -232,6 +254,7 @@
 
 .projectsSilver [data-v3-projects-indicator="search-sort-toolbar"] svg {
   color: var(--og-text-muted);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
 }
 
 .projectsSilver [data-v3-projects-indicator="search-sort-toolbar"] button,
@@ -252,33 +275,73 @@
   background-color: var(--og-surface-secondary-light);
 }
 
+.projectsSilver [data-v3-projects-indicator="search-sort-toolbar"] button {
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.9);
+  background-color: transparent;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 100%),
+    linear-gradient(rgba(250, 246, 236, 0.36), rgba(250, 246, 236, 0.36));
+  color: var(--og-text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(86, 55, 27, 0.2),
+    0 4px 14px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
+}
+
+.projectsSilver [data-v3-projects-indicator="search-sort-toolbar"] button:hover {
+  border-color: color-mix(in srgb, var(--og-focus) 60%, rgba(255, 255, 255, 0.4));
+  color: var(--og-text-primary);
+}
+
 .projectsSilver [data-v3-projects-indicator="sort-panel"] {
-  border: var(--og-border-width) solid var(--og-border-subtle);
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.85);
   border-radius: var(--og-radius-m);
-  background-color: var(--og-surface-secondary);
-  background-image: var(--og-material-paper-card);
-  box-shadow: var(--og-shadow-contact);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.24) 100%),
+    rgba(250, 246, 236, 0.28);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
+    0 6px 16px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(16px) saturate(135%) brightness(1.06) contrast(0.97);
+  color: var(--og-text-primary);
 }
 
 .projectsSilver [data-v3-projects-indicator="view-toggle"] {
-  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950));
-  background-color: var(--og-walnut-950);
-  background-image: var(--og-material-dark-inset);
-  box-shadow: var(--og-shadow-pressed), var(--og-shadow-contact);
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.85);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.24) 100%),
+    rgba(250, 246, 236, 0.32);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+    0 8px 20px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.06) contrast(0.97);
 }
 
 .projectsSilver [data-v3-projects-indicator="view-toggle"] button {
   border: 0;
   background: transparent;
-  color: var(--og-paper-200);
+  color: var(--og-text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   box-shadow: none;
 }
 
 .projectsSilver [data-v3-projects-indicator="view-toggle"] button[data-active="true"] {
-  background-color: var(--og-brass-500);
-  background-image: var(--og-material-brass);
-  color: var(--og-ink-950);
-  box-shadow: var(--og-shadow-brass-plate);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 255, 0.2);
+  color: var(--og-text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .projectsSilver [data-v3-projects-indicator="project-card"],
@@ -412,12 +475,25 @@
 }
 
 .projectsSilver [data-v3-projects-indicator="project-filter-chips"] button {
-  border: var(--og-border-width) solid var(--og-border-subtle);
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.85);
   border-radius: var(--og-radius-s);
-  background-color: var(--og-surface-secondary-light);
-  background-image: var(--og-material-paper-card);
-  color: var(--og-text-secondary);
-  box-shadow: var(--og-shadow-contact);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.14) 45%, rgba(255, 255, 255, 0.26) 100%),
+    rgba(250, 246, 236, 0.3);
+  color: var(--og-text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(86, 55, 27, 0.18),
+    0 3px 10px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(16px) saturate(135%) brightness(1.06) contrast(0.97);
+}
+
+.projectsSilver [data-v3-projects-indicator="project-filter-chips"] button:hover {
+  border-color: color-mix(in srgb, var(--og-focus) 60%, rgba(255, 255, 255, 0.4));
+  color: var(--og-text-primary);
 }
 
 .projectsSilver [data-v3-projects-indicator="pagination-rail"] {

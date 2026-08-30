@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../../utils/supabase/server'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
+import { safeEvaluateAchievements } from '../achievements/evaluateAchievements'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { isCurrentUserAdmin } from '../admin'
 import { getContestPhase } from './phases'
@@ -624,6 +625,12 @@ export async function submitNominationAction(formData: FormData) {
     },
   })
 
+  await safeEvaluateAchievements(user.id, {
+    triggers: ['contest_participations_total'],
+    sourceType: 'contest_nomination_submitted',
+    sourceId: nominationId,
+  })
+
   contestRevalidate(contest.slug)
   revalidatePath(`/${sourceType === 'guide' ? 'recipes' : `${sourceType}s`}/${sourceId}`)
   redirect(`/contests/${contest.slug}`)
@@ -759,13 +766,26 @@ export async function submitBallotAction(formData: FormData) {
     },
   })
 
+  await safeEvaluateAchievements(user.id, {
+    triggers: ['contest_votes_total'],
+    sourceType: 'contest_vote_cast',
+    sourceId: summary?.ballot_id ?? contestId,
+  })
+
   contestRevalidate(slug)
   redirect(`/contests/${slug}/vote?submitted=1`)
 }
 
 export async function finalizeContestResultsAction(formData: FormData) {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
   const contestId = getString(formData, 'contestId')
+  if (!(await canManageContest(user.id, contestId))) throw new Error('Not authorized')
+
   const { error } = await supabase.rpc('finalize_contest_results', {
     p_contest_id: contestId,
   })
@@ -775,8 +795,15 @@ export async function finalizeContestResultsAction(formData: FormData) {
 
 export async function publishContestResultsAction(formData: FormData) {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
   const contestId = getString(formData, 'contestId')
   const slug = getString(formData, 'slug')
+  if (!(await canManageContest(user.id, contestId))) throw new Error('Not authorized')
+
   const { error } = await supabase.rpc('publish_contest_results', {
     p_contest_id: contestId,
   })
@@ -929,6 +956,12 @@ export async function removeContestAllowlistUserAction(formData: FormData) {
   const supabase = await createClient()
   const contestId = getString(formData, 'contestId')
   const userId = getString(formData, 'userId')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+  if (!(await canManageContest(user.id, contestId))) throw new Error('Not authorized')
 
   const { error } = await supabase
     .from('contest_voter_allowlist')
@@ -940,7 +973,7 @@ export async function removeContestAllowlistUserAction(formData: FormData) {
 
   await supabase.from('contest_audit_events').insert({
     contest_id: contestId,
-    actor_user_id: (await supabase.auth.getUser()).data.user?.id ?? null,
+    actor_user_id: user.id,
     action: 'contest_allowlist_user_removed',
     target_type: 'user',
     target_id: userId,

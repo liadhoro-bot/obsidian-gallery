@@ -10,10 +10,16 @@ export const runtime = 'nodejs'
 
 function getSafeNextPath(value: unknown) {
   if (typeof value !== 'string' || !value.startsWith('/')) {
-    return '/dashboard?preview=1'
+    return '/dashboard'
   }
 
   const nextUrl = new URL(value, 'http://local-preview.test')
+
+  if (nextUrl.pathname === '/dashboard') {
+    nextUrl.searchParams.delete('preview')
+    return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+  }
+
   nextUrl.searchParams.set('preview', '1')
 
   return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`

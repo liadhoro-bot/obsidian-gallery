@@ -248,6 +248,20 @@
   color: var(--og-paper-50);
 }
 
+.unitSilver [data-v3-unit-indicator="details-card"] {
+  overflow: hidden;
+}
+
+.unitSilver [data-v3-unit-indicator="details-card"] h2 {
+  font-size: 1rem;
+}
+
+.unitSilver [data-v3-unit-indicator="details-card"] [data-v3-unit-indicator="project-chip"] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .unitSilver [data-v3-unit-indicator="tab-content"] button[aria-label="Add palette color"],
 .unitSilver [data-v3-unit-indicator="tab-content"] button[aria-label="Add gallery image"] {
   border: var(--og-border-width) dashed color-mix(in srgb, var(--og-brass-700) 58%, var(--og-border-subtle));
@@ -268,9 +282,56 @@
   box-shadow: var(--og-shadow-control-built);
 }
 
-.unitSilver [data-v3-unit-indicator="tab-content"] button[aria-pressed="true"] > span:first-child,
-.unitSilver [data-v3-unit-indicator="tab-content"] button[aria-pressed] > span:first-child:has(+ span) {
+.unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child button[data-stage-state],
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-state] {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  background-image: none;
+  color: inherit;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child button[data-stage-state]::before,
+.unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child button[data-stage-state]::after,
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-state]::before,
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-state]::after {
+  display: none;
+}
+
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-state="complete"] > span:first-child {
+  border-color: color-mix(in srgb, var(--og-brass-500) 80%, var(--og-walnut-700));
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-brass-plate);
+}
+
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-state="current"] > span:first-child,
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-state="todo"] > span:first-child {
+  border-color: color-mix(in srgb, var(--og-brass-700) 28%, var(--og-border-subtle));
+  background-color: color-mix(in srgb, var(--og-ink-500) 15%, var(--og-surface-secondary));
+  background-image: var(--og-material-dark-inset);
+  color: color-mix(in srgb, var(--og-paper-200) 42%, transparent);
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-selected="true"] > span:first-child {
   border-color: color-mix(in srgb, var(--og-brass-500) 74%, var(--og-walnut-700));
+  box-shadow:
+    var(--og-shadow-control-built),
+    0 0 0 4px color-mix(in srgb, var(--og-brass-500) 30%, transparent),
+    0 0 22px color-mix(in srgb, var(--og-brass-500) 42%, transparent),
+    0 0 34px color-mix(in srgb, var(--og-brass-500) 18%, transparent);
+}
+
+.unitSilver [data-v3-unit-indicator="tab-content"] button[data-stage-state="complete"][data-stage-selected="true"] > span:first-child {
+  box-shadow:
+    var(--og-shadow-brass-plate),
+    0 0 0 4px color-mix(in srgb, var(--og-brass-500) 34%, transparent),
+    0 0 24px color-mix(in srgb, var(--og-brass-500) 44%, transparent),
+    0 0 36px color-mix(in srgb, var(--og-brass-500) 20%, transparent);
 }
 
 .unitSilver [data-v3-unit-indicator="tab-content"] button[aria-label*="gallery image"] {
@@ -322,6 +383,7 @@
 .unitSilver [data-v3-unit-indicator="tab-content"] textarea,
 .unitSilver [role="dialog"] input,
 .unitSilver [role="dialog"] textarea,
+.unitSilver [role="dialog"] select,
 .unitSilver [role="dialog"] label:has(input[type="checkbox"]) {
   border: var(--og-border-width) solid var(--og-border-subtle);
   border-radius: var(--og-radius-s);
@@ -329,6 +391,11 @@
   background-image: var(--og-material-paper-card);
   color: var(--og-text-primary);
   box-shadow: var(--og-shadow-pressed);
+}
+
+.unitSilver [role="dialog"] select option {
+  background-color: var(--og-surface-primary);
+  color: var(--og-text-primary);
 }
 
 .unitSilver [role="dialog"] {
@@ -351,6 +418,50 @@
 .unitSilver [data-v3-unit-indicator="schedule-scrim"] {
   background: color-mix(in srgb, var(--og-ink-950) 72%, transparent);
   backdrop-filter: blur(8px);
+}
+
+.unitSilver [data-v3-unit-indicator="edit-scrim"] {
+  background: color-mix(in srgb, var(--og-ink-950) 72%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.unitSilver [data-v3-unit-indicator="edit-sheet"] {
+  overscroll-behavior: contain;
+}
+
+.unitSilver [data-v3-unit-indicator="delete-unit-failsafe"] {
+  border-color: color-mix(in srgb, #ef4444 42%, var(--og-border-subtle));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #7f1d1d 16%, transparent), transparent),
+    color-mix(in srgb, var(--og-surface-primary) 92%, #7f1d1d);
+  box-shadow: var(--og-shadow-contact);
+}
+
+.unitSilver [data-v3-unit-indicator="delete-unit-failsafe"] p:first-child,
+.unitSilver [data-v3-unit-indicator="delete-unit-failsafe"] span {
+  color: #fca5a5;
+}
+
+.unitSilver [data-v3-unit-indicator="delete-unit-failsafe"] p + p {
+  color: color-mix(in srgb, var(--og-text-secondary) 78%, #fca5a5);
+}
+
+.unitSilver [role="dialog"] button[data-v3-unit-indicator="delete-unit-button"] {
+  border: var(--og-border-width) solid color-mix(in srgb, #ef4444 64%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  background-color: color-mix(in srgb, #7f1d1d 42%, var(--og-walnut-950));
+  background-image: none;
+  color: #fecaca;
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.unitSilver [role="dialog"] button[data-v3-unit-indicator="delete-unit-button"][data-delete-armed="true"] {
+  border-color: color-mix(in srgb, #fca5a5 72%, var(--og-ink-950));
+  background-color: #991b1b;
+  color: var(--og-paper-50);
+  box-shadow:
+    var(--og-shadow-control-built),
+    0 0 18px color-mix(in srgb, #ef4444 24%, transparent);
 }
 
 .unitSilver a,

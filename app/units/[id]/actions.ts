@@ -24,6 +24,7 @@ import {
   completeOnboardingAction,
   completeOnboardingActions,
 } from '../../../lib/onboarding/completion'
+import { safeEvaluateAchievements } from '../../../lib/achievements/evaluateAchievements'
 
 const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
 const unitThemeDescription = (unitId: string, source: string) =>
@@ -192,6 +193,14 @@ export async function updateUnitStatus(
         : []),
     ],
   })
+
+  if (status === 'complete') {
+    await safeEvaluateAchievements(user.id, {
+      triggers: ['units_completed_total', 'models_completed_total'],
+      sourceType: 'unit_completed',
+      sourceId: unitId,
+    })
+  }
 
   revalidatePath(`/units/${unitId}`)
 
@@ -379,6 +388,18 @@ export async function endUnitSession(unitId: string) {
     ],
   })
 
+  await safeEvaluateAchievements(user.id, {
+    triggers: [
+      'painting_sessions_total',
+      'painting_minutes_total',
+      'painting_days_in_window',
+      'consecutive_painting_days',
+      'weekly_painting_streak',
+    ],
+    sourceType: 'painting_session_completed',
+    sourceId: updatedSession.id,
+  })
+
   revalidatePath(`/units/${unitId}`)
   perf.mark('revalidation duration')
   perf.total()
@@ -473,6 +494,18 @@ export async function logManualUnitSession(formData: FormData) {
     ],
   })
 
+  await safeEvaluateAchievements(user.id, {
+    triggers: [
+      'painting_sessions_total',
+      'painting_minutes_total',
+      'painting_days_in_window',
+      'consecutive_painting_days',
+      'weekly_painting_streak',
+    ],
+    sourceType: 'painting_session_logged',
+    sourceId: session.id,
+  })
+
   revalidatePath(`/units/${unitId}`)
 
   return session
@@ -510,6 +543,12 @@ export async function updateProgressStep(
       'organize_set_progress_stage',
       'update_unit_progress',
     ],
+  })
+
+  await safeEvaluateAchievements(user.id, {
+    triggers: ['progress_marks_total'],
+    sourceType: 'progress_step_updated',
+    sourceId: stepId,
   })
 
   revalidatePath(`/units/${unitId}`)
@@ -1019,6 +1058,12 @@ export async function uploadUnitGalleryImages(
       actionKeys: ['add_unit_image', 'add_session_progress_photo'],
     })
 
+    await safeEvaluateAchievements(user.id, {
+      triggers: ['progress_photos_total'],
+      sourceType: 'progress_photo_added',
+      sourceId: unitId,
+    })
+
     revalidatePath(`/units/${unitId}`)
     if (unit.project_id) {
       revalidatePath(`/projects/${unit.project_id}`)
@@ -1505,6 +1550,17 @@ export async function toggleStepDone(formData: FormData) {
     ],
   })
 
+  await safeEvaluateAchievements(user.id, {
+    triggers: [
+      'progress_marks_total',
+      ...(allVisibleDone
+        ? ['units_completed_total', 'models_completed_total']
+        : []),
+    ],
+    sourceType: 'progress_step_toggled',
+    sourceId: stepId,
+  })
+
   revalidatePath(`/units/${unitId}`)
 
   return {
@@ -1557,6 +1613,18 @@ export async function updateUnitSession(formData: FormData) {
     subjectUnitId: unitId,
     subjectSessionId: session.id,
     actionKeys: ['finish_first_session', 'organize_finish_session'],
+  })
+
+  await safeEvaluateAchievements(user.id, {
+    triggers: [
+      'painting_sessions_total',
+      'painting_minutes_total',
+      'painting_days_in_window',
+      'consecutive_painting_days',
+      'weekly_painting_streak',
+    ],
+    sourceType: 'painting_session_updated',
+    sourceId: session.id,
   })
 
   revalidatePath(`/units/${unitId}`)
@@ -2039,6 +2107,12 @@ export async function addPaintToStage(formData: FormData) {
     userId: user.id,
     subjectUnitId: unitId,
     actionKeys: ['add_unit_paints', 'use_project_palette'],
+  })
+
+  await safeEvaluateAchievements(user.id, {
+    triggers: ['unique_paints_used_in_progress_total'],
+    sourceType: 'progress_paint_added',
+    sourceId: stagePaint.id,
   })
 
   revalidatePath(`/units/${unitId}`)

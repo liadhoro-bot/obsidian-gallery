@@ -3,6 +3,7 @@
 import { createClient } from '../supabase/server'
 import { captureServerEvent } from '../analytics/server'
 import { completeOnboardingActions } from '../../lib/onboarding/completion'
+import { safeEvaluateAchievements } from '../../lib/achievements/evaluateAchievements'
 
 type OwnershipAction =
   | 'owned'
@@ -125,6 +126,12 @@ export async function updatePaintOwnership({
     await completeOnboardingActions({
       userId,
       actionKeys: ['mark_paints_owned', 'add_owned_paints'],
+    })
+
+    await safeEvaluateAchievements(userId, {
+      triggers: ['paints_catalogued_total'],
+      sourceType: 'paint_ownership_added',
+      sourceId: paintCatalogId,
     })
   }
 

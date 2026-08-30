@@ -16,6 +16,8 @@ export default async function ContestNonOwnerPreviewPage() {
   if (!user) redirect('/login')
 
   const canCreateContests = await isCurrentUserAdmin(user.id)
+  if (!canCreateContests) redirect('/contests')
+
   const contests = await getManageContests(user.id, canCreateContests)
   const previewContests = await Promise.all(
     contests.map(async (contest) => ({

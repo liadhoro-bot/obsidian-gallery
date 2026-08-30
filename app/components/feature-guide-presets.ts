@@ -60,10 +60,10 @@ export const communityFeatureGuides = [
 
 export const projectDetailFeatureGuides = [
   guide('projects.detail.page', 'Project Detail', 'Project Detail is the command page for one project: its image, notes, units, gallery, and add-unit workflow all live here.', 100),
-  guide('projects.detail.tabs.details', 'Project Details Tab', 'Project Details contains the project notes, stats, palette or theme information, and project gallery.', 110),
+  guide('projects.detail.tabs.details', 'Details Tab', 'Details contains the project notes, stats, palette or theme information, and project gallery.', 110),
   guide('projects.detail.tabs.units', 'Units Tab', 'Units lists the miniatures inside this project. Use this tab to open or resume a specific unit.', 120),
-  guide('projects.detail.tabs.add', 'Add Unit Tab', 'Add Unit creates a new miniature, squad, vehicle, or display piece directly inside this project.', 130),
   guide('projects.detail.units', 'Project Units', 'Project Units shows the project’s unit cards. The main card highlights the most recent or most active unit, and each card opens the unit page.', 140, 'top'),
+  guide('projects.detail.add_unit', 'Add Unit', 'Tap this button to add a new miniature, squad, vehicle, or display piece directly inside this project.', 150),
 ]
 
 export const unitDetailFeatureGuides = [

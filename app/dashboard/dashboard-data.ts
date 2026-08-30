@@ -8,6 +8,8 @@ import {
   getSessionUser,
 } from '../../utils/supabase/server'
 import { resolveOnboardingActionDestination } from '../../lib/onboarding/action-destinations'
+import { onboardingActionDefinitions } from '../../lib/onboarding/action-definitions'
+import { selectVisibleOnboardingActionBatch } from '../../lib/onboarding/action-batches'
 
 export type DashboardProfile = {
   avatar_url: string | null
@@ -100,6 +102,9 @@ export type DashboardMetadataSummary = {
   totalUnits: number
   recentUnits: number
   ownedColors: number
+  wishlistedPaints: number
+  ownedPaintBrands: number
+  ownedPaintUnits: number
   timeLogged: string
   averageSessionLength: string
   weeklySessions: string
@@ -107,9 +112,26 @@ export type DashboardMetadataSummary = {
   paintStreak: string
   totalLoggedSeconds: number
   averageSessionSeconds: number
+  longestSessionSeconds: number
+  longestSessionLength: string
+  paintingSessionsCount: number
+  activePaintingDays: number
   completedSessionsCount: number
+  completedUnits: number
+  modelsCompleted: number
+  collectionCompletedPercent: string
+  mostUsedPaint: string
+  paintingTimeBuckets: DashboardPaintingTimeBucket[]
   lastSessionAt: string | null
   paintStreakDays: number
+}
+
+export type DashboardPaintingTimeBucket = {
+  id: 'morning' | 'noon' | 'afternoon' | 'evening' | 'late-night'
+  label: string
+  count: number
+  percent: number
+  color: string
 }
 
 export type DashboardXpState = {
@@ -131,6 +153,49 @@ type DashboardMetricsRow = {
   paint_streak_days: number | null
 }
 
+type DashboardSessionMetricsRow = {
+  created_at: string | null
+  started_at?: string | null
+  duration_seconds: number | null
+}
+
+type DashboardUnitMetricsRow = {
+  id: string
+  status: DashboardStatus | null
+  model_count?: number | null
+}
+
+type DashboardOwnershipMetricsRow = {
+  paint_catalog_id: string | null
+  is_owned: boolean | null
+  is_wishlist: boolean | null
+  units_owned: number | null
+  paint?:
+    | {
+        brand: string | null
+      }[]
+    | {
+        brand: string | null
+      }
+    | null
+}
+
+type DashboardStagePaintMetricsRow = {
+  paint_catalog_id: string | null
+  catalog_paint?:
+    | {
+        name: string | null
+        brand: string | null
+        line: string | null
+      }[]
+    | {
+        name: string | null
+        brand: string | null
+        line: string | null
+      }
+    | null
+}
+
 type UserOnboardingFlowRow = {
   flow_name: string | null
   subject_unit_id?: string | null
@@ -148,6 +213,7 @@ type OnboardingActionFlowRow = {
 
 type OnboardingFlowActionRow = {
   id: string
+  action_key?: string | null
   action_label: string | null
   action_order: number | null
   breadcrumb: string | null
@@ -162,6 +228,25 @@ type OnboardingActionCompletionRow = {
   flow_action_id: string
   completed_at: string
 }
+
+const canonicalOnboardingActionsByFlowKey = new Map(
+  onboardingActionDefinitions.map((action) => [
+    `${action.flowName}:${action.actionKey}`,
+    action,
+  ])
+)
+
+const legacyOnboardingActionKeys = new Map([
+  ['paint_miniature:add_or_photograph_miniature', 'create_unit'],
+  ['paint_miniature:choose_beginner_guide', 'choose_unit_guide'],
+  ['paint_miniature:complete_first_painting_step', 'set_unit_progress_stage'],
+  ['organize_hobby:create_first_project', 'create_project'],
+  ['organize_hobby:add_unit_to_bench', 'add_unit_to_active_bench'],
+  ['organize_hobby:mark_owned_paints', 'add_owned_paints'],
+  ['create_content:create_custom_guide', 'create_guide'],
+  ['create_content:add_showcase_photos', 'add_guide_cover'],
+  ['create_content:share_completed_unit', 'finish_first_guide'],
+])
 
 export type DashboardNextActionItem = {
   id: string
@@ -214,6 +299,13 @@ const DASHBOARD_PROGRESS_STEP_KEYS = [
   'fine_details',
   'base_rim',
 ] as const
+const DASHBOARD_PAINTING_TIME_BUCKETS: DashboardPaintingTimeBucket[] = [
+  { id: 'morning', label: 'Morning', count: 0, percent: 0, color: '#b96d3f' },
+  { id: 'noon', label: 'Noon', count: 0, percent: 0, color: '#c99a55' },
+  { id: 'afternoon', label: 'Afternoon', count: 0, percent: 0, color: '#8f7a45' },
+  { id: 'evening', label: 'Evening', count: 0, percent: 0, color: '#526d72' },
+  { id: 'late-night', label: 'Late-night', count: 0, percent: 0, color: '#39445e' },
+] as const
 
 function isMissingOnboardingMilestoneColumn(error: { code?: string; message?: string } | null) {
   if (!error) return false
@@ -259,6 +351,14 @@ function formatWeeklySessions(value: number) {
   return `${value.toFixed(value >= 10 ? 0 : 1)}/wk`
 }
 
+function formatCompletionPercent(completed: number, total: number) {
+  if (total <= 0) {
+    return '0%'
+  }
+
+  return `${Math.round((completed / total) * 100)}%`
+}
+
 function formatTimeSince(dateString: string | null) {
   if (!dateString) {
     return '-'
@@ -292,6 +392,172 @@ function getDateKeyInTimezone(date: Date, timeZone: string) {
   const day = parts.find((part) => part.type === 'day')?.value
 
   return `${year}-${month}-${day}`
+}
+
+function getHourInTimezone(date: Date, timeZone: string) {
+  const hourPart = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    hour12: false,
+    timeZone,
+  })
+    .formatToParts(date)
+    .find((part) => part.type === 'hour')?.value
+
+  const hour = Number(hourPart)
+  return Number.isFinite(hour) ? hour : 0
+}
+
+function getSessionTimestamp(session: DashboardSessionMetricsRow) {
+  return session.started_at ?? session.created_at
+}
+
+function getPaintingTimeBucketId(hour: number): DashboardPaintingTimeBucket['id'] {
+  if (hour >= 5 && hour < 12) return 'morning'
+  if (hour >= 12 && hour < 14) return 'noon'
+  if (hour >= 14 && hour < 17) return 'afternoon'
+  if (hour >= 17 && hour < 22) return 'evening'
+  return 'late-night'
+}
+
+function getPaintingTimeBuckets(
+  sessions: DashboardSessionMetricsRow[],
+  timeZone: string
+) {
+  const counts = new Map<DashboardPaintingTimeBucket['id'], number>()
+  const datedSessions = sessions.filter((session) => Boolean(getSessionTimestamp(session)))
+
+  for (const session of datedSessions) {
+    const timestamp = getSessionTimestamp(session)
+    if (!timestamp) continue
+
+    const bucketId = getPaintingTimeBucketId(
+      getHourInTimezone(new Date(timestamp), timeZone)
+    )
+    counts.set(bucketId, (counts.get(bucketId) ?? 0) + 1)
+  }
+
+  return DASHBOARD_PAINTING_TIME_BUCKETS.map((bucket) => {
+    const count = counts.get(bucket.id) ?? 0
+
+    return {
+      ...bucket,
+      count,
+      percent: datedSessions.length
+        ? Math.round((count / datedSessions.length) * 100)
+        : 0,
+    }
+  })
+}
+
+function getFirstRelation<T>(value: T | T[] | null | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value ?? null
+}
+
+function formatPaintName(
+  paint: { name: string | null; brand: string | null; line: string | null } | null
+) {
+  if (!paint?.name) {
+    return null
+  }
+
+  return paint.brand ? `${paint.brand} ${paint.name}` : paint.name
+}
+
+function getMostUsedPaint(stagePaintRows: DashboardStagePaintMetricsRow[]) {
+  const paintCounts = new Map<
+    string,
+    {
+      count: number
+      label: string
+    }
+  >()
+
+  for (const row of stagePaintRows) {
+    if (!row.paint_catalog_id) continue
+
+    const label = formatPaintName(getFirstRelation(row.catalog_paint))
+
+    if (!label) continue
+
+    const current = paintCounts.get(row.paint_catalog_id)
+    paintCounts.set(row.paint_catalog_id, {
+      count: (current?.count ?? 0) + 1,
+      label,
+    })
+  }
+
+  return (
+    [...paintCounts.values()].sort((first, second) => second.count - first.count)[0]
+      ?.label ?? '-'
+  )
+}
+
+function buildDashboardSupplementalMetrics({
+  sessions,
+  units,
+  ownershipRows,
+  stagePaintRows,
+}: {
+  sessions: DashboardSessionMetricsRow[]
+  units: DashboardUnitMetricsRow[]
+  ownershipRows: DashboardOwnershipMetricsRow[]
+  stagePaintRows: DashboardStagePaintMetricsRow[]
+}) {
+  const completedSessions = sessions.filter(
+    (session) => (session.duration_seconds ?? 0) > 0
+  )
+  const activeDayKeys = new Set(
+    completedSessions
+      .map((session) => {
+        const timestamp = getSessionTimestamp(session)
+        return timestamp
+          ? getDateKeyInTimezone(new Date(timestamp), DASHBOARD_TIMEZONE)
+          : null
+      })
+      .filter((dayKey): dayKey is string => Boolean(dayKey))
+  )
+  const completedUnits = units.filter((unit) => unit.status === 'complete')
+  const ownedRows = ownershipRows.filter((row) => row.is_owned === true)
+  const ownedPaintBrands = new Set(
+    ownedRows
+      .map((row) => getFirstRelation(row.paint)?.brand?.trim())
+      .filter((brand): brand is string => Boolean(brand))
+  )
+
+  return {
+    totalUnits: units.length,
+    completedUnits: completedUnits.length,
+    modelsCompleted: completedUnits.reduce(
+      (sum, unit) => sum + Math.max(1, unit.model_count ?? 1),
+      0
+    ),
+    collectionCompletedPercent: formatCompletionPercent(
+      completedUnits.length,
+      units.length
+    ),
+    paintingSessionsCount: completedSessions.length,
+    activePaintingDays: activeDayKeys.size,
+    longestSessionSeconds: Math.max(
+      0,
+      ...completedSessions.map((session) => session.duration_seconds ?? 0)
+    ),
+    wishlistedPaints: ownershipRows.filter((row) => row.is_wishlist === true)
+      .length,
+    ownedPaintBrands: ownedPaintBrands.size,
+    ownedPaintUnits: ownedRows.reduce(
+      (sum, row) => sum + Math.max(1, row.units_owned ?? 1),
+      0
+    ),
+    mostUsedPaint: getMostUsedPaint(stagePaintRows),
+    paintingTimeBuckets: getPaintingTimeBuckets(
+      completedSessions,
+      DASHBOARD_TIMEZONE
+    ),
+  }
 }
 
 function getPaintStreak(
@@ -773,7 +1039,14 @@ export const getDashboardPaintingTableFeed = cache(async (userId: string) => {
 
 export const getDashboardMetadataSummary = cache(async (userId: string) => {
   const supabase = await createClient()
-  const [metricsResult, completedSessionsResult] = await Promise.all([
+  const [
+    metricsResult,
+    completedSessionsResult,
+    unitsResult,
+    ownershipResult,
+    sessionsResult,
+    stagePaintsResult,
+  ] = await Promise.all([
     supabase
       .from('dashboard_user_metrics')
       .select(
@@ -786,15 +1059,62 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .gt('duration_seconds', 0),
+    supabase
+      .from('units')
+      .select('id, status, model_count')
+      .eq('user_id', userId),
+    supabase
+      .from('user_paint_ownership')
+      .select(
+        `
+        paint_catalog_id,
+        is_owned,
+        is_wishlist,
+        units_owned,
+        paint:paint_catalog (
+          brand
+        )
+      `
+      )
+      .eq('user_id', userId),
+    supabase
+      .from('unit_sessions')
+      .select('duration_seconds, created_at, started_at')
+      .eq('user_id', userId)
+      .gt('duration_seconds', 0)
+      .order('started_at', { ascending: false }),
+    supabase
+      .from('unit_stage_paints')
+      .select(
+        `
+        paint_catalog_id,
+        catalog_paint:paint_catalog (
+          name,
+          brand,
+          line
+        )
+      `
+      )
+      .eq('user_id', userId)
+      .not('paint_catalog_id', 'is', null),
   ])
   const metricsRow = metricsResult.data
   const completedSessionsCount = completedSessionsResult.count ?? 0
+  const supplementalMetrics = buildDashboardSupplementalMetrics({
+    sessions: (sessionsResult.data ?? []) as DashboardSessionMetricsRow[],
+    units: (unitsResult.data ?? []) as DashboardUnitMetricsRow[],
+    ownershipRows: (ownershipResult.data ?? []) as DashboardOwnershipMetricsRow[],
+    stagePaintRows: (stagePaintsResult.data ?? []) as DashboardStagePaintMetricsRow[],
+  })
 
   if (metricsRow) {
     return {
       totalUnits: metricsRow.total_units ?? 0,
       recentUnits: metricsRow.recent_units ?? 0,
       ownedColors: metricsRow.owned_colors ?? 0,
+      wishlistedPaints: supplementalMetrics.wishlistedPaints,
+      ownedPaintBrands: supplementalMetrics.ownedPaintBrands,
+      ownedPaintUnits: supplementalMetrics.ownedPaintUnits,
       timeLogged: formatDuration(metricsRow.total_logged_seconds ?? 0),
       averageSessionLength: formatSessionLength(
         metricsRow.average_session_seconds ?? 0
@@ -806,7 +1126,21 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
       paintStreak: `${metricsRow.paint_streak_days ?? 0}d`,
       totalLoggedSeconds: metricsRow.total_logged_seconds ?? 0,
       averageSessionSeconds: metricsRow.average_session_seconds ?? 0,
+      longestSessionSeconds: supplementalMetrics.longestSessionSeconds,
+      longestSessionLength: formatSessionLength(
+        supplementalMetrics.longestSessionSeconds
+      ),
+      paintingSessionsCount: completedSessionsCount,
+      activePaintingDays: supplementalMetrics.activePaintingDays,
       completedSessionsCount,
+      completedUnits: supplementalMetrics.completedUnits,
+      modelsCompleted: supplementalMetrics.modelsCompleted,
+      collectionCompletedPercent: formatCompletionPercent(
+        supplementalMetrics.completedUnits,
+        metricsRow.total_units ?? supplementalMetrics.totalUnits
+      ),
+      mostUsedPaint: supplementalMetrics.mostUsedPaint,
+      paintingTimeBuckets: supplementalMetrics.paintingTimeBuckets,
       lastSessionAt: metricsRow.last_session_at,
       paintStreakDays: metricsRow.paint_streak_days ?? 0,
     } satisfies DashboardMetadataSummary
@@ -819,7 +1153,6 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
     totalUnitsResult,
     recentUnitsResult,
     ownedColorsResult,
-    sessionsResult,
   ] = await Promise.all([
     supabase
       .from('units')
@@ -835,16 +1168,12 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
       .select('paint_catalog_id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_owned', true),
-    supabase
-      .from('unit_sessions')
-      .select('duration_seconds, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false }),
   ])
 
   const sessions =
     (sessionsResult.data ?? []) as Array<{
       created_at: string | null
+      started_at?: string | null
       duration_seconds: number | null
     }>
 
@@ -883,6 +1212,9 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
     totalUnits: totalUnitsResult.count ?? 0,
     recentUnits: recentUnitsResult.count ?? 0,
     ownedColors: ownedColorsResult.count ?? 0,
+    wishlistedPaints: supplementalMetrics.wishlistedPaints,
+    ownedPaintBrands: supplementalMetrics.ownedPaintBrands,
+    ownedPaintUnits: supplementalMetrics.ownedPaintUnits,
     timeLogged: formatDuration(totalSeconds),
     averageSessionLength: formatSessionLength(averageSessionSeconds),
     weeklySessions: formatWeeklySessions(averageSessionsPerWeek),
@@ -890,7 +1222,18 @@ export const getDashboardMetadataSummary = cache(async (userId: string) => {
     paintStreak: getPaintStreak(sessions, DASHBOARD_TIMEZONE),
     totalLoggedSeconds: totalSeconds,
     averageSessionSeconds,
+    longestSessionSeconds: supplementalMetrics.longestSessionSeconds,
+    longestSessionLength: formatSessionLength(
+      supplementalMetrics.longestSessionSeconds
+    ),
+    paintingSessionsCount: completedSessions.length,
+    activePaintingDays: supplementalMetrics.activePaintingDays,
     completedSessionsCount: completedSessions.length,
+    completedUnits: supplementalMetrics.completedUnits,
+    modelsCompleted: supplementalMetrics.modelsCompleted,
+    collectionCompletedPercent: supplementalMetrics.collectionCompletedPercent,
+    mostUsedPaint: supplementalMetrics.mostUsedPaint,
+    paintingTimeBuckets: supplementalMetrics.paintingTimeBuckets,
     lastSessionAt,
     paintStreakDays:
       Number.parseInt(getPaintStreak(sessions, DASHBOARD_TIMEZONE), 10) || 0,
@@ -936,7 +1279,7 @@ export const getDashboardNextActions = cache(async (userId: string) => {
     supabase
       .from('onboarding_flow_actions')
       .select(
-        'id, action_label, action_order, breadcrumb, ref_page, ref_component, milestone_key, milestone_label, milestone_order'
+        'id, action_key, action_label, action_order, breadcrumb, ref_page, ref_component, milestone_key, milestone_label, milestone_order'
       )
       .eq('flow_name', activeFlowName)
       .order('action_order', { ascending: true })
@@ -947,7 +1290,7 @@ export const getDashboardNextActions = cache(async (userId: string) => {
   if (isMissingOnboardingMilestoneColumn(actionsResult.error)) {
     const fallbackActionsResult = await supabase
       .from('onboarding_flow_actions')
-      .select('id, action_label, action_order, breadcrumb, ref_page, ref_component')
+      .select('id, action_key, action_label, action_order, breadcrumb, ref_page, ref_component')
       .eq('flow_name', activeFlowName)
       .order('action_order', { ascending: true })
 
@@ -983,21 +1326,40 @@ export const getDashboardNextActions = cache(async (userId: string) => {
   )
 
   const actions = actionRows.map((action) => {
-    const order = action.action_order ?? 1
-    const milestoneOrder = action.milestone_order ?? Math.ceil(order / 5)
-    const milestoneKey = action.milestone_key || `milestone_${milestoneOrder}`
+    const flowActionKey = action.action_key
+      ? `${activeFlowName}:${action.action_key}`
+      : null
+    const canonicalAction =
+      (flowActionKey
+        ? canonicalOnboardingActionsByFlowKey.get(flowActionKey)
+        : null) ??
+      (flowActionKey
+        ? canonicalOnboardingActionsByFlowKey.get(
+            `${activeFlowName}:${legacyOnboardingActionKeys.get(flowActionKey)}`
+          )
+        : null)
+    const order = canonicalAction?.actionOrder ?? action.action_order ?? 1
+    const milestoneOrder =
+      canonicalAction?.milestoneOrder ??
+      action.milestone_order ??
+      Math.ceil(order / 5)
+    const milestoneKey =
+      canonicalAction?.milestoneKey ??
+      action.milestone_key ??
+      `milestone_${milestoneOrder}`
     const milestoneLabel =
+      canonicalAction?.milestoneLabel ||
       action.milestone_label || `Milestone ${milestoneOrder}`
 
     return {
       id: action.id,
-      label: action.action_label || 'Next action',
+      label: canonicalAction?.actionLabel || action.action_label || 'Next action',
       order,
-      breadcrumb: action.breadcrumb || 'Dashboard',
+      breadcrumb: canonicalAction?.breadcrumb || action.breadcrumb || 'Dashboard',
       href: resolveOnboardingActionDestination(
         {
-          refPage: action.ref_page,
-          refComponent: action.ref_component,
+          refPage: canonicalAction?.refPage ?? action.ref_page,
+          refComponent: canonicalAction?.refComponent ?? action.ref_component,
         },
         {
           subjectUnitId: userFlow.subject_unit_id,
@@ -1011,11 +1373,8 @@ export const getDashboardNextActions = cache(async (userId: string) => {
       milestoneOrder,
       completedAt: completions.get(action.id) ?? null,
     } satisfies DashboardNextActionItem
-  })
-  const incompleteActions = actions.filter((action) => !action.completedAt)
-  const visibleActions = incompleteActions.length
-    ? incompleteActions.slice(0, 3)
-    : actions.slice(-3)
+  }).sort((first, second) => first.order - second.order)
+  const visibleActions = selectVisibleOnboardingActionBatch(actions, 3)
 
   const milestones = Array.from(
     visibleActions
@@ -1043,10 +1402,10 @@ export const getDashboardNextActions = cache(async (userId: string) => {
 
   return {
     flowName: activeFlowName,
-    title: flowResult.data?.title || 'Next actions',
-    description: flowResult.data?.description ?? null,
-    totalCount: actions.length,
-    completedCount: actions.filter((action) => action.completedAt).length,
+    title: 'Next Action',
+    description: null,
+    totalCount: Math.max(3, visibleActions.length),
+    completedCount: visibleActions.filter((action) => action.completedAt).length,
     actions: visibleActions,
     milestones,
   } satisfies DashboardNextActionsState

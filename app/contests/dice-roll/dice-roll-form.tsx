@@ -1,8 +1,13 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import SubmitButton from '../../components/SubmitButton'
-import { rollCampaignDice, type DiceRollState } from './actions'
+import {
+  rollCampaignDice,
+  type DiceRollState,
+  type DiceRollType,
+} from './actions'
+import styles from '../../../components/contests/contest-v3-silver.module.css'
 
 const initialDiceRollState: DiceRollState = {
   error: null,
@@ -19,7 +24,7 @@ function formatRollTime(value: string) {
 function RollResult({ state }: { state: DiceRollState }) {
   if (state.error) {
     return (
-      <div className="rounded-lg border border-red-400/30 bg-red-500/10 p-4 text-sm font-bold text-red-100">
+      <div className={styles.errorPanel}>
         {state.error}
       </div>
     )
@@ -30,56 +35,66 @@ function RollResult({ state }: { state: DiceRollState }) {
   }
 
   return (
-    <section className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-5">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200">
-        {state.result.duplicate ? 'Already recorded' : 'Roll recorded'}
+    <section className={styles.resultPanel}>
+      <p className={styles.eyebrow}>
+        {state.result.duplicate
+          ? `${state.result.rollType} already recorded`
+          : `${state.result.rollType} roll recorded`}
       </p>
-      <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-3 text-center">
-        <div className="rounded-lg border border-white/10 bg-black/25 p-4">
-          <div className="text-4xl font-black tabular-nums">{state.result.dieOne}</div>
-          <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/45">
+      <div className={styles.diceEquation}>
+        <div className={styles.dieBox}>
+          <div className={styles.dieValue}>{state.result.dieOne}</div>
+          <div className={styles.statLabel}>
             Die 1
           </div>
         </div>
-        <div className="text-2xl font-black text-white/45">+</div>
-        <div className="rounded-lg border border-white/10 bg-black/25 p-4">
-          <div className="text-4xl font-black tabular-nums">{state.result.dieTwo}</div>
-          <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/45">
-            Die 2
-          </div>
-        </div>
-        <div className="text-2xl font-black text-white/45">=</div>
-        <div className="rounded-lg border border-emerald-300/25 bg-emerald-300/10 p-4">
-          <div className="text-5xl font-black tabular-nums text-emerald-100">
+        {state.result.rollType === '2d6' && state.result.dieTwo ? (
+          <>
+            <div className={styles.operator}>+</div>
+            <div className={styles.dieBox}>
+              <div className={styles.dieValue}>{state.result.dieTwo}</div>
+              <div className={styles.statLabel}>
+                Die 2
+              </div>
+            </div>
+          </>
+        ) : null}
+        <div className={styles.operator}>=</div>
+        <div className={styles.totalBox}>
+          <div className={styles.totalValue}>
             {state.result.total}
           </div>
-          <div className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-200/70">
+          <div className={styles.statLabel}>
             Total
           </div>
         </div>
       </div>
-      <dl className="mt-4 grid gap-2 text-sm text-white/65 sm:grid-cols-2">
+      <dl className={styles.resultMetaGrid}>
         <div>
-          <dt className="font-bold text-white/40">Player</dt>
-          <dd className="font-bold text-white">{state.result.playerName}</dd>
+          <dt>Player</dt>
+          <dd>{state.result.playerName}</dd>
         </div>
         {state.result.appUsername ? (
           <div>
-            <dt className="font-bold text-white/40">App username</dt>
+            <dt>App username</dt>
             <dd>@{state.result.appUsername}</dd>
           </div>
         ) : null}
         <div>
-          <dt className="font-bold text-white/40">Reason</dt>
+          <dt>Reason</dt>
           <dd>{state.result.rollReason}</dd>
         </div>
         <div>
-          <dt className="font-bold text-white/40">Recorded</dt>
+          <dt>Rolled</dt>
+          <dd>{state.result.rollType}</dd>
+        </div>
+        <div>
+          <dt>Recorded</dt>
           <dd>{formatRollTime(state.result.createdAt)}</dd>
         </div>
       </dl>
       {state.result.duplicate ? (
-        <p className="mt-4 text-sm text-cyan-100/75">
+        <p className={styles.helperText}>
           This player name already has a roll for that reason, so the original saved result is
           shown.
         </p>
@@ -90,44 +105,69 @@ function RollResult({ state }: { state: DiceRollState }) {
 
 export default function DiceRollForm() {
   const [state, formAction] = useActionState(rollCampaignDice, initialDiceRollState)
+  const [rollType, setRollType] = useState<DiceRollType>('2d6')
 
   return (
-    <div className="space-y-5">
-      <form action={formAction} className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
-        <label className="block text-sm font-bold text-white/75" htmlFor="playerName">
-          Campaign player name
-        </label>
-        <input
-          id="playerName"
-          name="playerName"
-          type="text"
-          minLength={2}
-          maxLength={80}
-          required
-          autoComplete="name"
-          className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-base font-bold text-white outline-none transition focus:border-cyan-300/70"
-        />
-        <label className="mt-5 block text-sm font-bold text-white/75" htmlFor="rollReason">
-          Roll reason
-        </label>
-        <input
-          id="rollReason"
-          name="rollReason"
-          type="text"
-          minLength={3}
-          maxLength={160}
-          required
-          className="mt-2 w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-base font-bold text-white outline-none transition focus:border-cyan-300/70"
-          placeholder="Example: Skeleton Chariots, veteran abilities roll +2XP"
-        />
-        <p className="mt-3 text-sm text-white/50">
-          One saved 2d6 roll is allowed for each player name and reason. A new reason can be
-          rolled separately.
+    <div className={styles.formStack}>
+      <form action={formAction} className={styles.formPanel}>
+        <div className={styles.fieldGroup}>
+          <span className={styles.labelText}>Roll type</span>
+          <input type="hidden" name="rollType" value={rollType} />
+          <div className={styles.rollTypeChooser} role="group" aria-label="Roll type">
+            {(['1d6', '2d6'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={rollType === option}
+                className={styles.rollTypeOption}
+                onClick={() => setRollType(option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.labelText} htmlFor="playerName">
+            Campaign player name
+          </label>
+          <input
+            id="playerName"
+            name="playerName"
+            type="text"
+            minLength={2}
+            maxLength={80}
+            required
+            autoComplete="name"
+            className={styles.textInput}
+          />
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.labelText} htmlFor="rollReason">
+            Roll reason
+          </label>
+          <input
+            id="rollReason"
+            name="rollReason"
+            type="text"
+            minLength={3}
+            maxLength={160}
+            required
+            className={styles.textInput}
+            placeholder="Example: Skeleton Chariots, veteran abilities roll +2XP"
+          />
+        </div>
+
+        <p className={styles.helperText}>
+          One saved roll is allowed for each player name, reason, and roll type. A new reason
+          can be rolled separately.
         </p>
         <SubmitButton
-          idleText="Roll 2d6"
+          idleText={`Roll ${rollType}`}
           pendingText="Rolling..."
-          className="mt-5 w-full rounded-lg border border-cyan-300/30 bg-cyan-300 px-5 py-3 font-black text-slate-950 shadow-lg shadow-cyan-950/30"
+          className={styles.submitButton}
         />
       </form>
 

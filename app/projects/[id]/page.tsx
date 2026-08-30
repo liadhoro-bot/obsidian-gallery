@@ -755,7 +755,7 @@ async function getProjectDetailData({
       projectImagesError: null,
       stagesByUnitId: {},
       imagesByUnitId: {},
-      defaultTab: 'add' as ProjectDetailTab,
+      defaultTab: 'units' as ProjectDetailTab,
     }
   }
 
@@ -775,7 +775,7 @@ async function getProjectDetailData({
 
   const projectUnitIds = projectUnitIdsResult.ids
   const projectUnitCount = projectUnitIds.length
-  const defaultTab: ProjectDetailTab = projectUnitCount > 0 ? 'units' : 'add'
+  const defaultTab: ProjectDetailTab = 'units'
   const projectImagesError = activeTab === 'details' ? null : null
 
   if (activeTab === 'details') {
@@ -1005,9 +1005,7 @@ export default async function ProjectDetailPage({
   }
 
   const activeTab: ProjectDetailTab =
-    resolvedSearchParams.tab === 'details' ||
-    resolvedSearchParams.tab === 'units' ||
-    resolvedSearchParams.tab === 'add'
+    resolvedSearchParams.tab === 'details' || resolvedSearchParams.tab === 'units'
       ? resolvedSearchParams.tab
       : 'units'
 

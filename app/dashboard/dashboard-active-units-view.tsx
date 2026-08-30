@@ -1,12 +1,12 @@
 'use client'
 
 import Image from 'next/image'
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useState } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   OgButton,
-  OgIconButton,
   OgPlaque,
   OgProgressTrack,
 } from '@/src/components/v3'
@@ -17,6 +17,7 @@ import { findVisibleFeatureGuideIndex } from '../components/feature-guide-naviga
 import PrefetchLink from '../components/prefetch-link'
 import DashboardQuickActionStartButton from './dashboard-quick-action-start-button'
 import DashboardResumeButton from './dashboard-resume-button'
+import { setDashboardNextActionDone } from './actions'
 import type { DashboardFeatureGuide } from './feature-guide-types'
 import type {
   DashboardActiveUnitCardViewModel,
@@ -27,14 +28,11 @@ import type {
 import styles from './dashboard-og.module.css'
 
 type ActiveTab = 'profile' | 'painting-table'
-type DisplayMode = 'cards' | 'tiles'
 
 type StatusOption = {
   value: DashboardActiveUnitViewStatus
   label: string
 }
-
-const STORAGE_KEY = 'og_unit_view_mode'
 
 const statusOptions: StatusOption[] = [
   { value: 'active', label: 'Active' },
@@ -44,16 +42,11 @@ const statusOptions: StatusOption[] = [
   { value: 'other', label: 'Other' },
 ]
 
-function isDisplayMode(value: string | null): value is DisplayMode {
-  return value === 'cards' || value === 'tiles'
-}
-
 function HelpIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
       <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
       <path d="M12 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   )
 }
@@ -79,22 +72,6 @@ function ChevronIcon({ open = false }: { open?: boolean }) {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true" data-open={open}>
       <path d="m6 9 6 6 6-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-    </svg>
-  )
-}
-
-function TilesIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
-    </svg>
-  )
-}
-
-function CardsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
-      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
     </svg>
   )
 }
@@ -173,6 +150,7 @@ function DashboardHeader({
           aria-label="Show dashboard explanation"
           onClick={onHelp}
           data-feature-guide-target="dashboard.help"
+          data-feature-guide-launcher-button="true"
         >
           <HelpIcon />
         </button>
@@ -218,17 +196,59 @@ function DashboardTabs({ currentTab, onChange }: { currentTab: ActiveTab; onChan
 }
 
 function NextActionsObject({ nextActions }: { nextActions: NonNullable<DashboardActiveUnitsViewModel['nextActions']> | null }) {
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(true)
+  const [completionOverrides, setCompletionOverrides] = useState<
+    Map<string, boolean>
+  >(() => new Map())
+  const [isPending, startTransition] = useTransition()
 
   if (!nextActions) {
     return null
   }
 
   const isActionDone = (action: DashboardActiveUnitsNextActionViewModel) =>
-    Boolean(action.completedAt)
-  const completedCount = nextActions.completedCount
-  const totalCount = Math.max(1, nextActions.totalCount)
-  const progress = Math.round((completedCount / totalCount) * 100)
+    completionOverrides.get(action.id) ?? Boolean(action.completedAt)
+  const batchSize = 3
+  const completedCount = nextActions.actions.filter(isActionDone).length
+  const progress = Math.round((completedCount / batchSize) * 100)
+
+  function toggleAction(action: DashboardActiveUnitsNextActionViewModel) {
+    if (!nextActions?.canMutate) {
+      return
+    }
+
+    const nextDone = !isActionDone(action)
+
+    setCompletionOverrides((current) => {
+      const next = new Map(current)
+      next.set(action.id, nextDone)
+      return next
+    })
+
+    startTransition(async () => {
+      const result = await setDashboardNextActionDone(action.id, nextDone)
+
+      if (!result.ok) {
+        setCompletionOverrides((current) => {
+          const next = new Map(current)
+          next.set(action.id, !nextDone)
+          return next
+        })
+        return
+      }
+
+      const isBatchComplete =
+        nextDone &&
+        nextActions.actions.every((currentAction) =>
+          currentAction.id === action.id ? true : isActionDone(currentAction)
+        )
+
+      if (isBatchComplete) {
+        router.refresh()
+      }
+    })
+  }
 
   return (
     <section
@@ -248,8 +268,8 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
           <strong>{nextActions.title}</strong>
           <span>{nextActions.copy}</span>
         </span>
-        <span className={styles.nextActionProgress} aria-label={`${completedCount} of ${nextActions.totalCount} complete`}>
-          <span className={styles.nextActionCount}>{completedCount}/{nextActions.totalCount} complete</span>
+        <span className={styles.nextActionProgress} aria-label={`${completedCount} of ${batchSize} visible actions complete`}>
+          <span className={styles.nextActionCount}>{completedCount}/{batchSize} complete</span>
           <span className={styles.nextActionTrack} aria-hidden="true">
             <span style={{ width: `${progress}%` }} />
           </span>
@@ -260,19 +280,16 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
       </button>
 
       {isOpen ? (
-        <div className={styles.nextActionDrawer}>
-          {nextActions.description ? (
-            <p className={styles.nextActionDescription}>
-              {nextActions.description}
-            </p>
-          ) : null}
-
+        <div
+          className={styles.nextActionDrawer}
+          data-pending={isPending}
+        >
           {nextActions.milestones.map((milestone) => (
             <section key={milestone.key} className={styles.nextActionMilestone}>
               <div className={styles.nextActionMilestoneHeader}>
                 <strong>{milestone.label}</strong>
                 <span>
-                  {milestone.completedCount}/{milestone.totalCount} complete
+                  {milestone.actions.filter(isActionDone).length}/{milestone.totalCount} complete
                 </span>
               </div>
 
@@ -287,13 +304,21 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
                       data-active={action.isActive}
                       data-complete={isDone}
                     >
-                      <span
+                      <button
+                        type="button"
+                        onClick={() => toggleAction(action)}
                         className={styles.nextActionCheck}
                         data-done={isDone}
-                        aria-hidden="true"
+                        disabled={!nextActions.canMutate || isPending}
+                        aria-pressed={isDone}
+                        aria-label={
+                          isDone
+                            ? `Mark ${action.label} incomplete`
+                            : `Mark ${action.label} complete`
+                        }
                       >
                         <CheckIcon />
-                      </span>
+                      </button>
                       <div className={styles.nextActionRowText}>
                         <span data-done={isDone}>{action.label}</span>
                         <small>{action.breadcrumb}</small>
@@ -338,14 +363,8 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
       data-v3-dashboard-indicator="featured-unit"
       data-feature-guide-target="dashboard.featured_unit"
     >
-      <OgPlaque className={styles.panelPlaque}>Featured Unit</OgPlaque>
-      <PrefetchLink href={`/units/${unit.id}`} className={styles.featuredImageMount} aria-label={`Open ${unit.name}`}>
-        <span className={styles.featuredImageFrame}>
-          <MiniatureImage imageUrl={unit.imageUrl} name={unit.name} priority />
-        </span>
-      </PrefetchLink>
-
       <div className={styles.featuredDetails}>
+        <OgPlaque className={styles.featuredPlaque}>Featured Unit</OgPlaque>
         <div>
           <h2 className={styles.featuredTitle}>{unit.name}</h2>
           <p className={styles.featuredDescriptor}>{unit.descriptor}</p>
@@ -370,14 +389,20 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
           </span>
         </div>
       </div>
+
+      <PrefetchLink href={`/units/${unit.id}`} className={styles.featuredImageMount} aria-label={`Open ${unit.name}`}>
+        <span className={styles.featuredImageFrame}>
+          <MiniatureImage imageUrl={unit.imageUrl} name={unit.name} priority />
+        </span>
+      </PrefetchLink>
     </section>
   )
 }
 
-function ActiveUnitCard({ unit, mode }: { unit: DashboardActiveUnitCardViewModel; mode: DisplayMode }) {
+function ActiveUnitCard({ unit }: { unit: DashboardActiveUnitCardViewModel }) {
   return (
     <article
-      className={mode === 'tiles' ? styles.unitTile : styles.unitListCard}
+      className={styles.unitTile}
       data-v3-dashboard-indicator="active-unit"
     >
       <PrefetchLink href={`/units/${unit.id}`} className={styles.unitCardLink} aria-label={`Open ${unit.name}`}>
@@ -399,27 +424,34 @@ function ActiveUnitCard({ unit, mode }: { unit: DashboardActiveUnitCardViewModel
 function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[] }) {
   const [selectedStatus, setSelectedStatus] = useState<DashboardActiveUnitViewStatus>('active')
   const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false)
-  const [mode, setMode] = useState<DisplayMode>('tiles')
+  const [statusMenuPosition, setStatusMenuPosition] = useState<{ top: number; left: number } | null>(null)
+  const statusMenuWrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      const storedMode = window.localStorage.getItem(STORAGE_KEY)
-      if (isDisplayMode(storedMode)) setMode(storedMode)
-    }, 0)
-    return () => window.clearTimeout(timeoutId)
-  }, [])
+    if (!isStatusMenuOpen) {
+      return
+    }
 
-  function handleModeChange(nextMode: DisplayMode) {
-    setMode(nextMode)
-    window.localStorage.setItem(STORAGE_KEY, nextMode)
-    void import('../../utils/analytics/client').then(({ capturePostHog }) => {
-      void capturePostHog('display_mode_changed', {
-        entity: 'unit',
-        mode: nextMode,
-        surface: 'dashboard_active_bench',
-      })
-    })
-  }
+    function updatePosition() {
+      const rect = statusMenuWrapRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setStatusMenuPosition({ top: rect.bottom + 8, left: rect.left })
+    }
+
+    updatePosition()
+
+    function closeOnScrollOrResize() {
+      setIsStatusMenuOpen(false)
+      setStatusMenuPosition(null)
+    }
+
+    window.addEventListener('resize', closeOnScrollOrResize)
+    window.addEventListener('scroll', closeOnScrollOrResize, true)
+    return () => {
+      window.removeEventListener('resize', closeOnScrollOrResize)
+      window.removeEventListener('scroll', closeOnScrollOrResize, true)
+    }
+  }, [isStatusMenuOpen])
 
   const selectedOption = statusOptions.find((option) => option.value === selectedStatus) ?? statusOptions[0]
   const displayUnits = useMemo(
@@ -432,64 +464,70 @@ function ActiveUnitsPanel({ units }: { units: DashboardActiveUnitCardViewModel[]
       className={styles.activeUnitsPanel}
       data-feature-guide-target="dashboard.up_next.panel"
     >
-      <OgPlaque className={styles.panelPlaque}>Up Next</OgPlaque>
-      <div className={styles.activeUnitsControls}>
-          <div className={styles.statusMenuWrap}>
+      <div className={styles.activeUnitsHeader}>
+        <OgPlaque className={styles.activeUnitsPlaque}>Up Next</OgPlaque>
+        <div className={styles.activeUnitsControls}>
+          <div className={styles.statusMenuWrap} ref={statusMenuWrapRef}>
             <span className={styles.showingLabel}>Showing</span>
             <OgButton
               aria-expanded={isStatusMenuOpen}
               aria-haspopup="menu"
               aria-label={`Change unit status filter, currently ${selectedOption.label}`}
               className={styles.statusTrigger}
-              onClick={() => setIsStatusMenuOpen((open) => !open)}
+              onClick={() => {
+                if (isStatusMenuOpen) {
+                  setStatusMenuPosition(null)
+                }
+                setIsStatusMenuOpen((open) => !open)
+              }}
               size="compact"
               variant="primary"
             >
               {selectedOption.label}
               <ChevronIcon />
             </OgButton>
-            {isStatusMenuOpen ? (
-              <div className={styles.statusMenu} role="menu">
-                {statusOptions.map((option) => {
-                  const selected = option.value === selectedStatus
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={selected}
-                      data-selected={selected}
-                      className={styles.statusMenuItem}
-                      onClick={() => {
-                        setSelectedStatus(option.value)
-                        setIsStatusMenuOpen(false)
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  )
-                })}
-              </div>
-            ) : null}
+            {isStatusMenuOpen && statusMenuPosition && typeof document !== 'undefined'
+              ? createPortal(
+                  <div
+                    className={styles.statusMenu}
+                    role="menu"
+                    style={{ position: 'fixed', top: statusMenuPosition.top, left: statusMenuPosition.left }}
+                  >
+                    {statusOptions.map((option) => {
+                      const selected = option.value === selectedStatus
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={selected}
+                          data-selected={selected}
+                          className={styles.statusMenuItem}
+                          onClick={() => {
+                            setSelectedStatus(option.value)
+                            setIsStatusMenuOpen(false)
+                            setStatusMenuPosition(null)
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      )
+                    })}
+                  </div>,
+                  document.body
+                )
+              : null}
           </div>
-
-          <div className={styles.viewToggle} aria-label="Display mode">
-            <OgIconButton label="Show units as tiles" aria-pressed={mode === 'tiles'} className={styles.iconToggle} data-selected={mode === 'tiles'} onClick={() => handleModeChange('tiles')} size="compact">
-              <TilesIcon />
-            </OgIconButton>
-            <OgIconButton label="Show units as cards" aria-pressed={mode === 'cards'} className={styles.iconToggle} data-selected={mode === 'cards'} onClick={() => handleModeChange('cards')} size="compact">
-              <CardsIcon />
-            </OgIconButton>
-          </div>
+        </div>
       </div>
 
       {displayUnits.length > 0 ? (
         <div
-          className={mode === 'tiles' ? styles.unitGrid : styles.unitStack}
-          data-v3-dashboard-active-units-layout={mode === 'tiles' ? 'grid' : 'cards'}
+          className={styles.unitGrid}
+          data-v3-dashboard-active-units-layout="grid"
         >
           {displayUnits.map((unit) => (
-            <ActiveUnitCard key={unit.id} unit={unit} mode={mode} />
+            <ActiveUnitCard key={unit.id} unit={unit} />
           ))}
         </div>
       ) : (
@@ -565,6 +603,7 @@ export default function DashboardActiveUnitsView({
     <div
       className={styles.dashboardApp}
       data-v3-dashboard-indicator="root"
+      data-v3-dashboard-feed={source}
       data-v3-dashboard-source={source}
     >
       <V3PerfIndicator

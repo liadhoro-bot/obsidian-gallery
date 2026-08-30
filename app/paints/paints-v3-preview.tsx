@@ -1,6 +1,7 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
@@ -21,12 +22,15 @@ type PaintRecord = {
   swatchImageUrl?: string | null
   owned: boolean
   wish: boolean
+  colorMatchEnabled?: boolean
   notes: string
 }
 
 type PaintExportFormat = 'csv' | 'txt' | 'json' | 'pdf'
 type PaintOwnershipAction = 'owned' | 'wishlist'
 type PaintOwnershipState = Pick<PaintRecord, 'owned' | 'wish'>
+type PaintSortMode = 'name-asc' | 'name-desc' | 'brand-asc' | 'line-asc'
+type PaintViewMode = 'grid' | 'card'
 
 const fallbackPaints: PaintRecord[] = [
   {
@@ -248,6 +252,7 @@ const fallbackPaints: PaintRecord[] = [
 ]
 
 const pageSize = 9
+const colorMatchLimit = 24
 const defaultMatchColor = '#17c9d2'
 const paintExportOptions: {
   format: PaintExportFormat
@@ -273,6 +278,27 @@ const paintExportOptions: {
     format: 'pdf',
     label: 'PDF',
     description: 'Printable report in a new window.',
+  },
+]
+const paintSortOptions: {
+  value: PaintSortMode
+  label: string
+}[] = [
+  {
+    value: 'name-asc',
+    label: 'Name A-Z',
+  },
+  {
+    value: 'name-desc',
+    label: 'Name Z-A',
+  },
+  {
+    value: 'brand-asc',
+    label: 'Brand A-Z',
+  },
+  {
+    value: 'line-asc',
+    label: 'Line A-Z',
   },
 ]
 
@@ -309,6 +335,10 @@ function getColorDistance(firstHex: string, secondHex: string) {
     firstGreen - secondGreen,
     firstBlue - secondBlue
   )
+}
+
+function isUsableColorHex(hex: string | null | undefined) {
+  return Boolean(hex && /^#[0-9A-Fa-f]{6}$/.test(hex))
 }
 
 function escapeCsvValue(value: string | boolean) {
@@ -465,6 +495,46 @@ function applyPaintStateOverrides(
   }))
 }
 
+function uniqueSortedPaintValues(
+  paints: PaintRecord[],
+  getValue: (paint: PaintRecord) => string
+) {
+  return Array.from(new Set(paints.map(getValue).filter(Boolean))).sort(
+    (first, second) => first.localeCompare(second)
+  )
+}
+
+function sortPaintRecords(paints: PaintRecord[], sortMode: PaintSortMode) {
+  return [...paints].sort((first, second) => {
+    if (sortMode === 'name-desc') {
+      return second.name.localeCompare(first.name)
+    }
+
+    if (sortMode === 'brand-asc') {
+      return `${first.brand} ${first.name}`.localeCompare(
+        `${second.brand} ${second.name}`
+      )
+    }
+
+    if (sortMode === 'line-asc') {
+      return `${first.line} ${first.brand} ${first.name}`.localeCompare(
+        `${second.line} ${second.brand} ${second.name}`
+      )
+    }
+
+    return first.name.localeCompare(second.name)
+  })
+}
+
+function getBrandCode(brand: string) {
+  const normalizedBrand = brand
+    .replace(/^the\s+/i, '')
+    .replace(/[^a-z0-9 ]/gi, ' ')
+    .trim()
+
+  return (normalizedBrand || brand).slice(0, 3).toUpperCase()
+}
+
 type PaintsV3PreviewProps = {
   featureGuides?: FeatureGuideEntry[]
   initialPayload?: PaintsV3Payload
@@ -478,8 +548,40 @@ export default function PaintsV3Preview({
   const [query, setQuery] = useState('')
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [isSortOpen, setIsSortOpen] = useState(false)
   const [isMixOpen, setIsMixOpen] = useState(false)
   const [isExportOpen, setIsExportOpen] = useState(false)
+  const [sortMode, setSortMode] = useState<PaintSortMode>('name-asc')
+  const [viewMode, setViewMode] = useState<PaintViewMode>('grid')
+  const searchToolbarRef = useRef<HTMLElement>(null)
+  const [panelPosition, setPanelPosition] = useState<{ top: number; left: number; width: number } | null>(null)
+
+  useEffect(() => {
+    if (!isFilterOpen && !isSortOpen) {
+      setPanelPosition(null)
+      return
+    }
+
+    function updatePosition() {
+      const rect = searchToolbarRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setPanelPosition({ top: rect.bottom + 8, left: rect.left, width: rect.width })
+    }
+
+    updatePosition()
+
+    function closeOnScrollOrResize() {
+      setIsFilterOpen(false)
+      setIsSortOpen(false)
+    }
+
+    window.addEventListener('resize', closeOnScrollOrResize)
+    window.addEventListener('scroll', closeOnScrollOrResize, true)
+    return () => {
+      window.removeEventListener('resize', closeOnScrollOrResize)
+      window.removeEventListener('scroll', closeOnScrollOrResize, true)
+    }
+  }, [isFilterOpen, isSortOpen])
   const [brandFilter, setBrandFilter] = useState('all')
   const [lineFilter, setLineFilter] = useState('all')
   const [ownershipFilter, setOwnershipFilter] = useState('all')
@@ -516,16 +618,26 @@ export default function PaintsV3Preview({
     () => applyPaintStateOverrides(libraryBasePaints, paintStateOverrides),
     [libraryBasePaints, paintStateOverrides]
   )
-  const brandOptions =
-    initialPayload?.filters.brands.length
-      ? initialPayload.filters.brands
-      : ['WHC', 'VAL', 'TAP', 'AK']
-  const lineOptions =
-    initialPayload?.filters.lines.length
-      ? initialPayload.filters.lines
-      : ['Base', 'Technical', 'Game Color', 'Warpaints', 'Model Color', '3rd Gen', 'Shade']
-  const defaultSelectedPaintId = allPaints[7]?.id ?? allPaints[0]?.id ?? ''
-  const [selectedPaintId, setSelectedPaintId] = useState(defaultSelectedPaintId)
+  const activeFilterPaints = useMemo(
+    () =>
+      activeTab === 'owned'
+        ? allPaints.filter((paint) => paint.owned || paint.wish)
+        : libraryPaints,
+    [activeTab, allPaints, libraryPaints]
+  )
+  const brandOptions = useMemo(
+    () => uniqueSortedPaintValues(activeFilterPaints, (paint) => paint.brand),
+    [activeFilterPaints]
+  )
+  const lineOptions = useMemo(() => {
+    const lineSourcePaints =
+      brandFilter === 'all'
+        ? activeFilterPaints
+        : activeFilterPaints.filter((paint) => paint.brand === brandFilter)
+
+    return uniqueSortedPaintValues(lineSourcePaints, (paint) => paint.line)
+  }, [activeFilterPaints, brandFilter])
+  const [selectedPaintId, setSelectedPaintId] = useState<string | null>(null)
   const [mixName, setMixName] = useState('')
   const [mixBase, setMixBase] = useState(allPaints[0]?.name ?? '')
 
@@ -533,14 +645,21 @@ export default function PaintsV3Preview({
     performance.mark('v3-paints-hydrated')
   }, [])
 
+  useEffect(() => {
+    if (brandFilter !== 'all' && !brandOptions.includes(brandFilter)) {
+      setBrandFilter('all')
+    }
+  }, [brandFilter, brandOptions])
+
+  useEffect(() => {
+    if (lineFilter !== 'all' && !lineOptions.includes(lineFilter)) {
+      setLineFilter('all')
+    }
+  }, [lineFilter, lineOptions])
+
   const filteredPaints = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    const basePaints =
-      activeTab === 'owned'
-        ? allPaints.filter((paint) => paint.owned || paint.wish)
-        : libraryPaints
-
-    return basePaints.filter((paint) => {
+    const matchingPaints = activeFilterPaints.filter((paint) => {
       const matchesQuery =
         !normalizedQuery ||
         paint.name.toLowerCase().includes(normalizedQuery) ||
@@ -551,32 +670,45 @@ export default function PaintsV3Preview({
       const matchesOwnership =
         ownershipFilter === 'all' ||
         (ownershipFilter === 'owned' && paint.owned) ||
+        (ownershipFilter === 'unowned' && !paint.owned) ||
         (ownershipFilter === 'wishlist' && paint.wish)
       const matchesColorGroup =
         colorGroupFilter === 'all' ||
         getPaintColorGroup(paint.color) === colorGroupFilter
-      const matchesColor =
-        !matchColor || getColorDistance(paint.color, matchColor) < 150
 
       return (
         matchesQuery &&
         matchesBrand &&
         matchesLine &&
         matchesOwnership &&
-        matchesColorGroup &&
-        matchesColor
+        matchesColorGroup
       )
     })
+
+    if (matchColor && isUsableColorHex(matchColor)) {
+      return matchingPaints
+        .filter(
+          (paint) =>
+            paint.colorMatchEnabled !== false && isUsableColorHex(paint.color)
+        )
+        .sort(
+          (first, second) =>
+            getColorDistance(first.color, matchColor) -
+            getColorDistance(second.color, matchColor)
+        )
+        .slice(0, colorMatchLimit)
+    }
+
+    return sortPaintRecords(matchingPaints, sortMode)
   }, [
-    activeTab,
-    allPaints,
+    activeFilterPaints,
     brandFilter,
     colorGroupFilter,
-    libraryPaints,
     lineFilter,
     matchColor,
     ownershipFilter,
     query,
+    sortMode,
   ])
 
   const pageCount = Math.max(1, Math.ceil(filteredPaints.length / pageSize))
@@ -585,12 +717,16 @@ export default function PaintsV3Preview({
     normalizedPageIndex * pageSize,
     normalizedPageIndex * pageSize + pageSize
   )
-  const selectedPaint =
-    allPaints.find((paint) => paint.id === selectedPaintId) ??
-    filteredPaints[0] ??
-    allPaints[0]
+  const selectedPaint = selectedPaintId
+    ? allPaints.find((paint) => paint.id === selectedPaintId) ?? null
+    : null
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+
+  function resetPaintListState() {
+    setPageIndex(0)
+    setSelectedPaintId(null)
+  }
 
   function showPreviousPage() {
     setPageIndex((current) => (current === 0 ? pageCount - 1 : current - 1))
@@ -602,7 +738,10 @@ export default function PaintsV3Preview({
 
   function handleTabChange(nextTab: 'owned' | 'library') {
     setActiveTab(nextTab)
-    setPageIndex(0)
+    if (nextTab === 'library') {
+      setOwnershipFilter('all')
+    }
+    resetPaintListState()
   }
 
   function handleMixSubmit(event: FormEvent<HTMLFormElement>) {
@@ -715,11 +854,13 @@ export default function PaintsV3Preview({
           onCreate={() => {
             setActiveGuideIndex(null)
             setIsFilterOpen(false)
+            setIsSortOpen(false)
             setIsExportOpen(false)
             setIsMixOpen(true)
           }}
           onHelpToggle={() => {
             setIsFilterOpen(false)
+            setIsSortOpen(false)
             setIsExportOpen(false)
             setIsMixOpen(false)
             if (!featureGuides.length) return
@@ -768,9 +909,10 @@ export default function PaintsV3Preview({
 
         <section
           className="relative"
+          ref={searchToolbarRef}
           data-v3-paints-indicator="search-filter-toolbar"
         >
-          <div className="grid grid-cols-[1fr_auto] gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_64px_56px] gap-2">
             <label
               className="relative block"
               data-feature-guide-target="paints.search"
@@ -793,7 +935,7 @@ export default function PaintsV3Preview({
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value)
-                  setPageIndex(0)
+                  resetPaintListState()
                 }}
                 placeholder="Search by name or brand..."
                 className="h-12 w-full rounded-[8px] border border-white/10 bg-[#111821] pl-10 pr-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/28 focus:border-cyan-300/70"
@@ -806,36 +948,41 @@ export default function PaintsV3Preview({
               aria-controls="paint-filters"
               onClick={() => {
                 setActiveGuideIndex(null)
+                setIsSortOpen(false)
                 setIsExportOpen(false)
                 setIsFilterOpen((open) => !open)
               }}
-              className="flex h-12 items-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-4 text-xs font-black text-white/48 transition hover:text-cyan-300"
+              className="flex h-12 items-center justify-center rounded-[8px] border border-white/10 bg-[#111821] px-2 text-xs font-black text-white/48 transition hover:text-cyan-300"
               data-feature-guide-target="paints.filters"
             >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 5h18" />
-                <path d="M6 12h12" />
-                <path d="M10 19h4" />
-              </svg>
               Filter
+            </button>
+
+            <button
+              type="button"
+              aria-expanded={isSortOpen}
+              aria-controls="paint-sort-actions"
+              onClick={() => {
+                setActiveGuideIndex(null)
+                setIsFilterOpen(false)
+                setIsExportOpen(false)
+                setIsSortOpen((open) => !open)
+              }}
+              className="flex h-12 items-center justify-center rounded-[8px] border border-white/10 bg-[#111821] px-2 text-xs font-black text-white/48 transition hover:text-cyan-300"
+              data-feature-guide-target="paints.sort"
+            >
+              Sort
             </button>
           </div>
 
-          {isFilterOpen ? (
+          {isFilterOpen && panelPosition && typeof document !== 'undefined'
+            ? createPortal(
             <div
               id="paint-filters"
               data-v3-paints-indicator="filter-panel"
               data-feature-guide-target="paints.filters"
-              className="absolute inset-x-0 top-14 z-20 grid gap-4 rounded-[8px] border border-white/10 bg-[#071015] p-3 shadow-2xl shadow-black/45"
+              className="z-20 grid gap-4 rounded-[8px] border border-white/10 bg-[#071015] p-3 shadow-2xl shadow-black/45"
+              style={{ position: 'fixed', top: panelPosition.top, left: panelPosition.left, width: panelPosition.width }}
             >
               <div className="grid grid-cols-3 gap-3">
                 <label className="relative">
@@ -844,7 +991,8 @@ export default function PaintsV3Preview({
                     value={brandFilter}
                     onChange={(event) => {
                       setBrandFilter(event.target.value)
-                      setPageIndex(0)
+                      setLineFilter('all')
+                      resetPaintListState()
                     }}
                     className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
                   >
@@ -866,7 +1014,7 @@ export default function PaintsV3Preview({
                     value={lineFilter}
                     onChange={(event) => {
                       setLineFilter(event.target.value)
-                      setPageIndex(0)
+                      resetPaintListState()
                     }}
                     className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
                   >
@@ -888,12 +1036,13 @@ export default function PaintsV3Preview({
                     value={ownershipFilter}
                     onChange={(event) => {
                       setOwnershipFilter(event.target.value)
-                      setPageIndex(0)
+                      resetPaintListState()
                     }}
                     className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
                   >
-                    <option value="all">All</option>
+                    <option value="all">Ownership</option>
                     <option value="owned">Owned</option>
+                    <option value="unowned">Unowned</option>
                     <option value="wishlist">Wishlist</option>
                   </select>
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/70">
@@ -909,7 +1058,7 @@ export default function PaintsV3Preview({
                     value={colorGroupFilter}
                     onChange={(event) => {
                       setColorGroupFilter(event.target.value)
-                      setPageIndex(0)
+                      resetPaintListState()
                     }}
                     className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
                   >
@@ -941,17 +1090,18 @@ export default function PaintsV3Preview({
                     aria-hidden="true"
                     className="h-4 w-4 rounded-full border border-white/20"
                     style={{
-                      background:
-                        'conic-gradient(#f43f5e, #f59e0b, #22c55e, #06b6d4, #8b5cf6, #f43f5e)',
+                      background: matchColor
+                        ? matchColor
+                        : 'conic-gradient(#f43f5e, #f59e0b, #22c55e, #06b6d4, #8b5cf6, #f43f5e)',
                     }}
                   />
-                  Match a Color
+                  {matchColor ? 'Matching' : 'Match a Color'}
                   <input
                     type="color"
                     value={matchColor || defaultMatchColor}
                     onChange={(event) => {
                       setMatchColor(event.target.value)
-                      setPageIndex(0)
+                      resetPaintListState()
                     }}
                     className="absolute inset-0 cursor-pointer opacity-0"
                     aria-label="Match a color"
@@ -966,93 +1116,146 @@ export default function PaintsV3Preview({
                     setOwnershipFilter('all')
                     setColorGroupFilter('all')
                     setMatchColor('')
-                    setPageIndex(0)
+                    resetPaintListState()
                   }}
                   className="h-11 rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 text-sm font-black text-white transition hover:border-cyan-300/55 hover:text-cyan-200"
                 >
                   Clear
                 </button>
               </div>
-            </div>
-          ) : null}
-        </section>
+            </div>,
+              document.body
+            )
+            : null}
 
-        <section
-          className="grid grid-cols-[1fr_auto_auto] gap-2"
-          data-v3-paints-indicator="actions-toolbar"
-        >
-          <button className="flex h-9 items-center justify-between rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/45">
-            Name A-Z
-            <span className="text-white/28">v</span>
-          </button>
-
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded={isExportOpen}
-            onClick={() => {
-              setActiveGuideIndex(null)
-              setIsFilterOpen(false)
-              setIsExportOpen(true)
-            }}
-            className="flex h-9 items-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/48 transition hover:border-cyan-300/45 hover:text-cyan-300"
-            data-feature-guide-target="paints.export"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {isSortOpen && panelPosition && typeof document !== 'undefined'
+            ? createPortal(
+            <div
+              id="paint-sort-actions"
+              data-v3-paints-indicator="sort-panel"
+              className="z-20 grid gap-3 rounded-[8px] border border-white/10 bg-[#071015] p-3 shadow-2xl shadow-black/45"
+              style={{ position: 'fixed', top: panelPosition.top, left: panelPosition.left, width: panelPosition.width }}
             >
-              <path d="M12 3v12" />
-              <path d="m7 10 5 5 5-5" />
-              <path d="M5 21h14" />
-            </svg>
-            Export
-          </button>
+              <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-2">
+                <label className="relative">
+                  <span className="sr-only">Sort paints</span>
+                  <select
+                    value={sortMode}
+                    onChange={(event) => {
+                      setSortMode(event.target.value as PaintSortMode)
+                      resetPaintListState()
+                    }}
+                    className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
+                  >
+                    {paintSortOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/70">
+                    v
+                  </span>
+                </label>
 
-          <div
-            className="flex h-9 rounded-[8px] border border-white/10 bg-[#111821] p-1"
-            data-v3-paints-indicator="view-toggle"
-          >
-            <span
-              className="grid w-8 place-items-center rounded-[6px] bg-cyan-300/10 text-cyan-300"
-              data-active="true"
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+                <div
+                  className="flex h-11 w-full rounded-[8px] border border-white/10 bg-[#111821] p-1"
+                  data-v3-paints-indicator="view-toggle"
+                  role="group"
+                  aria-label="Paint view"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={viewMode === 'grid'}
+                    onClick={() => setViewMode('grid')}
+                    className={[
+                      'grid flex-1 place-items-center rounded-[6px] transition',
+                      viewMode === 'grid'
+                        ? 'bg-cyan-300/10 text-cyan-300'
+                        : 'text-white/28 hover:text-white/60',
+                    ].join(' ')}
+                    data-active={viewMode === 'grid' ? 'true' : undefined}
+                  >
+                    <span className="sr-only">Grid view</span>
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={viewMode === 'card'}
+                    onClick={() => setViewMode('card')}
+                    className={[
+                      'grid flex-1 place-items-center rounded-[6px] transition',
+                      viewMode === 'card'
+                        ? 'bg-cyan-300/10 text-cyan-300'
+                        : 'text-white/28 hover:text-white/60',
+                    ].join(' ')}
+                    data-active={viewMode === 'card' ? 'true' : undefined}
+                  >
+                    <span className="sr-only">Card view</span>
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={isExportOpen}
+                onClick={() => {
+                  setActiveGuideIndex(null)
+                  setIsFilterOpen(false)
+                  setIsSortOpen(false)
+                  setIsExportOpen(true)
+                }}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/48 transition hover:border-cyan-300/45 hover:text-cyan-300"
+                data-feature-guide-target="paints.export"
               >
-                <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
-              </svg>
-            </span>
-            <span className="grid w-8 place-items-center text-white/28">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-              </svg>
-            </span>
-          </div>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 3v12" />
+                  <path d="m7 10 5 5 5-5" />
+                  <path d="M5 21h14" />
+                </svg>
+                Export
+              </button>
+            </div>,
+              document.body
+            )
+            : null}
         </section>
 
         <section className="relative pr-8">
           {visiblePaints.length > 0 ? (
             <div
-              className="grid grid-cols-3 gap-2"
+              className={
+                viewMode === 'grid' ? 'grid grid-cols-3 gap-2' : 'grid gap-2'
+              }
               aria-label="Paint swatches"
               data-feature-guide-target="paints.swatch_grid"
               data-v3-paints-indicator={
@@ -1060,12 +1263,21 @@ export default function PaintsV3Preview({
               }
             >
               {visiblePaints.map((paint) => (
-                <PaintSwatch
-                  key={paint.id}
-                  paint={paint}
-                  isSelected={paint.id === selectedPaint?.id}
-                  onSelect={() => setSelectedPaintId(paint.id)}
-                />
+                viewMode === 'grid' ? (
+                  <PaintSwatch
+                    key={paint.id}
+                    paint={paint}
+                    isSelected={paint.id === selectedPaintId}
+                    onSelect={() => setSelectedPaintId(paint.id)}
+                  />
+                ) : (
+                  <PaintCard
+                    key={paint.id}
+                    paint={paint}
+                    isSelected={paint.id === selectedPaintId}
+                    onSelect={() => setSelectedPaintId(paint.id)}
+                  />
+                )
               ))}
             </div>
           ) : (
@@ -1118,7 +1330,9 @@ export default function PaintsV3Preview({
             togglePaintOwnershipState(selectedPaint, 'wishlist')
           }
         />
-      ) : null}
+      ) : (
+        <PaintInfoEmptyPanel />
+      )}
 
       {isExportOpen ? (
         <div className="fixed inset-0 z-[60] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
@@ -1312,11 +1526,11 @@ function TopNav({
           aria-label="About paint vault"
           onClick={onHelpToggle}
           data-feature-guide-target="paints.help"
+          data-feature-guide-launcher-button="true"
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
             <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
             <path d="M12 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
-            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
           </svg>
         </button>
         <button
@@ -1393,15 +1607,108 @@ function PaintSwatch({
           )}
         </span>
       )}
-      <span className="absolute inset-x-0 bottom-0 p-2">
-        <span className="line-clamp-2 text-[11px] font-black leading-tight text-white">
+      <span className="absolute inset-x-0 bottom-0 top-[39%] grid min-h-0 grid-rows-[1fr_auto] overflow-hidden p-2">
+        <span className="block min-w-0 truncate text-[11px] font-black leading-tight text-white">
           {paint.name}
         </span>
-        <span className="mt-2 block text-[8px] font-black uppercase tracking-[0.13em] text-white/36">
-          {paint.brand}
+        <span className="mt-1 flex min-w-0 items-center gap-1 overflow-hidden text-[8px] font-black uppercase tracking-[0.08em] text-white/36">
+          <span className="shrink-0">{getBrandCode(paint.brand)}</span>
+          <span className="text-white/24">/</span>
+          <span className="min-w-0 truncate">{paint.line}</span>
         </span>
       </span>
     </button>
+  )
+}
+
+function PaintCard({
+  isSelected,
+  onSelect,
+  paint,
+}: {
+  isSelected: boolean
+  onSelect: () => void
+  paint: PaintRecord
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={isSelected}
+      data-v3-paints-indicator="paint-card"
+      className={[
+        'grid min-h-[76px] grid-cols-[52px_1fr_auto] items-center gap-3 rounded-[8px] border bg-[#111821] p-2 text-left transition',
+        isSelected
+          ? 'border-cyan-300/75 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]'
+          : 'border-white/[0.055] hover:border-cyan-300/45',
+      ].join(' ')}
+    >
+      <span
+        className="relative h-12 w-12 overflow-hidden rounded-[8px] border border-white/10"
+        style={{ backgroundColor: paint.color }}
+      >
+        {paint.swatchImageUrl ? (
+          <Image
+            src={paint.swatchImageUrl}
+            alt=""
+            fill
+            sizes="52px"
+            className="object-cover"
+          />
+        ) : null}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-black text-white">
+          {paint.name}
+        </span>
+        <span className="mt-1 flex min-w-0 items-center gap-1 overflow-hidden text-[10px] font-black uppercase tracking-[0.1em] text-white/36">
+          <span className="shrink-0">{getBrandCode(paint.brand)}</span>
+          <span className="text-white/24">/</span>
+          <span className="min-w-0 truncate">{paint.line}</span>
+        </span>
+      </span>
+      <span className="grid justify-items-end gap-1 text-[9px] font-black text-white/34">
+        <span>{paint.finish}</span>
+        <span>{paint.size}</span>
+      </span>
+    </button>
+  )
+}
+
+function PaintInfoEmptyPanel() {
+  return (
+    <aside
+      className="fixed inset-x-2 bottom-16 z-40 mx-auto max-w-md overflow-hidden rounded-[8px] border border-cyan-300/18 bg-[#10161d]/96 shadow-2xl shadow-black/50 backdrop-blur"
+      data-v3-paints-indicator="paint-info-panel"
+      data-feature-guide-target="paints.paint_info_panel"
+    >
+      <div className="grid min-h-[118px] grid-cols-[64px_1fr]">
+        <div className="grid place-items-center bg-black/10 px-2 text-center">
+          <span className="text-[9px] font-black uppercase tracking-[0.08em] text-white/38">
+            Paint Preview
+          </span>
+        </div>
+        <div className="min-w-0 p-3">
+          <h2 className="text-sm font-black uppercase text-white">
+            Paint Detail Pane
+          </h2>
+          <p className="mt-1 text-[10px] font-bold text-white/36">
+            Select a paint
+          </p>
+
+          <div className="mt-3 grid grid-cols-4 gap-2 text-[9px] font-black text-white/34">
+            <InfoPair label="Brand" value="-" />
+            <InfoPair label="Line" value="-" />
+            <InfoPair label="Finish" value="-" />
+            <InfoPair label="Size" value="-" />
+          </div>
+
+          <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-white/46">
+            Click a paint card to preview color, ownership, finish, and notes.
+          </p>
+        </div>
+      </div>
+    </aside>
   )
 }
 

@@ -19,6 +19,7 @@ playwright-report/
 .codex/
 .claude/
 .codex-remote-attachments/
+_prodrestore/
 downloads/
 debug.log
 perf-debug-flows.log

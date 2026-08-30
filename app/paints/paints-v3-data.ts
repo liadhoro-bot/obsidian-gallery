@@ -1,7 +1,6 @@
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
-import { getCachedCatalogFilterRows } from '../../lib/public-cache'
 
 export type PaintsV3Paint = {
   id: string
@@ -14,6 +13,7 @@ export type PaintsV3Paint = {
   swatchImageUrl: string | null
   owned: boolean
   wish: boolean
+  colorMatchEnabled: boolean
   notes: string
 }
 
@@ -41,6 +41,7 @@ type CatalogPaintRow = {
   hex_approx: string | null
   swatch_image_url: string | null
   paint_type: string | null
+  color_match_enabled: boolean | null
 }
 
 type CustomPaintRow = {
@@ -63,7 +64,7 @@ type CollectionOwnershipRow = OwnershipRow & {
 }
 
 const collectionLimit = 72
-const libraryLimit = 1000
+const libraryPageSize = 1000
 const customLimit = 36
 const defaultPaintSize = '18ml'
 const fallbackColors = [
@@ -140,6 +141,7 @@ function toCatalogPaint(
     swatchImageUrl: getPaintSwatchImageUrl(paint.swatch_image_url),
     owned: ownership?.is_owned === true,
     wish: ownership?.is_wishlist === true,
+    colorMatchEnabled: paint.color_match_enabled !== false,
     notes: `${brand} ${line}${paint.sku ? `, SKU ${paint.sku}` : ''}.`,
   }
 }
@@ -163,6 +165,7 @@ function toCustomPaint(
     swatchImageUrl: getPaintSwatchImageUrl(imageByPaintId.get(paint.id)),
     owned: true,
     wish: false,
+    colorMatchEnabled: false,
     notes: 'Custom mix saved in your paint collection.',
   }
 }
@@ -203,6 +206,37 @@ async function loadCustomPaintImages(
   )
 }
 
+async function loadCatalogPaintRows(
+  supabase: Awaited<ReturnType<typeof createClient>>
+) {
+  let from = 0
+  let allRows: CatalogPaintRow[] = []
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('paint_catalog')
+      .select('id, brand, line, name, sku, hex_approx, swatch_image_url, paint_type, color_match_enabled')
+      .eq('is_active', true)
+      .order('brand', { ascending: true })
+      .order('line', { ascending: true })
+      .order('name', { ascending: true })
+      .range(from, from + libraryPageSize - 1)
+
+    if (error) throw new Error(error.message)
+
+    const rows = (data ?? []) as CatalogPaintRow[]
+    allRows = [...allRows, ...rows]
+
+    if (rows.length < libraryPageSize) {
+      break
+    }
+
+    from += libraryPageSize
+  }
+
+  return allRows
+}
+
 export const getPaintsV3Payload = cache(async (userId: string) => {
   const supabase = await createClient()
 
@@ -210,8 +244,7 @@ export const getPaintsV3Payload = cache(async (userId: string) => {
     ownershipResult,
     collectionResult,
     customResult,
-    libraryResult,
-    catalogFilterRows,
+    libraryRows,
   ] =
     await Promise.all([
     supabase
@@ -233,7 +266,8 @@ export const getPaintsV3Payload = cache(async (userId: string) => {
           sku,
           hex_approx,
           swatch_image_url,
-          paint_type
+          paint_type,
+          color_match_enabled
         )
       `
       )
@@ -251,21 +285,12 @@ export const getPaintsV3Payload = cache(async (userId: string) => {
       .order('series', { ascending: true })
       .order('name', { ascending: true })
       .limit(customLimit),
-    supabase
-      .from('paint_catalog')
-      .select('id, brand, line, name, sku, hex_approx, swatch_image_url, paint_type')
-      .eq('is_active', true)
-      .order('brand', { ascending: true })
-      .order('line', { ascending: true })
-      .order('name', { ascending: true })
-      .limit(libraryLimit),
-    getCachedCatalogFilterRows(),
+    loadCatalogPaintRows(supabase),
   ])
 
   if (ownershipResult.error) throw new Error(ownershipResult.error.message)
   if (collectionResult.error) throw new Error(collectionResult.error.message)
   if (customResult.error) throw new Error(customResult.error.message)
-  if (libraryResult.error) throw new Error(libraryResult.error.message)
 
   const ownershipRows = (ownershipResult.data ?? []) as OwnershipRow[]
   const customRows = (customResult.data ?? []) as CustomPaintRow[]
@@ -291,14 +316,11 @@ export const getPaintsV3Payload = cache(async (userId: string) => {
   const ownedPaints = [...collectionCatalogPaints, ...customPaints]
     .sort(sortPaints)
     .slice(0, collectionLimit)
-  const libraryPaints = ((libraryResult.data ?? []) as CatalogPaintRow[]).map(
+  const libraryPaints = libraryRows.map(
     (paint) => toCatalogPaint(paint, ownershipByPaintId)
   )
   const filterRows = [
-    ...catalogFilterRows.map((row) => ({
-      brand: cleanLabel(row.brand, 'Catalog'),
-      line: cleanLabel(row.line, 'Paint'),
-    })),
+    ...libraryPaints,
     ...ownedPaints.map((paint) => ({
       brand: paint.brand,
       line: paint.line,

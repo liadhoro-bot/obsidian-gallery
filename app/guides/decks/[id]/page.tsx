@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import type { Recipe, RecipeImage, RecipeStep } from '../../../recipes/[id]/components/types'
 import {
@@ -7,7 +6,6 @@ import {
   RecipeGuideImageStepCard,
 } from '../../../recipes/[id]/components/recipe-guide-cards'
 import V3PerfIndicator from '../../../components/v3-perf-indicator'
-import FeatureGuideLauncher from '../../../components/feature-guide-launcher'
 import { getFeatureGuidesForPage } from '../../../components/feature-guide-data'
 import { deckDetailFeatureGuides } from '../../../components/feature-guide-presets'
 import { hasV3PreviewSession } from '../../../../lib/v3-preview-server'
@@ -18,11 +16,12 @@ import {
   type GuidesV3DeckDetail,
   type GuidesV3DeckStep,
 } from '../../guides-v3-detail-data'
-import styles from '../../guide-detail-silver.module.css'
+import DeckCardViewer, { type DeckCardEntry } from './deck-card-viewer'
+import DeckEditorClient from './deck-editor-client'
 
 type DeckDetailPageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ preview?: string }>
+  searchParams?: Promise<{ edit?: string; preview?: string }>
 }
 
 type DeckGuidePaint = {
@@ -35,9 +34,17 @@ type DeckGuidePaint = {
   ratio_text?: string | null
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
 function isUsableImageUrl(value?: string | null) {
   const url = typeof value === 'string' ? value.trim() : ''
-  return url.startsWith('http://') || url.startsWith('https://')
+  return (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    (url.startsWith('/') && !url.startsWith('//'))
+  )
 }
 
 function toRecipe(deck: GuidesV3DeckDetail): Recipe {
@@ -92,9 +99,14 @@ export default async function DeckDetailPage({
   const perf = createPerfTimer('/guides/decks/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} as { preview?: string }),
+    searchParams ?? Promise.resolve({} as { edit?: string; preview?: string }),
   ])
   const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
+  const isEditing = resolvedSearchParams.edit === '1'
+
+  if (!isUuid(id)) {
+    redirect('/guides?preview=1')
+  }
 
   if (!isPreview) {
     redirect(`/recipes/${id}`)
@@ -105,8 +117,12 @@ export default async function DeckDetailPage({
   perf.mark('auth/session fetch')
 
   if (!user) {
+    const nextPath = isEditing
+      ? `/guides/decks/${id}?preview=1&edit=1`
+      : `/guides/decks/${id}?preview=1`
+
     redirect(
-      `/login?next=${encodeURIComponent(`/guides/decks/${id}?preview=1`)}&preview=1`
+      `/login?next=${encodeURIComponent(nextPath)}&preview=1`
     )
   }
 
@@ -121,82 +137,70 @@ export default async function DeckDetailPage({
 
   if (!deck) notFound()
 
+  if (isEditing) {
+    return (
+      <main>
+        <V3PerfIndicator surface="deck-editor" detail="main" />
+        <DeckEditorClient
+          deck={deck}
+          backHref="/guides?preview=1"
+          featureGuides={featureGuides}
+        />
+      </main>
+    )
+  }
+
   const recipe = toRecipe(deck)
   const featuredImage = toFeaturedImage(deck)
   const paintCount = deck.paintList.length
   const recipeSteps = deck.steps.map(toRecipeStep)
 
-  return (
-    <main className={styles.root}>
-      <V3PerfIndicator surface="deck-detail" detail="main" />
-      <div className={styles.shell}>
-        <header className={styles.topBar}>
-          <Link
-            href="/guides?preview=1"
-            className={styles.backButton}
-            aria-label="Back to guides"
-          >
-            <span>&lt;</span>
-          </Link>
-          <span
-            className={styles.topLabel}
-            data-feature-guide-target="guides.deck.page"
-          >
-            Deck
-          </span>
-          <FeatureGuideLauncher
-            buttonClassName={styles.backButton}
-            guides={featureGuides}
-            label="Show deck detail explanation"
+  const cards: DeckCardEntry[] = [
+    {
+      key: 'cover',
+      featureGuideTarget: 'guides.deck.cover',
+      node: (
+        <RecipeGuideCoverCard
+          recipe={recipe}
+          featuredImage={featuredImage}
+          stepCount={recipeSteps.length}
+          paintCount={paintCount}
+        />
+      ),
+    },
+    ...deck.steps.map((step) => {
+      const recipeStep = toRecipeStep(step)
+      const paints = toRecipePaints(step)
+
+      return {
+        key: step.id,
+        featureGuideTarget: 'guides.deck.steps',
+        node: isUsableImageUrl(recipeStep.image_url) ? (
+          <RecipeGuideImageStepCard
+            step={recipeStep}
+            stepsLength={recipeSteps.length}
+            paints={paints}
           />
-        </header>
+        ) : (
+          <RecipeGuideDescriptiveStepCard
+            step={recipeStep}
+            stepsLength={recipeSteps.length}
+            paints={paints}
+          />
+        ),
+      }
+    }),
+  ]
 
-        <section className={styles.cardStack} aria-label={`${deck.title} cards`}>
-          <div
-            className={styles.shareCardMount}
-            data-feature-guide-target="guides.deck.cover"
-          >
-            <RecipeGuideCoverCard
-              recipe={recipe}
-              featuredImage={featuredImage}
-              stepCount={recipeSteps.length}
-              paintCount={paintCount}
-            />
-          </div>
-          {deck.steps.length ? (
-            deck.steps.map((step) => {
-              const recipeStep = toRecipeStep(step)
-              const paints = toRecipePaints(step)
-
-              return (
-                <div
-                  key={step.id}
-                  className={styles.shareCardMount}
-                  data-feature-guide-target="guides.deck.steps"
-                >
-                  {isUsableImageUrl(recipeStep.image_url) ? (
-                    <RecipeGuideImageStepCard
-                      step={recipeStep}
-                      stepsLength={recipeSteps.length}
-                      paints={paints}
-                    />
-                  ) : (
-                    <RecipeGuideDescriptiveStepCard
-                      step={recipeStep}
-                      stepsLength={recipeSteps.length}
-                      paints={paints}
-                    />
-                  )}
-                </div>
-              )
-            })
-          ) : (
-            <div className={styles.emptyPanel}>
-              No cards have been added to this deck yet.
-            </div>
-          )}
-        </section>
-      </div>
+  return (
+    <main>
+      <V3PerfIndicator surface="deck-detail" detail="main" />
+      <DeckCardViewer
+        cards={cards}
+        title={deck.title}
+        backHref="/guides?preview=1"
+        featureGuides={featureGuides}
+      />
     </main>
   )
 }

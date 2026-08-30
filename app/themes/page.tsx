@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import ThemesPageClient from './themes-page-client'
@@ -9,6 +10,7 @@ import {
 } from '../../lib/public-cache'
 import { createPerfTimer } from '../../utils/perf/server'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
+import { isLocalV3PreviewHost } from '../../lib/v3-preview'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
 import { getFeatureGuidesForPage } from '../components/feature-guide-data'
 import ThemesV3Preview from './themes-v3-preview'
@@ -414,8 +416,10 @@ export default async function ThemesPage({ searchParams }: Props) {
   const perf = createPerfTimer('/themes')
   const params = searchParams ? await searchParams : undefined
   const isPreview = await hasV3PreviewSession(params?.preview)
+  const headerStore = await headers()
+  const isLocalPreviewHost = isLocalV3PreviewHost(headerStore.get('host'))
 
-  if (isPreview) {
+  if (isPreview && isLocalPreviewHost) {
     const featureGuides = await getFeatureGuidesForPage('/themes')
     perf.total()
     return <ThemesV3Preview featureGuides={featureGuides} />

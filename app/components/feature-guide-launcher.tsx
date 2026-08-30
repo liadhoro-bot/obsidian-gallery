@@ -25,6 +25,7 @@ export default function FeatureGuideLauncher({
         aria-expanded={activeGuide !== null}
         aria-label={label}
         className={buttonClassName}
+        data-feature-guide-launcher-button="true"
         onClick={() => {
           if (guides.length) {
             setActiveGuideIndex(

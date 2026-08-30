@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useSyncExternalStore } from 'react'
+import styles from './dashboard-og.module.css'
 
 const STORAGE_KEY = 'obsidian-gallery:hidden-dashboard-metadata'
 const STORAGE_CHANGE_EVENT = 'dashboard-metadata-visibility-change'
@@ -78,6 +79,53 @@ function MetadataVisibilityIcon({ isHidden }: { isHidden: boolean }) {
   )
 }
 
+function PaintingTimesChart({
+  buckets,
+}: {
+  buckets: NonNullable<DashboardMetadataItem['paintingTimeBuckets']>
+}) {
+  const gradientStops = buckets
+    .reduce(
+      (stops, bucket) => {
+        const start = stops.cursor
+        const end = start + bucket.percent
+        return {
+          cursor: end,
+          values: [
+            ...stops.values,
+            `${bucket.color} ${start}% ${Math.min(100, end)}%`,
+          ],
+        }
+      },
+      { cursor: 0, values: [] as string[] }
+    )
+    .values.join(', ')
+
+  return (
+    <div className={styles.paintingTimesCardContent}>
+      <div
+        className={styles.paintingTimesPie}
+        style={{ background: `conic-gradient(${gradientStops})` }}
+        aria-hidden="true"
+      >
+        <span>{buckets.reduce((sum, bucket) => sum + bucket.count, 0)}</span>
+      </div>
+      <div className={styles.paintingTimesLegend}>
+        {buckets.map((bucket) => (
+          <div key={bucket.id} className={styles.paintingTimesLegendRow}>
+            <span
+              className={styles.paintingTimesSwatch}
+              style={{ backgroundColor: bucket.color }}
+            />
+            <span>{bucket.label}</span>
+            <strong>{bucket.percent}%</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardMetadataCards({
   items,
 }: {
@@ -121,21 +169,22 @@ export default function DashboardMetadataCards({
   }
 
   return (
-    <section className="grid gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xs font-black uppercase tracking-[0.16em] text-white/45">
-          Metadata
-        </h2>
+    <section className={styles.metadataPanel}>
+      <div className={styles.metadataHeader}>
+        <div>
+          <p className={styles.profileSectionEyebrow}>Bench Record</p>
+          <h2 className={styles.profileSectionTitle}>Metadata</h2>
+        </div>
         <button
           type="button"
           onClick={() => setIsEditing((current) => !current)}
-          className="tap-press rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/70 transition hover:border-cyan-300/50 hover:bg-cyan-300/10 hover:text-cyan-200 active:scale-[0.98]"
+          className={styles.metadataEditButton}
         >
           {isEditing ? 'Done' : 'Edit'}
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className={styles.metadataGrid}>
         {visibleItems.map((item) => {
           const isHidden = validHiddenItemIds.includes(item.id)
           const canHide = !isHidden && visibleItemCount <= 1
@@ -147,33 +196,29 @@ export default function DashboardMetadataCards({
               onClick={isEditing ? () => toggleItem(item.id) : undefined}
               disabled={!isEditing || canHide}
               aria-pressed={isEditing ? !isHidden : undefined}
-              className={[
-                'min-h-[86px] rounded-xl border border-white/10 bg-white/5 p-3 text-left transition',
-                isEditing
-                  ? 'cursor-pointer hover:border-cyan-300/45 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-60'
-                  : 'cursor-default',
-                isHidden ? 'opacity-45' : 'opacity-100',
-              ].join(' ')}
+              className={styles.metadataCard}
+              data-chart={item.paintingTimeBuckets ? 'painting-times' : undefined}
+              data-editing={isEditing}
+              data-hidden={isHidden}
+              data-tone={item.accent === 'text-orange-400' ? 'warm' : 'neutral'}
             >
-              <div className="flex items-start justify-between gap-1.5">
-                <p className="min-w-0 text-[9px] font-semibold uppercase leading-tight tracking-[0.1em] text-white/45">
-                  {item.label}
-                </p>
+              <div className={styles.metadataCardTopline}>
+                <p>{item.label}</p>
                 {isEditing ? (
                   <span
-                    className={[
-                      'mt-0.5 flex-none',
-                      isHidden ? 'text-white/25' : 'text-cyan-200',
-                    ].join(' ')}
+                    className={styles.metadataVisibilityIcon}
+                    data-hidden={isHidden}
                     aria-hidden="true"
                   >
                     <MetadataVisibilityIcon isHidden={isHidden} />
                   </span>
                 ) : null}
               </div>
-              <p className={`mt-2 text-xl font-semibold leading-none ${item.accent}`}>
-                {item.value}
-              </p>
+              {item.paintingTimeBuckets ? (
+                <PaintingTimesChart buckets={item.paintingTimeBuckets} />
+              ) : (
+                <p className={styles.metadataValue}>{item.value}</p>
+              )}
             </button>
           )
         })}
@@ -190,15 +235,22 @@ export function DashboardPaintStreakCard({
   sessionLabel: string
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
-        Paint Streak
-      </p>
-      <div className="mt-3 flex items-end justify-between gap-4">
-        <p className="text-3xl font-semibold text-white">{paintStreak}</p>
-        <p className="text-sm text-white/55">
-          Last session {sessionLabel}
-        </p>
+    <section className={styles.paintStreakCard}>
+      <div className={styles.paintStreakCopy}>
+        <span className={styles.streakIconPlate} aria-hidden="true">
+          <svg className={styles.streakIcon} viewBox="0 0 24 24" fill="none">
+            <path d="M12 3c2.2 2.2 4.5 5.5 4.5 9a4.5 4.5 0 0 1-9 0c0-3.5 2.3-6.8 4.5-9Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+            <path d="M10.2 14.3c.8.8 2.8.8 3.6 0" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          </svg>
+        </span>
+        <div>
+          <p className={styles.progressKicker}>Paint Streak</p>
+          <h2>{paintStreak}</h2>
+        </div>
+      </div>
+      <div className={styles.lastSessionBlock}>
+        <p>Last Session</p>
+        <span>{sessionLabel}</span>
       </div>
     </section>
   )

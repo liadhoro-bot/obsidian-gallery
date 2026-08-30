@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import type { ContestNomination } from '../../lib/contests/types'
+import styles from './contest-v3-silver.module.css'
 
 function formatSubmittedDate(value: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -18,8 +19,8 @@ export default function NomineeCard({
   control?: React.ReactNode
 }) {
   return (
-    <article className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
-      <div className="relative aspect-square bg-[#0b1622]">
+    <article className={styles.nomineeCard}>
+      <div className={styles.nomineeImage}>
         <Image
           src={nomination.snapshot_image_url}
           alt=""
@@ -28,33 +29,33 @@ export default function NomineeCard({
           className="object-cover"
         />
       </div>
-      <div className="space-y-2 p-3">
+      <div className={styles.nomineeBody}>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-cyan-300">
+            <p className={styles.eyebrow}>
               {nomination.source_type}
             </p>
-            <h3 className="truncate text-base font-black text-white">
+            <h3 className={`${styles.nomineeTitle} truncate text-base`}>
               {nomination.snapshot_title}
             </h3>
           </div>
           {control}
         </div>
         {nomination.snapshot_description ? (
-          <p className="line-clamp-3 text-sm text-white/55">
+          <p className={`${styles.nomineeDescription} line-clamp-3 text-sm`}>
             {nomination.snapshot_description}
           </p>
         ) : null}
         <div className="flex flex-wrap gap-1.5 pt-1">
           {!hideIdentity && nomination.snapshot_owner_display_name ? (
-            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase text-white/60">
+            <span className={styles.nomineePill}>
               By {nomination.snapshot_owner_display_name}
             </span>
           ) : null}
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase text-white/60">
+          <span className={styles.nomineePill}>
             {nomination.status}
           </span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-black uppercase text-white/60">
+          <span className={styles.nomineePill}>
             {formatSubmittedDate(nomination.submitted_at)}
           </span>
         </div>

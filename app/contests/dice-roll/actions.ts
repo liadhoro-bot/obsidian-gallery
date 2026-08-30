@@ -13,12 +13,15 @@ export type DiceRollResult = {
   playerName: string
   appUsername: string | null
   rollReason: string
+  rollType: DiceRollType
   dieOne: number
-  dieTwo: number
+  dieTwo: number | null
   total: number
   createdAt: string
   duplicate: boolean
 }
+
+export type DiceRollType = '1d6' | '2d6'
 
 export type DiceRollState = {
   error: string | null
@@ -30,8 +33,9 @@ type DiceRollRow = {
   roll_player_name: string
   roll_app_username: string | null
   roll_reason_text: string
+  roll_type_text?: DiceRollType | null
   roll_die_one: number
-  roll_die_two: number
+  roll_die_two: number | null
   roll_total: number
   roll_created_at: string
   duplicate: boolean
@@ -45,12 +49,17 @@ function normalizeRollReason(reason: string) {
   return reason.trim().replace(/\s+/g, ' ')
 }
 
-function toResult(row: DiceRollRow): DiceRollResult {
+function normalizeRollType(value: FormDataEntryValue | null): DiceRollType | null {
+  return value === '1d6' || value === '2d6' ? value : null
+}
+
+function toResult(row: DiceRollRow, fallbackRollType: DiceRollType): DiceRollResult {
   return {
     id: row.roll_id,
     playerName: row.roll_player_name,
     appUsername: row.roll_app_username,
     rollReason: row.roll_reason_text,
+    rollType: row.roll_type_text ?? fallbackRollType,
     dieOne: row.roll_die_one,
     dieTwo: row.roll_die_two,
     total: row.roll_total,
@@ -79,12 +88,21 @@ function getDatabaseErrorMessage(error: { code?: string; message?: string }) {
   if (
     error.code === 'PGRST205' ||
     error.code === 'PGRST204' ||
+    error.code === 'PGRST202' ||
     error.code === '42P01' ||
     error.code === '42703' ||
     error.message?.toLowerCase().includes('campaign_dice_rolls') ||
     error.message?.toLowerCase().includes('record_campaign_dice_roll')
   ) {
     return 'The dice-roll log table needs the latest database migration. Ask the organizer to run it, then try again.'
+  }
+
+  return null
+}
+
+function getRollTypeMigrationErrorMessage(rollType: DiceRollType) {
+  if (rollType === '1d6') {
+    return 'The campaign roll log needs the roll-type database migration before 1d6 rolls can be recorded.'
   }
 
   return null
@@ -109,14 +127,19 @@ async function sendDiceRollEmail(result: DiceRollResult) {
     process.env.ADMIN_REPORT_EMAIL ||
     process.env.FEEDBACK_TO_EMAIL
   const resendKey = process.env.RESEND_API_KEY
+  const rollText =
+    result.rollType === '2d6' && result.dieTwo
+      ? `${result.dieOne} + ${result.dieTwo} = ${result.total}`
+      : `${result.dieOne} = ${result.total}`
 
   const body = [
-    'A campaign 2d6 roll was recorded in Obsidian Gallery.',
+    `A campaign ${result.rollType} roll was recorded in Obsidian Gallery.`,
     '',
     `Player: ${result.playerName}`,
     `App username: ${result.appUsername ? `@${result.appUsername}` : 'Not signed in'}`,
     `Reason: ${result.rollReason}`,
-    `Roll: ${result.dieOne} + ${result.dieTwo} = ${result.total}`,
+    `Roll type: ${result.rollType}`,
+    `Roll: ${rollText}`,
     `Recorded at: ${new Date(result.createdAt).toISOString()}`,
     `Roll ID: ${result.id}`,
   ].join('\n')
@@ -132,7 +155,7 @@ async function sendDiceRollEmail(result: DiceRollResult) {
     await resend.emails.send({
       from: 'Obsidian Gallery <onboarding@resend.dev>',
       to: adminEmail,
-      subject: `Campaign 2d6 roll: ${result.playerName} rolled ${result.total}`,
+      subject: `Campaign ${result.rollType} roll: ${result.playerName} rolled ${result.total}`,
       text: body,
     })
 
@@ -171,6 +194,7 @@ export async function rollCampaignDice(
 ): Promise<DiceRollState> {
   const playerName = normalizePlayerName(String(formData.get('playerName') || ''))
   const rollReason = normalizeRollReason(String(formData.get('rollReason') || ''))
+  const rollType = normalizeRollType(formData.get('rollType'))
 
   if (playerName.length < 2) {
     return { error: 'Enter your campaign player name before rolling.', result: null }
@@ -188,6 +212,10 @@ export async function rollCampaignDice(
     return { error: 'Roll reason must be 160 characters or fewer.', result: null }
   }
 
+  if (!rollType) {
+    return { error: 'Choose whether to roll 1d6 or 2d6.', result: null }
+  }
+
   let supabase: ReturnType<typeof createDiceRollClient>
 
   try {
@@ -202,22 +230,36 @@ export async function rollCampaignDice(
   const forwardedFor = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const realIp = headerStore.get('x-real-ip')
 
-  const { data: rollRows, error: rollError } = await supabase.rpc(
+  const rollPayload = {
+    p_player_name: playerName,
+    p_app_username: appUsername,
+    p_roll_reason: rollReason,
+    p_ip_address: forwardedFor || realIp,
+    p_user_agent: headerStore.get('user-agent'),
+  }
+  let { data: rollRows, error: rollError } = await supabase.rpc(
     'record_campaign_dice_roll',
     {
-      p_player_name: playerName,
-      p_app_username: appUsername,
-      p_roll_reason: rollReason,
-      p_ip_address: forwardedFor || realIp,
-      p_user_agent: headerStore.get('user-agent'),
+      ...rollPayload,
+      p_roll_type: rollType,
     }
   )
+
+  const migrationError = rollError ? getDatabaseErrorMessage(rollError) : null
+
+  if (migrationError && rollType === '2d6') {
+    const legacyResult = await supabase.rpc('record_campaign_dice_roll', rollPayload)
+    rollRows = legacyResult.data
+    rollError = legacyResult.error
+  }
 
   if (rollError) {
     console.error('Could not record campaign dice roll:', rollError)
     return {
       error:
-        getDatabaseErrorMessage(rollError) || 'Could not record your roll. Please try again.',
+        getRollTypeMigrationErrorMessage(rollType) ||
+        getDatabaseErrorMessage(rollError) ||
+        'Could not record your roll. Please try again.',
       result: null,
     }
   }
@@ -228,7 +270,7 @@ export async function rollCampaignDice(
     return { error: 'Could not record your roll. Please try again.', result: null }
   }
 
-  const result = toResult(rollRow)
+  const result = toResult(rollRow, rollType)
 
   if (!result.duplicate) {
     const emailSent = await sendDiceRollEmail(result)

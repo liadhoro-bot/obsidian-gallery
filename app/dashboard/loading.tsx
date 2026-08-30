@@ -1,21 +1,36 @@
-import DashboardWelcome from './dashboard-welcome'
-import DashboardQuickActions from './dashboard-quick-actions'
-import {
-  BenchUnitsSkeleton,
-  FeaturedUnitSkeleton,
-  TopBarSkeleton,
-} from './dashboard-skeletons'
+import { WorkbenchShell } from '@/src/components/v3'
+import styles from './dashboard-og.module.css'
 
 export default function DashboardLoading() {
   return (
-    <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-5">
-        <TopBarSkeleton />
-        <DashboardWelcome />
-        <DashboardQuickActions />
-        <FeaturedUnitSkeleton />
-        <BenchUnitsSkeleton />
+    <WorkbenchShell
+      contentClassName={styles.dashboardFrame}
+      gutter="none"
+      maxWidth="var(--og-workbench-compact-max-width)"
+    >
+      <div className={styles.loadingShell} aria-label="Loading dashboard">
+        <div className={styles.loadingHeader}>
+          <span className={styles.loadingDot} />
+          <span className={styles.loadingLine} />
+          <span className={styles.loadingButton} />
+        </div>
+
+        <div className={styles.loadingTabs}>
+          <span />
+          <span />
+        </div>
+
+        <section className={styles.loadingPanel}>
+          <span className={styles.loadingLine} />
+          <span className={styles.loadingTrack} />
+        </section>
+
+        <section className={styles.loadingPanel} data-kind="featured">
+          <span className={styles.loadingLine} />
+          <span className={styles.loadingTrack} />
+          <span className={styles.loadingPhoto} />
+        </section>
       </div>
-    </main>
+    </WorkbenchShell>
   )
 }

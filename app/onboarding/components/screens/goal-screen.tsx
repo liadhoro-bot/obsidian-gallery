@@ -11,6 +11,7 @@ import styles from '../../../auth-flow-silver.module.css'
 type GoalScreenProps = {
   onContinue: (goal: OnboardingGoal) => void
   previewMode?: boolean
+  requireUnitSetup?: boolean
 }
 
 const personaOptions: Array<{
@@ -56,6 +57,7 @@ const experienceOptions: Array<{
 export default function GoalScreen({
   onContinue,
   previewMode = false,
+  requireUnitSetup = false,
 }: GoalScreenProps) {
   const [selectedGoal, setSelectedGoal] = useState<OnboardingGoal | null>(null)
   const [experience, setExperience] = useState<OnboardingExperience | null>(null)
@@ -65,6 +67,9 @@ export default function GoalScreen({
   const selectedPersona = personaOptions.find(
     (option) => option.id === selectedGoal
   )
+  const visiblePersonaOptions = requireUnitSetup
+    ? personaOptions.filter((option) => option.id !== 'create_content')
+    : personaOptions
   const ctaLabel = selectedPersona?.cta ?? 'Choose an option above'
 
   function saveAndContinue(goal: OnboardingGoal) {
@@ -103,7 +108,7 @@ export default function GoalScreen({
       </div>
 
       <div className={styles.optionStack}>
-        {personaOptions.map((option) => {
+        {visiblePersonaOptions.map((option) => {
           const isSelected = selectedGoal === option.id
 
           return (
@@ -195,6 +200,7 @@ export default function GoalScreen({
           disabled={isPending}
           onClick={() => saveAndContinue('look_around')}
           className={`tap-target ${styles.backButton}`}
+          hidden={requireUnitSetup}
         >
           Let me look around first
         </button>

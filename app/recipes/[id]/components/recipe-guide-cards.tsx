@@ -19,7 +19,52 @@ type RecipeGuidePaint = NonNullable<StepPaintLink['paint']> & {
 
 function isUsableImageUrl(value?: string | null) {
   const url = typeof value === 'string' ? value.trim() : ''
-  return url.startsWith('http://') || url.startsWith('https://')
+  return (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    (url.startsWith('/') && !url.startsWith('//')) ||
+    url.startsWith('blob:') ||
+    url.startsWith('data:image/')
+  )
+}
+
+function isInlinePreviewImageUrl(value?: string | null) {
+  const url = typeof value === 'string' ? value.trim() : ''
+  return url.startsWith('blob:') || url.startsWith('data:image/')
+}
+
+function getYoutubeVideoId(url: string | null) {
+  if (!url) return null
+
+  try {
+    const parsed = new URL(url)
+
+    if (parsed.hostname.includes('youtu.be')) {
+      return parsed.pathname.replace('/', '') || null
+    }
+
+    if (parsed.hostname.includes('youtube.com')) {
+      const watchId = parsed.searchParams.get('v')
+      if (watchId) return watchId
+
+      if (parsed.pathname.startsWith('/shorts/')) {
+        return parsed.pathname.split('/')[2] || null
+      }
+
+      if (parsed.pathname.startsWith('/embed/')) {
+        return parsed.pathname.split('/')[2] || null
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
+function getYoutubeEmbedUrl(url: string | null) {
+  const id = getYoutubeVideoId(url)
+  return id ? `https://www.youtube.com/embed/${id}` : null
 }
 
 function CoverStat({
@@ -145,7 +190,7 @@ function PaintMark({
         </span>
       </div>
       <div className="recipe-guide-paint-copy min-w-0">
-        <p className="recipe-guide-paint-name font-serif leading-tight text-white">
+        <p className="recipe-guide-paint-name font-serif leading-tight">
           {label}
         </p>
       </div>
@@ -165,11 +210,11 @@ function PaintsUsed({
   return (
     <section className="recipe-guide-paints shrink-0">
       <div className="flex items-center gap-2">
-        <span className="h-px flex-1 bg-[#8d5d2d]" />
-        <p className="recipe-guide-paints-label text-center font-black uppercase text-[#d69a45]">
+        <span className="recipe-guide-divider-rule h-px flex-1" />
+        <p className="recipe-guide-paints-label text-center font-black uppercase">
           Paints Used
         </p>
-        <span className="h-px flex-1 bg-[#8d5d2d]" />
+        <span className="recipe-guide-divider-rule h-px flex-1" />
       </div>
       <div
         className={[
@@ -212,7 +257,7 @@ export function RecipeGuideCoverCard({
 
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
-      <div className="relative -mx-1 -mt-1 h-[43%] shrink-0 overflow-hidden rounded-t-[18px] border border-[#8d5d2d]/60 bg-black">
+      <div className="recipe-guide-cover-image relative -mx-1 -mt-1 h-[43%] shrink-0 overflow-hidden rounded-t-[18px] border">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -221,11 +266,12 @@ export function RecipeGuideCoverCard({
             priority
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
+            unoptimized={isInlinePreviewImageUrl(imageUrl)}
           />
         ) : (
           <div className="h-full w-full bg-[radial-gradient(circle_at_30%_25%,rgba(45,212,191,0.34),transparent_30%),linear-gradient(135deg,#111827,#020617)]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#020806] via-transparent to-black/20" />
+        <div className="recipe-guide-cover-image-shade absolute inset-0" />
       </div>
 
       <ObsidianShareDividerLabel>
@@ -238,14 +284,14 @@ export function RecipeGuideCoverCard({
         </div>
         <ObsidianShareOrnament />
         {description ? (
-          <p className="recipe-guide-cover-description font-serif text-white">
+          <p className="recipe-guide-cover-description font-serif">
             {description}
           </p>
         ) : null}
         <ObsidianShareOrnament />
-        <div className="recipe-guide-stats grid grid-cols-[1fr_auto_1fr] items-center font-serif uppercase text-white">
+        <div className="recipe-guide-stats grid grid-cols-[1fr_auto_1fr] items-center font-serif uppercase">
           <CoverStat icon={<ObsidianShareStepIcon />} count={stepCount} label="Steps" />
-          <span className="recipe-guide-stat-divider w-px bg-[#8d5d2d]" />
+          <span className="recipe-guide-stat-divider w-px" />
           <CoverStat icon={<ObsidianSharePaletteIcon />} count={paintCount} label="Paints" />
         </div>
       </div>
@@ -269,7 +315,7 @@ export function RecipeGuideImageStepCard({
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
       <div className="recipe-guide-step-head shrink-0 text-center">
-        <p className="recipe-guide-step-number font-serif uppercase text-cyan-300">
+        <p className="recipe-guide-step-number font-serif uppercase">
           <span className="recipe-guide-step-number-word">Step</span>
           <span className="recipe-guide-step-number-value">
             {step.step_number}
@@ -284,7 +330,7 @@ export function RecipeGuideImageStepCard({
         <PaintsUsed paints={paints} columns />
       </div>
       <ObsidianShareOrnament />
-      <div className="relative -mx-1 min-h-0 flex-1 overflow-hidden border-y border-[#8d5d2d]/70 bg-black">
+      <div className="recipe-guide-step-image relative -mx-1 min-h-0 flex-1 overflow-hidden border-y">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -292,11 +338,12 @@ export function RecipeGuideImageStepCard({
             fill
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
+            unoptimized={isInlinePreviewImageUrl(imageUrl)}
           />
         ) : null}
       </div>
       <div className="recipe-guide-short-description shrink-0 text-center">
-        <p className="recipe-guide-short-copy font-serif text-white">
+        <p className="recipe-guide-short-copy font-serif">
           {step.instructions}
         </p>
       </div>
@@ -318,7 +365,7 @@ export function RecipeGuideDescriptiveStepCard({
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
       <div className="recipe-guide-step-head recipe-guide-step-head-descriptive shrink-0 text-center">
-        <p className="recipe-guide-step-number font-serif uppercase text-cyan-300">
+        <p className="recipe-guide-step-number font-serif uppercase">
           <span className="recipe-guide-step-number-word">Step</span>
           <span className="recipe-guide-step-number-value">
             {step.step_number}
@@ -333,10 +380,142 @@ export function RecipeGuideDescriptiveStepCard({
       <PaintsUsed paints={paints} />
       <ObsidianShareOrnament />
       <div className="recipe-guide-long-description grid min-h-0 flex-1 place-items-start text-center">
-        <p className="recipe-guide-long-copy max-h-full overflow-hidden font-serif text-white">
+        <p className="recipe-guide-long-copy max-h-full overflow-hidden font-serif">
           {step.instructions}
         </p>
       </div>
+    </ObsidianShareCardFrame>
+  )
+}
+
+function PaintOwnershipPill({ paint }: { paint: RecipeGuidePaint }) {
+  if (paint?.is_owned) {
+    return <span className="recipe-guide-paint-list-pill recipe-guide-paint-list-pill-owned">Owned</span>
+  }
+
+  if (paint?.is_wishlist) {
+    return <span className="recipe-guide-paint-list-pill recipe-guide-paint-list-pill-wishlist">Wishlist</span>
+  }
+
+  return <span className="recipe-guide-paint-list-pill">Not Owned</span>
+}
+
+function PaintListSwatch({ paint }: { paint: RecipeGuidePaint }) {
+  const color = paint?.hex_approx || '#8b8b8b'
+  const swatchUrl = isUsableImageUrl(paint?.swatch_image_url)
+    ? paint.swatch_image_url
+    : null
+
+  return (
+    <span
+      className="recipe-guide-paint-list-swatch"
+      style={{ backgroundColor: color }}
+    >
+      {swatchUrl ? (
+        <Image src={swatchUrl} alt="" fill sizes="48px" className="object-cover" />
+      ) : null}
+    </span>
+  )
+}
+
+export function RecipeGuidePaintsCard({
+  title,
+  description,
+  paints,
+  showBrandMark = false,
+}: {
+  title: string
+  description: string
+  paints: RecipeGuidePaint[]
+  showBrandMark?: boolean
+}) {
+  return (
+    <ObsidianShareCardFrame showBrandMark={showBrandMark}>
+      <div className="recipe-guide-step-head shrink-0 text-center">
+        <p className="recipe-guide-step-number font-serif uppercase">
+          <span className="recipe-guide-step-number-word">The Palette</span>
+        </p>
+        <ObsidianShareOrnament />
+        <ObsidianShareTitle title={title} compact />
+      </div>
+      <ObsidianShareOrnament />
+      <div className="recipe-guide-paint-list min-h-0 flex-1 overflow-y-auto">
+        {paints.length ? (
+          <ul className="recipe-guide-paint-list-items">
+            {paints.map((paint, index) => (
+              <li
+                key={`${paint?.id || 'paint'}-${index}`}
+                className="recipe-guide-paint-list-row"
+              >
+                <PaintListSwatch paint={paint} />
+                <span className="recipe-guide-paint-list-copy">
+                  <strong className="font-serif">{paint?.name || 'Unnamed paint'}</strong>
+                  <small>
+                    {[paint?.brand, paint?.line].filter(Boolean).join(' - ') || 'Unknown source'}
+                  </small>
+                </span>
+                <PaintOwnershipPill paint={paint} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="recipe-guide-paint-list-empty font-serif">
+            No paints have been added yet.
+          </p>
+        )}
+      </div>
+      {description ? (
+        <div className="recipe-guide-short-description shrink-0 text-center">
+          <p className="recipe-guide-short-copy font-serif">{description}</p>
+        </div>
+      ) : null}
+    </ObsidianShareCardFrame>
+  )
+}
+
+export function RecipeGuideVideoCard({
+  title,
+  description,
+  youtubeUrl,
+  showBrandMark = false,
+}: {
+  title: string
+  description: string
+  youtubeUrl: string | null
+  showBrandMark?: boolean
+}) {
+  const embedUrl = getYoutubeEmbedUrl(youtubeUrl)
+
+  return (
+    <ObsidianShareCardFrame showBrandMark={showBrandMark}>
+      <div className="recipe-guide-step-head shrink-0 text-center">
+        <p className="recipe-guide-step-number font-serif uppercase">
+          <span className="recipe-guide-step-number-word">Video</span>
+        </p>
+        <ObsidianShareOrnament />
+        <ObsidianShareTitle title={title} compact />
+      </div>
+      <ObsidianShareOrnament />
+      <div className="recipe-guide-video-frame relative -mx-1 min-h-0 flex-1 overflow-hidden border-y">
+        {embedUrl ? (
+          <iframe
+            src={embedUrl}
+            title={title}
+            className="recipe-guide-video-iframe"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        ) : (
+          <div className="recipe-guide-video-empty grid h-full place-items-center text-center font-serif">
+            No video linked yet.
+          </div>
+        )}
+      </div>
+      {description ? (
+        <div className="recipe-guide-short-description shrink-0 text-center">
+          <p className="recipe-guide-short-copy font-serif">{description}</p>
+        </div>
+      ) : null}
     </ObsidianShareCardFrame>
   )
 }

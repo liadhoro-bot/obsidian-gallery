@@ -42,7 +42,7 @@ export default async function ManageContestPage({
 
   const { id } = await params
   const isDemoContest = id === DEMO_CONTEST_ID
-  if (!isDemoContest && !(await canManageContest(user.id, id))) redirect('/contests')
+  if (!(await canManageContest(user.id, id))) redirect('/contests')
 
   const contest = await getContestById(id)
   if (!contest) notFound()

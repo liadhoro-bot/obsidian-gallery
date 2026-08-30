@@ -5,6 +5,10 @@ import {
   isV3DeploymentHost,
   isV3PreviewValue,
 } from '../../../lib/v3-preview'
+import {
+  getDashboardOnboardingRequirement,
+  getOnboardingRedirectPath,
+} from '../../../lib/onboarding/dashboard-entry-guard'
 import { createClient } from '../../../utils/supabase/server'
 
 const emailOtpTypes = new Set<EmailOtpType>([
@@ -58,6 +62,37 @@ function isDashboardNextWithoutPreview(value: string) {
   }
 }
 
+function getDashboardLaunchPath(value: string) {
+  try {
+    const nextUrl = new URL(value, 'https://obsidian-gallery-v3.vercel.app')
+
+    if (nextUrl.pathname !== '/dashboard') {
+      return null
+    }
+
+    nextUrl.searchParams.delete('preview')
+    return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+  } catch {
+    return value === '/dashboard' || value.startsWith('/dashboard?')
+      ? '/dashboard'
+      : null
+  }
+}
+
+function getRequestedPreviewPath(value: string) {
+  try {
+    const nextUrl = new URL(value, 'https://obsidian-gallery-v3.vercel.app')
+
+    if (!isV3PreviewValue(nextUrl.searchParams.get('preview'))) {
+      return null
+    }
+
+    return ensureV3PreviewPath(value)
+  } catch {
+    return null
+  }
+}
+
 function shouldForceV3PreviewPath(requestUrl: URL, next: string) {
   if (isV3PreviewValue(requestUrl.searchParams.get('preview'))) {
     return true
@@ -71,9 +106,29 @@ function shouldForceV3PreviewPath(requestUrl: URL, next: string) {
 }
 
 function getCallbackNextPath(requestUrl: URL, requestedNext: string) {
+  const requestedPreviewPath = getRequestedPreviewPath(requestedNext)
+
+  if (requestedPreviewPath) {
+    return requestedPreviewPath
+  }
+
+  const dashboardLaunchPath = getDashboardLaunchPath(requestedNext)
+
+  if (dashboardLaunchPath) {
+    return dashboardLaunchPath
+  }
+
   return shouldForceV3PreviewPath(requestUrl, requestedNext)
     ? ensureV3PreviewPath(requestedNext)
     : requestedNext
+}
+
+function isDashboardDestination(value: string) {
+  try {
+    return new URL(value, 'https://obsidian-gallery-v3.vercel.app').pathname === '/dashboard'
+  } catch {
+    return value === '/dashboard' || value.startsWith('/dashboard?')
+  }
 }
 
 function getLoginErrorUrl(requestUrl: URL, reason: string | null, next: string) {
@@ -146,6 +201,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       getLoginErrorUrl(requestUrl, getSafeReason(result.error.message), next)
     )
+  }
+
+  if (isDashboardDestination(next)) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      const onboarding = await getDashboardOnboardingRequirement(user.id)
+
+      if (onboarding.needsOnboarding && onboarding.reason) {
+        return NextResponse.redirect(
+          new URL(
+            getOnboardingRedirectPath({
+              preview: isV3PreviewValue(new URL(next, requestUrl.origin).searchParams.get('preview')),
+              reason: onboarding.reason,
+            }),
+            requestUrl.origin
+          )
+        )
+      }
+    }
   }
 
   return NextResponse.redirect(new URL(next, requestUrl.origin))

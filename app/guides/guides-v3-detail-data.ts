@@ -23,6 +23,8 @@ export type GuidesV3DeckPaint = {
   line: string
   color: string
   swatchImageUrl: string | null
+  isOwned: boolean
+  isWishlist: boolean
 }
 
 export type GuidesV3DeckStepPaint = GuidesV3DeckPaint & {
@@ -231,6 +233,8 @@ export const getGuidesV3DeckDetail = cache(
           line: clean(catalogPaint.line, 'Paint'),
           color: catalogPaint.hex_approx || '#17b9c2',
           swatchImageUrl: catalogPaint.swatch_image_url,
+          isOwned: false,
+          isWishlist: false,
         }, link.ratio_text)
       } else if (customPaint) {
         addStepPaint(link.recipe_step_id, {
@@ -240,8 +244,55 @@ export const getGuidesV3DeckDetail = cache(
           line: clean(customPaint.series, 'Mix'),
           color: customPaint.color_hex || '#d8bd83',
           swatchImageUrl: null,
+          isOwned: false,
+          isWishlist: false,
         }, link.ratio_text)
       }
+    }
+
+    const catalogPaintIds = Array.from(paintsById.keys())
+      .filter((id) => id.startsWith('catalog:'))
+      .map((id) => id.slice('catalog:'.length))
+
+    const { data: ownershipRows, error: ownershipError } =
+      catalogPaintIds.length > 0
+        ? await supabase
+            .from('user_paint_ownership')
+            .select('paint_catalog_id, is_owned, is_wishlist')
+            .eq('user_id', userId)
+            .in('paint_catalog_id', catalogPaintIds)
+        : { data: [], error: null }
+
+    if (ownershipError) throw new Error(ownershipError.message)
+
+    const ownershipByPaintId = new Map(
+      ((ownershipRows ?? []) as {
+        paint_catalog_id: string
+        is_owned: boolean | null
+        is_wishlist: boolean | null
+      }[]).map((row) => [row.paint_catalog_id, row])
+    )
+
+    for (const [id, paint] of paintsById) {
+      const catalogId = id.startsWith('catalog:') ? id.slice('catalog:'.length) : null
+      const ownership = catalogId ? ownershipByPaintId.get(catalogId) : undefined
+      if (ownership) {
+        paintsById.set(id, {
+          ...paint,
+          isOwned: ownership.is_owned === true,
+          isWishlist: ownership.is_wishlist === true,
+        })
+      }
+    }
+
+    for (const [stepId, stepPaints] of paintsByStepId) {
+      paintsByStepId.set(
+        stepId,
+        stepPaints.map((stepPaint) => {
+          const updated = paintsById.get(stepPaint.id)
+          return updated ? { ...updated, ratioText: stepPaint.ratioText } : stepPaint
+        })
+      )
     }
 
     const paints = Array.from(paintsById.values())

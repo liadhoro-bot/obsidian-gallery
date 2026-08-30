@@ -13,9 +13,8 @@ export default function ProjectDetailTabs({ activeTab, projectId }: Props) {
     label: string
     href: string
   }> = [
-    { key: 'details', label: 'Project Details', href: `/projects/${projectId}?tab=details` },
+    { key: 'details', label: 'Details', href: `/projects/${projectId}?tab=details` },
     { key: 'units', label: 'Units', href: `/projects/${projectId}?tab=units` },
-    { key: 'add', label: 'Add Unit', href: `/projects/${projectId}?tab=add` },
   ]
 
   return (

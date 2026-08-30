@@ -1,6 +1,10 @@
+'use client'
+
 import Image from 'next/image'
+import { useState } from 'react'
 import PrefetchLink from '../../components/prefetch-link'
 import UnitListView from '../../../components/units/unit-list-view'
+import ProjectAddUnitTab from './project-add-unit-tab'
 import type { ProjectUnit, SerializableError, UnitImage, UnitStage } from './types'
 import styles from './project-detail-silver.module.css'
 
@@ -9,6 +13,8 @@ type Props = {
   unitsError: SerializableError | null
   stagesByUnitId: Record<string, UnitStage[]>
   imagesByUnitId: Record<string, UnitImage[]>
+  projectId: string
+  addUnitAction: (formData: FormData) => Promise<void>
 }
 
 export default function ProjectUnitsTab({
@@ -16,7 +22,10 @@ export default function ProjectUnitsTab({
   unitsError,
   stagesByUnitId,
   imagesByUnitId,
+  projectId,
+  addUnitAction,
 }: Props) {
+  const [showAddUnit, setShowAddUnit] = useState(false)
   function getUnitProgress(unitId: string) {
     const stages = stagesByUnitId[unitId] ?? []
     const stageDoneMap = new Map<string, boolean>()
@@ -213,6 +222,23 @@ export default function ProjectUnitsTab({
       <p className="text-[color:var(--og-text-secondary)]">No units yet.</p>
     )
 
+  const addUnitButton = (
+    <button
+      type="button"
+      onClick={() => setShowAddUnit((current) => !current)}
+      className={`${styles.iconControl} tap-press tap-target`}
+      aria-label={showAddUnit ? 'Close add unit form' : 'Add unit'}
+      title={showAddUnit ? 'Close' : 'Add unit'}
+      data-feature-guide-target="projects.detail.add_unit"
+    >
+      <span>{showAddUnit ? '×' : '+'}</span>
+    </button>
+  )
+
+  const addUnitPanel = showAddUnit ? (
+    <ProjectAddUnitTab projectId={projectId} addUnitAction={addUnitAction} />
+  ) : null
+
   return (
     <section
       className={`${styles.unitViewSection} mt-3`}
@@ -220,7 +246,11 @@ export default function ProjectUnitsTab({
     >
       {unitsError ? (
         <>
-          <h2 className="text-xl">Project Units</h2>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h2 className="text-xl">Project Units</h2>
+            <div className="shrink-0">{addUnitButton}</div>
+          </div>
+          {addUnitPanel}
           <pre className="mt-4 whitespace-pre-wrap rounded bg-red-100 p-4 text-sm text-black">
             {JSON.stringify(unitsError, null, 2)}
           </pre>
@@ -240,18 +270,30 @@ export default function ProjectUnitsTab({
           surface="project_detail_units"
           emptyMessage="No units yet."
           header={(toggle) => (
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <h2 className="text-xl">
-                Project Units
-              </h2>
-              <div className="shrink-0">{toggle}</div>
-            </div>
+            <>
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <h2 className="text-xl">
+                  Project Units
+                </h2>
+                <div className="flex shrink-0 items-center gap-2">
+                  {toggle}
+                  {addUnitButton}
+                </div>
+              </div>
+              {addUnitPanel}
+            </>
           )}
         />
       ) : (
         <>
-          <h2 className="text-xl">Project Units</h2>
-          <p className="mt-4 text-[color:var(--og-text-secondary)]">No units yet.</p>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h2 className="text-xl">Project Units</h2>
+            <div className="shrink-0">{addUnitButton}</div>
+          </div>
+          {addUnitPanel}
+          {!showAddUnit ? (
+            <p className="mt-4 text-[color:var(--og-text-secondary)]">No units yet.</p>
+          ) : null}
         </>
       )}
     </section>

@@ -150,6 +150,7 @@ export default function ThemesV3Preview({
                 aria-expanded={activeGuide !== null}
                 aria-label="Show themes explanation"
                 data-feature-guide-target="themes.help"
+                data-feature-guide-launcher-button="true"
                 onClick={startFeatureTour}
                 className="grid h-10 w-10 place-items-center rounded-full bg-[#11171d] text-sm font-black text-white/58 transition hover:bg-white/12 hover:text-cyan-300"
               >

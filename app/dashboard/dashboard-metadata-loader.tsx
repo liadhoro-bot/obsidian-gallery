@@ -16,6 +16,9 @@ type DashboardMetadataSummary = {
   totalUnits: number
   recentUnits: number
   ownedColors: number
+  wishlistedPaints: number
+  ownedPaintBrands: number
+  ownedPaintUnits: number
   timeLogged: string
   averageSessionLength: string
   weeklySessions: string
@@ -23,7 +26,22 @@ type DashboardMetadataSummary = {
   paintStreak: string
   totalLoggedSeconds: number
   averageSessionSeconds: number
+  longestSessionSeconds: number
+  longestSessionLength: string
+  paintingSessionsCount: number
+  activePaintingDays: number
   completedSessionsCount: number
+  completedUnits: number
+  modelsCompleted: number
+  collectionCompletedPercent: string
+  mostUsedPaint: string
+  paintingTimeBuckets: Array<{
+    id: 'morning' | 'noon' | 'afternoon' | 'evening' | 'late-night'
+    label: string
+    count: number
+    percent: number
+    color: string
+  }>
   lastSessionAt: string | null
   paintStreakDays: number
 }
@@ -79,52 +97,89 @@ function formatTimeSince(dateString: string | null) {
 function buildItems(summary: DashboardMetadataSummary): DashboardMetadataItem[] {
   return [
     {
-      id: 'total-units',
-      label: 'Total Units',
-      value: String(summary.totalUnits),
-      accent: 'text-white',
-    },
-    {
-      id: 'added-last-30-days',
-      label: 'Added Last 30 Days',
-      value: `+${summary.recentUnits}`,
-      accent: 'text-orange-400',
-    },
-    {
-      id: 'time-logged',
-      label: 'Time Logged',
+      id: 'painting-time',
+      label: 'Painting Time',
       value: summary.timeLogged,
       accent: 'text-white',
     },
     {
-      id: 'average-session-length',
-      label: 'Avg Session Length',
+      id: 'painting-sessions',
+      label: 'Painting Sessions',
+      value: String(summary.paintingSessionsCount),
+      accent: 'text-white',
+    },
+    {
+      id: 'active-painting-days',
+      label: 'Active Painting Days',
+      value: String(summary.activePaintingDays),
+      accent: 'text-white',
+    },
+    {
+      id: 'average-session-duration',
+      label: 'Avg Session Duration',
       value: summary.averageSessionLength,
       accent: 'text-white',
     },
     {
-      id: 'weekly-sessions',
-      label: 'Weekly Sessions',
-      value: summary.weeklySessions,
+      id: 'longest-session',
+      label: 'Longest Session',
+      value: summary.longestSessionLength,
       accent: 'text-orange-400',
     },
     {
-      id: 'colors-in-vault',
-      label: 'Colors in Paints',
+      id: 'painting-times',
+      label: 'Painting Times',
+      value: '',
+      accent: 'text-white',
+      paintingTimeBuckets: summary.paintingTimeBuckets,
+    },
+    {
+      id: 'paints-owned',
+      label: 'Paints Owned',
       value: String(summary.ownedColors),
       accent: 'text-white',
     },
     {
-      id: 'since-last-session',
-      label: 'Since Last Session',
-      value: summary.timeSinceLastSession,
+      id: 'paints-wishlisted',
+      label: 'Paints Wishlisted',
+      value: String(summary.wishlistedPaints),
       accent: 'text-white',
     },
     {
-      id: 'paint-streak',
-      label: 'Paint Streak',
-      value: summary.paintStreak,
+      id: 'paint-brands-owned',
+      label: 'Paint Brands Owned',
+      value: String(summary.ownedPaintBrands),
+      accent: 'text-white',
+    },
+    {
+      id: 'most-used-paint',
+      label: 'Most Used Paint',
+      value: summary.mostUsedPaint,
       accent: 'text-orange-400',
+    },
+    {
+      id: 'units-owned',
+      label: 'Units Owned',
+      value: String(summary.totalUnits),
+      accent: 'text-white',
+    },
+    {
+      id: 'units-completed',
+      label: 'Units Completed',
+      value: String(summary.completedUnits),
+      accent: 'text-white',
+    },
+    {
+      id: 'models-completed',
+      label: 'Models Completed',
+      value: String(summary.modelsCompleted),
+      accent: 'text-white',
+    },
+    {
+      id: 'collection-completed',
+      label: 'Collection Completed',
+      value: summary.collectionCompletedPercent,
+      accent: 'text-white',
     },
   ]
 }

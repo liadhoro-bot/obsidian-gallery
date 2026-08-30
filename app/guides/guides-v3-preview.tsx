@@ -2,18 +2,24 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState, useTransition } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './guides-v3-silver.module.css'
+import { createDeckFromForge } from './actions'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type {
   GuidesV3Deck,
   GuidesV3GuideFile,
   GuidesV3Payload,
 } from './guides-v3-data'
+import type { GuidesV3DeckDetail } from './guides-v3-detail-data'
+import DeckEditorClient, {
+  type DeckEditorInitialCard,
+  type DeckEditorSavePayload,
+} from './decks/[id]/deck-editor-client'
 
 type GuideTab = 'guides' | 'decks' | 'library'
 type ForgeMode = 'guide' | 'deck'
@@ -29,18 +35,42 @@ type ForgeScreen =
   | 'draft'
   | 'build'
   | 'deck-editor'
-type SourceKind = 'unit' | 'project' | 'photos' | 'paints' | 'blank'
-type BuildTab = 'details' | 'decks' | 'preview'
+type SourceKind = 'unit' | 'project' | 'photos' | 'paints' | 'blank' | 'scratch'
+type BuildTab = 'details' | 'cards' | 'preview'
+type DeckDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
+type DeckStatus = 'Draft' | 'Private' | 'Public'
+type CardTemplate = 'title' | 'step' | 'theme' | 'image' | 'paints' | 'video'
 
 type GuideFile = GuidesV3GuideFile
-type Deck = GuidesV3Deck
+type Deck = GuidesV3Deck & {
+  draft?: ForgeDeck
+}
 
 type ForgeDeck = {
   id: string
   title: string
+  description: string
+  difficulty: DeckDifficulty
+  status: DeckStatus
   type: string
-  cards: string[]
+  cards: ForgeCard[]
+  gallery: ForgeDeckImage[]
+  heroImageId: string
   required: boolean
+}
+
+type ForgeCard = {
+  id: string
+  title: string
+  template: CardTemplate
+  body: string
+  image: string
+}
+
+type ForgeDeckImage = {
+  id: string
+  url: string
+  alt: string
 }
 
 type SourceUnit = {
@@ -214,13 +244,94 @@ const sourcePaints = [
   { name: 'Akhelian Green', brand: 'Citadel', type: 'Layer', color: '#17b9c2' },
 ]
 
-const blankTemplates = [
-  'Quick 4-Step Guide',
-  'Classic Layering Guide',
-  'Speedpaint Guide',
-  'Airbrush Guide',
-  'Basing Guide',
-  'Custom Blank Guide',
+type BlankTemplateStep = {
+  glyph: string
+  template: CardTemplate
+}
+
+type BlankTemplate = {
+  id: string
+  name: string
+  description: string
+  sequence: BlankTemplateStep[]
+}
+
+const blankTemplates: BlankTemplate[] = [
+  {
+    id: '4-step-recipe',
+    name: '4-Step Recipe',
+    description: 'Paints + 4 steps. Fast and practical.',
+    sequence: [
+      { glyph: '\u{1F3A8}', template: 'paints' },
+      { glyph: '1', template: 'step' },
+      { glyph: '2', template: 'step' },
+      { glyph: '3', template: 'step' },
+      { glyph: '4', template: 'step' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+    ],
+  },
+  {
+    id: 'photo-walkthrough',
+    name: 'Photo Walkthrough',
+    description: 'Progress photos paired with instructions.',
+    sequence: [
+      { glyph: '\u{1F5BC}', template: 'image' },
+      { glyph: '1', template: 'step' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+      { glyph: '2', template: 'step' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+    ],
+  },
+  {
+    id: 'color-scheme',
+    name: 'Color Scheme',
+    description: 'Palette-first guide for recreating a look.',
+    sequence: [
+      { glyph: '◈', template: 'theme' },
+      { glyph: '\u{1F3A8}', template: 'paints' },
+      { glyph: '1', template: 'step' },
+      { glyph: '2', template: 'step' },
+      { glyph: '3', template: 'step' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+    ],
+  },
+  {
+    id: 'technique-lesson',
+    name: 'Technique Lesson',
+    description: 'Teach one skill with video and examples.',
+    sequence: [
+      { glyph: '▶', template: 'video' },
+      { glyph: '1', template: 'step' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+      { glyph: '2', template: 'step' },
+    ],
+  },
+  {
+    id: 'showcase',
+    name: 'Showcase',
+    description: 'Image-led presentation of finished work.',
+    sequence: [
+      { glyph: '◈', template: 'theme' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+      { glyph: '\u{1F3A8}', template: 'paints' },
+    ],
+  },
+  {
+    id: 'full-tutorial',
+    name: 'Full Tutorial',
+    description: 'The complete start-to-finish process.',
+    sequence: [
+      { glyph: '\u{1F3A8}', template: 'paints' },
+      { glyph: '1', template: 'step' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+      { glyph: '2', template: 'step' },
+      { glyph: '▶', template: 'video' },
+      { glyph: '3', template: 'step' },
+      { glyph: '\u{1F5BC}', template: 'image' },
+    ],
+  },
 ]
 
 const libraryTags = [
@@ -285,40 +396,245 @@ const publicDecks: Deck[] = [
   },
 ]
 
+const deckDifficultyOptions: DeckDifficulty[] = [
+  'Beginner',
+  'Intermediate',
+  'Advanced',
+]
+
+const deckStatusOptions: DeckStatus[] = ['Draft', 'Private', 'Public']
+
+const cardTemplateOptions: Array<{
+  template: CardTemplate
+  title: string
+  body: string
+}> = [
+  {
+    template: 'title',
+    title: 'Title',
+    body: 'Opening card with the deck name, promise, and hero reference.',
+  },
+  {
+    template: 'step',
+    title: 'Step',
+    body: 'Instruction card for one painting move, technique, or stage.',
+  },
+  {
+    template: 'theme',
+    title: 'Theme',
+    body: 'Palette, mood, army scheme, or color story reference.',
+  },
+  {
+    template: 'image',
+    title: 'Image',
+    body: 'Reference photo, finished result, or visual checkpoint.',
+  },
+  {
+    template: 'paints',
+    title: 'Paints',
+    body: 'Deck paints and current ownership status, at a glance.',
+  },
+  {
+    template: 'video',
+    title: 'Video',
+    body: 'YouTube walkthrough with a short caption.',
+  },
+]
+
+function makeForgeCard(title: string, index: number): ForgeCard {
+  const lowerTitle = title.toLowerCase()
+  const template: CardTemplate =
+    lowerTitle.includes('palette') || lowerTitle.includes('theme')
+      ? 'theme'
+      : lowerTitle.includes('image') || lowerTitle.includes('photo')
+        ? 'image'
+        : lowerTitle.includes('cover') || lowerTitle.includes('title')
+          ? 'title'
+          : 'step'
+
+  return {
+    id: `card-${index}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    title,
+    template,
+    body:
+      template === 'title'
+        ? 'Introduce the technique and what the finished model should feel like.'
+        : template === 'theme'
+          ? 'Capture the palette, finish, and visual intent for this deck.'
+          : template === 'image'
+            ? 'Use this card as a visual checkpoint for comparison.'
+            : 'Describe the painting action, timing, and result to check before moving on.',
+    image:
+      template === 'image'
+        ? '/onboarding/pains/paint-management.jpeg'
+        : '/onboarding/pains/tough-choices.jpeg',
+  }
+}
+
+function makeTemplateCard(template: CardTemplate, existingCards: ForgeCard[]): ForgeCard {
+  const option = cardTemplateOptions.find((item) => item.template === template)
+  const label = option?.title ?? 'Step'
+  const occurrence = existingCards.filter((card) => card.template === template).length + 1
+  const title = template === 'title' ? `${label} Card` : `${label} ${occurrence}`
+
+  return {
+    id: `card-${Date.now()}-${existingCards.length}-${template}`,
+    title,
+    template,
+    body: option?.body ?? 'Add the card notes here.',
+    image:
+      template === 'image'
+        ? '/onboarding/pains/paint-management.jpeg'
+        : template === 'theme'
+          ? '/onboarding/first-project-bg.jpeg'
+          : '/onboarding/pains/tough-choices.jpeg',
+  }
+}
+
+function makeDeckGallery(seed: string): ForgeDeckImage[] {
+  return [
+    {
+      id: `${seed}-gallery-hero`,
+      url: '/onboarding/pains/tough-choices.jpeg',
+      alt: 'Main deck reference',
+    },
+    {
+      id: `${seed}-gallery-palette`,
+      url: '/onboarding/first-project-bg.jpeg',
+      alt: 'Palette reference',
+    },
+    {
+      id: `${seed}-gallery-finish`,
+      url: '/onboarding/pains/paint-management.jpeg',
+      alt: 'Finished card reference',
+    },
+  ]
+}
+
+function toEditorCard(card: ForgeCard): DeckEditorInitialCard {
+  return {
+    id: card.id,
+    title: card.title,
+    template: card.template === 'title' ? 'cover' : card.template,
+    body: card.body,
+    image: card.image,
+    paints: [],
+    videoUrl: null,
+  }
+}
+
+function toEditorCards(deck: ForgeDeck): DeckEditorInitialCard[] {
+  const cards = deck.cards.map(toEditorCard)
+  if (cards.some((card) => card.template === 'cover')) return cards
+
+  return [
+    {
+      id: `${deck.id}:cover`,
+      title: deck.title,
+      template: 'cover',
+      body: deck.description,
+      image:
+        deck.gallery.find((image) => image.id === deck.heroImageId)?.url ??
+        deck.gallery[0]?.url ??
+        null,
+      paints: [],
+      videoUrl: null,
+    },
+    ...cards,
+  ]
+}
+
+function toEditorDeckDetail(deck: ForgeDeck): GuidesV3DeckDetail {
+  const heroImage =
+    deck.gallery.find((image) => image.id === deck.heroImageId)?.url ??
+    deck.gallery[0]?.url ??
+    '/onboarding/pains/tough-choices.jpeg'
+
+  return {
+    id: deck.id,
+    title: deck.title,
+    category: deck.type,
+    cards: deck.cards.length,
+    paints: 0,
+    usedIn: 0,
+    image: heroImage,
+    saved: true,
+    accent: '#22d3ee',
+    description: deck.description,
+    isPublic: deck.status === 'Public',
+    ownerLabel: 'Created by you',
+    steps: [],
+    paintList: [],
+  }
+}
+
 const defaultForgeDecks: ForgeDeck[] = [
   {
     id: 'palette-card',
     title: 'Palette Card',
+    description: 'A compact color reference for the deck.',
+    difficulty: 'Beginner',
+    status: 'Draft',
     type: 'Palette',
-    cards: ['Palette overview'],
+    cards: ['Palette overview'].map(makeForgeCard),
+    gallery: makeDeckGallery('palette-card'),
+    heroImageId: 'palette-card-gallery-hero',
     required: true,
   },
   {
     id: 'ancient-bone',
     title: 'Ancient Bone',
+    description: 'A reusable sequence for painting aged bone and sepulchral details.',
+    difficulty: 'Intermediate',
+    status: 'Draft',
     type: 'Steps',
-    cards: ['Cover Card', 'Basecoat', 'Shade the bone', 'Drybrush'],
+    cards: ['Cover Card', 'Basecoat', 'Shade the bone', 'Drybrush'].map(
+      makeForgeCard
+    ),
+    gallery: makeDeckGallery('ancient-bone'),
+    heroImageId: 'ancient-bone-gallery-hero',
     required: true,
   },
   {
     id: 'forgotten-tomb-gold',
     title: 'Forgotten Tomb Gold',
+    description: 'Warm metallics with verdigris and final edge shine.',
+    difficulty: 'Intermediate',
+    status: 'Draft',
     type: 'Steps',
-    cards: ['Cover Card', 'Base metal', 'Verdigris wash', 'Final shine'],
+    cards: ['Cover Card', 'Base metal', 'Verdigris wash', 'Final shine'].map(
+      makeForgeCard
+    ),
+    gallery: makeDeckGallery('forgotten-tomb-gold'),
+    heroImageId: 'forgotten-tomb-gold-gallery-hero',
     required: true,
   },
   {
     id: 'verdigris-brass-weapons',
     title: 'Verdigris Brass Weapons',
+    description: 'A focused corrosion pass for brass weapon details.',
+    difficulty: 'Advanced',
+    status: 'Private',
     type: 'Steps',
-    cards: ['Cover Card', 'Brass base', 'Green oxidation', 'Edge cleanup'],
+    cards: ['Cover Card', 'Brass base', 'Green oxidation', 'Edge cleanup'].map(
+      makeForgeCard
+    ),
+    gallery: makeDeckGallery('verdigris-brass-weapons'),
+    heroImageId: 'verdigris-brass-weapons-gallery-hero',
     required: false,
   },
   {
     id: 'classic-turquoise-armour',
     title: 'Classic Turquoise Armour',
+    description: 'Clean turquoise armor panels with crisp shade and highlight notes.',
+    difficulty: 'Intermediate',
+    status: 'Draft',
     type: 'Steps',
-    cards: ['Cover Card', 'Teal base', 'Dark shade', 'Edge highlight'],
+    cards: ['Cover Card', 'Teal base', 'Dark shade', 'Edge highlight'].map(
+      makeForgeCard
+    ),
+    gallery: makeDeckGallery('classic-turquoise-armour'),
+    heroImageId: 'classic-turquoise-armour-gallery-hero',
     required: false,
   },
 ]
@@ -336,7 +652,7 @@ export default function GuidesV3Preview({
     initialPayload?.guideFiles.length
       ? initialPayload.guideFiles
       : initialGuideFiles
-  const seedDecks =
+  const seedDecks: Deck[] =
     initialPayload?.decks.length ? initialPayload.decks : initialDecks
   const seedLibraryGuides =
     initialPayload?.libraryGuides.length
@@ -348,7 +664,7 @@ export default function GuidesV3Preview({
       : publicDecks
   const [activeTab, setActiveTab] = useState<GuideTab>('guides')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
-  const [decks, setDecks] = useState(seedDecks)
+  const [decks, setDecks] = useState<Deck[]>(seedDecks)
   const [query, setQuery] = useState('')
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false)
@@ -366,11 +682,16 @@ export default function GuidesV3Preview({
   const [selectedPaintIds, setSelectedPaintIds] = useState(
     () => new Set(sourcePaints.slice(0, 4).map((paint) => paint.name))
   )
-  const [selectedTemplate, setSelectedTemplate] = useState(blankTemplates[0])
+  const [selectedTemplateId, setSelectedTemplateId] = useState(blankTemplates[0].id)
+  const selectedTemplate =
+    blankTemplates.find((template) => template.id === selectedTemplateId) ??
+    blankTemplates[0]
   const [forgeDecks, setForgeDecks] = useState<ForgeDeck[]>(defaultForgeDecks)
   const [buildTab, setBuildTab] = useState<BuildTab>('details')
   const [editingDeckId, setEditingDeckId] = useState(defaultForgeDecks[1].id)
+  const [editingCardId, setEditingCardId] = useState<string | null>(null)
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
+  const [isEditingDeckDetails, setIsEditingDeckDetails] = useState(false)
   const [guideDeckSearch, setGuideDeckSearch] = useState('')
   const [selectedGuideDeckIds, setSelectedGuideDeckIds] = useState(
     () => new Set<string>()
@@ -378,6 +699,9 @@ export default function GuidesV3Preview({
   const [guideName, setGuideName] = useState('')
   const [guideDescription, setGuideDescription] = useState('')
   const [guideImage, setGuideImage] = useState('/onboarding/pains/tough-choices.jpeg')
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [isSavingForge, startSaveTransition] = useTransition()
+  const isSavingForgeRef = useRef(false)
 
   useEffect(() => {
     performance.mark('v3-guides-hydrated')
@@ -406,6 +730,8 @@ export default function GuidesV3Preview({
     sourceProjects[0]
   const editingDeck =
     forgeDecks.find((deck) => deck.id === editingDeckId) ?? forgeDecks[0]
+  const editingCard =
+    editingDeck?.cards.find((card) => card.id === editingCardId) ?? null
   const forgeTitle =
     sourceKind === 'unit'
       ? selectedUnit.title
@@ -415,9 +741,12 @@ export default function GuidesV3Preview({
           ? 'Photo Built Guide'
           : sourceKind === 'paints'
             ? 'Paint List Guide'
-          : selectedTemplate
+          : selectedTemplate.name
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+  const shouldUseSharedDeckEditor =
+    forgeScreen === 'build' &&
+    (forgeMode === 'deck' || sourceKind === 'blank' || sourceKind === 'scratch')
 
   function openCreateChoice() {
     setActiveGuideIndex(null)
@@ -450,6 +779,7 @@ export default function GuidesV3Preview({
     setForgeMode(mode)
     setIsCreateChoiceOpen(false)
     if (mode === 'guide') {
+      setSourceKind('unit')
       setSelectedGuideDeckIds(new Set())
       setGuideDeckSearch('')
       setGuideName('')
@@ -459,6 +789,7 @@ export default function GuidesV3Preview({
       return
     }
 
+    setSourceKind('unit')
     setForgeDecks([defaultForgeDecks[0]])
     setEditingDeckId(defaultForgeDecks[0].id)
     setForgeScreen('source')
@@ -467,15 +798,74 @@ export default function GuidesV3Preview({
   function closeForge() {
     setForgeScreen(null)
     setIsAddCardOpen(false)
+    setEditingCardId(null)
+    setIsEditingDeckDetails(false)
+    setSaveError(null)
     setBuildTab('details')
   }
 
-  function chooseSource(nextSource: SourceKind) {
+  function chooseSource(nextSource: Exclude<SourceKind, 'scratch'>) {
     setSourceKind(nextSource)
     setForgeScreen(nextSource)
   }
 
+  function startFromTemplate(template: BlankTemplate) {
+    setForgeMode('deck')
+    setSourceKind('blank')
+    setSelectedTemplateId(template.id)
+    const deckId = 'draft-deck-blank'
+    const cards: ForgeCard[] = [makeTemplateCard('title', [])]
+    template.sequence.forEach((step) => {
+      cards.push(makeTemplateCard(step.template, cards))
+    })
+    const baseDecks: ForgeDeck[] = [
+      {
+        id: deckId,
+        title: template.name,
+        description: template.description,
+        difficulty: 'Beginner',
+        status: 'Draft',
+        type: 'Steps',
+        cards,
+        gallery: makeDeckGallery(deckId),
+        heroImageId: `${deckId}-gallery-hero`,
+        required: true,
+      },
+    ]
+
+    setForgeDecks(baseDecks)
+    setEditingDeckId(baseDecks[0].id)
+    setBuildTab('details')
+    setForgeScreen('build')
+  }
+
+  function startBlankDeck() {
+    setForgeMode('deck')
+    setSourceKind('scratch')
+    const deckId = 'draft-deck-scratch'
+    const baseDecks: ForgeDeck[] = [
+      {
+        id: deckId,
+        title: 'New Deck',
+        description: 'A deck built entirely from scratch.',
+        difficulty: 'Beginner',
+        status: 'Draft',
+        type: 'Steps',
+        cards: [makeTemplateCard('title', [])],
+        gallery: makeDeckGallery(deckId),
+        heroImageId: `${deckId}-gallery-hero`,
+        required: true,
+      },
+    ]
+
+    setForgeDecks(baseDecks)
+    setEditingDeckId(baseDecks[0].id)
+    setBuildTab('details')
+    setForgeScreen('build')
+  }
+
   function continueToDraft() {
+    setForgeMode('deck')
     const deckTitle =
       sourceKind === 'unit'
         ? `${selectedUnit.title} Deck`
@@ -483,18 +873,24 @@ export default function GuidesV3Preview({
           ? `${selectedProject.title} Deck`
           : sourceKind === 'photos'
             ? 'Photo Sequence Deck'
-            : sourceKind === 'paints'
-              ? 'Paint List Deck'
-              : selectedTemplate
-    const baseDecks = [
+            : 'Paint List Deck'
+    const cards: ForgeCard[] = [
+      'Title Card',
+      'Theme Card',
+      'Card 01 - Basecoat',
+      'Card 02 - Finish',
+    ].map(makeForgeCard)
+    const baseDecks: ForgeDeck[] = [
       {
         id: `draft-deck-${sourceKind}`,
         title: deckTitle,
+        description: `A working deck built from ${sourceKind} source material.`,
+        difficulty: 'Intermediate',
+        status: 'Draft',
         type: sourceKind === 'photos' ? 'Image + Steps' : 'Steps',
-        cards:
-          sourceKind === 'blank'
-            ? ['Cover Card', 'Card 01 - First step']
-            : ['Cover Card', 'Palette Card', 'Card 01 - Basecoat', 'Card 02 - Finish'],
+        cards,
+        gallery: makeDeckGallery(`draft-deck-${sourceKind}`),
+        heroImageId: `draft-deck-${sourceKind}-gallery-hero`,
         required: true,
       },
     ]
@@ -509,22 +905,41 @@ export default function GuidesV3Preview({
     setForgeScreen('build')
   }
 
+  function backFromBuild() {
+    if (sourceKind === 'scratch') {
+      setForgeScreen('source')
+      return
+    }
+    if (sourceKind === 'blank') {
+      setForgeScreen('blank')
+      return
+    }
+    setForgeScreen('draft')
+  }
+
+  function resetDeckForge() {
+    setForgeDecks([defaultForgeDecks[0]])
+    setEditingDeckId(defaultForgeDecks[0].id)
+    setSourceKind('unit')
+    setSelectedTemplateId(blankTemplates[0].id)
+  }
+
   function saveForgeToHome() {
+    if (isSavingForge || isSavingForgeRef.current) return
+
     if (forgeMode === 'deck') {
-      const deckDraft = editingDeck ?? forgeDecks[0]
-      const nextDeck = {
-        id: `saved-${Date.now()}`,
-        title: deckDraft.title,
-        category: deckDraft.type,
-        cards: deckDraft.cards.length,
-        paints: 5,
-        usedIn: 0,
-        image: '/onboarding/pains/paint-management.jpeg',
-        saved: true,
-        accent: '#22d3ee',
-      }
-      setDecks((current) => [nextDeck, ...current])
-      setActiveTab('decks')
+      saveDeckEditorPayload({
+        title: editingDeck.title,
+        description: editingDeck.description,
+        difficulty: editingDeck.difficulty,
+        status: editingDeck.status,
+        heroImage:
+          editingDeck.gallery.find((image) => image.id === editingDeck.heroImageId)?.url ??
+          editingDeck.gallery[0]?.url ??
+          null,
+        cards: toEditorCards(editingDeck),
+      })
+      return
     } else {
       const guideDeckTotal = selectedGuideDecks.length
       const cardTotal = selectedGuideDecks.reduce((sum, deck) => sum + deck.cards, 0)
@@ -551,13 +966,67 @@ export default function GuidesV3Preview({
     closeForge()
   }
 
-  function addCardToDeck(cardType: string) {
+  function saveDeckEditorPayload(payload: DeckEditorSavePayload) {
+    if (isSavingForge || isSavingForgeRef.current) return
+
+    isSavingForgeRef.current = true
+    setSaveError(null)
+    startSaveTransition(async () => {
+      try {
+        const savedDeck = await createDeckFromForge({
+          title: payload.title,
+          description: payload.description,
+          status: payload.status,
+          image: payload.heroImage,
+          cards: payload.cards.map((card) => ({
+            title: card.title,
+            template: card.template === 'cover' ? 'title' : card.template,
+            body: card.body,
+            image: card.image,
+            paints: card.paints?.map((paint) => ({
+              id: paint.id,
+              ratio_text: paint.ratio_text ?? null,
+            })),
+          })),
+        })
+
+        setDecks((current) => [
+          savedDeck,
+          ...current.filter((deck) => deck.id !== savedDeck.id && !deck.draft),
+        ])
+        setActiveTab('decks')
+        resetDeckForge()
+        closeForge()
+      } catch (error) {
+        setSaveError(
+          error instanceof Error ? error.message : 'Could not save deck.'
+        )
+      } finally {
+        isSavingForgeRef.current = false
+      }
+    })
+  }
+
+  function editDraftDeck(deck: Deck) {
+    if (!deck.draft) return
+    setForgeMode('deck')
+    setForgeDecks([deck.draft])
+    setEditingDeckId(deck.draft.id)
+    setBuildTab('details')
+    setForgeScreen('build')
+    setActiveTab('decks')
+  }
+
+  function addCardToDeck(cardType: CardTemplate) {
     setForgeDecks((current) =>
       current.map((deck) =>
         deck.id === editingDeck.id
           ? {
               ...deck,
-              cards: [...deck.cards, cardType],
+              cards: [
+                ...deck.cards,
+                makeTemplateCard(cardType, deck.cards),
+              ],
             }
           : deck
       )
@@ -565,12 +1034,79 @@ export default function GuidesV3Preview({
     setIsAddCardOpen(false)
   }
 
+  function updateEditingDeck(patch: Partial<ForgeDeck>) {
+    setForgeDecks((current) =>
+      current.map((deck) =>
+        deck.id === editingDeck.id ? { ...deck, ...patch } : deck
+      )
+    )
+  }
+
+  function updateEditingCard(cardId: string, patch: Partial<ForgeCard>) {
+    setForgeDecks((current) =>
+      current.map((deck) =>
+        deck.id === editingDeck.id
+          ? {
+              ...deck,
+              cards: deck.cards.map((card) =>
+                card.id === cardId ? { ...card, ...patch } : card
+              ),
+            }
+          : deck
+      )
+    )
+  }
+
+  function deleteEditingCard(cardId: string) {
+    setForgeDecks((current) =>
+      current.map((deck) =>
+        deck.id === editingDeck.id
+          ? {
+              ...deck,
+              cards: deck.cards.filter((card) => card.id !== cardId),
+            }
+          : deck
+      )
+    )
+    setEditingCardId(null)
+  }
+
+  function reorderEditingCard(cardId: string, targetIndex: number) {
+    setForgeDecks((current) =>
+      current.map((deck) => {
+        if (deck.id !== editingDeck.id) return deck
+        const currentIndex = deck.cards.findIndex((card) => card.id === cardId)
+
+        if (
+          currentIndex < 0 ||
+          targetIndex < 0 ||
+          targetIndex > deck.cards.length ||
+          currentIndex === targetIndex
+        ) {
+          return deck
+        }
+
+        const cards = [...deck.cards]
+        const [movedCard] = cards.splice(currentIndex, 1)
+        const adjustedTargetIndex =
+          currentIndex < targetIndex ? targetIndex - 1 : targetIndex
+        cards.splice(adjustedTargetIndex, 0, movedCard)
+        return { ...deck, cards }
+      })
+    )
+  }
+
   function addDeckToDraft() {
-    const nextDeck = {
+    const nextDeck: ForgeDeck = {
       id: `added-deck-${Date.now()}`,
       title: 'New Optional Deck',
+      description: 'A new optional deck section.',
+      difficulty: 'Beginner',
+      status: 'Draft',
       type: 'Steps',
-      cards: ['Cover Card'],
+      cards: ['Title Card'].map(makeForgeCard),
+      gallery: makeDeckGallery('added-deck'),
+      heroImageId: 'added-deck-gallery-hero',
       required: false,
     }
     setForgeDecks((current) => [...current, nextDeck])
@@ -621,9 +1157,11 @@ export default function GuidesV3Preview({
           if (forgeScreen === 'guide-decks') closeForge()
           else if (forgeScreen === 'guide-compose') setForgeScreen('guide-decks')
           else if (forgeScreen === 'source') closeForge()
-          else if (forgeScreen === 'draft') setForgeScreen(sourceKind)
-          else if (forgeScreen === 'build') setForgeScreen('draft')
-          else if (forgeScreen === 'deck-editor') {
+          else if (forgeScreen === 'draft') {
+            setForgeScreen(sourceKind === 'scratch' ? 'source' : sourceKind)
+          } else if (forgeScreen === 'build') {
+            backFromBuild()
+          } else if (forgeScreen === 'deck-editor') {
             setForgeScreen('build')
           } else setForgeScreen('source')
         }}
@@ -656,7 +1194,15 @@ export default function GuidesV3Preview({
           />
         ) : null}
         {forgeScreen === 'source' ? (
-          <SourcePicker onChooseSource={chooseSource} />
+          <SourcePicker
+            onChooseSource={(source) => {
+              if (source === 'scratch') {
+                startBlankDeck()
+                return
+              }
+              chooseSource(source)
+            }}
+          />
         ) : null}
         {forgeScreen === 'unit' ? (
           <UnitSourceScreen
@@ -717,11 +1263,7 @@ export default function GuidesV3Preview({
           />
         ) : null}
         {forgeScreen === 'blank' ? (
-          <BlankSourceScreen
-            selectedTemplate={selectedTemplate}
-            onTemplateChange={setSelectedTemplate}
-            onContinue={continueToDraft}
-          />
+          <BlankSourceScreen onSelectTemplate={startFromTemplate} />
         ) : null}
         {forgeScreen === 'draft' ? (
           <DraftReviewScreen
@@ -731,18 +1273,38 @@ export default function GuidesV3Preview({
             onContinue={continueToBuild}
           />
         ) : null}
-        {forgeScreen === 'build' ? (
+        {shouldUseSharedDeckEditor ? (
+          <DeckEditorClient
+            key={editingDeck.id}
+            backHref="/guides?preview=1"
+            deck={toEditorDeckDetail(editingDeck)}
+            featureGuides={featureGuides}
+            initialCards={toEditorCards(editingDeck)}
+            isSaving={isSavingForge}
+            onBack={backFromBuild}
+            onSaveDraft={saveDeckEditorPayload}
+            saveError={saveError}
+            saveLabel="Save"
+          />
+        ) : null}
+        {forgeScreen === 'build' && !shouldUseSharedDeckEditor ? (
           <GuideBuildScreen
             buildTab={buildTab}
-            decks={forgeDecks}
-            title={editingDeck?.title ?? forgeTitle}
-            onAddDeck={addDeckToDraft}
+            deck={editingDeck}
+            isEditingDetails={isEditingDeckDetails}
+            onAddCard={() => setIsAddCardOpen(true)}
+            onBack={backFromBuild}
             onBuildTabChange={setBuildTab}
-            onEditDeck={(deckId) => {
-              setEditingDeckId(deckId)
-              setForgeScreen('deck-editor')
-            }}
+            onCardEdit={setEditingCardId}
+            onDetailsEditToggle={() =>
+              setIsEditingDeckDetails((current) => !current)
+            }
+            onHelp={startFeatureTour}
+            isSaving={isSavingForge}
+            onReorderCard={reorderEditingCard}
             onSave={saveForgeToHome}
+            onUpdateDeck={updateEditingDeck}
+            saveError={saveError}
           />
         ) : null}
         {forgeScreen === 'deck-editor' ? (
@@ -750,7 +1312,11 @@ export default function GuidesV3Preview({
             deck={editingDeck}
             forgeMode={forgeMode}
             onAddCard={() => setIsAddCardOpen(true)}
+            onCardEdit={setEditingCardId}
+            isSaving={isSavingForge}
+            onReorderCard={reorderEditingCard}
             onSave={saveForgeToHome}
+            saveError={saveError}
           />
         ) : null}
 
@@ -758,6 +1324,14 @@ export default function GuidesV3Preview({
           <AddCardSheet
             onClose={() => setIsAddCardOpen(false)}
             onAddCard={addCardToDeck}
+          />
+        ) : null}
+        {editingCard ? (
+          <EditCardSheet
+            card={editingCard}
+            onChange={(patch) => updateEditingCard(editingCard.id, patch)}
+            onClose={() => setEditingCardId(null)}
+            onDelete={() => deleteEditingCard(editingCard.id)}
           />
         ) : null}
       </ForgeShell>
@@ -788,6 +1362,7 @@ export default function GuidesV3Preview({
           <DecksTab
             decks={decks}
             onAddDeck={openCreateChoice}
+            onEditDraftDeck={editDraftDeck}
           />
         ) : null}
         {activeTab === 'library' ? (
@@ -829,7 +1404,7 @@ function getForgeScreenTitle(screen: ForgeScreen, mode: ForgeMode) {
   if (screen === 'project') return 'Choose Source Project'
   if (screen === 'photos') return 'Build From Photos'
   if (screen === 'paints') return 'Build From Paints'
-  if (screen === 'blank') return 'Start From Blank'
+  if (screen === 'blank') return 'Choose a Template'
   if (screen === 'draft') return 'Deck Draft'
   if (screen === 'build') return 'Deck Details'
   return mode === 'deck' ? 'Edit Deck' : 'Deck Editor'
@@ -866,11 +1441,11 @@ function TopNav({
           aria-label="About guides"
           onClick={onHelpToggle}
           data-feature-guide-target="guides.help"
+          data-feature-guide-launcher-button="true"
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
             <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
             <path d="M12 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
-            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
           </svg>
         </button>
         <button
@@ -1314,6 +1889,48 @@ function ChoiceCard({
   )
 }
 
+const sourceChoices: {
+  id: SourceKind
+  title: string
+  body: string
+  disabled?: boolean
+}[] = [
+  {
+    id: 'blank',
+    title: 'From Template',
+    body: 'Start from a proven card structure.',
+  },
+  {
+    id: 'unit',
+    title: 'From Unit',
+    body: 'Turn a completed unit into a reusable deck.',
+    disabled: true,
+  },
+  {
+    id: 'project',
+    title: 'From Project',
+    body: 'Build a deck from units and shared palette.',
+    disabled: true,
+  },
+  {
+    id: 'photos',
+    title: 'From Photos',
+    body: 'Upload progress photos and let the app arrange them.',
+    disabled: true,
+  },
+  {
+    id: 'paints',
+    title: 'From Paint List',
+    body: 'Start with paints and build steps around them.',
+    disabled: true,
+  },
+  {
+    id: 'scratch',
+    title: 'From Blank',
+    body: 'Start with an empty deck and build everything yourself.',
+  },
+]
+
 function SourcePicker({
   onChooseSource,
 }: {
@@ -1324,30 +1941,46 @@ function SourcePicker({
       <p className="text-sm font-semibold leading-6 text-white/48">
         Start a deck from existing data or begin from scratch.
       </p>
-      {[
-        ['unit', 'From Unit', 'Turn a completed unit into a reusable deck.'],
-        ['project', 'From Project', 'Build a deck from units and shared palette.'],
-        ['photos', 'From Photos', 'Upload progress photos and let the app arrange them.'],
-        ['paints', 'From Paint List', 'Start with paints and build steps around them.'],
-        ['blank', 'From Blank', 'Create cards manually.'],
-      ].map(([id, title, body]) => (
+      {sourceChoices.map(({ id, title, body, disabled }) => (
         <button
           key={id}
           type="button"
-          onClick={() => onChooseSource(id as SourceKind)}
+          disabled={disabled}
+          aria-disabled={disabled}
+          onClick={() => {
+            if (disabled) return
+            onChooseSource(id)
+          }}
           data-v3-guides-indicator="source-choice-card"
-          className="flex items-center gap-3 rounded-[10px] border border-white/10 bg-[#111821] p-3 text-left transition hover:border-cyan-300/45"
+          className={[
+            'flex items-center gap-3 rounded-[10px] border p-3 text-left transition',
+            disabled
+              ? 'cursor-not-allowed border-white/5 bg-[#111821]/50 opacity-45'
+              : 'border-white/10 bg-[#111821] hover:border-cyan-300/45',
+          ].join(' ')}
         >
-          <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] bg-cyan-300/10 text-xl font-black text-cyan-300">
+          <span
+            className={[
+              'grid h-14 w-14 shrink-0 place-items-center rounded-[8px] text-xl font-black',
+              disabled ? 'bg-white/5 text-white/30' : 'bg-cyan-300/10 text-cyan-300',
+            ].join(' ')}
+          >
             {title.slice(5, 6)}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-black text-white">{title}</span>
+            <span className="flex items-center gap-2">
+              <span className="block text-sm font-black text-white">{title}</span>
+              {disabled ? (
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-white/45">
+                  Soon
+                </span>
+              ) : null}
+            </span>
             <span className="mt-1 block text-xs font-semibold leading-5 text-white/45">
               {body}
             </span>
           </span>
-          <span className="text-white/36">&gt;</span>
+          {disabled ? null : <span className="text-white/36">&gt;</span>}
         </button>
       ))}
     </section>
@@ -1549,40 +2182,39 @@ function PaintSourceScreen({
 }
 
 function BlankSourceScreen({
-  onContinue,
-  onTemplateChange,
-  selectedTemplate,
+  onSelectTemplate,
 }: {
-  onContinue: () => void
-  onTemplateChange: (template: string) => void
-  selectedTemplate: string
+  onSelectTemplate: (template: BlankTemplate) => void
 }) {
   return (
     <section className="grid gap-4">
       <p className="text-sm font-semibold text-white/48">
         Choose a template to get started.
       </p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3">
         {blankTemplates.map((template) => (
           <button
-            key={template}
+            key={template.id}
             type="button"
-            onClick={() => onTemplateChange(template)}
-            className={[
-              'min-h-[118px] rounded-[10px] border bg-[#111821] p-3 text-left transition',
-              template === selectedTemplate
-                ? 'border-cyan-300/60'
-                : 'border-white/10',
-            ].join(' ')}
+            onClick={() => onSelectTemplate(template)}
+            data-v3-guides-indicator="template-choice-card"
+            className="block w-full text-left transition"
           >
-            <span className="block text-sm font-black">{template}</span>
-            <span className="mt-2 block text-xs font-semibold leading-5 text-white/42">
-              Starts with a ready card outline.
+            <span
+              className="block"
+              data-v3-guides-indicator="template-choice-title"
+            >
+              {template.name}
+            </span>
+            <span
+              className="mt-1 block"
+              data-v3-guides-indicator="template-choice-description"
+            >
+              {template.description}
             </span>
           </button>
         ))}
       </div>
-      <PrimaryButton onClick={onContinue}>Use Template</PrimaryButton>
     </section>
   )
 }
@@ -1639,102 +2271,508 @@ function DraftReviewScreen({
 
 function GuideBuildScreen({
   buildTab,
-  decks,
-  onAddDeck,
+  deck,
+  isEditingDetails,
+  onAddCard,
+  onBack,
   onBuildTabChange,
-  onEditDeck,
+  onCardEdit,
+  onDetailsEditToggle,
+  onHelp,
+  isSaving,
+  onReorderCard,
   onSave,
-  title,
+  onUpdateDeck,
+  saveError,
 }: {
   buildTab: BuildTab
-  decks: ForgeDeck[]
-  onAddDeck: () => void
+  deck: ForgeDeck
+  isEditingDetails: boolean
+  isSaving: boolean
+  onAddCard: () => void
+  onBack: () => void
   onBuildTabChange: (tab: BuildTab) => void
-  onEditDeck: (deckId: string) => void
+  onCardEdit: (cardId: string) => void
+  onDetailsEditToggle: () => void
+  onHelp: () => void
+  onReorderCard: (cardId: string, targetIndex: number) => void
   onSave: () => void
-  title: string
+  onUpdateDeck: (patch: Partial<ForgeDeck>) => void
+  saveError: string | null
 }) {
+  const heroImage =
+    deck.gallery.find((image) => image.id === deck.heroImageId) ?? deck.gallery[0]
+
   return (
-    <section className="grid gap-4">
-      <div className="relative h-40 overflow-hidden rounded-[12px] border border-white/10 bg-black">
-        <Image
-          src="/onboarding/pains/tough-choices.jpeg"
-          alt=""
-          fill
-          sizes="(max-width: 640px) 100vw, 448px"
-          className="object-cover opacity-80"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/82" />
-        <div className="absolute inset-x-0 bottom-0 p-4">
-          <h2 className="text-2xl font-black">{title}</h2>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 rounded-[8px] bg-white/[0.055] p-0.5">
-        {(['details', 'decks', 'preview'] as const).map((tab) => (
+    <section className="grid gap-4" data-v3-guides-indicator="deck-editor-page">
+      <DeckEditorHero
+        cardCount={deck.cards.length}
+        deck={deck}
+        heroImage={heroImage}
+        onBack={onBack}
+        onHelp={onHelp}
+        isSaving={isSaving}
+        onSave={onSave}
+      />
+      <div
+        className="grid grid-cols-3 rounded-[8px] bg-white/[0.055] p-0.5"
+        role="tablist"
+        aria-label="Deck editor sections"
+      >
+        {(['details', 'cards', 'preview'] as const).map((tab) => (
           <button
             key={tab}
             type="button"
+            role="tab"
+            aria-selected={buildTab === tab}
             onClick={() => onBuildTabChange(tab)}
             className={[
               'h-9 rounded-[6px] text-xs font-black capitalize',
               buildTab === tab ? 'bg-[#101822] text-cyan-300' : 'text-white/38',
             ].join(' ')}
           >
-            {tab === 'decks' ? 'cards' : tab}
+            {tab}
           </button>
         ))}
       </div>
       {buildTab === 'details' ? (
-        <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
-              Deck Details
-            </h3>
-            <button className="text-[10px] font-black text-cyan-300">Edit</button>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm font-semibold text-white/58">
-            <InfoPair label="Difficulty" value="Intermediate" />
-            <InfoPair label="Decks" value={String(decks.length)} />
-            <InfoPair label="Cards" value={String(decks.reduce((sum, deck) => sum + deck.cards.length, 0))} />
-            <InfoPair label="Status" value="Draft" />
-          </div>
-        </section>
+        <div className="grid gap-4">
+          <DeckDetailsPanel
+            deck={deck}
+            isEditingDetails={isEditingDetails}
+            onDetailsEditToggle={onDetailsEditToggle}
+            onUpdateDeck={onUpdateDeck}
+          />
+          <DeckGalleryPanel
+            deck={deck}
+            onSetHero={(heroImageId) => onUpdateDeck({ heroImageId })}
+          />
+        </div>
       ) : null}
-      {buildTab === 'decks' ? (
+      {buildTab === 'cards' ? (
         <section className="rounded-[10px] border border-white/10 bg-[#111821]">
           <div className="flex items-center justify-between px-4 py-3">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
-              Card Plan
+              Cards ({deck.cards.length})
             </h3>
             <button
               type="button"
-              onClick={onAddDeck}
-              className="text-[10px] font-black text-cyan-300"
+              onClick={onAddCard}
+              data-v3-guides-indicator="editor-action"
+              className="inline-flex h-8 items-center rounded-[6px] px-3 text-[10px] font-black"
             >
-              + Add Deck
+              + Add Card
             </button>
           </div>
-          <div className="divide-y divide-white/[0.06]">
-            {decks.map((deck) => (
-              <button
-                key={deck.id}
-                type="button"
-                onClick={() => onEditDeck(deck.id)}
-                className="w-full text-left"
-              >
-                <ForgeDeckRow deck={deck} />
-              </button>
-            ))}
-          </div>
+          <CardOrderList
+            cards={deck.cards}
+            onCardEdit={onCardEdit}
+            onReorderCard={onReorderCard}
+          />
         </section>
       ) : null}
       {buildTab === 'preview' ? (
-        <InfoBox>
-          Preview will show the guide as a readable sequence once card layout is
-          finalized.
-        </InfoBox>
+        <DeckPreview deck={deck} />
       ) : null}
-      <PrimaryButton onClick={onSave}>Save Deck Draft</PrimaryButton>
+      {saveError ? (
+        <p className="rounded-[8px] border border-red-300/30 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-100">
+          {saveError}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
+function DeckEditorHero({
+  cardCount,
+  deck,
+  heroImage,
+  isSaving,
+  onBack,
+  onHelp,
+  onSave,
+}: {
+  cardCount: number
+  deck: ForgeDeck
+  heroImage: ForgeDeckImage | undefined
+  isSaving: boolean
+  onBack: () => void
+  onHelp: () => void
+  onSave: () => void
+}) {
+  return (
+    <section
+      className="overflow-hidden rounded-[12px] border border-white/10 bg-[#111821]"
+      data-v3-guides-indicator="deck-editor-hero"
+    >
+      <div className="relative h-56 bg-black">
+        {heroImage ? (
+          <Image
+            src={heroImage.url}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 100vw, 448px"
+            className="object-cover"
+          />
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/68 to-black/16" />
+
+        <div className="absolute left-3 top-3 z-10 flex gap-2">
+          <button
+            type="button"
+            onClick={onBack}
+            data-v3-guides-indicator="hero-icon-action"
+            className="grid h-10 w-10 place-items-center rounded-full"
+            aria-label="Back"
+          >
+            &lt;
+          </button>
+          <button
+            type="button"
+            onClick={onHelp}
+            data-v3-guides-indicator="hero-icon-action"
+            className="grid h-10 w-10 place-items-center rounded-full"
+            aria-label="Show deck editor help"
+          >
+            ?
+          </button>
+        </div>
+
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+          <button
+            type="button"
+            data-v3-guides-indicator="hero-icon-action"
+            className="grid h-10 w-10 place-items-center rounded-full"
+            aria-label="Save deck to favorites"
+          >
+            <HeartIcon />
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving}
+            data-v3-guides-indicator="editor-action"
+            className="inline-flex h-10 items-center rounded-[6px] px-3 text-xs font-black disabled:cursor-wait disabled:opacity-60"
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 z-10 p-5">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-white/62">
+            Deck
+          </p>
+          <h2 className="mt-1 text-3xl font-black leading-tight text-white">
+            {deck.title}
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-black text-white/68">
+            <span data-v3-guides-indicator="hero-counter">Saved by 0</span>
+            <span data-v3-guides-indicator="hero-counter">{cardCount} cards</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function DeckDetailsPanel({
+  deck,
+  isEditingDetails,
+  onDetailsEditToggle,
+  onUpdateDeck,
+}: {
+  deck: ForgeDeck
+  isEditingDetails: boolean
+  onDetailsEditToggle: () => void
+  onUpdateDeck: (patch: Partial<ForgeDeck>) => void
+}) {
+  return (
+    <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
+          Details
+        </h3>
+        <button
+          type="button"
+          onClick={onDetailsEditToggle}
+          data-v3-guides-indicator="editor-action"
+          className="inline-flex h-8 items-center gap-1.5 rounded-[6px] px-3 text-[10px] font-black"
+        >
+          <EditIcon />
+          {isEditingDetails ? 'Done' : 'Edit'}
+        </button>
+      </div>
+      <div className="mt-4 grid gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <label
+            className="grid gap-1.5"
+            data-v3-guides-indicator="detail-field"
+          >
+            <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/28">
+              Title
+            </span>
+            <input
+              value={deck.title}
+              disabled={!isEditingDetails}
+              onChange={(event) => onUpdateDeck({ title: event.target.value })}
+              className="h-11 px-3 text-sm font-semibold disabled:opacity-75"
+            />
+          </label>
+          <PickerField
+            disabled={!isEditingDetails}
+            label="Difficulty"
+            value={deck.difficulty}
+            options={deckDifficultyOptions}
+            onChange={(value) =>
+              onUpdateDeck({ difficulty: value as DeckDifficulty })
+            }
+          />
+          <PickerField
+            disabled={!isEditingDetails}
+            label="Status"
+            value={deck.status}
+            options={deckStatusOptions}
+            onChange={(value) => onUpdateDeck({ status: value as DeckStatus })}
+          />
+          <InfoPair label="Cards" value={String(deck.cards.length)} />
+        </div>
+        <section
+          className="rounded-[10px] border border-white/10 bg-white/[0.035] p-3"
+          data-v3-guides-indicator="description-panel"
+        >
+          <div className="flex items-center justify-between">
+            <h4 className="text-[9px] font-black uppercase tracking-[0.16em] text-white/28">
+              Description
+            </h4>
+          </div>
+          <textarea
+            value={deck.description}
+            disabled={!isEditingDetails}
+            onChange={(event) => onUpdateDeck({ description: event.target.value })}
+            rows={4}
+            className="mt-2 w-full resize-none px-3 py-2 text-sm font-semibold leading-5 disabled:opacity-75"
+          />
+        </section>
+      </div>
+    </section>
+  )
+}
+
+function DeckGalleryPanel({
+  deck,
+  onSetHero,
+}: {
+  deck: ForgeDeck
+  onSetHero: (heroImageId: string) => void
+}) {
+  return (
+    <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
+          Gallery
+        </h3>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {deck.gallery.map((image) => {
+          const isHero = image.id === deck.heroImageId
+
+          return (
+            <article
+              key={image.id}
+              className="overflow-hidden rounded-[8px] border border-white/10 bg-black"
+            >
+              <div className="relative h-24">
+                <Image
+                  src={image.url}
+                  alt=""
+                  fill
+                  sizes="33vw"
+                  className="object-cover"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => onSetHero(image.id)}
+                data-v3-guides-indicator={isHero ? 'hero-image-active' : 'hero-image-action'}
+                className="h-9 w-full text-[10px] font-black"
+              >
+                {isHero ? 'Hero' : 'Set Hero'}
+              </button>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function PickerField({
+  disabled,
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  disabled: boolean
+  label: string
+  onChange: (value: string) => void
+  options: string[]
+  value: string
+}) {
+  return (
+    <label className="grid gap-1.5" data-v3-guides-indicator="detail-field">
+      <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/28">
+        {label}
+      </span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        data-v3-guides-indicator="editor-select"
+        className="h-11 rounded-[6px] px-3 text-sm font-semibold disabled:opacity-75"
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function CardOrderList({
+  cards,
+  onCardEdit,
+  onReorderCard,
+}: {
+  cards: ForgeCard[]
+  onCardEdit: (cardId: string) => void
+  onReorderCard: (cardId: string, targetIndex: number) => void
+}) {
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<{
+    edge: 'before' | 'after'
+    index: number
+  } | null>(null)
+
+  return (
+    <div className="grid gap-1.5 px-3 pb-3" data-v3-guides-indicator="card-order-list">
+      {cards.map((card, index) => {
+        const isDragging = draggingCardId === card.id
+        const isDropBefore = dropTarget?.index === index && dropTarget.edge === 'before'
+        const isDropAfter = dropTarget?.index === index && dropTarget.edge === 'after'
+
+        return (
+        <article
+          key={card.id}
+          data-dragging={isDragging}
+          data-drop-before={isDropBefore}
+          data-drop-after={isDropAfter}
+          data-v3-guides-indicator="card-order-row"
+          className="relative grid grid-cols-[36px_44px_1fr_40px] items-center gap-3 rounded-[8px] px-1 py-2"
+          onDragOver={(event) => {
+            event.preventDefault()
+            const rect = event.currentTarget.getBoundingClientRect()
+            const edge =
+              event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+            setDropTarget({ edge, index })
+            event.dataTransfer.dropEffect = 'move'
+          }}
+          onDragLeave={(event) => {
+            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return
+            setDropTarget(null)
+          }}
+          onDrop={(event) => {
+            event.preventDefault()
+            const draggedId =
+              event.dataTransfer.getData('text/plain') || draggingCardId
+            const targetIndex = dropTarget?.index ?? index
+            const targetEdge = dropTarget?.edge ?? 'before'
+            if (draggedId) onReorderCard(draggedId, targetIndex + (targetEdge === 'after' ? 1 : 0))
+            setDraggingCardId(null)
+            setDropTarget(null)
+          }}
+        >
+          <span
+            className="grid h-10 w-8 cursor-grab place-items-center rounded-[6px] text-lg font-black active:cursor-grabbing"
+            aria-label="Move card"
+            data-v3-guides-indicator="card-drag-handle"
+            draggable
+            onDragStart={(event) => {
+              setDraggingCardId(card.id)
+              event.dataTransfer.effectAllowed = 'move'
+              event.dataTransfer.setData('text/plain', card.id)
+            }}
+            onDragEnd={() => {
+              setDraggingCardId(null)
+              setDropTarget(null)
+            }}
+          >
+            ::
+          </span>
+          <span
+            className="grid h-11 w-11 place-items-center rounded-[7px]"
+            data-v3-guides-indicator="card-order-number"
+            aria-label={`Card ${index + 1}`}
+          >
+            {index + 1}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-black text-[color:var(--og-text-primary)]">{card.title}</span>
+            <span className="block text-[10px] font-semibold capitalize text-[color:var(--og-text-secondary)]">
+              {card.template}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => onCardEdit(card.id)}
+            data-v3-guides-indicator="card-edit-button"
+            className="grid h-9 w-9 place-items-center rounded-[6px] border text-lg font-black"
+            aria-label={`Edit ${card.title}`}
+          >
+            <EditIcon />
+          </button>
+        </article>
+        )
+      })}
+    </div>
+  )
+}
+
+function DeckPreview({ deck }: { deck: ForgeDeck }) {
+  return (
+    <section
+      className="rounded-[10px] border border-white/10 bg-[#111821] p-3"
+      data-v3-guides-indicator="deck-preview"
+    >
+      <div className="grid gap-3">
+        {deck.cards.map((card, index) => (
+          <article
+            key={card.id}
+            className="overflow-hidden rounded-[10px] border border-white/10 bg-white/[0.035]"
+          >
+            <div className="relative h-36 bg-black">
+              <Image
+                src={card.image}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 100vw, 448px"
+                className="object-cover"
+              />
+            </div>
+            <div className="p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/32">
+                {index + 1} - {card.template}
+              </p>
+              <h4 className="mt-1 text-lg font-black">{card.title}</h4>
+              <p className="mt-2 text-sm font-semibold leading-5 text-white/50">
+                {card.body}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
     </section>
   )
 }
@@ -1742,13 +2780,21 @@ function GuideBuildScreen({
 function DeckEditorScreen({
   deck,
   forgeMode,
+  isSaving,
   onAddCard,
+  onCardEdit,
+  onReorderCard,
   onSave,
+  saveError,
 }: {
   deck: ForgeDeck
   forgeMode: ForgeMode
+  isSaving: boolean
   onAddCard: () => void
+  onCardEdit: (cardId: string) => void
+  onReorderCard: (cardId: string, targetIndex: number) => void
   onSave: () => void
+  saveError: string | null
 }) {
   return (
     <section className="grid gap-4">
@@ -1779,43 +2825,28 @@ function DeckEditorScreen({
           <button
             type="button"
             onClick={onAddCard}
-            className="text-[10px] font-black text-cyan-300"
+            data-v3-guides-indicator="editor-action"
+            className="inline-flex h-8 items-center rounded-[6px] px-3 text-[10px] font-black"
           >
             + Add Card
           </button>
         </div>
-        <div className="divide-y divide-white/[0.06]">
-          {deck.cards.map((card, index) => (
-            <div
-              key={`${card}-${index}`}
-              className="grid grid-cols-[auto_56px_1fr_auto] items-center gap-3 px-4 py-3"
-            >
-              <span className="text-white/22">::</span>
-              <span className="relative h-12 overflow-hidden rounded-[7px] bg-black">
-                <Image
-                  src="/onboarding/pains/tough-choices.jpeg"
-                  alt=""
-                  fill
-                  sizes="56px"
-                  className="object-cover"
-                />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-black">{card}</span>
-                <span className="block text-[10px] font-semibold text-white/36">
-                  {index === 0 ? 'Cover' : 'Step'}
-                </span>
-              </span>
-              <span className="text-white/28">&gt;</span>
-            </div>
-          ))}
-        </div>
+        <CardOrderList
+          cards={deck.cards}
+          onCardEdit={onCardEdit}
+          onReorderCard={onReorderCard}
+        />
       </section>
       <p className="text-center text-xs font-semibold text-white/32">
-        Drag to reorder cards later.
+        Use the left handle to move cards up or down.
       </p>
-      <PrimaryButton onClick={onSave}>
-        {forgeMode === 'deck' ? 'Save Deck Draft' : 'Save Deck'}
+      {saveError ? (
+        <p className="rounded-[8px] border border-red-300/30 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-100">
+          {saveError}
+        </p>
+      ) : null}
+      <PrimaryButton onClick={onSave} disabled={isSaving}>
+        {isSaving ? 'Saving Deck...' : forgeMode === 'deck' ? 'Save Deck' : 'Save Deck'}
       </PrimaryButton>
     </section>
   )
@@ -1825,15 +2856,9 @@ function AddCardSheet({
   onAddCard,
   onClose,
 }: {
-  onAddCard: (cardType: string) => void
+  onAddCard: (cardType: CardTemplate) => void
   onClose: () => void
 }) {
-  const cards = [
-    ['Cover Card', 'Set the tone with a large hero image and details.'],
-    ['Card (Step Card)', 'Step-by-step painting instruction with paints.'],
-    ['Image Card', 'Reference images, showcases, or finished mini details.'],
-    ['Palette Card', 'Save a colour palette and list of paints.'],
-  ]
   return (
     <div className="fixed inset-0 z-[70] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
       <section
@@ -1852,11 +2877,11 @@ function AddCardSheet({
           <h2 className="text-xl font-black">Add Card to Deck</h2>
         </div>
         <div className="grid gap-3">
-          {cards.map(([title, body]) => (
+          {cardTemplateOptions.map((card) => (
             <button
-              key={title}
+              key={card.template}
               type="button"
-              onClick={() => onAddCard(title)}
+              onClick={() => onAddCard(card.template)}
               className="grid grid-cols-[64px_1fr] gap-3 rounded-[10px] border border-white/10 bg-white/[0.04] p-3 text-left"
             >
               <span className="relative h-16 overflow-hidden rounded-[8px] bg-black">
@@ -1869,13 +2894,90 @@ function AddCardSheet({
                 />
               </span>
               <span>
-                <span className="block text-sm font-black">{title}</span>
+                <span className="block text-sm font-black">{card.title}</span>
                 <span className="mt-1 block text-xs font-semibold leading-5 text-white/45">
-                  {body}
+                  {card.body}
                 </span>
               </span>
             </button>
           ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function EditCardSheet({
+  card,
+  onChange,
+  onClose,
+  onDelete,
+}: {
+  card: ForgeCard
+  onChange: (patch: Partial<ForgeCard>) => void
+  onClose: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-[75] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
+      <section
+        className="w-full max-w-md rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
+        data-v3-guides-indicator="add-card-sheet"
+      >
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06]"
+            aria-label="Close card editor"
+          >
+            x
+          </button>
+          <span>
+            <h2 className="text-xl font-black">Edit Card</h2>
+            <p className="mt-1 text-xs font-semibold capitalize text-white/42">
+              {card.template} template
+            </p>
+          </span>
+        </div>
+        <div className="grid gap-3">
+          <label className="grid gap-1.5">
+            <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/28">
+              Title
+            </span>
+            <input
+              value={card.title}
+              onChange={(event) => onChange({ title: event.target.value })}
+              className="h-11 px-3 text-sm font-semibold"
+            />
+          </label>
+          <label className="grid gap-1.5">
+            <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/28">
+              Notes
+            </span>
+            <textarea
+              value={card.body}
+              onChange={(event) => onChange({ body: event.target.value })}
+              rows={5}
+              className="resize-none px-3 py-2 text-sm font-semibold leading-5"
+            />
+          </label>
+          <PickerField
+            disabled={false}
+            label="Template"
+            value={card.template}
+            options={cardTemplateOptions.map((option) => option.template)}
+            onChange={(value) => onChange({ template: value as CardTemplate })}
+          />
+          <button
+            type="button"
+            onClick={onDelete}
+            data-v3-guides-indicator="danger-action"
+            className="h-11 rounded-[6px] text-sm font-black"
+          >
+            Delete Card
+          </button>
+          <PrimaryButton onClick={onClose}>Done</PrimaryButton>
         </div>
       </section>
     </div>
@@ -1940,9 +3042,11 @@ function GuidesTab({ guideFiles }: { guideFiles: GuideFile[] }) {
 function DecksTab({
   decks,
   onAddDeck,
+  onEditDraftDeck,
 }: {
   decks: Deck[]
   onAddDeck: () => void
+  onEditDraftDeck: (deck: Deck) => void
 }) {
   return (
     <section
@@ -1968,6 +3072,7 @@ function DecksTab({
             <DeckRow
               key={deck.id}
               deck={deck}
+              onEditDraftDeck={onEditDraftDeck}
             />
           ))
         ) : (
@@ -2139,47 +3244,80 @@ function CompactGuideCard({ guide }: { guide: GuideFile }) {
 
 function DeckRow({
   deck,
+  onEditDraftDeck,
 }: {
   deck: Deck
+  onEditDraftDeck?: (deck: Deck) => void
 }) {
+  const isDraftDeck = Boolean(deck.draft)
+  const primaryClassName = 'flex min-w-0 flex-1 items-center gap-3 text-left transition hover:opacity-85'
+  const primaryContent = (
+    <>
+      <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-black">
+        <Image src={deck.image} alt="" fill sizes="48px" className="object-cover" />
+        <span
+          className="absolute inset-x-0 bottom-0 h-1"
+          style={{ backgroundColor: deck.accent }}
+        />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-black text-white">
+          {deck.title}
+        </span>
+        <span className="mt-1 block truncate text-[10px] font-semibold text-white/36">
+          {deck.category} - {deck.cards} Cards - {deck.paints} Paints
+        </span>
+        <span className="mt-1 block text-[10px] font-semibold text-white/26">
+          Used in {deck.usedIn} Guides
+        </span>
+      </span>
+    </>
+  )
+
   return (
     <article
       className="flex items-center gap-3 px-4 py-3"
       data-v3-guides-indicator="deck-row"
       data-feature-guide-target="guides.tabs.decks"
     >
-      <Link
-        href={`/guides/decks/${deck.id}?preview=1`}
-        className="flex min-w-0 flex-1 items-center gap-3 transition hover:opacity-85"
-      >
-        <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-black">
-          <Image src={deck.image} alt="" fill sizes="48px" className="object-cover" />
-          <span
-            className="absolute inset-x-0 bottom-0 h-1"
-            style={{ backgroundColor: deck.accent }}
-          />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-black text-white">
-            {deck.title}
-          </span>
-          <span className="mt-1 block truncate text-[10px] font-semibold text-white/36">
-            {deck.category} - {deck.cards} Cards - {deck.paints} Paints
-          </span>
-          <span className="mt-1 block text-[10px] font-semibold text-white/26">
-            Used in {deck.usedIn} Guides
-          </span>
-        </span>
-      </Link>
-      <Link
-        href={`/recipes/${deck.id}`}
-        aria-label={`Edit ${deck.title}`}
-        data-v3-guides-indicator="deck-edit-link"
-        data-feature-guide-target="guides.deck_save"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border text-lg font-black transition"
-      >
-        <EditIcon />
-      </Link>
+      {isDraftDeck ? (
+        <button
+          type="button"
+          className={primaryClassName}
+          onClick={() => onEditDraftDeck?.(deck)}
+        >
+          {primaryContent}
+        </button>
+      ) : (
+        <Link
+          href={`/guides/decks/${deck.id}?preview=1`}
+          className={primaryClassName}
+        >
+          {primaryContent}
+        </Link>
+      )}
+      {isDraftDeck ? (
+        <button
+          type="button"
+          aria-label={`Edit ${deck.title}`}
+          data-v3-guides-indicator="deck-edit-link"
+          data-feature-guide-target="guides.deck_save"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border text-lg font-black transition"
+          onClick={() => onEditDraftDeck?.(deck)}
+        >
+          <EditIcon />
+        </button>
+      ) : (
+        <Link
+          href={`/guides/decks/${deck.id}?preview=1&edit=1`}
+          aria-label={`Edit ${deck.title}`}
+          data-v3-guides-indicator="deck-edit-link"
+          data-feature-guide-target="guides.deck_save"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border text-lg font-black transition"
+        >
+          <EditIcon />
+        </Link>
+      )}
     </article>
   )
 }
@@ -2341,17 +3479,20 @@ function InfoBox({ children }: { children: ReactNode }) {
 
 function PrimaryButton({
   children,
+  disabled = false,
   onClick,
 }: {
   children: ReactNode
+  disabled?: boolean
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       data-v3-guides-indicator="primary-button"
-      className="tap-press h-12 rounded-[10px] bg-cyan-300 text-sm font-black text-black shadow-[0_0_24px_rgba(34,211,238,0.22)] transition hover:bg-cyan-200"
+      className="tap-press h-12 rounded-[10px] bg-cyan-300 text-sm font-black text-black shadow-[0_0_24px_rgba(34,211,238,0.22)] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60"
     >
       {children}
     </button>
@@ -2371,6 +3512,23 @@ function CheckIcon() {
       strokeLinejoin="round"
     >
       <path d="m5 12 4 4L19 6" />
+    </svg>
+  )
+}
+
+function HeartIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20.8 4.6c-1.8-1.7-4.7-1.6-6.4.2L12 7.2 9.6 4.8C7.9 3 5 2.9 3.2 4.6c-2 1.9-2.1 5.1-.2 7.1L12 21l9-9.3c1.9-2 1.8-5.2-.2-7.1Z" />
     </svg>
   )
 }

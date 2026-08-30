@@ -5,6 +5,7 @@ import {
   V3_PREVIEW_COOKIE_MAX_AGE,
   canUseV3PreviewCookie,
   canUseV3PreviewParam,
+  isLocalV3PreviewHost,
   isV3DeploymentHost,
 } from './lib/v3-preview'
 
@@ -26,29 +27,10 @@ export default async function proxy(request: NextRequest) {
     hasInspectionPreviewHost
   const shouldClearInspectionPreviewCookie =
     hasInspectionPreviewCookie && !canPersistInspectionPreview
-  const finalizeResponse = (response: NextResponse) => {
-    if (shouldClearInspectionPreviewCookie) {
-      response.cookies.set(V3_PREVIEW_COOKIE, '', {
-        maxAge: 0,
-        path: '/',
-        sameSite: 'lax',
-      })
-    }
-
-    return response
-  }
 
   const isGoldenDashboardFixture =
     pathname === '/dashboard' &&
     request.nextUrl.searchParams.get('golden') === 'dashboard-active-units'
-
-  if (isGoldenDashboardFixture) {
-    return finalizeResponse(
-      NextResponse.next({
-        request,
-      })
-    )
-  }
 
   const isInspectionPreviewRoute =
     pathname === '/onboarding' ||
@@ -60,12 +42,9 @@ export default async function proxy(request: NextRequest) {
     pathname === '/settings' ||
     pathname.startsWith('/units/')
 
-  if (isInspectionPreview && isInspectionPreviewRoute) {
-    const response = NextResponse.next({
-      request,
-    })
-
+  const finalizeResponse = (response: NextResponse) => {
     if (
+      isInspectionPreviewRoute &&
       (hasInspectionPreviewParam || hasInspectionPreviewHost) &&
       canPersistInspectionPreview &&
       !hasInspectionPreviewCookie
@@ -77,7 +56,26 @@ export default async function proxy(request: NextRequest) {
       })
     }
 
-    return finalizeResponse(response)
+    if (shouldClearInspectionPreviewCookie) {
+      response.cookies.set(V3_PREVIEW_COOKIE, '', {
+        maxAge: 0,
+        path: '/',
+        sameSite: 'lax',
+      })
+    }
+
+    return response
+  }
+
+  if (
+    isGoldenDashboardFixture &&
+    isLocalV3PreviewHost(request.nextUrl.host)
+  ) {
+    return finalizeResponse(
+      NextResponse.next({
+        request,
+      })
+    )
   }
 
   const isPublicRoute =
@@ -101,7 +99,10 @@ export default async function proxy(request: NextRequest) {
     pathname.startsWith('/legal') ||
     pathname.includes('.')
 
-  const shouldCheckSession = !isPublicRoute || pathname === '/onboarding'
+  const shouldRequireAuthenticatedPreview =
+    isInspectionPreview && isInspectionPreviewRoute && pathname !== '/onboarding'
+  const shouldCheckSession =
+    !isPublicRoute || pathname === '/onboarding' || shouldRequireAuthenticatedPreview
 
   if (!shouldCheckSession) {
     return finalizeResponse(
@@ -146,7 +147,7 @@ export default async function proxy(request: NextRequest) {
   const activeUser = verifiedUser ?? null
 
   if (!activeUser) {
-    if (!isPublicRoute) {
+    if (!isPublicRoute || shouldRequireAuthenticatedPreview) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
       if (
@@ -169,7 +170,7 @@ export default async function proxy(request: NextRequest) {
 
   const hasAcceptedTerms = Boolean(profile?.terms_accepted_at)
 
-  if (!hasAcceptedTerms && !isPublicRoute) {
+  if (!hasAcceptedTerms && (!isPublicRoute || shouldRequireAuthenticatedPreview)) {
     return finalizeResponse(
       NextResponse.redirect(new URL('/onboarding', request.url))
     )

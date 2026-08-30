@@ -11,11 +11,11 @@ export function ObsidianShareCardFrame({
   brandMarkHref?: string | null
 }) {
   return (
-    <article className="recipe-guide-card relative isolate flex h-full w-full overflow-hidden border border-[#b98137]/70 bg-[#020806] text-white shadow-[0_24px_80px_rgba(0,0,0,0.75)]">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_18%,rgba(29,221,211,0.2),transparent_25%),radial-gradient(circle_at_50%_100%,rgba(38,236,224,0.16),transparent_16%),linear-gradient(135deg,#010504,#061715_48%,#020403)]" />
-      <div className="pointer-events-none absolute inset-0 -z-10 opacity-70 [background-image:linear-gradient(120deg,transparent_0,rgba(255,255,255,0.035)_1px,transparent_2px),radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.06),transparent_1px)] [background-size:28px_28px,13px_13px]" />
-      <div className="pointer-events-none absolute inset-[9px] rounded-[20px] border border-[#d6a253]/70" />
-      <div className="pointer-events-none absolute inset-[15px] rounded-[16px] border border-[#6f471f]/80" />
+    <article className="recipe-guide-card relative isolate flex h-full w-full overflow-hidden border">
+      <div className="recipe-guide-card-field pointer-events-none absolute inset-0 -z-10" />
+      <div className="recipe-guide-card-fiber pointer-events-none absolute inset-0 -z-10" />
+      <div className="recipe-guide-card-outer-line pointer-events-none absolute inset-[9px] rounded-[20px]" />
+      <div className="recipe-guide-card-inner-line pointer-events-none absolute inset-[15px] rounded-[16px]" />
       <ObsidianShareCorner className="left-[21px] top-[21px]" />
       <ObsidianShareCorner className="right-[21px] top-[21px] rotate-90" />
       <ObsidianShareCorner className="bottom-[21px] right-[21px] rotate-180" />
@@ -53,31 +53,31 @@ export function ObsidianShareBrandMark({
 export function ObsidianShareCorner({ className }: { className: string }) {
   return (
     <div
-      className={`pointer-events-none absolute h-12 w-12 border-l border-t border-[#d8a24a]/80 ${className}`}
+      className={`recipe-guide-corner pointer-events-none absolute h-12 w-12 ${className}`}
     >
-      <span className="absolute left-2 top-2 h-3 w-3 border border-[#d8a24a]/70" />
-      <span className="absolute left-0 top-7 h-px w-9 bg-[#d8a24a]/70" />
-      <span className="absolute left-7 top-0 h-9 w-px bg-[#d8a24a]/70" />
+      <span className="recipe-guide-corner-box absolute left-2 top-2 h-3 w-3" />
+      <span className="recipe-guide-corner-rule absolute left-0 top-7 h-px w-9" />
+      <span className="recipe-guide-corner-rule absolute left-7 top-0 h-9 w-px" />
     </div>
   )
 }
 
 export function ObsidianShareOrnament() {
   return (
-    <div className="recipe-guide-ornament flex shrink-0 items-center gap-2 text-[#d69a45]">
-      <span className="h-px flex-1 bg-gradient-to-r from-transparent via-[#b98137] to-[#b98137]" />
-      <span className="h-2 w-2 rotate-45 border border-[#d69a45] bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.85)]" />
-      <span className="h-px flex-1 bg-gradient-to-l from-transparent via-[#b98137] to-[#b98137]" />
+    <div className="recipe-guide-ornament flex shrink-0 items-center gap-2">
+      <span className="recipe-guide-ornament-rule h-px flex-1" />
+      <span className="recipe-guide-ornament-diamond h-2 w-2 rotate-45" />
+      <span className="recipe-guide-ornament-rule h-px flex-1" />
     </div>
   )
 }
 
 export function ObsidianShareDividerLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="recipe-guide-cover-divider flex items-center gap-2 text-[#d69a45]">
-      <span className="h-px flex-1 bg-[#8d5d2d]" />
+    <div className="recipe-guide-cover-divider flex items-center gap-2">
+      <span className="recipe-guide-divider-rule h-px flex-1" />
       <p className="recipe-guide-kicker font-black uppercase">{children}</p>
-      <span className="h-px flex-1 bg-[#8d5d2d]" />
+      <span className="recipe-guide-divider-rule h-px flex-1" />
     </div>
   )
 }
@@ -92,7 +92,7 @@ export function ObsidianShareTitle({
   return (
     <h2
       className={[
-        'recipe-guide-title font-serif font-black uppercase text-[#9cf5ed] drop-shadow-[0_2px_0_rgba(255,255,255,0.22)]',
+        'recipe-guide-title font-serif font-black uppercase',
         compact ? 'recipe-guide-title-compact' : '',
       ].join(' ')}
     >

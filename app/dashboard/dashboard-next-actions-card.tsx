@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   OgCaption,
   OgIconButton,
@@ -9,7 +10,10 @@ import {
   SurfacePanel,
 } from '@/src/components/v3'
 import type { DashboardNextActionsState } from './dashboard-data'
-import { dismissDashboardNextActions } from './actions'
+import {
+  dismissDashboardNextActions,
+  setDashboardNextActionDone,
+} from './actions'
 import styles from './dashboard-og.module.css'
 
 type Props = {
@@ -86,9 +90,17 @@ function ArrowIcon() {
 }
 
 export default function DashboardNextActionsCard({ state }: Props) {
+  const router = useRouter()
   const [hidden, setHidden] = useState(false)
+  const [completionOverrides, setCompletionOverrides] = useState<
+    Map<string, boolean>
+  >(() => new Map())
   const [isPending, startTransition] = useTransition()
-  const completedCount = state.completedCount
+  const isActionDone = (action: DashboardNextActionsState['actions'][number]) =>
+    completionOverrides.get(action.id) ?? Boolean(action.completedAt)
+  const completedCount = state.actions.filter((action) =>
+    isActionDone(action)
+  ).length
 
   if (hidden) {
     return null
@@ -101,6 +113,39 @@ export default function DashboardNextActionsCard({ state }: Props) {
 
       if (!result.ok) {
         setHidden(false)
+      }
+    })
+  }
+
+  function toggleAction(actionId: string) {
+    const action = state.actions.find((current) => current.id === actionId)
+    const nextDone = action ? !isActionDone(action) : true
+    setCompletionOverrides((current) => {
+      const next = new Map(current)
+      next.set(actionId, nextDone)
+      return next
+    })
+
+    startTransition(async () => {
+      const result = await setDashboardNextActionDone(actionId, nextDone)
+
+      if (!result.ok) {
+        setCompletionOverrides((current) => {
+          const next = new Map(current)
+          next.set(actionId, !nextDone)
+          return next
+        })
+        return
+      }
+
+      const isBatchComplete =
+        nextDone &&
+        state.actions.every((currentAction) =>
+          currentAction.id === actionId ? true : isActionDone(currentAction)
+        )
+
+      if (isBatchComplete) {
+        router.refresh()
       }
     })
   }
@@ -130,7 +175,7 @@ export default function DashboardNextActionsCard({ state }: Props) {
               <span
                 key={action.id}
                 className={styles.progressDot}
-                data-complete={Boolean(action.completedAt)}
+                data-complete={isActionDone(action)}
               />
             ))}
           </div>
@@ -143,17 +188,25 @@ export default function DashboardNextActionsCard({ state }: Props) {
 
       <div className={styles.actionRows}>
         {state.actions.map((action) => {
-          const isDone = Boolean(action.completedAt)
+          const isDone = isActionDone(action)
 
           return (
             <div key={action.id} className={styles.actionRow}>
-              <span
+              <button
+                type="button"
+                onClick={() => toggleAction(action.id)}
                 className={styles.checkButton}
                 data-done={isDone}
-                aria-hidden="true"
+                disabled={isPending}
+                aria-pressed={isDone}
+                aria-label={
+                  isDone
+                    ? `Mark ${action.label} incomplete`
+                    : `Mark ${action.label} complete`
+                }
               >
                 <CheckIcon className="h-3.5 w-3.5" />
-              </span>
+              </button>
 
               <div className={styles.actionText}>
                 <span className={styles.actionTitle} data-done={isDone}>

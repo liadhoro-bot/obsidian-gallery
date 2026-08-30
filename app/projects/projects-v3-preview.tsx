@@ -475,10 +475,9 @@ export default function ProjectsV3Preview({
 
 function HelpIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" aria-hidden="true">
       <path d="M9.6 9a2.6 2.6 0 0 1 4.95 1.15c0 1.75-1.55 2.25-2.25 3.3-.22.33-.3.68-.3 1.05" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" />
       <path d="M12 18h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   )
 }
@@ -524,6 +523,7 @@ function ProjectsHeader({
           aria-label="About projects and units"
           onClick={onHelpToggle}
           data-feature-guide-target="projects.help"
+          data-feature-guide-launcher-button="true"
         >
           <HelpIcon />
         </button>

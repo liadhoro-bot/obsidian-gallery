@@ -22,10 +22,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const params = searchParams ? await searchParams : undefined
   const isPreview = await hasV3PreviewSession(params?.preview)
 
-  if (isPreview) {
-    return <SettingsV3Preview />
-  }
-
   const supabase = await createClient()
 
   const {
@@ -33,7 +29,35 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    redirect(
+      isPreview
+        ? '/login?next=%2Fsettings%3Fpreview%3D1&preview=1'
+        : '/login'
+    )
+  }
+
+  if (isPreview) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name, username, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    return (
+      <SettingsV3Preview
+        user={{
+          createdAt: user.created_at ?? null,
+          displayName:
+            profile?.display_name ||
+            user.user_metadata?.full_name ||
+            user.email?.split('@')[0] ||
+            'Painter',
+          email: user.email ?? '',
+          avatarUrl: profile?.avatar_url ?? null,
+          username: profile?.username ?? null,
+        }}
+      />
+    )
   }
 
   return (

@@ -172,7 +172,14 @@ function mapNextActions(
   }
 
   const firstOpenAction = state.actions.find((action) => !action.completedAt)
-  const copy = firstOpenAction?.label ?? 'All next actions complete'
+  const firstOpenMilestone = state.milestones.find((milestone) =>
+    milestone.actions.some((action) => !action.completedAt)
+  )
+  const copy =
+    firstOpenMilestone?.label ??
+    state.milestones[0]?.label ??
+    firstOpenAction?.label ??
+    'All next actions complete'
   const activeActionId = firstOpenAction?.id ?? null
   const mappedActions = state.actions.map((action) => ({
     id: action.id,
@@ -189,8 +196,8 @@ function mapNextActions(
 
   return {
     flowName: state.flowName,
-    title: state.title || 'Next Actions',
-    description: state.description,
+    title: 'Next Action',
+    description: null,
     copy,
     totalCount: state.totalCount,
     completedCount: state.completedCount,

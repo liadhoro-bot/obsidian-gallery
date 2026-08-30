@@ -1,8 +1,14 @@
 import { Suspense } from 'react'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { createPerfTimer } from '../../utils/perf/server'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
+import { isLocalV3PreviewHost } from '../../lib/v3-preview'
+import {
+  getDashboardOnboardingRequirement,
+  getOnboardingRedirectPath,
+} from '../../lib/onboarding/dashboard-entry-guard'
 
 import DashboardTabSwitcher from './dashboard-tab-switcher'
 import DashboardTopBar from './dashboard-top-bar'
@@ -12,6 +18,7 @@ import DashboardMetadataGrid from './dashboard-metadata-grid'
 import DashboardPaintingTable from './dashboard-painting-table'
 import DashboardQuickActions from './dashboard-quick-actions'
 import DashboardHobbyBadges from './dashboard-hobby-badges'
+import DashboardAchievements from './dashboard-achievements'
 import type { DashboardFeatureGuide } from './feature-guide-types'
 
 import {
@@ -108,7 +115,7 @@ const dashboardFeatureGuideFallbacks: Record<
     location_reference: 'Dashboard > Up Next',
     component_reference: 'app/dashboard/dashboard-active-units-view.tsx',
     explanation:
-      'Up Next is your active unit shelf. Use the status menu to switch between unit states, toggle grid or card view, and press any unit card to open that unit page.',
+      'Up Next is your active unit shelf. Use the status menu to switch between unit states, and press any unit card to open that unit page.',
     place_in_page: 'Bottom of the Active Units tab',
     coach_mark_area: 'The whole Up Next card',
     popup_placement: 'top',
@@ -122,8 +129,12 @@ export default async function DashboardPage({
   const perf = createPerfTimer('/dashboard')
   const resolvedSearchParams = searchParams ? await searchParams : undefined
   const isPreview = await hasV3PreviewSession(resolvedSearchParams?.preview)
+  const headerStore = await headers()
+  const isLocalPreviewHost = isLocalV3PreviewHost(headerStore.get('host'))
   const isGoldenFixture =
-    isPreview && resolvedSearchParams?.golden === 'dashboard-active-units'
+    isPreview &&
+    isLocalPreviewHost &&
+    resolvedSearchParams?.golden === 'dashboard-active-units'
 
   if (isGoldenFixture) {
     const [
@@ -160,6 +171,17 @@ export default async function DashboardPage({
     )
   }
 
+  const onboarding = await getDashboardOnboardingRequirement(user.id)
+
+  if (onboarding.needsOnboarding && onboarding.reason) {
+    redirect(
+      getOnboardingRedirectPath({
+        preview: isPreview,
+        reason: onboarding.reason,
+      })
+    )
+  }
+
   if (isPreview) {
     const [
       { WorkbenchShell },
@@ -180,9 +202,8 @@ export default async function DashboardPage({
     const previewProfilePanel = (
       <div className={styles.profileStack}>
         <Suspense fallback={<StatsSkeleton />}>
-          <DashboardXpCard userId={user.id} />
+          <DashboardAchievements userId={user.id} />
         </Suspense>
-        <DashboardHobbyBadges />
         <Suspense fallback={<StatsSkeleton />}>
           <DashboardMetadataGrid userId={user.id} />
         </Suspense>

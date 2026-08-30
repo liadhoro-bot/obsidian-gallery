@@ -22,7 +22,7 @@ export default async function ContestManagePreviewPage({
 
   const { id } = await params
   const isDemoContest = id === DEMO_CONTEST_ID
-  if (!isDemoContest && !(await canManageContest(user.id, id))) {
+  if (!(await canManageContest(user.id, id))) {
     redirect('/contests')
   }
 

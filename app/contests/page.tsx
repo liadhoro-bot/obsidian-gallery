@@ -13,7 +13,7 @@ export default async function ContestsPage() {
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 pb-24 pt-6 sm:max-w-5xl">
+      <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 pb-24 pt-6">
         <header className="flex items-end justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">
@@ -40,12 +40,12 @@ export default async function ContestsPage() {
           </p>
           <div className="mt-2 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black">2d6 Remote Roll</h2>
+              <h2 className="text-xl font-black">Remote Campaign Roll</h2>
               <p className="mt-1 text-sm text-white/55">
-                Let campaign players roll once, record the result, and notify the organizer.
+                Let campaign players roll 1d6 or 2d6, record the result, and notify the organizer.
               </p>
             </div>
-            <span className="shrink-0 text-2xl font-black text-cyan-100">2d6</span>
+            <span className="shrink-0 text-2xl font-black text-cyan-100">d6</span>
           </div>
         </Link>
 

@@ -13,6 +13,7 @@ export default async function ContestManagePage() {
   const user = await getSessionUser(supabase)
   if (!user) redirect('/login')
   const canCreateContests = await isCurrentUserAdmin(user.id)
+  if (!canCreateContests) redirect('/contests')
 
   const contests = await getManageContests(user.id, canCreateContests)
 

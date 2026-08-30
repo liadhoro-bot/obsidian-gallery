@@ -1,4 +1,5 @@
 import type { ContestPhase } from '../../lib/contests/types'
+import styles from './contest-v3-silver.module.css'
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en-US', {
@@ -31,7 +32,7 @@ export default function ContestCountdown({
             : 'Updated'
 
   return (
-    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-white/45">
+    <span className={styles.countdown}>
       {label} {formatDate(target)}
     </span>
   )

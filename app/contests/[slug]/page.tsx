@@ -1,17 +1,20 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import ContestHeader from '../../../components/contests/contest-header'
-import ContestNomineeGallery from '../../../components/contests/contest-nominee-gallery'
+import ContestDetailTabs from '../../../components/contests/contest-detail-tabs'
 import { getContestPhase } from '../../../lib/contests/phases'
 import {
   DEMO_CONTEST_ID,
   getContestBySlug,
   getContestNominations,
+  getContestResults,
   getNominationPickerSources,
+  getUserContestNominations,
+  getViewerBallot,
 } from '../../../lib/contests/queries'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
-import { canManageContest } from '../../../lib/contests/permissions'
+import { canManageContest, canViewContest } from '../../../lib/contests/permissions'
 import type { ContestNomination } from '../../../lib/contests/types'
+import styles from '../../../components/contests/contest-v3-silver.module.css'
 
 export default async function ContestDetailPage({
   params,
@@ -25,10 +28,10 @@ export default async function ContestDetailPage({
   if (!contest) notFound()
 
   const isDemoContest = contest.id === DEMO_CONTEST_ID
-  const canManage =
-    Boolean(user) && (isDemoContest || (await canManageContest(user!.id, contest.id)))
+  const canManage = Boolean(user) && (await canManageContest(user!.id, contest.id))
+  const canView = isDemoContest || (await canViewContest(user?.id, contest.id))
 
-  if (contest.visibility === 'private' && !canManage) {
+  if (!canView) {
     notFound()
   }
 
@@ -38,101 +41,33 @@ export default async function ContestDetailPage({
   const nominations = isDemoContest && user
     ? await getDemoNominations(user.id, contest.id, allowedTypes)
     : await getContestNominations(contest.id)
+  const results = isDemoContest ? [] : await getContestResults(contest.id)
+  const userNominations = user
+    ? isDemoContest
+      ? nominations.filter((nomination) => nomination.owner_user_id === user.id)
+      : await getUserContestNominations(contest.id, user.id)
+    : []
+  const ballot = user && !isDemoContest ? await getViewerBallot(contest.id, user.id) : null
   const hideIdentity =
     contest.hide_nominee_identity_during_voting && phase === 'voting_open'
 
   return (
-    <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 pb-24 pt-6 sm:max-w-5xl">
+    <main className={styles.contestSilver}>
+      <div className={styles.pageRail}>
         <ContestHeader
+          backHref="/community"
+          backLabel="Back"
           contest={contest}
           manageHref={canManage ? `/contests/manage/${contest.id}` : undefined}
+          showFooter={false}
         />
 
-        <section className="grid gap-4 md:grid-cols-[1fr_320px]">
-          <div className="grid gap-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">
-                Details
-              </p>
-              <h2 className="mt-1 text-xl font-black">Description</h2>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/65">
-                {contest.description ||
-                  contest.short_description ||
-                  'Contest details will be posted soon.'}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">
-                Rules
-              </p>
-              <h2 className="mt-1 text-xl font-black">How to Enter</h2>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-white/65">
-                {contest.rules_markdown}
-              </p>
-            </div>
-          </div>
-
-          <aside className="grid content-start gap-4">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">
-                Nominations
-              </p>
-              <h2 className="mt-1 text-xl font-black">Accepted Objects</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {allowedTypes.map((type) => (
-                  <span
-                    key={type}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-black uppercase text-white/70"
-                  >
-                    {type === 'guide' ? 'Guides' : `${type}s`}
-                  </span>
-                ))}
-              </div>
-              <Link
-                href={`/contests/${contest.slug}/submit`}
-                className="mt-4 inline-flex w-full justify-center rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-black"
-              >
-                Submit a Nomination
-              </Link>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-300">
-                Voting
-              </p>
-              <h2 className="mt-1 text-xl font-black capitalize">
-                {contest.voting_method}
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-white/60">
-                {contest.voting_method === 'ranked'
-                  ? `Rank up to ${contest.maximum_selections_per_ballot} nominees.`
-                  : `Choose ${
-                      contest.require_exact_selection_count ? 'exactly' : 'up to'
-                    } ${contest.maximum_selections_per_ballot}.`}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="text-2xl font-black">{nominations.length}</div>
-                <div className="text-xs font-bold uppercase tracking-[0.14em] text-white/40">
-                  Nominees
-                </div>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="text-2xl font-black">{allowedTypes.length}</div>
-                <div className="text-xs font-bold uppercase tracking-[0.14em] text-white/40">
-                  Object Types
-                </div>
-              </div>
-            </div>
-          </aside>
-        </section>
-
-        <ContestNomineeGallery
+        <ContestDetailTabs
+          ballot={ballot}
+          contest={contest}
           nominations={nominations}
+          results={results}
+          userNominations={userNominations}
           hideIdentity={hideIdentity}
         />
       </div>

@@ -418,6 +418,25 @@ async function ensureCustomPaint(supabase, userId) {
   return data.id
 }
 
+async function ensureBenchmarkOnboardingFlow(supabase, userId) {
+  const now = new Date().toISOString()
+  const { error } = await supabase.from('user_onboarding_flows').upsert(
+    {
+      user_id: userId,
+      goal_key: 'organize_hobby',
+      flow_name: 'organize_hobby',
+      experience_level: 'experienced',
+      started_at: now,
+      completed_at: null,
+      dismissed_at: null,
+      updated_at: now,
+    },
+    { onConflict: 'user_id' }
+  )
+
+  if (error) throw error
+}
+
 async function ensureBenchmarkData(supabase, userId) {
   await ensureProfile(supabase, userId)
   const projectId = await ensureProject(supabase, userId)
@@ -426,6 +445,7 @@ async function ensureBenchmarkData(supabase, userId) {
     ensureRecipe(supabase, userId),
     ensureTheme(supabase, userId),
     ensureCustomPaint(supabase, userId),
+    ensureBenchmarkOnboardingFlow(supabase, userId),
   ])
 }
 

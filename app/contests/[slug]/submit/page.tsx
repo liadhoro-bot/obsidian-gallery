@@ -7,8 +7,10 @@ import {
   getContestBySlug,
   getNominationPickerSources,
 } from '../../../../lib/contests/queries'
+import ContestHeader from '../../../../components/contests/contest-header'
 import NominationSourcePicker from '../../../../components/contests/nomination-source-picker'
-import { canManageContest } from '../../../../lib/contests/permissions'
+import { canViewContest } from '../../../../lib/contests/permissions'
+import styles from '../../../../components/contests/contest-v3-silver.module.css'
 
 export default async function ContestSubmitPage({
   params,
@@ -28,28 +30,47 @@ export default async function ContestSubmitPage({
   const phase = getContestPhase(contest)
   const allowedTypes = contest.allowed_nominee_types?.map((row) => row.nominee_type) ?? []
   const isDemoContest = contest.id === DEMO_CONTEST_ID
-  const canManage = isDemoContest || (await canManageContest(user.id, contest.id))
-  if (contest.visibility === 'private' && !canManage) {
+  const canView = isDemoContest || (await canViewContest(user.id, contest.id))
+  if (!canView) {
     notFound()
+  }
+
+  if (phase !== 'submissions_open') {
+    return (
+      <main className={styles.contestSilver}>
+        <div className={styles.pageRail}>
+          <ContestHeader
+            backHref={`/contests/${contest.slug}`}
+            backLabel="Back"
+            contest={contest}
+            showFooter={false}
+          />
+
+          <article className={`${styles.paperPanel} ${styles.closedPanel}`}>
+            <p className={styles.eyebrow}>Nomination</p>
+            <h2 className={styles.sectionTitle}>Submissions Closed</h2>
+            <p className={styles.bodyText}>
+              This contest is not accepting new nominations right now.
+            </p>
+          </article>
+        </div>
+      </main>
+    )
   }
 
   const sources = await getNominationPickerSources(user.id, allowedTypes)
 
   return (
-    <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 pb-24 pt-6 sm:max-w-5xl">
-        <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">
-            Nomination
-          </p>
-          <h1 className="mt-2 text-3xl font-black">{contest.title}</h1>
-        </header>
+    <main className={styles.contestSilver}>
+      <div className={styles.pageRail}>
+        <ContestHeader
+          backHref={`/contests/${contest.slug}`}
+          backLabel="Back"
+          contest={contest}
+          showFooter={false}
+        />
 
-        {phase !== 'submissions_open' ? (
-          <p className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/60">
-            Submission period is closed.
-          </p>
-        ) : (
+        <div className={styles.contentGrid}>
           <NominationSourcePicker
             contest={contest}
             sources={sources}
@@ -58,7 +79,7 @@ export default async function ContestSubmitPage({
             action={submitNominationAction}
             isDemoContest={isDemoContest}
           />
-        )}
+        </div>
       </div>
     </main>
   )
