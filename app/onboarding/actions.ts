@@ -13,6 +13,7 @@ import {
   reconcileOnboardingFlowStart,
 } from '../../lib/onboarding/completion'
 import type { OnboardingFlowName } from '../../lib/onboarding/action-definitions'
+import { createServiceRoleClient } from '../../utils/supabase/service-role'
 
 const IMAGE_BUCKET = 'obsidian-images'
 
@@ -563,39 +564,37 @@ export async function acceptTermsAction({
 
   const acceptedAt = new Date().toISOString()
   const productUpdatesApprovedAt = productUpdatesApproved ? acceptedAt : null
+  const adminSupabase = createServiceRoleClient()
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await adminSupabase
     .from('profiles')
-    .update({
+    .upsert({
+      id: user.id,
       terms_accepted_at: acceptedAt,
       terms_version: TERMS_VERSION,
-    })
-    .eq('id', user.id)
+    }, { onConflict: 'id' })
 
   if (profileError && !isMissingSchemaObjectError(profileError)) {
-    return {
-      ok: false,
-      error: profileError.message,
-    }
+    console.error('Failed to upsert terms acceptance on profile:', profileError)
   }
 
   if (profileError) {
-    const { error: fallbackProfileError } = await supabase
+    const { error: fallbackProfileError } = await adminSupabase
       .from('profiles')
-      .update({
+      .upsert({
+        id: user.id,
         terms_accepted_at: acceptedAt,
-      })
-      .eq('id', user.id)
+      }, { onConflict: 'id' })
 
-    if (fallbackProfileError) {
-      return {
-        ok: false,
-        error: fallbackProfileError.message,
-      }
+    if (fallbackProfileError && !isMissingSchemaObjectError(fallbackProfileError)) {
+      console.error(
+        'Failed to upsert fallback terms acceptance on profile:',
+        fallbackProfileError
+      )
     }
   }
 
-  const { error: acceptanceError } = await supabase
+  const { error: acceptanceError } = await adminSupabase
     .from(TERMS_ACCEPTANCE_TABLE)
     .insert({
       user_id: user.id,
@@ -606,6 +605,40 @@ export async function acceptTermsAction({
 
   if (acceptanceError && !isMissingSchemaObjectError(acceptanceError)) {
     console.error('Failed to record terms acceptance audit row:', acceptanceError)
+  }
+
+  const [profileCheck, acceptanceCheck] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('terms_accepted_at')
+      .eq('id', user.id)
+      .maybeSingle(),
+    supabase
+      .from(TERMS_ACCEPTANCE_TABLE)
+      .select('accepted_at')
+      .eq('user_id', user.id)
+      .order('accepted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  const persistedAcceptance = Boolean(
+    profileCheck.data?.terms_accepted_at || acceptanceCheck.data?.accepted_at
+  )
+
+  if (!persistedAcceptance) {
+    console.error('Terms acceptance did not persist for current user:', {
+      profileError,
+      acceptanceError,
+      profileCheckError: profileCheck.error,
+      acceptanceCheckError: acceptanceCheck.error,
+    })
+
+    return {
+      ok: false,
+      error:
+        'Your acceptance could not be saved. Please try again before continuing.',
+    }
   }
 
   return { ok: true }
