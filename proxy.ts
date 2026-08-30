@@ -162,13 +162,25 @@ export default async function proxy(request: NextRequest) {
     return finalizeResponse(response)
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('terms_accepted_at')
-    .eq('id', activeUser.id)
-    .maybeSingle()
+  const [profileResult, termsAcceptanceResult] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('terms_accepted_at')
+      .eq('id', activeUser.id)
+      .maybeSingle(),
+    supabase
+      .from('user_terms_acceptances')
+      .select('accepted_at')
+      .eq('user_id', activeUser.id)
+      .order('accepted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
 
-  const hasAcceptedTerms = Boolean(profile?.terms_accepted_at)
+  const hasAcceptedTerms = Boolean(
+    profileResult.data?.terms_accepted_at ||
+      termsAcceptanceResult.data?.accepted_at
+  )
 
   if (!hasAcceptedTerms && (!isPublicRoute || shouldRequireAuthenticatedPreview)) {
     return finalizeResponse(

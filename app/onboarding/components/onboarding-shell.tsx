@@ -13,6 +13,7 @@ import type { OnboardingGoal } from '../actions'
 
 type OnboardingShellProps = {
   initialStep?: OnboardingStep
+  initialGoal?: OnboardingGoal
   previewMode?: boolean
   requireUnitSetup?: boolean
 }
@@ -21,13 +22,14 @@ type OnboardingStep = 'terms' | 'persona' | 'creation' | 'curator'
 
 export default function OnboardingShell({
   initialStep = 'terms',
+  initialGoal = 'paint_miniature',
   previewMode = false,
   requireUnitSetup = false,
 }: OnboardingShellProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(initialStep)
   const [selectedGoal, setSelectedGoal] =
-    useState<OnboardingGoal>('paint_miniature')
+    useState<OnboardingGoal>(initialGoal)
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })

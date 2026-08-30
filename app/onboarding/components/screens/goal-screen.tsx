@@ -67,9 +67,6 @@ export default function GoalScreen({
   const selectedPersona = personaOptions.find(
     (option) => option.id === selectedGoal
   )
-  const visiblePersonaOptions = requireUnitSetup
-    ? personaOptions.filter((option) => option.id !== 'create_content')
-    : personaOptions
   const ctaLabel = selectedPersona?.cta ?? 'Choose an option above'
 
   function saveAndContinue(goal: OnboardingGoal) {
@@ -108,7 +105,7 @@ export default function GoalScreen({
       </div>
 
       <div className={styles.optionStack}>
-        {visiblePersonaOptions.map((option) => {
+        {personaOptions.map((option) => {
           const isSelected = selectedGoal === option.id
 
           return (

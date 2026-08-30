@@ -10,8 +10,29 @@ import { getDashboardOnboardingRequirement } from '../../lib/onboarding/dashboar
 type OnboardingPageProps = {
   searchParams?: Promise<{
     preview?: string
+    reason?: string
     reset?: string
   }>
+}
+
+function getInitialStep({
+  previewMode,
+  reason,
+  termsAccepted,
+}: {
+  previewMode: boolean
+  reason?: string
+  termsAccepted?: boolean
+}) {
+  if (previewMode || termsAccepted === false) {
+    return 'terms'
+  }
+
+  if (reason === 'missing_units') {
+    return 'creation'
+  }
+
+  return 'persona'
 }
 
 export default async function OnboardingPage({
@@ -32,8 +53,17 @@ export default async function OnboardingPage({
   return (
     <OnboardingShell
       key={params?.reset ?? 'default'}
-      initialStep={
-        previewMode || onboarding?.termsAccepted === false ? 'terms' : 'persona'
+      initialStep={getInitialStep({
+        previewMode,
+        reason: params?.reason,
+        termsAccepted: onboarding?.termsAccepted,
+      })}
+      initialGoal={
+        onboarding?.flowName === 'organize_hobby'
+          ? 'organize_hobby'
+          : onboarding?.flowName === 'create_content'
+            ? 'create_content'
+            : 'paint_miniature'
       }
       previewMode={previewMode}
       requireUnitSetup={onboarding?.hasUnits === false}

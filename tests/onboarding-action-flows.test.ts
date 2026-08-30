@@ -6,6 +6,7 @@ import {
   onboardingFlowDefinitions,
   type OnboardingFlowName,
 } from '../lib/onboarding/action-definitions'
+import { resolveDashboardOnboardingRequirement } from '../lib/onboarding/dashboard-entry-guard'
 import { resolveOnboardingActionDestination } from '../lib/onboarding/action-destinations'
 import { selectVisibleOnboardingActionBatch } from '../lib/onboarding/action-batches'
 
@@ -212,4 +213,38 @@ test('visible onboarding action batch stays fixed until all three are complete',
     selectVisibleOnboardingActionBatch(actions).map((action) => action.id),
     ['action-4', 'action-5', 'action-6']
   )
+})
+
+test('dashboard onboarding accepts terms audit rows when profile row is missing', () => {
+  const requirement = resolveDashboardOnboardingRequirement({
+    profile: null,
+    termsAcceptance: { accepted_at: '2026-08-30T10:00:00.000Z' },
+    flow: { flow_name: 'paint_miniature' },
+    unitCount: 1,
+  })
+
+  assert.equal(requirement.termsAccepted, true)
+  assert.equal(requirement.needsOnboarding, false)
+})
+
+test('dashboard onboarding does not require units for guide or look-around flows', () => {
+  const guideRequirement = resolveDashboardOnboardingRequirement({
+    profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },
+    termsAcceptance: null,
+    flow: { flow_name: 'create_content' },
+    unitCount: 0,
+  })
+
+  assert.equal(guideRequirement.hasGoal, true)
+  assert.equal(guideRequirement.needsOnboarding, false)
+
+  const lookAroundRequirement = resolveDashboardOnboardingRequirement({
+    profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },
+    termsAcceptance: null,
+    flow: { flow_name: null, dismissed_at: '2026-08-30T10:00:00.000Z' },
+    unitCount: 0,
+  })
+
+  assert.equal(lookAroundRequirement.hasGoal, true)
+  assert.equal(lookAroundRequirement.needsOnboarding, false)
 })
