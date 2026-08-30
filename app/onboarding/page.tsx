@@ -66,6 +66,7 @@ export default async function OnboardingPage({
             : 'paint_miniature'
       }
       previewMode={previewMode}
+      hasAuthenticatedUser={Boolean(user)}
       requireUnitSetup={onboarding?.hasUnits === false}
     />
   )

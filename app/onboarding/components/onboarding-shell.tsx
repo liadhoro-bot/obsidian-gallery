@@ -14,6 +14,7 @@ import type { OnboardingGoal } from '../actions'
 type OnboardingShellProps = {
   initialStep?: OnboardingStep
   initialGoal?: OnboardingGoal
+  hasAuthenticatedUser?: boolean
   previewMode?: boolean
   requireUnitSetup?: boolean
 }
@@ -23,6 +24,7 @@ type OnboardingStep = 'terms' | 'persona' | 'creation' | 'curator'
 export default function OnboardingShell({
   initialStep = 'terms',
   initialGoal = 'paint_miniature',
+  hasAuthenticatedUser = false,
   previewMode = false,
   requireUnitSetup = false,
 }: OnboardingShellProps) {
@@ -58,6 +60,7 @@ export default function OnboardingShell({
       <div className={styles.onboardingViewport}>
         {currentStep === 'terms' ? (
           <LegalScreen
+            shouldPersistAcceptance={hasAuthenticatedUser}
             previewMode={previewMode}
             onAccepted={() => setCurrentStep('persona')}
           />

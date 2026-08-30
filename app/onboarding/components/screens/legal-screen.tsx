@@ -8,9 +8,14 @@ import styles from '../../../auth-flow-silver.module.css'
 type Props = {
   onAccepted: () => void
   previewMode?: boolean
+  shouldPersistAcceptance?: boolean
 }
 
-export default function LegalScreen({ onAccepted, previewMode = false }: Props) {
+export default function LegalScreen({
+  onAccepted,
+  previewMode = false,
+  shouldPersistAcceptance = false,
+}: Props) {
   const [accepted, setAccepted] = useState(false)
   const [marketingAccepted, setMarketingAccepted] = useState(false)
   const [showTerms, setShowTerms] = useState(false)
@@ -23,7 +28,7 @@ export default function LegalScreen({ onAccepted, previewMode = false }: Props) 
     setIsSaving(true)
     setError(null)
 
-    if (previewMode) {
+    if (previewMode && !shouldPersistAcceptance) {
       onAccepted()
       return
     }
