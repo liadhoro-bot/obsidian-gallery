@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-pwa-v2.8.9-dev-bypass'
+const CACHE_VERSION = 'obsidian-gallery-v3-pwa-2026-08-30'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'
@@ -9,12 +9,12 @@ const PRECACHE_URLS = [
   '/favicon-16x16.png',
   '/favicon-32x32.png',
   '/apple-touch-icon.png',
+  '/favicon-48x48.png',
   '/icon-192.png',
-  '/icon-192-v4.png',
+  '/icon-256.png',
+  '/icon-384.png',
   '/icon-512.png',
-  '/icon-512-v4.png',
   '/maskable-icon-512.png',
-  '/maskable-icon-512-v4.png',
   '/bookmark.svg',
   '/icons/nav/dashboard.svg',
   '/icons/nav/projects.svg',

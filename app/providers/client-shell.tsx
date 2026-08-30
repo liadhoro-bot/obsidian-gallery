@@ -8,6 +8,10 @@ const ServiceWorkerRegistrar = dynamic(
   () => import('./service-worker-registrar'),
   { ssr: false }
 )
+const MobileInstallPrompt = dynamic(
+  () => import('../components/mobile-install-prompt'),
+  { ssr: false }
+)
 const PostHogUserIdentifier = dynamic(
   () => import('./posthog-user-identifier'),
   { ssr: false }
@@ -26,11 +30,17 @@ export default function ClientShell({
     !pathname.startsWith('/auth') &&
     !pathname.startsWith('/offline') &&
     !pathname.startsWith('/support') &&
+    !pathname.startsWith('/settings/terms') &&
+    !pathname.startsWith('/guides/decks')
+  const showInstallPrompt =
+    !pathname.startsWith('/auth') &&
+    !pathname.startsWith('/offline') &&
     !pathname.startsWith('/settings/terms')
 
   return (
     <>
       <ServiceWorkerRegistrar />
+      {showInstallPrompt ? <MobileInstallPrompt /> : null}
       {enableProductionTelemetry ? <PostHogUserIdentifier /> : null}
       {showMobileNav ? <MobileNav /> : null}
     </>

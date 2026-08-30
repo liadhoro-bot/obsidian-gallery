@@ -34,10 +34,10 @@ const ogMonoFont = IBM_Plex_Mono({
 const enableProductionTelemetry = process.env.VERCEL_ENV === 'production'
 
 export const metadata: Metadata = {
-  title: 'Obsidian Gallery',
-  description: 'Miniature painting and hobby companion',
+  title: 'Obsidian Gallery V3',
+  description: 'The V3 miniature painting and hobby companion.',
 
-  applicationName: 'Obsidian Gallery',
+  applicationName: 'Obsidian Gallery V3',
   generator: 'Next.js',
 
   manifest: '/manifest.webmanifest',
@@ -45,14 +45,17 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Obsidian Gallery',
+    title: 'Obsidian V3',
   },
 
   icons: {
     icon: [
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-48x48.png', sizes: '48x48', type: 'image/png' },
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-256.png', sizes: '256x256', type: 'image/png' },
+      { url: '/icon-384.png', sizes: '384x384', type: 'image/png' },
       { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
 
@@ -81,14 +84,14 @@ export const metadata: Metadata = {
     'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'black-translucent',
-    'apple-mobile-web-app-title': 'Obsidian Gallery',
+    'apple-mobile-web-app-title': 'Obsidian V3',
   },
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#24150b',
+  themeColor: '#071015',
   colorScheme: 'dark',
   viewportFit: 'cover',
 }
