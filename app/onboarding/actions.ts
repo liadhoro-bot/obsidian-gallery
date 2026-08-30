@@ -106,6 +106,85 @@ export async function saveOnboardingGoalAction(
   return { ok: true }
 }
 
+export async function dismissOnboardingSetupAction() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: 'You must be logged in to finish onboarding.',
+    }
+  }
+
+  const now = new Date().toISOString()
+  const admin = createServiceRoleClient()
+  const { data: existing, error: existingError } = await admin
+    .from('user_onboarding_flows')
+    .select('user_id, goal_key, flow_name, experience_level')
+    .eq('user_id', user.id)
+    .maybeSingle<{
+      user_id: string
+      goal_key: OnboardingGoal | null
+      flow_name: OnboardingFlowName | null
+      experience_level: OnboardingExperience | null
+    }>()
+
+  if (existingError) {
+    return {
+      ok: false,
+      error: existingError.message,
+    }
+  }
+
+  const { error } = existing
+    ? await admin
+        .from('user_onboarding_flows')
+        .update({
+          dismissed_at: now,
+          updated_at: now,
+        })
+        .eq('user_id', user.id)
+    : await admin.from('user_onboarding_flows').upsert(
+        {
+          user_id: user.id,
+          goal_key: 'look_around',
+          flow_name: null,
+          experience_level: null,
+          started_at: now,
+          completed_at: null,
+          dismissed_at: now,
+          updated_at: now,
+        },
+        { onConflict: 'user_id' }
+      )
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message,
+    }
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'onboarding_flow_dismissed',
+    properties: {
+      flow_name: existing?.flow_name ?? null,
+      goal_key: existing?.goal_key ?? 'look_around',
+      experience_level: existing?.experience_level ?? null,
+      source: 'onboarding_setup_skip',
+    },
+  })
+
+  revalidatePath('/dashboard')
+
+  return { ok: true }
+}
+
 export type CreateOnboardingProjectState = {
   success: boolean
   error: string | null
