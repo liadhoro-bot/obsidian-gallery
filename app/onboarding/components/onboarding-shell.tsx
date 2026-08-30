@@ -9,7 +9,10 @@ import FirstProjectScreen from './screens/first-project-screen'
 import GoalScreen from './screens/goal-screen'
 import GuideCreationScreen from './screens/guide-creation-screen'
 import LegalScreen from './screens/legal-screen'
-import type { OnboardingGoal } from '../actions'
+import {
+  dismissOnboardingSetupAction,
+  type OnboardingGoal,
+} from '../actions'
 
 type OnboardingShellProps = {
   initialStep?: OnboardingStep
@@ -29,6 +32,7 @@ export default function OnboardingShell({
   requireUnitSetup = false,
 }: OnboardingShellProps) {
   const router = useRouter()
+  const canBypassPersistence = previewMode && !hasAuthenticatedUser
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(initialStep)
   const [selectedGoal, setSelectedGoal] =
     useState<OnboardingGoal>(initialGoal)
@@ -54,6 +58,18 @@ export default function OnboardingShell({
     router.push('/dashboard')
   }
 
+  async function skipCreationSetup() {
+    if (!canBypassPersistence) {
+      const result = await dismissOnboardingSetupAction()
+
+      if (!result.ok) {
+        console.error('Failed to dismiss onboarding setup:', result.error)
+      }
+    }
+
+    setCurrentStep('curator')
+  }
+
   return (
     <main className={styles.onboardingRoot}>
       <V3PerfIndicator surface="onboarding" detail={currentStep} />
@@ -61,14 +77,14 @@ export default function OnboardingShell({
         {currentStep === 'terms' ? (
           <LegalScreen
             shouldPersistAcceptance={hasAuthenticatedUser}
-            previewMode={previewMode}
+            previewMode={canBypassPersistence}
             onAccepted={() => setCurrentStep('persona')}
           />
         ) : null}
 
         {currentStep === 'persona' ? (
           <GoalScreen
-            previewMode={previewMode}
+            previewMode={canBypassPersistence}
             requireUnitSetup={requireUnitSetup}
             onContinue={continueFromPersona}
           />
@@ -76,17 +92,21 @@ export default function OnboardingShell({
 
         {currentStep === 'creation' && selectedGoal !== 'create_content' ? (
           <FirstProjectScreen
-            previewMode={previewMode}
+            previewMode={canBypassPersistence}
             onCreated={() => setCurrentStep('curator')}
-            onSkip={() => setCurrentStep('curator')}
+            onSkip={() => {
+              void skipCreationSetup()
+            }}
           />
         ) : null}
 
         {currentStep === 'creation' && selectedGoal === 'create_content' ? (
           <GuideCreationScreen
-            previewMode={previewMode}
+            previewMode={canBypassPersistence}
             onCreated={() => setCurrentStep('curator')}
-            onSkip={() => setCurrentStep('curator')}
+            onSkip={() => {
+              void skipCreationSetup()
+            }}
           />
         ) : null}
 

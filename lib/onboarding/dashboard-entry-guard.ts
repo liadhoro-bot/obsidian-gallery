@@ -41,8 +41,9 @@ export function resolveDashboardOnboardingRequirement({
   const hasGoal = Boolean(flow)
   const hasUnits = (unitCount ?? 0) > 0
   const requiresUnitSetup =
-    flow?.flow_name === 'paint_miniature' ||
-    flow?.flow_name === 'organize_hobby'
+    !flow?.dismissed_at &&
+    (flow?.flow_name === 'paint_miniature' ||
+      flow?.flow_name === 'organize_hobby')
   const reason = !hasGoal
     ? 'missing_goal'
     : requiresUnitSetup && !hasUnits

@@ -248,3 +248,18 @@ test('dashboard onboarding does not require units for guide or look-around flows
   assert.equal(lookAroundRequirement.hasGoal, true)
   assert.equal(lookAroundRequirement.needsOnboarding, false)
 })
+
+test('dashboard onboarding allows skipped unit setup after a unit-based goal', () => {
+  const requirement = resolveDashboardOnboardingRequirement({
+    profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },
+    termsAcceptance: null,
+    flow: {
+      flow_name: 'paint_miniature',
+      dismissed_at: '2026-08-30T10:05:00.000Z',
+    },
+    unitCount: 0,
+  })
+
+  assert.equal(requirement.hasGoal, true)
+  assert.equal(requirement.needsOnboarding, false)
+})

@@ -16,15 +16,17 @@ type OnboardingPageProps = {
 }
 
 function getInitialStep({
+  hasAuthenticatedUser,
   previewMode,
   reason,
   termsAccepted,
 }: {
+  hasAuthenticatedUser: boolean
   previewMode: boolean
   reason?: string
   termsAccepted?: boolean
 }) {
-  if (previewMode || termsAccepted === false) {
+  if (termsAccepted === false || (previewMode && !hasAuthenticatedUser)) {
     return 'terms'
   }
 
@@ -54,6 +56,7 @@ export default async function OnboardingPage({
     <OnboardingShell
       key={params?.reset ?? 'default'}
       initialStep={getInitialStep({
+        hasAuthenticatedUser: Boolean(user),
         previewMode,
         reason: params?.reason,
         termsAccepted: onboarding?.termsAccepted,
