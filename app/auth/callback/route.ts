@@ -209,7 +209,10 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser()
 
     if (user) {
-      const onboarding = await getDashboardOnboardingRequirement(user.id)
+      const onboarding = await getDashboardOnboardingRequirement(
+        user.id,
+        user.user_metadata
+      )
 
       if (onboarding.needsOnboarding && onboarding.reason) {
         return NextResponse.redirect(

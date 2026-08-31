@@ -227,6 +227,32 @@ test('dashboard onboarding accepts terms audit rows when profile row is missing'
   assert.equal(requirement.needsOnboarding, false)
 })
 
+test('dashboard onboarding accepts auth metadata terms fallback', () => {
+  const requirement = resolveDashboardOnboardingRequirement({
+    authMetadata: { terms_accepted_at: '2026-08-31T10:00:00.000Z' },
+    profile: null,
+    termsAcceptance: null,
+    flow: { flow_name: 'paint_miniature' },
+    unitCount: 1,
+  })
+
+  assert.equal(requirement.termsAccepted, true)
+  assert.equal(requirement.needsOnboarding, false)
+})
+
+test('dashboard onboarding accepts terms cookie fallback', () => {
+  const requirement = resolveDashboardOnboardingRequirement({
+    hasTermsCookie: true,
+    profile: null,
+    termsAcceptance: null,
+    flow: { flow_name: 'paint_miniature' },
+    unitCount: 1,
+  })
+
+  assert.equal(requirement.termsAccepted, true)
+  assert.equal(requirement.needsOnboarding, false)
+})
+
 test('dashboard onboarding does not require units for guide or look-around flows', () => {
   const guideRequirement = resolveDashboardOnboardingRequirement({
     profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },

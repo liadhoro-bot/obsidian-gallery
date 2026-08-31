@@ -171,7 +171,10 @@ export default async function DashboardPage({
     )
   }
 
-  const onboarding = await getDashboardOnboardingRequirement(user.id)
+  const onboarding = await getDashboardOnboardingRequirement(
+    user.id,
+    user.user_metadata
+  )
 
   if (onboarding.needsOnboarding && onboarding.reason) {
     redirect(

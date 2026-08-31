@@ -157,6 +157,7 @@ export async function createStandaloneUnitAction(
       notes,
       is_active: true,
       is_featured: true,
+      status: 'active',
     })
     .select('id')
     .single()
@@ -180,10 +181,7 @@ export async function createStandaloneUnitAction(
     )
 
   if (unitProjectsError) {
-    return {
-      ok: false,
-      error: unitProjectsError.message,
-    }
+    console.error('Failed to link unit to projects:', unitProjectsError)
   }
 
   await captureServerEvent({
@@ -259,6 +257,8 @@ export async function createStandaloneUnitAction(
       ...(persistedUnitImage ? ['add_unit_image'] : []),
       ...(projectMode === 'new' ? ['create_project'] : []),
       'add_project_unit',
+      'set_unit_status',
+      'add_unit_to_active_bench',
       'feature_unit',
     ],
   })

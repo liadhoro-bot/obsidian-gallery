@@ -45,7 +45,7 @@ export default async function OnboardingPage({
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
   const onboarding = user
-    ? await getDashboardOnboardingRequirement(user.id)
+    ? await getDashboardOnboardingRequirement(user.id, user.user_metadata)
     : null
 
   if (!previewMode && !user) {

@@ -22,7 +22,7 @@ export default function FirstProjectScreen({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const canSubmit = unitName.trim().length > 1 && !isPending
+  const canSubmit = (unitName.trim().length > 1 || useDemo) && !isPending
 
   function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -34,6 +34,9 @@ export default function FirstProjectScreen({
     if (!canSubmit) return
 
     const formData = new FormData(event.currentTarget)
+    if (useDemo && !unitName.trim()) {
+      formData.set('unitName', 'Demo Starter Miniature')
+    }
     setError(null)
 
     if (previewMode) {
