@@ -1,13 +1,18 @@
 'use client'
 
 import Image from 'next/image'
-import { FormEvent, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { FormEvent, useMemo, useState, useTransition } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import styles from './projects-v3-silver.module.css'
+import {
+  createProjectsPageProjectAction,
+  createProjectsPageUnitAction,
+} from './actions'
 import type {
   ProjectsV3Project,
   ProjectsV3Unit,
@@ -153,24 +158,27 @@ export default function ProjectsV3Preview({
   initialProjects?: PreviewProject[]
   initialUnits?: PreviewUnit[]
 }) {
+  const router = useRouter()
   const defaultUnitProjectId = liveProjects
-    ? liveProjects[0]?.id ?? 'unfiled'
+    ? liveProjects[0]?.id ?? 'new'
     : initialProjects[0].id
   const [activeTab, setActiveTab] = useState<ProjectsTab>('projects')
-  const [projects, setProjects] = useState(
+  const [projects] = useState(
     liveProjects ?? initialProjects
   )
-  const [units, setUnits] = useState(
+  const [units] = useState(
     liveUnits ?? initialUnits
   )
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
-  const [projectType, setProjectType] = useState('Warband')
-  const [projectDueDate, setProjectDueDate] = useState('')
+  const [projectDescription, setProjectDescription] = useState('')
+  const [projectImagePreview, setProjectImagePreview] = useState<string | null>(null)
   const [unitName, setUnitName] = useState('')
   const [unitProjectId, setUnitProjectId] = useState(defaultUnitProjectId)
+  const [unitNewProjectName, setUnitNewProjectName] = useState('')
   const [unitDeadline, setUnitDeadline] = useState('')
+  const [unitImagePreview, setUnitImagePreview] = useState<string | null>(null)
   const [projectSearch, setProjectSearch] = useState('')
   const [projectSort, setProjectSort] = useState<ProjectsSort>('recent')
   const [projectView, setProjectView] = useState<ViewMode>('cards')
@@ -179,6 +187,8 @@ export default function ProjectsV3Preview({
   const [unitSort, setUnitSort] = useState<ProjectsSort>('recent')
   const [unitView, setUnitView] = useState<ViewMode>('grid')
   const [unitPageIndex, setUnitPageIndex] = useState(0)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [isSaving, startSaving] = useTransition()
 
   const projectById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
@@ -264,6 +274,7 @@ export default function ProjectsV3Preview({
 
   function openCreate() {
     setActiveGuideIndex(null)
+    setCreateError(null)
     setIsCreateOpen(true)
   }
 
@@ -309,50 +320,59 @@ export default function ProjectsV3Preview({
     setUnitPageIndex((current) => (current + 1 >= unitPageCount ? 0 : current + 1))
   }
 
-  function createPreviewProject(event: FormEvent<HTMLFormElement>) {
+  function createProject(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const nextProject: PreviewProject = {
-      id: `preview-project-${Date.now()}`,
-      name: projectPreviewName,
-      description: `${projectType} collection ready for units.`,
-      type: projectType,
-      due: projectDueDate || undefined,
-      image: '/onboarding/pains/paint-management.jpeg',
-      palette: ['#22d3ee', '#d6a73a', '#111417', '#8f9fd9', '#37665b'],
-    }
+    const formData = new FormData(event.currentTarget)
+    formData.set('name', projectPreviewName)
+    formData.set('description', projectDescription)
+    setCreateError(null)
 
-    setProjects((currentProjects) => [nextProject, ...currentProjects])
-    setProjectName('')
-    setProjectType('Warband')
-    setProjectDueDate('')
-    setUnitProjectId(nextProject.id)
-    setIsCreateOpen(false)
+    startSaving(async () => {
+      const result = await createProjectsPageProjectAction(formData)
+
+      if (!result.ok) {
+        setCreateError(result.error)
+        return
+      }
+
+      setProjectName('')
+      setProjectDescription('')
+      setProjectImagePreview(null)
+      setUnitProjectId(result.projectId)
+      setIsCreateOpen(false)
+      router.push(`/projects/${result.projectId}`)
+      router.refresh()
+    })
   }
 
-  function createPreviewUnit(event: FormEvent<HTMLFormElement>) {
+  function createUnit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const nextUnit: PreviewUnit = {
-      id: `preview-unit-${Date.now()}`,
-      name: unitPreviewName,
-      projectId: unitProjectId,
-      image: '/onboarding/pains/paint-management.jpeg',
-      status: 'Active',
-      progress: 0,
-      stage: 'Planning',
-      deadline: unitDeadline || '2026-08-01',
-      logged: '0m',
-      updatedAt: '2026-07-31',
-      modelCount: 1,
-      palette: ['#22d3ee', '#111417', '#d6a73a', '#8f9fd9', '#37665b'],
-    }
+    const formData = new FormData(event.currentTarget)
+    formData.set('name', unitPreviewName)
+    formData.set('projectId', unitProjectId)
+    formData.set('newProjectName', unitNewProjectName)
+    formData.set('deadline', unitDeadline)
+    setCreateError(null)
 
-    setUnits((currentUnits) => [nextUnit, ...currentUnits])
-    setUnitName('')
-    setUnitDeadline('')
-    setActiveTab('units')
-    setIsCreateOpen(false)
+    startSaving(async () => {
+      const result = await createProjectsPageUnitAction(formData)
+
+      if (!result.ok) {
+        setCreateError(result.error)
+        return
+      }
+
+      setUnitName('')
+      setUnitNewProjectName('')
+      setUnitDeadline('')
+      setUnitImagePreview(null)
+      setActiveTab('units')
+      setIsCreateOpen(false)
+      router.push(`/units/${result.unitId}`)
+      router.refresh()
+    })
   }
 
   return (
@@ -433,15 +453,17 @@ export default function ProjectsV3Preview({
       {isCreateOpen ? (
         activeTab === 'projects' ? (
           <CreateProjectSheet
-            dueDate={projectDueDate}
+            description={projectDescription}
+            imagePreview={projectImagePreview}
             name={projectName}
             previewName={projectPreviewName}
-            projectType={projectType}
             onClose={() => setIsCreateOpen(false)}
-            onDueDateChange={setProjectDueDate}
+            onDescriptionChange={setProjectDescription}
+            onImagePreviewChange={setProjectImagePreview}
             onNameChange={setProjectName}
-            onProjectTypeChange={setProjectType}
-            onSubmit={createPreviewProject}
+            onSubmit={createProject}
+            error={createError}
+            isSaving={isSaving}
           />
         ) : (
           <CreateUnitSheet
@@ -452,9 +474,15 @@ export default function ProjectsV3Preview({
             projects={projects}
             onClose={() => setIsCreateOpen(false)}
             onDeadlineChange={setUnitDeadline}
+            onImagePreviewChange={setUnitImagePreview}
             onNameChange={setUnitName}
+            onNewProjectNameChange={setUnitNewProjectName}
             onProjectChange={setUnitProjectId}
-            onSubmit={createPreviewUnit}
+            onSubmit={createUnit}
+            error={createError}
+            isSaving={isSaving}
+            imagePreview={unitImagePreview}
+            newProjectName={unitNewProjectName}
           />
         )
       ) : null}
@@ -1186,25 +1214,29 @@ function ProgressRing({ progress }: { progress: number }) {
 }
 
 function CreateProjectSheet({
-  dueDate,
+  description,
   name,
   onClose,
-  onDueDateChange,
+  onDescriptionChange,
+  onImagePreviewChange,
   onNameChange,
-  onProjectTypeChange,
   onSubmit,
   previewName,
-  projectType,
+  error,
+  imagePreview,
+  isSaving,
 }: {
-  dueDate: string
+  description: string
+  error: string | null
+  imagePreview: string | null
+  isSaving: boolean
   name: string
   onClose: () => void
-  onDueDateChange: (date: string) => void
+  onDescriptionChange: (description: string) => void
+  onImagePreviewChange: (preview: string | null) => void
   onNameChange: (name: string) => void
-  onProjectTypeChange: (projectType: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   previewName: string
-  projectType: string
 }) {
   return (
     <Sheet title="Create project" eyebrow="New Project" onClose={onClose}>
@@ -1219,28 +1251,27 @@ function CreateProjectSheet({
           value={name}
           onChange={onNameChange}
         />
-        <label className="grid gap-2">
-          <span className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
-            Type
-          </span>
-          <select
-            value={projectType}
-            onChange={(event) => onProjectTypeChange(event.target.value)}
-            className="h-12 rounded-[8px] border border-white/10 bg-black/24 px-4 text-sm font-semibold text-white outline-none transition focus:border-cyan-300/70"
-          >
-            <option>Warband</option>
-            <option>Army</option>
-            <option>Display Force</option>
-            <option>Terrain Table</option>
-          </select>
-        </label>
-        <DateField label="Due date" value={dueDate} onChange={onDueDateChange} />
-        <PreviewCard
-          image="/onboarding/pains/paint-management.jpeg"
-          title={previewName}
-          subtitle={projectType}
+        <TextAreaField
+          label="Description"
+          placeholder="What belongs in this project?"
+          value={description}
+          onChange={onDescriptionChange}
         />
-        <PrimaryButton>Create preview project</PrimaryButton>
+        <ImageField
+          label="Project image"
+          name="image"
+          preview={imagePreview}
+          onPreviewChange={onImagePreviewChange}
+        />
+        <PreviewCard
+          image={imagePreview ?? '/onboarding/pains/paint-management.jpeg'}
+          title={previewName}
+          subtitle={description.trim() || 'Project card image and notes'}
+        />
+        {error ? <p className="text-sm font-semibold text-red-300">{error}</p> : null}
+        <PrimaryButton disabled={isSaving}>
+          {isSaving ? 'Creating project...' : 'Create project'}
+        </PrimaryButton>
       </form>
     </Sheet>
   )
@@ -1251,18 +1282,30 @@ function CreateUnitSheet({
   name,
   onClose,
   onDeadlineChange,
+  onImagePreviewChange,
   onNameChange,
+  onNewProjectNameChange,
   onProjectChange,
   onSubmit,
   previewName,
   projectId,
   projects,
+  error,
+  imagePreview,
+  isSaving,
+  newProjectName,
 }: {
   deadline: string
+  error: string | null
+  imagePreview: string | null
+  isSaving: boolean
   name: string
+  newProjectName: string
   onClose: () => void
   onDeadlineChange: (date: string) => void
+  onImagePreviewChange: (preview: string | null) => void
   onNameChange: (name: string) => void
+  onNewProjectNameChange: (name: string) => void
   onProjectChange: (projectId: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   previewName: string
@@ -1301,15 +1344,33 @@ function CreateUnitSheet({
                 {item.name}
               </option>
             ))}
+            <option value="new">Create a new project</option>
           </select>
         </label>
+        {projectId === 'new' ? (
+          <TextField
+            label="New project name"
+            placeholder="e.g. Winter Warband"
+            value={newProjectName}
+            onChange={onNewProjectNameChange}
+          />
+        ) : null}
         <DateField label="Deadline" value={deadline} onChange={onDeadlineChange} />
-        <PreviewCard
-          image="/onboarding/pains/paint-management.jpeg"
-          title={previewName}
-          subtitle={project?.name ?? 'No Project'}
+        <ImageField
+          label="Unit image"
+          name="image"
+          preview={imagePreview}
+          onPreviewChange={onImagePreviewChange}
         />
-        <PrimaryButton>Create preview unit</PrimaryButton>
+        <PreviewCard
+          image={imagePreview ?? '/onboarding/pains/paint-management.jpeg'}
+          title={previewName}
+          subtitle={project?.name ?? (newProjectName.trim() || 'New project')}
+        />
+        {error ? <p className="text-sm font-semibold text-red-300">{error}</p> : null}
+        <PrimaryButton disabled={isSaving}>
+          {isSaving ? 'Creating unit...' : 'Create unit'}
+        </PrimaryButton>
       </form>
     </Sheet>
   )
@@ -1384,6 +1445,83 @@ function TextField({
   )
 }
 
+function TextAreaField({
+  label,
+  onChange,
+  placeholder,
+  value,
+}: {
+  label: string
+  onChange: (value: string) => void
+  placeholder: string
+  value: string
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
+        {label}
+      </span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        rows={3}
+        className="resize-none rounded-[8px] border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold leading-5 text-white outline-none transition placeholder:text-white/25 focus:border-cyan-300/70"
+      />
+    </label>
+  )
+}
+
+function ImageField({
+  label,
+  name,
+  onPreviewChange,
+  preview,
+}: {
+  label: string
+  name: string
+  onPreviewChange: (preview: string | null) => void
+  preview: string | null
+}) {
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    onPreviewChange(file ? URL.createObjectURL(file) : null)
+  }
+
+  return (
+    <label className="grid gap-2">
+      <span className="text-xs font-black uppercase tracking-[0.18em] text-white/42">
+        {label}
+      </span>
+      <span className="flex cursor-pointer items-center gap-3 rounded-[8px] border border-dashed border-white/14 bg-black/24 p-3 transition hover:border-cyan-300/60">
+        <span className="relative grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-[8px] bg-white/[0.06] text-2xl font-black text-white/42">
+          {preview ? (
+            <Image
+              src={preview}
+              alt=""
+              fill
+              className="object-cover"
+              unoptimized
+            />
+          ) : (
+            '+'
+          )}
+        </span>
+        <span className="min-w-0 text-sm font-semibold leading-5 text-white/56">
+          Upload a photo to use as the card image.
+        </span>
+        <input
+          name={name}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={handleChange}
+          className="sr-only"
+        />
+      </span>
+    </label>
+  )
+}
+
 function DateField({
   label,
   onChange,
@@ -1429,6 +1567,7 @@ function PreviewCard({
           fill
           sizes="(max-width: 640px) 100vw, 448px"
           className="object-cover opacity-55"
+          unoptimized={image.startsWith('blob:')}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/15" />
         <div className="absolute inset-x-0 bottom-0 p-4">
@@ -1443,11 +1582,18 @@ function PreviewCard({
   )
 }
 
-function PrimaryButton({ children }: { children: React.ReactNode }) {
+function PrimaryButton({
+  children,
+  disabled = false,
+}: {
+  children: React.ReactNode
+  disabled?: boolean
+}) {
   return (
     <button
       type="submit"
-      className="h-12 rounded-[8px] bg-cyan-300 text-sm font-black text-black transition hover:bg-cyan-200"
+      disabled={disabled}
+      className="h-12 rounded-[8px] bg-cyan-300 text-sm font-black text-black transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/45"
     >
       {children}
     </button>

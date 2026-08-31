@@ -184,6 +184,7 @@ async function addUnit(formData: FormData) {
         deadline,
         notes,
         is_active: true,
+        status: 'active',
       },
     ])
     .select()
@@ -192,6 +193,21 @@ async function addUnit(formData: FormData) {
   if (error || !insertedUnit) {
     console.error('Error adding unit:', error)
     return
+  }
+
+  const { error: unitProjectsError } = await supabase
+    .from('unit_projects')
+    .upsert(
+      {
+        unit_id: insertedUnit.id,
+        project_id: projectId,
+        user_id: user.id,
+      },
+      { onConflict: 'unit_id,project_id' }
+    )
+
+  if (unitProjectsError) {
+    console.error('Error linking unit to project:', unitProjectsError)
   }
 
   await captureServerEvent({
@@ -341,6 +357,8 @@ async function addUnit(formData: FormData) {
       'create_unit',
       'name_unit',
       'add_project_unit',
+      'set_unit_status',
+      'add_unit_to_active_bench',
       ...(notes || deadline || modelCount ? ['complete_unit_info'] : []),
       ...(persistedUnitImage ? ['add_unit_image'] : []),
     ],

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { createPerfTimer } from '../../utils/perf/server'
@@ -345,6 +346,7 @@ export async function createFirstProjectUnitAction(
       deadline,
       is_active: true,
       is_featured: true,
+      status: 'active',
     })
     .select('id')
     .single()
@@ -368,10 +370,7 @@ export async function createFirstProjectUnitAction(
     })
 
   if (unitProjectsError) {
-    return {
-      ok: false,
-      error: unitProjectsError.message,
-    }
+    console.error('Failed to link onboarding unit to project:', unitProjectsError)
   }
 
   await captureServerEvent({
@@ -462,6 +461,8 @@ export async function createFirstProjectUnitAction(
       ...(persistedUnitImage ? ['add_unit_image'] : []),
       'create_project',
       'add_project_unit',
+      'set_unit_status',
+      'add_unit_to_active_bench',
       'feature_unit',
     ],
   })
@@ -610,6 +611,7 @@ export async function createOnboardingGuideAction(
 }
 const TERMS_VERSION = '2026-05-13'
 const TERMS_ACCEPTANCE_TABLE = 'user_terms_acceptances'
+const TERMS_ACCEPTANCE_COOKIE = 'og_terms_acceptance'
 
 function isMissingSchemaObjectError(error: { code?: string; message?: string }) {
   const message = error.message ?? ''
@@ -628,24 +630,113 @@ export async function acceptTermsAction({
 }: {
   productUpdatesApproved?: boolean
 } = {}) {
+  const diagnosticId = `terms-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+  const diagnostics: Array<{
+    step: string
+    ok: boolean
+    code?: string | null
+    message?: string | null
+  }> = []
+  const recordDiagnostic = (
+    step: string,
+    result: {
+      ok: boolean
+      code?: string | null
+      message?: string | null
+    }
+  ) => {
+    diagnostics.push({ step, ...result })
+    if (!result.ok) {
+      console.error('[terms-acceptance]', diagnosticId, step, result)
+    }
+  }
+
   const supabase = await createClient()
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (userError || !user) {
+    recordDiagnostic('auth.getUser', {
+      ok: false,
+      code: userError?.name ?? null,
+      message: userError?.message ?? 'No authenticated user',
+    })
     return {
       ok: false,
-      error: 'You must be logged in to accept the terms.',
+      error: `You must be logged in to accept the terms. Diagnostic: ${diagnosticId}`,
+      diagnosticId,
     }
   }
+  recordDiagnostic('auth.getUser', { ok: true })
 
   const acceptedAt = new Date().toISOString()
   const productUpdatesApprovedAt = productUpdatesApproved ? acceptedAt : null
-  const adminSupabase = createServiceRoleClient()
+  try {
+    const cookieStore = await cookies()
+    cookieStore.set(
+      TERMS_ACCEPTANCE_COOKIE,
+      `${user.id}|${TERMS_VERSION}|${acceptedAt}`,
+      {
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 365,
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      }
+    )
+    recordDiagnostic('cookie.set', { ok: true })
+  } catch (cookieError) {
+    recordDiagnostic('cookie.set', {
+      ok: false,
+      message:
+        cookieError instanceof Error ? cookieError.message : String(cookieError),
+    })
+    console.error('Failed to persist terms acceptance cookie:', cookieError)
+  }
 
-  const { error: profileError } = await adminSupabase
+  const authMetadata = {
+    ...user.user_metadata,
+    terms_accepted_at: acceptedAt,
+    terms_version: TERMS_VERSION,
+    product_updates_approved_at: productUpdatesApprovedAt,
+  }
+  const { error: metadataError } = await supabase.auth.updateUser({
+    data: authMetadata,
+  })
+
+  if (metadataError) {
+    recordDiagnostic('auth.updateUser.metadata', {
+      ok: false,
+      code: metadataError.name,
+      message: metadataError.message,
+    })
+    console.error('Failed to persist terms acceptance on auth user:', metadataError)
+  } else {
+    recordDiagnostic('auth.updateUser.metadata', { ok: true })
+  }
+
+  let adminSupabase: ReturnType<typeof createServiceRoleClient> | null = null
+
+  try {
+    adminSupabase = createServiceRoleClient()
+    recordDiagnostic('serviceRole.createClient', { ok: true })
+  } catch (serviceRoleError) {
+    recordDiagnostic('serviceRole.createClient', {
+      ok: false,
+      message:
+        serviceRoleError instanceof Error
+          ? serviceRoleError.message
+          : String(serviceRoleError),
+    })
+    console.error('Could not create service role client for terms acceptance:', serviceRoleError)
+  }
+
+  const writeSupabase = adminSupabase ?? supabase
+
+  const { error: profileError } = await writeSupabase
     .from('profiles')
     .upsert({
       id: user.id,
@@ -656,9 +747,14 @@ export async function acceptTermsAction({
   if (profileError && !isMissingSchemaObjectError(profileError)) {
     console.error('Failed to upsert terms acceptance on profile:', profileError)
   }
+  recordDiagnostic('profiles.upsert.full', {
+    ok: !profileError,
+    code: profileError?.code ?? null,
+    message: profileError?.message ?? null,
+  })
 
   if (profileError) {
-    const { error: fallbackProfileError } = await adminSupabase
+    const { error: fallbackProfileError } = await writeSupabase
       .from('profiles')
       .upsert({
         id: user.id,
@@ -671,9 +767,14 @@ export async function acceptTermsAction({
         fallbackProfileError
       )
     }
+    recordDiagnostic('profiles.upsert.fallback', {
+      ok: !fallbackProfileError,
+      code: fallbackProfileError?.code ?? null,
+      message: fallbackProfileError?.message ?? null,
+    })
   }
 
-  const { error: acceptanceError } = await adminSupabase
+  const { error: acceptanceError } = await writeSupabase
     .from(TERMS_ACCEPTANCE_TABLE)
     .insert({
       user_id: user.id,
@@ -682,17 +783,27 @@ export async function acceptTermsAction({
       product_updates_approved_at: productUpdatesApprovedAt,
     })
 
-  if (acceptanceError && !isMissingSchemaObjectError(acceptanceError)) {
+  if (
+    acceptanceError &&
+    acceptanceError.code !== '23505' &&
+    !isMissingSchemaObjectError(acceptanceError)
+  ) {
     console.error('Failed to record terms acceptance audit row:', acceptanceError)
   }
+  recordDiagnostic('user_terms_acceptances.insert', {
+    ok: !acceptanceError || acceptanceError.code === '23505',
+    code: acceptanceError?.code ?? null,
+    message: acceptanceError?.message ?? null,
+  })
 
+  const readSupabase = adminSupabase ?? supabase
   const [profileCheck, acceptanceCheck] = await Promise.all([
-    supabase
+    readSupabase
       .from('profiles')
       .select('terms_accepted_at')
       .eq('id', user.id)
       .maybeSingle(),
-    supabase
+    readSupabase
       .from(TERMS_ACCEPTANCE_TABLE)
       .select('accepted_at')
       .eq('user_id', user.id)
@@ -702,23 +813,50 @@ export async function acceptTermsAction({
   ])
 
   const persistedAcceptance = Boolean(
-    profileCheck.data?.terms_accepted_at || acceptanceCheck.data?.accepted_at
+    profileCheck.data?.terms_accepted_at ||
+      acceptanceCheck.data?.accepted_at ||
+      (!metadataError && authMetadata.terms_accepted_at)
   )
+  recordDiagnostic('verify.persistedAcceptance', {
+    ok: persistedAcceptance,
+    message: persistedAcceptance ? null : 'No persisted acceptance was visible',
+  })
 
   if (!persistedAcceptance) {
     console.error('Terms acceptance did not persist for current user:', {
+      metadataError,
       profileError,
       acceptanceError,
       profileCheckError: profileCheck.error,
       acceptanceCheckError: acceptanceCheck.error,
     })
-
-    return {
-      ok: false,
-      error:
-        'Your acceptance could not be saved. Please try again before continuing.',
-    }
   }
 
-  return { ok: true }
+  try {
+    await captureServerEvent({
+      distinctId: user.id,
+      event: 'terms_acceptance_diagnostic',
+      properties: {
+        diagnostic_id: diagnosticId,
+        persisted_acceptance: persistedAcceptance,
+        product_updates_approved: productUpdatesApproved,
+        diagnostics,
+      },
+    })
+  } catch (analyticsError) {
+    recordDiagnostic('analytics.capture', {
+      ok: false,
+      message:
+        analyticsError instanceof Error
+          ? analyticsError.message
+          : String(analyticsError),
+    })
+  }
+
+  console.info('[terms-acceptance]', diagnosticId, {
+    persistedAcceptance,
+    diagnostics,
+  })
+
+  return { ok: true, diagnosticId }
 }

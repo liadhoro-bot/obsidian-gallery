@@ -11,6 +11,40 @@ type Props = {
   shouldPersistAcceptance?: boolean
 }
 
+function createTermsDiagnosticId() {
+  return `terms-client-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+async function sendTermsDiagnostic({
+  details,
+  diagnosticId,
+  event,
+  message,
+}: {
+  details?: Record<string, unknown>
+  diagnosticId: string
+  event: string
+  message?: string | null
+}) {
+  try {
+    await fetch('/api/onboarding/terms-diagnostics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        details,
+        diagnosticId,
+        event,
+        message,
+      }),
+      keepalive: true,
+    })
+  } catch (diagnosticError) {
+    console.error('Failed to send terms acceptance diagnostic:', diagnosticError)
+  }
+}
+
 export default function LegalScreen({
   onAccepted,
   previewMode = false,
@@ -28,22 +62,66 @@ export default function LegalScreen({
     setIsSaving(true)
     setError(null)
 
+    const diagnosticId = createTermsDiagnosticId()
+    await sendTermsDiagnostic({
+      diagnosticId,
+      event: 'terms_accept_attempt',
+      details: {
+        marketingAccepted,
+        previewMode,
+        shouldPersistAcceptance,
+      },
+    })
+
     if (previewMode && !shouldPersistAcceptance) {
+      await sendTermsDiagnostic({
+        diagnosticId,
+        event: 'terms_accept_preview_skip',
+      })
       onAccepted()
       return
     }
 
-    const result = await acceptTermsAction({
-      productUpdatesApproved: marketingAccepted,
-    })
+    try {
+      const result = await acceptTermsAction({
+        productUpdatesApproved: marketingAccepted,
+      })
 
-    if (!result.ok) {
-      setError(result.error ?? 'Could not save your acceptance. Please try again.')
-      setIsSaving(false)
-      return
+      const resultDiagnosticId = result.diagnosticId ?? diagnosticId
+
+      await sendTermsDiagnostic({
+        diagnosticId: resultDiagnosticId,
+        event: result.ok
+          ? 'terms_accept_action_ok'
+          : 'terms_accept_action_not_ok',
+        message: result.ok ? null : result.error,
+        details: {
+          clientDiagnosticId: diagnosticId,
+        },
+      })
+
+      if (!result.ok) {
+        setError(
+          result.error ??
+            `Could not verify your login acceptance. Diagnostic: ${resultDiagnosticId}`
+        )
+        setIsSaving(false)
+        return
+      }
+
+      onAccepted()
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error ? caughtError.message : String(caughtError)
+
+      await sendTermsDiagnostic({
+        diagnosticId,
+        event: 'terms_accept_action_throw',
+        message,
+      })
+      console.error('Terms acceptance action threw:', caughtError)
+      onAccepted()
     }
-
-    onAccepted()
   }
 
   async function signOut() {
