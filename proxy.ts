@@ -94,6 +94,7 @@ export default async function proxy(request: NextRequest) {
     pathname.startsWith('/paints/') ||
     pathname === '/themes' ||
     pathname.startsWith('/themes/') ||
+    pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||
