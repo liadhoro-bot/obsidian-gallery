@@ -56,6 +56,11 @@ export default function OnboardingShell({
     // /dashboard is the launch dashboard. Keep onboarding exits on the
     // canonical route so preview-only dashboard experiments cannot leak in.
     router.push('/dashboard')
+    window.setTimeout(() => {
+      if (window.location.pathname === '/onboarding') {
+        window.location.assign('/dashboard')
+      }
+    }, 500)
   }
 
   async function skipCreationSetup() {

@@ -9,6 +9,31 @@ import {
   isV3DeploymentHost,
 } from './lib/v3-preview'
 
+const TERMS_VERSION = '2026-05-13'
+const TERMS_ACCEPTANCE_COOKIE = 'og_terms_acceptance'
+
+type TermsAuthMetadata = {
+  terms_accepted_at?: string | null
+}
+
+function hasAcceptedTermsCookie(
+  cookieValue: string | undefined,
+  userId: string
+) {
+  if (!cookieValue) {
+    return false
+  }
+
+  const [acceptedUserId, termsVersion, acceptedAt] = cookieValue.split('|')
+
+  return Boolean(
+    acceptedUserId === userId &&
+      termsVersion === TERMS_VERSION &&
+      acceptedAt &&
+      !Number.isNaN(new Date(acceptedAt).getTime())
+  )
+}
+
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const hasInspectionPreviewCookie =
@@ -180,7 +205,13 @@ export default async function proxy(request: NextRequest) {
 
   const hasAcceptedTerms = Boolean(
     profileResult.data?.terms_accepted_at ||
-      termsAcceptanceResult.data?.accepted_at
+      termsAcceptanceResult.data?.accepted_at ||
+      (activeUser.user_metadata as TermsAuthMetadata | null)
+        ?.terms_accepted_at ||
+      hasAcceptedTermsCookie(
+        request.cookies.get(TERMS_ACCEPTANCE_COOKIE)?.value,
+        activeUser.id
+      )
   )
 
   if (!hasAcceptedTerms && (!isPublicRoute || shouldRequireAuthenticatedPreview)) {
