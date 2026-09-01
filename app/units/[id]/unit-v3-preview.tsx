@@ -1349,7 +1349,8 @@ function UnitV3GalleryCard({
 
   return (
     <section
-      className="rounded-[18px] border border-white/[0.06] bg-[#111821] p-4"
+      className="rounded-[18px] p-4"
+      data-v3-unit-indicator="gallery-card"
       data-feature-guide-target="units.detail.gallery"
     >
       <div className="flex items-start justify-between gap-3">
@@ -1366,14 +1367,18 @@ function UnitV3GalleryCard({
           onClick={() => setIsAddingImage((current) => !current)}
           aria-label={isAddingImage ? 'Close add image options' : 'Add image'}
           title={isAddingImage ? 'Close' : 'Add image'}
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-cyan-300/35 bg-cyan-300/12 text-xl font-black text-cyan-300 shadow-[0_12px_28px_rgba(0,0,0,0.24)] transition hover:bg-cyan-300 hover:text-black"
+          data-v3-unit-indicator="gallery-add-toggle"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xl font-black transition"
         >
           {isAddingImage ? 'x' : '+'}
         </button>
       </div>
 
       {isAddingImage ? (
-        <div className="mt-4 grid gap-3 rounded-[12px] border border-white/10 bg-black/20 p-3">
+        <div
+          className="mt-4 grid gap-3 rounded-[12px] p-3"
+          data-v3-unit-indicator="gallery-add-panel"
+        >
           <input
             type="file"
             accept="image/*"
@@ -1394,14 +1399,16 @@ function UnitV3GalleryCard({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="min-h-11 rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-sm font-black text-white/72 transition hover:border-cyan-300/45 hover:text-cyan-300"
+              data-v3-unit-indicator="gallery-source-button"
+              className="min-h-11 rounded-[10px] px-3 text-sm font-black transition"
             >
               Gallery
             </button>
             <button
               type="button"
               onClick={() => cameraInputRef.current?.click()}
-              className="min-h-11 rounded-[10px] bg-cyan-300 px-3 text-sm font-black text-black transition hover:bg-cyan-200"
+              data-v3-unit-indicator="gallery-source-button"
+              className="min-h-11 rounded-[10px] px-3 text-sm font-black transition"
             >
               Camera
             </button>
@@ -1412,7 +1419,8 @@ function UnitV3GalleryCard({
               {filePreviews.map((preview, index) => (
                 <div
                   key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
-                  className="relative aspect-[1.1] overflow-hidden rounded-[10px] bg-black"
+                  className="relative aspect-[1.1] overflow-hidden rounded-[10px]"
+                  data-v3-unit-indicator="gallery-photo-tile"
                 >
                   <Image
                     src={preview.previewUrl}
@@ -1425,7 +1433,8 @@ function UnitV3GalleryCard({
                   <button
                     type="button"
                     onClick={() => removePendingFile(index)}
-                    className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-xs font-black text-white"
+                    data-v3-unit-indicator="gallery-delete-button"
+                    className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black"
                     aria-label={`Remove ${preview.file.name}`}
                   >
                     X
@@ -1436,7 +1445,10 @@ function UnitV3GalleryCard({
           ) : null}
 
           {uploadError ? (
-            <p className="rounded-[10px] border border-red-400/35 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
+            <p
+              className="rounded-[10px] p-3 text-sm font-semibold"
+              data-v3-unit-indicator="gallery-error"
+            >
               {uploadError}
             </p>
           ) : null}
@@ -1445,7 +1457,8 @@ function UnitV3GalleryCard({
             type="button"
             onClick={handleUpload}
             disabled={selectedFiles.length === 0 || isPending}
-            className="min-h-11 rounded-[10px] bg-cyan-300 px-4 text-sm font-black text-black transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-55"
+            data-v3-unit-indicator="gallery-upload-button"
+            className="min-h-11 rounded-[10px] px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-55"
           >
             {isPending
               ? 'Uploading...'
@@ -1457,7 +1470,10 @@ function UnitV3GalleryCard({
       ) : null}
 
       {actionError ? (
-        <p className="mt-4 rounded-[10px] border border-red-400/35 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
+        <p
+          className="mt-4 rounded-[10px] p-3 text-sm font-semibold"
+          data-v3-unit-indicator="gallery-error"
+        >
           {actionError}
         </p>
       ) : null}
@@ -1466,7 +1482,10 @@ function UnitV3GalleryCard({
         <div className="mt-4 grid grid-cols-3 gap-3">
           {localImages.map((image, index) => (
             <div key={image.id} className="min-w-0">
-              <div className="relative aspect-[0.82] overflow-hidden rounded-[10px] border border-white/10 bg-black">
+              <div
+                className="relative aspect-[0.82] overflow-hidden rounded-[10px]"
+                data-v3-unit-indicator="gallery-photo-tile"
+              >
                 <button
                   type="button"
                   onClick={() => setSelectedImage(image)}
@@ -1484,7 +1503,10 @@ function UnitV3GalleryCard({
                 </button>
                 <div className="absolute left-1 top-1">
                   {image.isFeatured ? (
-                    <span className="rounded-[6px] bg-cyan-300 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-black">
+                    <span
+                      className="rounded-[6px] px-1.5 py-1 text-[8px] font-black uppercase tracking-wide"
+                      data-v3-unit-indicator="gallery-featured-badge"
+                    >
                       Featured
                     </span>
                   ) : (
@@ -1492,7 +1514,8 @@ function UnitV3GalleryCard({
                       type="button"
                       onClick={() => handleSetFeatured(image.id)}
                       disabled={isPending || image.isOptimistic}
-                      className="grid h-8 w-8 place-items-center rounded-full bg-black/70 text-xs font-black text-cyan-200 transition hover:bg-cyan-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-55"
+                      data-v3-unit-indicator="gallery-feature-button"
+                      className="grid h-8 w-8 place-items-center rounded-full text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55"
                       aria-label="Make featured image"
                       title="Make featured"
                     >
@@ -1508,7 +1531,8 @@ function UnitV3GalleryCard({
                     )
                   }
                   disabled={isPending || image.isOptimistic}
-                  className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-xs font-black text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-55"
+                  data-v3-unit-indicator="gallery-delete-button"
+                  className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55"
                   aria-label="Delete image"
                   title="Delete image"
                 >
@@ -1526,7 +1550,8 @@ function UnitV3GalleryCard({
                       type="button"
                       onClick={() => handleDeleteImage(image.id)}
                       disabled={isPending}
-                      className="min-h-9 rounded-[8px] bg-red-500 px-2 text-xs font-black text-white disabled:opacity-55"
+                      data-v3-unit-indicator="gallery-confirm-delete"
+                      className="min-h-9 rounded-[8px] px-2 text-xs font-black disabled:opacity-55"
                     >
                       Delete
                     </button>
@@ -1544,7 +1569,10 @@ function UnitV3GalleryCard({
           ))}
         </div>
       ) : (
-        <p className="mt-4 rounded-[10px] border border-dashed border-white/12 px-3 py-5 text-center text-sm font-semibold text-white/38">
+        <p
+          className="mt-4 rounded-[10px] px-3 py-5 text-center text-sm font-semibold"
+          data-v3-unit-indicator="gallery-empty"
+        >
           No unit images yet.
         </p>
       )}
