@@ -562,9 +562,10 @@ export default function UnitV3Preview({
                     findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0
                   )
                 }
+                data-v3-unit-indicator="hero-help"
                 className="grid h-10 w-10 place-items-center rounded-full bg-[#111827]/88 text-white backdrop-blur-md transition hover:text-cyan-300"
               >
-                ?
+                <span className="relative z-10">?</span>
               </button>
               <button
                 type="button"
@@ -587,12 +588,6 @@ export default function UnitV3Preview({
                 </svg>
               </button>
 
-              <span
-                className="rounded-full bg-cyan-300 px-3 py-2 text-[10px] font-black text-black"
-                data-v3-unit-indicator="unit-label"
-              >
-                {unit.label}
-              </span>
             </div>
           </div>
 

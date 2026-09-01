@@ -104,6 +104,32 @@
   filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--og-ink-950) 72%, transparent));
 }
 
+.unitSilver [data-v3-unit-indicator="hero-controls"] button[data-v3-unit-indicator="hero-help"] {
+  border: 1px solid rgba(232, 236, 236, 0.34);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.24), rgba(238, 244, 245, 0.08)),
+    rgba(15, 17, 18, 0.24);
+  color: rgba(255, 244, 223, 0.92);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.3),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.46),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(16px) saturate(130%);
+}
+
+.unitSilver [data-v3-unit-indicator="hero-controls"] button[data-v3-unit-indicator="hero-help"]::before,
+.unitSilver [data-v3-unit-indicator="hero-controls"] button[data-v3-unit-indicator="hero-help"]::after {
+  display: none;
+}
+
+.unitSilver [data-v3-unit-indicator="hero-controls"] button[data-v3-unit-indicator="hero-help"]:hover {
+  border-color: rgba(230, 196, 132, 0.72);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 255, 0.13);
+  color: var(--og-paper-50);
+}
+
 .unitSilver [data-v3-unit-indicator="unit-label"],
 .unitSilver [data-v3-unit-indicator="paint-session-card"] {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 80%, var(--og-ink-950));
