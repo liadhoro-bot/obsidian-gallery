@@ -87,7 +87,11 @@ type UnitV3ImageRow = {
   id: string
   image_url: string | null
   is_featured: boolean | null
+  created_at: string | null
+  sort_order: number | null
   alt_text: string | null
+  storage_bucket: string | null
+  storage_path: string | null
 }
 
 type UnitV3SessionRow = {
@@ -293,7 +297,9 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
     await Promise.all([
       supabase
         .from('image_assets')
-        .select('id, image_url, is_featured, alt_text')
+        .select(
+          'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path'
+        )
         .eq('entity_type', 'unit')
         .eq('entity_id', id)
         .eq('user_id', userId)
@@ -496,6 +502,10 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
       stageKey: image.alt_text?.startsWith('stage:')
         ? image.alt_text.replace('stage:', '')
         : null,
+      createdAt: image.created_at,
+      sortOrder: image.sort_order,
+      storageBucket: image.storage_bucket,
+      storagePath: image.storage_path,
     }))
   const featuredImage =
     galleryImages.find((image) => image.isFeatured) ?? galleryImages[0]

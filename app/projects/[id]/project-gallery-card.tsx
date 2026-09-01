@@ -176,7 +176,6 @@ export default function ProjectGalleryCard({
           <p className={styles.eyebrow}>
             Project Gallery
           </p>
-          <h2 className="mt-1 text-xl">Images</h2>
           <p className="mt-2 text-sm">
             Upload project images and choose one for the page header.
           </p>

@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import type { FormEvent, ReactNode } from 'react'
-import { useMemo, useState, useTransition } from 'react'
+import type { ChangeEvent, FormEvent, ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import FeatureGuideTour from '../../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
@@ -11,14 +11,18 @@ import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
 import {
   assignRecipeToStage,
+  deleteUnitImage,
   deleteUnit,
   scheduleUnitSession,
+  setFeaturedUnitImage,
   startUnitSession,
   toggleStepDone,
   updateUnitDetails,
   updateUnitHeader,
   updateUnitStatus,
+  uploadUnitGalleryImages,
 } from './actions'
+import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 import ProjectPaletteStarter from '../../projects/[id]/project-palette-starter'
 import StagePaintPicker from './components/stage-paint-picker'
 import styles from './unit-v3-silver.module.css'
@@ -71,6 +75,11 @@ type PreviewGalleryImage = {
   alt: string
   isFeatured: boolean
   stageKey?: string | null
+  createdAt?: string | null
+  sortOrder?: number | null
+  storageBucket?: string | null
+  storagePath?: string | null
+  isOptimistic?: boolean
 }
 
 type PreviewProject = {
@@ -255,8 +264,6 @@ const previewUnits: PreviewUnit[] = [
     palette: ['#111417', '#5943a7', '#5aa7c9', '#d8bd83', '#b51d20'],
   },
 ]
-
-const gallerySlots = ['hero', 'angle', 'paint', 'detail']
 
 type UnitPaintSession = {
   id: string
@@ -633,7 +640,6 @@ export default function UnitV3Preview({
               <DetailsTab
                 unit={unit}
                 onEditDetails={() => openLiveEditor('details')}
-                onEditGallery={() => openLiveEditor('gallery')}
                 onLocalUnitChange={setLocalUnit}
               />
             ) : null}
@@ -680,6 +686,7 @@ export default function UnitV3Preview({
           onClose={closeLiveEditor}
           onHeaderSubmit={handleHeaderSubmit}
           onDetailsSubmit={handleDetailsSubmit}
+          onLocalUnitChange={setLocalUnit}
         />
       ) : null}
     </main>
@@ -693,6 +700,7 @@ function UnitEditSheet({
   onClose,
   onHeaderSubmit,
   onDetailsSubmit,
+  onLocalUnitChange,
 }: {
   unit: PreviewUnit
   target: EditTarget
@@ -700,6 +708,7 @@ function UnitEditSheet({
   onClose: () => void
   onHeaderSubmit: (formData: FormData) => void
   onDetailsSubmit: (formData: FormData) => void
+  onLocalUnitChange: (updater: (current: PreviewUnit | null) => PreviewUnit | null) => void
 }) {
   const isHeader = target === 'header'
   const isDetails = target === 'details'
@@ -736,7 +745,7 @@ function UnitEditSheet({
                 ? 'Edit unit'
                 : isDetails
                   ? 'Edit details'
-                  : 'Gallery editor'}
+                  : 'Unit gallery'}
             </h2>
           </div>
           <button
@@ -889,34 +898,8 @@ function UnitEditSheet({
         ) : null}
 
         {target === 'gallery' ? (
-          <div className="mt-5 grid gap-4">
-            <div className="grid grid-cols-2 gap-2">
-              {getGalleryImages(unit).map((image) => (
-                <div
-                  key={image.id}
-                  className="relative aspect-[1.32] overflow-hidden rounded-[10px] bg-black"
-                >
-                  <Image
-                    src={image.image}
-                    alt={image.alt}
-                    fill
-                    sizes="180px"
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="text-sm font-semibold leading-6 text-white/55">
-              The V3 gallery tools are being brought forward next. This drawer
-              keeps you in the V3 unit while the full image manager is migrated.
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-12 rounded-[10px] bg-cyan-300 text-sm font-black text-black transition hover:bg-cyan-200"
-            >
-              Done
-            </button>
+          <div className="mt-5">
+            <UnitV3GalleryCard unit={unit} onLocalUnitChange={onLocalUnitChange} />
           </div>
         ) : null}
       </section>
@@ -1009,15 +992,12 @@ function EditSheetActions({
 function DetailsTab({
   unit,
   onEditDetails,
-  onEditGallery,
   onLocalUnitChange,
 }: {
   unit: PreviewUnit
   onEditDetails: () => void
-  onEditGallery: () => void
   onLocalUnitChange: (updater: (current: PreviewUnit | null) => PreviewUnit | null) => void
 }) {
-  const galleryImages = getGalleryImages(unit)
   const firstProgressStepId =
     unit.progressSteps
       ?.slice()
@@ -1155,59 +1135,452 @@ function DetailsTab({
         onLocalUnitChange={onLocalUnitChange}
       />
 
-      <section
-        className="rounded-[18px] border border-white/[0.06] bg-[#111821] p-4"
-        data-feature-guide-target="units.detail.gallery"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/26">
-            Gallery
-          </h2>
-          <button
-            type="button"
-            onClick={onEditGallery}
-            className="rounded-full px-2 py-1 text-[10px] font-black text-white/38 transition hover:bg-white/[0.06] hover:text-cyan-300"
-          >
-            See all -&gt;
-          </button>
-        </div>
-
-        <div className="mt-8 grid grid-cols-[repeat(5,minmax(0,1fr))] gap-2">
-          {galleryImages.map((image, index) => (
-            <button
-              key={image.id}
-              type="button"
-              onClick={onEditGallery}
-              aria-label={`${unit.name} gallery image ${index + 1}`}
-              className="relative aspect-[1.32] min-w-0 overflow-hidden rounded-[12px] bg-black transition hover:ring-1 hover:ring-cyan-300/60"
-            >
-              <Image
-                src={image.image}
-                alt={image.alt}
-                fill
-                sizes="72px"
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/28" />
-              {image.isFeatured ? (
-                <span className="absolute bottom-1 left-1 rounded-[6px] bg-cyan-300 px-1.5 py-1 text-[9px] font-black text-black">
-                  Hero
-                </span>
-              ) : null}
-            </button>
-          ))}
-
-          <button
-            type="button"
-            onClick={onEditGallery}
-            aria-label="Add gallery image"
-            className="aspect-[1.32] rounded-[12px] border border-dashed border-white/14 bg-white/[0.02] text-xl font-black text-white/16 transition hover:border-cyan-300/45 hover:text-cyan-300"
-          >
-            +
-          </button>
-        </div>
-      </section>
+      <UnitV3GalleryCard unit={unit} onLocalUnitChange={onLocalUnitChange} />
     </>
+  )
+}
+
+function UnitV3GalleryCard({
+  unit,
+  onLocalUnitChange,
+}: {
+  unit: PreviewUnit
+  onLocalUnitChange: (updater: (current: PreviewUnit | null) => PreviewUnit | null) => void
+}) {
+  const [isAddingImage, setIsAddingImage] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [uploadSource, setUploadSource] = useState<'gallery_picker' | 'camera'>(
+    'gallery_picker'
+  )
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [selectedImage, setSelectedImage] = useState<PreviewGalleryImage | null>(null)
+  const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)
+  const [localImages, setLocalImages] = useState<PreviewGalleryImage[]>(
+    unit.galleryImages ?? []
+  )
+  const [isPending, startTransition] = useTransition()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const filePreviews = useMemo(
+    () =>
+      selectedFiles.map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    [selectedFiles]
+  )
+
+  useEffect(() => {
+    setLocalImages(unit.galleryImages ?? [])
+  }, [unit.galleryImages])
+
+  useEffect(() => {
+    return () => {
+      filePreviews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
+    }
+  }, [filePreviews])
+
+  function commitImages(nextImages: PreviewGalleryImage[]) {
+    const featuredImage =
+      nextImages.find((image) => image.isFeatured) ?? nextImages[0] ?? null
+
+    setLocalImages(nextImages)
+    onLocalUnitChange((current) =>
+      current
+        ? {
+            ...current,
+            galleryImages: nextImages,
+            image: featuredImage?.image ?? current.image,
+          }
+        : current
+    )
+  }
+
+  function handleFileSelection(
+    event: ChangeEvent<HTMLInputElement>,
+    source: 'gallery_picker' | 'camera'
+  ) {
+    setUploadError(null)
+    setActionError(null)
+    setUploadSource(source)
+    setSelectedFiles(Array.from(event.target.files ?? []))
+  }
+
+  function removePendingFile(indexToRemove: number) {
+    setSelectedFiles((current) =>
+      current.filter((_, index) => index !== indexToRemove)
+    )
+  }
+
+  function clearFileInputs() {
+    setSelectedFiles([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ''
+    }
+  }
+
+  function handleUpload() {
+    if (selectedFiles.length === 0) {
+      setUploadError('Choose at least one image to upload.')
+      return
+    }
+
+    const filesToUpload = selectedFiles
+    const previousImages = localImages
+    const optimisticImages = filesToUpload.map((file, index) =>
+      buildOptimisticGalleryImage({
+        file,
+        altText: unit.name,
+        isFeatured: localImages.length === 0 && index === 0,
+      })
+    )
+
+    setUploadError(null)
+    setActionError(null)
+    clearFileInputs()
+    commitImages([
+      ...optimisticImages,
+      ...previousImages.map((image) =>
+        optimisticImages.some((optimisticImage) => optimisticImage.isFeatured)
+          ? { ...image, isFeatured: false }
+          : image
+      ),
+    ])
+
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.set('unitId', unit.id)
+      formData.set('uploadSource', uploadSource)
+      filesToUpload.forEach((file) => formData.append('image', file))
+
+      try {
+        const result = await uploadUnitGalleryImages(formData)
+        const uploadedImages = mapUploadedUnitImages(result, unit.name)
+
+        if (uploadedImages.length > 0) {
+          commitImages([
+            ...uploadedImages,
+            ...previousImages.map((image) =>
+              uploadedImages.some((uploaded) => uploaded.isFeatured)
+                ? { ...image, isFeatured: false }
+                : image
+            ),
+          ])
+        } else {
+          commitImages(previousImages)
+        }
+
+        if (result?.failed.length) {
+          setUploadError(
+            `Could not upload ${result.failed
+              .map((failure) => `${failure.fileName}: ${failure.reason}`)
+              .join('; ')}`
+          )
+        } else {
+          setIsAddingImage(false)
+        }
+      } catch (error) {
+        commitImages(previousImages)
+        setUploadError(
+          error instanceof Error ? error.message : 'Could not upload images.'
+        )
+      } finally {
+        optimisticImages.forEach((image) => {
+          if (image.image.startsWith('blob:')) {
+            URL.revokeObjectURL(image.image)
+          }
+        })
+      }
+    })
+  }
+
+  function handleSetFeatured(imageId: string) {
+    const previousImages = localImages
+    const nextImages = localImages.map((image) => ({
+      ...image,
+      isFeatured: image.id === imageId,
+    }))
+
+    setActionError(null)
+    setDeleteConfirmImageId(null)
+    commitImages(nextImages)
+
+    startTransition(async () => {
+      try {
+        await setFeaturedUnitImage(unit.id, imageId)
+      } catch (error) {
+        commitImages(previousImages)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not update image.'
+        )
+      }
+    })
+  }
+
+  function handleDeleteImage(imageId: string) {
+    const previousImages = localImages
+    const nextImages = localImages.filter((image) => image.id !== imageId)
+    const formData = new FormData()
+
+    formData.set('unitId', unit.id)
+    formData.append('imageIds', imageId)
+
+    setActionError(null)
+    setDeleteConfirmImageId(null)
+    setSelectedImage((current) => (current?.id === imageId ? null : current))
+    commitImages(nextImages)
+
+    startTransition(async () => {
+      try {
+        await deleteUnitImage(formData)
+      } catch (error) {
+        commitImages(previousImages)
+        setDeleteConfirmImageId(imageId)
+        setActionError(
+          error instanceof Error ? error.message : 'Could not delete image.'
+        )
+      }
+    })
+  }
+
+  return (
+    <section
+      className="rounded-[18px] border border-white/[0.06] bg-[#111821] p-4"
+      data-feature-guide-target="units.detail.gallery"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/26">
+            Gallery
+          </p>
+          <p className="mt-2 text-sm font-semibold leading-5 text-white/48">
+            Add unit photos and choose the image shown at the top of this page.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsAddingImage((current) => !current)}
+          aria-label={isAddingImage ? 'Close add image options' : 'Add image'}
+          title={isAddingImage ? 'Close' : 'Add image'}
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-cyan-300/35 bg-cyan-300/12 text-xl font-black text-cyan-300 shadow-[0_12px_28px_rgba(0,0,0,0.24)] transition hover:bg-cyan-300 hover:text-black"
+        >
+          {isAddingImage ? 'x' : '+'}
+        </button>
+      </div>
+
+      {isAddingImage ? (
+        <div className="mt-4 grid gap-3 rounded-[12px] border border-white/10 bg-black/20 p-3">
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            ref={fileInputRef}
+            onChange={(event) => handleFileSelection(event, 'gallery_picker')}
+            className="hidden"
+          />
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            ref={cameraInputRef}
+            onChange={(event) => handleFileSelection(event, 'camera')}
+            className="hidden"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="min-h-11 rounded-[10px] border border-white/10 bg-white/[0.06] px-3 text-sm font-black text-white/72 transition hover:border-cyan-300/45 hover:text-cyan-300"
+            >
+              Gallery
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="min-h-11 rounded-[10px] bg-cyan-300 px-3 text-sm font-black text-black transition hover:bg-cyan-200"
+            >
+              Camera
+            </button>
+          </div>
+
+          {filePreviews.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {filePreviews.map((preview, index) => (
+                <div
+                  key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
+                  className="relative aspect-[1.1] overflow-hidden rounded-[10px] bg-black"
+                >
+                  <Image
+                    src={preview.previewUrl}
+                    alt={preview.file.name}
+                    fill
+                    sizes="110px"
+                    unoptimized
+                    className="object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePendingFile(index)}
+                    className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-xs font-black text-white"
+                    aria-label={`Remove ${preview.file.name}`}
+                  >
+                    X
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {uploadError ? (
+            <p className="rounded-[10px] border border-red-400/35 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
+              {uploadError}
+            </p>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={handleUpload}
+            disabled={selectedFiles.length === 0 || isPending}
+            className="min-h-11 rounded-[10px] bg-cyan-300 px-4 text-sm font-black text-black transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            {isPending
+              ? 'Uploading...'
+              : selectedFiles.length > 1
+                ? `Upload ${selectedFiles.length} images`
+                : 'Upload image'}
+          </button>
+        </div>
+      ) : null}
+
+      {actionError ? (
+        <p className="mt-4 rounded-[10px] border border-red-400/35 bg-red-500/10 p-3 text-sm font-semibold text-red-100">
+          {actionError}
+        </p>
+      ) : null}
+
+      {localImages.length > 0 ? (
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {localImages.map((image, index) => (
+            <div key={image.id} className="min-w-0">
+              <div className="relative aspect-[0.82] overflow-hidden rounded-[10px] border border-white/10 bg-black">
+                <button
+                  type="button"
+                  onClick={() => setSelectedImage(image)}
+                  aria-label={`${unit.name} gallery image ${index + 1}`}
+                  className="block h-full w-full"
+                >
+                  <Image
+                    src={image.image}
+                    alt={image.alt || unit.name}
+                    fill
+                    sizes="(max-width: 640px) 30vw, 128px"
+                    unoptimized={image.isOptimistic}
+                    className="object-cover transition hover:scale-[1.02]"
+                  />
+                </button>
+                <div className="absolute left-1 top-1">
+                  {image.isFeatured ? (
+                    <span className="rounded-[6px] bg-cyan-300 px-1.5 py-1 text-[8px] font-black uppercase tracking-wide text-black">
+                      Featured
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSetFeatured(image.id)}
+                      disabled={isPending || image.isOptimistic}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-black/70 text-xs font-black text-cyan-200 transition hover:bg-cyan-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-55"
+                      aria-label="Make featured image"
+                      title="Make featured"
+                    >
+                      *
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDeleteConfirmImageId((current) =>
+                      current === image.id ? null : image.id
+                    )
+                  }
+                  disabled={isPending || image.isOptimistic}
+                  className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-black/70 text-xs font-black text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-55"
+                  aria-label="Delete image"
+                  title="Delete image"
+                >
+                  X
+                </button>
+              </div>
+
+              {deleteConfirmImageId === image.id ? (
+                <div className="mt-2 rounded-[10px] border border-red-400/35 bg-red-500/10 p-2">
+                  <p className="text-xs font-semibold text-red-100">
+                    Delete this image?
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(image.id)}
+                      disabled={isPending}
+                      className="min-h-9 rounded-[8px] bg-red-500 px-2 text-xs font-black text-white disabled:opacity-55"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmImageId(null)}
+                      className="min-h-9 rounded-[8px] border border-white/10 px-2 text-xs font-black text-white/62"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-[10px] border border-dashed border-white/12 px-3 py-5 text-center text-sm font-semibold text-white/38">
+          No unit images yet.
+        </p>
+      )}
+
+      {selectedImage ? (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/82 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${unit.name} image preview`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedImage(null)
+            }
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedImage(null)}
+            className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-sm font-black text-white transition hover:bg-white/20"
+            aria-label="Close image preview"
+          >
+            X
+          </button>
+          <Image
+            src={selectedImage.image}
+            alt={selectedImage.alt || unit.name}
+            width={1400}
+            height={1400}
+            sizes="100vw"
+            unoptimized={selectedImage.isOptimistic}
+            className="max-h-[86dvh] w-auto max-w-full rounded-[14px] object-contain"
+          />
+        </div>
+      ) : null}
+    </section>
   )
 }
 
@@ -1489,16 +1862,41 @@ function GuideCardPopup({
   )
 }
 
-function getGalleryImages(unit: PreviewUnit) {
-  if (unit.galleryImages?.length) {
-    return unit.galleryImages.slice(0, 4)
+function buildOptimisticGalleryImage({
+  file,
+  altText,
+  isFeatured,
+}: {
+  file: File
+  altText: string
+  isFeatured: boolean
+}): PreviewGalleryImage {
+  return {
+    id: `optimistic-${crypto.randomUUID()}`,
+    image: URL.createObjectURL(file),
+    alt: altText,
+    isFeatured,
+    createdAt: new Date().toISOString(),
+    sortOrder: 0,
+    storageBucket: null,
+    storagePath: null,
+    isOptimistic: true,
   }
+}
 
-  return gallerySlots.map((slot, index) => ({
-    id: `${unit.id}-${slot}`,
-    image: unit.image,
-    alt: '',
-    isFeatured: index === 0,
+function mapUploadedUnitImages(
+  result: GalleryUploadResult | void,
+  fallbackAlt: string
+): PreviewGalleryImage[] {
+  return (result?.uploadedImages ?? []).map((image) => ({
+    id: image.id,
+    image: image.image_url,
+    alt: image.alt_text || fallbackAlt,
+    isFeatured: image.is_featured,
+    createdAt: image.created_at,
+    sortOrder: image.sort_order,
+    storageBucket: image.storage_bucket,
+    storagePath: image.storage_path,
   }))
 }
 
