@@ -357,6 +357,49 @@
   box-shadow: var(--og-shadow-contact);
 }
 
+.unitSilver a[data-v3-unit-indicator="project-chip"]:hover {
+  border-color: color-mix(in srgb, var(--og-brass-500) 76%, var(--og-border-subtle));
+  background-color: color-mix(in srgb, var(--og-brass-500) 26%, var(--og-paper-50));
+  color: var(--og-ink-950);
+}
+
+.unitSilver [data-v3-unit-indicator="project-picker"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 45%, var(--og-border-subtle));
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.unitSilver [data-v3-unit-indicator="project-picker"] summary {
+  color: var(--og-text-primary);
+}
+
+.unitSilver [data-v3-unit-indicator="project-picker"] summary::-webkit-details-marker {
+  display: none;
+}
+
+.unitSilver [data-v3-unit-indicator="project-picker"] summary span:first-child span:first-child {
+  color: color-mix(in srgb, var(--og-status-warning) 80%, var(--og-ink-800));
+}
+
+.unitSilver [data-v3-unit-indicator="project-picker"] summary > span:last-child {
+  display: grid;
+  height: 1.85rem;
+  width: 1.85rem;
+  place-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  border-radius: 999px;
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-brass-plate);
+}
+
+.unitSilver [data-v3-unit-indicator="project-picker"][open] summary > span:last-child {
+  transform: rotate(180deg);
+}
+
 .unitSilver [data-v3-unit-indicator="status-control"],
 .unitSilver [data-v3-unit-indicator="stage-tool-button"] {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));

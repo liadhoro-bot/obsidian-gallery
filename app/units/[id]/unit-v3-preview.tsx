@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
@@ -714,6 +715,13 @@ function UnitEditSheet({
   const isDetails = target === 'details'
   const selectedProjectIds = unit.selectedProjectIds ?? []
   const availableProjects = unit.availableProjects ?? []
+  const selectedProjectNames = availableProjects
+    .filter((project) => selectedProjectIds.includes(project.id))
+    .map((project) => project.name || 'Untitled project')
+  const projectDropdownLabel =
+    selectedProjectNames.length > 0
+      ? selectedProjectNames.join(', ')
+      : 'No parent project selected'
 
   return (
     <div
@@ -860,32 +868,45 @@ function UnitEditSheet({
                 </select>
               </label>
 
-              <fieldset className="grid gap-2 rounded-[10px] border border-white/10 bg-black/24 p-3">
-                <legend className="px-1 text-xs font-black uppercase tracking-[0.18em] text-white/42">
-                  Parent Projects
-                </legend>
+              <details
+                className="grid gap-2 rounded-[10px] border border-white/10 bg-black/24 p-3"
+                data-v3-unit-indicator="project-picker"
+              >
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-[8px] px-2 text-sm font-black">
+                  <span className="min-w-0">
+                    <span className="block text-xs font-black uppercase tracking-[0.18em]">
+                      Parent Project
+                    </span>
+                    <span className="mt-1 block truncate text-sm">
+                      {projectDropdownLabel}
+                    </span>
+                  </span>
+                  <span aria-hidden="true">v</span>
+                </summary>
                 {availableProjects.length > 0 ? (
-                  availableProjects.map((project) => (
-                    <label
-                      key={project.id}
-                      className="flex min-h-11 items-center gap-3 rounded-[8px] px-2 text-sm font-semibold text-white/75 transition hover:bg-white/5"
-                    >
-                      <input
-                        type="checkbox"
-                        name="projectIds"
-                        value={project.id}
-                        defaultChecked={selectedProjectIds.includes(project.id)}
-                        className="h-4 w-4 accent-cyan-400"
-                      />
-                      <span>{project.name || 'Untitled project'}</span>
-                    </label>
-                  ))
+                  <div className="mt-2 grid max-h-56 gap-2 overflow-y-auto pr-1">
+                    {availableProjects.map((project) => (
+                      <label
+                        key={project.id}
+                        className="flex min-h-11 items-center gap-3 rounded-[8px] px-2 text-sm font-semibold text-white/75 transition hover:bg-white/5"
+                      >
+                        <input
+                          type="checkbox"
+                          name="projectIds"
+                          value={project.id}
+                          defaultChecked={selectedProjectIds.includes(project.id)}
+                          className="h-4 w-4 accent-cyan-400"
+                        />
+                        <span>{project.name || 'Untitled project'}</span>
+                      </label>
+                    ))}
+                  </div>
                 ) : (
                   <p className="px-2 py-3 text-sm font-semibold text-white/40">
                     No parent projects yet.
                   </p>
                 )}
-              </fieldset>
+              </details>
 
               <EditSheetActions
                 isPending={isPending}
@@ -1003,6 +1024,7 @@ function DetailsTab({
       ?.slice()
       .sort((a, b) => a.step_order - b.step_order)
       .find((step) => step.step_key !== 'done')?.id ?? null
+  const primaryProjectId = unit.selectedProjectIds?.[0] ?? null
 
   return (
     <>
@@ -1051,12 +1073,22 @@ function DetailsTab({
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/26">
               Parent Project
             </p>
-            <span
-              className="mt-1.5 inline-flex max-w-full rounded-full bg-cyan-300/12 px-2.5 py-1 text-[10px] font-black text-cyan-300"
-              data-v3-unit-indicator="project-chip"
-            >
-              {unit.project}
-            </span>
+            {primaryProjectId ? (
+              <Link
+                href={`/projects/${primaryProjectId}`}
+                className="mt-1.5 inline-flex max-w-full rounded-full px-2.5 py-1 text-[10px] font-black"
+                data-v3-unit-indicator="project-chip"
+              >
+                {unit.project}
+              </Link>
+            ) : (
+              <span
+                className="mt-1.5 inline-flex max-w-full rounded-full px-2.5 py-1 text-[10px] font-black"
+                data-v3-unit-indicator="project-chip"
+              >
+                {unit.project}
+              </span>
+            )}
           </div>
           <div className="text-right">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/26">
