@@ -8,15 +8,15 @@ import styles from './project-detail-silver.module.css'
 type Props = {
   projectId: string
   addUnitAction: (formData: FormData) => Promise<void>
+  onClose?: () => void
 }
 
 export default function ProjectAddUnitTab({
   projectId,
   addUnitAction,
+  onClose,
 }: Props) {
   const [name, setName] = useState('')
-  const [modelCount, setModelCount] = useState('1')
-  const [deadline, setDeadline] = useState('')
   const [notes, setNotes] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
 
@@ -28,19 +28,6 @@ export default function ProjectAddUnitTab({
     () => notes.trim() || 'Ready for assembly, paint stages, and session notes.',
     [notes]
   )
-  const formattedDeadline = useMemo(() => {
-    if (!deadline) return 'No deadline set'
-
-    try {
-      return new Intl.DateTimeFormat('en', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }).format(new Date(`${deadline}T12:00:00`))
-    } catch {
-      return 'No deadline set'
-    }
-  }, [deadline])
 
   function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -50,13 +37,28 @@ export default function ProjectAddUnitTab({
 
   return (
     <section className={`${styles.panel} ${styles.addUnitDrawer} mobile-scroll mt-3`}>
-      <p className={styles.eyebrow}>
-        Add Unit
-      </p>
-      <h2 className="mt-1 text-xl">Create a New Unit</h2>
-      <p className="mt-2 text-sm">
-        Add a unit, squad, character, vehicle, or display piece to this project.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={styles.eyebrow}>
+            Add Unit
+          </p>
+          <h2 className="mt-1 text-xl">Create a New Unit</h2>
+          <p className="mt-2 text-sm">
+            Add a unit, squad, character, vehicle, or display piece to this project.
+          </p>
+        </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className={`${styles.iconControl} tap-press tap-target shrink-0`}
+            aria-label="Close add unit form"
+            title="Close"
+          >
+            <span>×</span>
+          </button>
+        ) : null}
+      </div>
 
       <form action={addUnitAction} className="mt-5 space-y-4 pb-2">
         <input type="hidden" name="projectId" value={projectId} />
@@ -73,33 +75,6 @@ export default function ProjectAddUnitTab({
             required
             className="px-3 py-3 transition"
             placeholder="e.g. Skeleton Warriors"
-          />
-        </div>
-
-        <div className={styles.formField}>
-          <label className="mb-1 block">
-            Model Count
-          </label>
-          <input
-            name="modelCount"
-            type="number"
-            min="1"
-            value={modelCount}
-            onChange={(event) => setModelCount(event.target.value)}
-            className="px-3 py-3 transition"
-          />
-        </div>
-
-        <div className={styles.formField}>
-          <label className="mb-1 block">
-            Deadline
-          </label>
-          <input
-            name="deadline"
-            type="date"
-            value={deadline}
-            onChange={(event) => setDeadline(event.target.value)}
-            className="px-3 py-3 transition"
           />
         </div>
 
@@ -172,25 +147,6 @@ export default function ProjectAddUnitTab({
             <p className="mt-2 max-w-[280px] text-sm leading-6 text-white/65">
               {previewNotes}
             </p>
-
-            <div className="mt-5 grid grid-cols-2 gap-2">
-              <div className={`${styles.secondaryAction} px-3 py-2`}>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/45">
-                  Models
-                </p>
-                <p className="mt-1 text-sm font-black text-white">
-                  {modelCount || '1'}
-                </p>
-              </div>
-              <div className={`${styles.secondaryAction} px-3 py-2`}>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-[color:var(--og-brass-500)]">
-                  Deadline
-                </p>
-                <p className="mt-1 text-sm font-black text-[color:var(--og-paper-50)]">
-                  {formattedDeadline}
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 

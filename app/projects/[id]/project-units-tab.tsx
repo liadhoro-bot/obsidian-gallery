@@ -236,7 +236,11 @@ export default function ProjectUnitsTab({
   )
 
   const addUnitPanel = showAddUnit ? (
-    <ProjectAddUnitTab projectId={projectId} addUnitAction={addUnitAction} />
+    <ProjectAddUnitTab
+      projectId={projectId}
+      addUnitAction={addUnitAction}
+      onClose={() => setShowAddUnit(false)}
+    />
   ) : null
 
   return (

@@ -245,7 +245,7 @@
 }
 
 .addUnitDrawer {
-  max-height: calc(100dvh - 154px - env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 108px - env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-margin-bottom: calc(86px + env(safe-area-inset-bottom));
@@ -265,6 +265,22 @@
     var(--og-material-parchment-panel);
   padding: var(--og-space-3) var(--og-space-4) calc(var(--og-space-3) + env(safe-area-inset-bottom));
   box-shadow: 0 -10px 24px color-mix(in srgb, var(--og-walnut-950) 14%, transparent);
+}
+
+@media (max-width: 639px) {
+  .addUnitDrawer {
+    position: fixed;
+    inset-inline: 12px;
+    inset-block-start: max(16px, env(safe-area-inset-top));
+    inset-block-end: calc(78px + env(safe-area-inset-bottom));
+    z-index: 70;
+    max-height: none;
+    margin-block-start: 0;
+  }
+
+  .addUnitSubmitDock {
+    padding-block-end: var(--og-space-3);
+  }
 }
 
 .detailsStack {
