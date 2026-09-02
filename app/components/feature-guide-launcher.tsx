@@ -41,6 +41,7 @@ export default function FeatureGuideLauncher({
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
+          guides={guides}
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) => {

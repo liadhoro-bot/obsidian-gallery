@@ -99,6 +99,7 @@ export default function CommunityV3Preview() {
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
+          guides={communityFeatureGuides}
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             showGuideAt(

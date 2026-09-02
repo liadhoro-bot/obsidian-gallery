@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { getFeatureGuideCounter } from './feature-guide-navigation'
 import type { FeatureGuideEntry } from './feature-guide-types'
 import styles from './feature-guide-tour.module.css'
 
@@ -19,22 +20,29 @@ type TourPosition = {
 
 export default function FeatureGuideTour({
   activeIndex,
+  displayIndex,
   guide,
+  guides,
   onClose,
   onNext,
   onPrevious,
   totalGuides,
 }: {
   activeIndex: number
+  displayIndex?: number
   guide: FeatureGuideEntry
+  guides?: FeatureGuideEntry[]
   onClose: () => void
   onNext: () => void
   onPrevious: () => void
   totalGuides: number
 }) {
   const [position, setPosition] = useState<TourPosition | null>(null)
-  const isFirstGuide = activeIndex === 0
-  const isLastGuide = activeIndex === totalGuides - 1
+  const guideCounter = guides
+    ? getFeatureGuideCounter(guides, activeIndex)
+    : { displayIndex: displayIndex ?? activeIndex + 1, totalGuides }
+  const isFirstGuide = guideCounter.displayIndex <= 1
+  const isLastGuide = guideCounter.displayIndex >= guideCounter.totalGuides
 
   const updatePosition = useCallback(() => {
     const target = document.querySelector<HTMLElement>(
@@ -161,7 +169,7 @@ export default function FeatureGuideTour({
           </div>
           <div className={styles.headerActions}>
             <span className={styles.counter}>
-              {activeIndex + 1}/{totalGuides}
+              {guideCounter.displayIndex}/{guideCounter.totalGuides}
             </span>
             <button
               type="button"

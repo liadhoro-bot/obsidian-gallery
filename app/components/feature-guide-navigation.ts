@@ -47,3 +47,38 @@ export function findVisibleFeatureGuideIndex(
 
   return currentIndex
 }
+
+export function getVisibleFeatureGuideIndexes(guides: FeatureGuideEntry[]) {
+  return guides.reduce<number[]>((visibleIndexes, guide, index) => {
+    if (isFeatureGuideTargetVisible(guide.uid)) {
+      visibleIndexes.push(index)
+    }
+
+    return visibleIndexes
+  }, [])
+}
+
+export function getFeatureGuideCounter(
+  guides: FeatureGuideEntry[],
+  activeIndex: number | null
+) {
+  const visibleIndexes = getVisibleFeatureGuideIndexes(guides)
+
+  if (!visibleIndexes.length) {
+    return {
+      displayIndex: activeIndex === null ? 1 : activeIndex + 1,
+      totalGuides: guides.length,
+    }
+  }
+
+  const visiblePosition =
+    activeIndex === null ? -1 : visibleIndexes.indexOf(activeIndex)
+
+  return {
+    displayIndex:
+      visiblePosition === -1
+        ? Math.min(visibleIndexes.length, Math.max(1, (activeIndex ?? 0) + 1))
+        : visiblePosition + 1,
+    totalGuides: visibleIndexes.length,
+  }
+}

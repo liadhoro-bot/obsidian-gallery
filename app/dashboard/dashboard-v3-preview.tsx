@@ -480,6 +480,7 @@ export default function DashboardV3Preview({
           <FeatureGuideTour
             guide={activeGuide}
             activeIndex={activeGuideIndex}
+            guides={featureGuides}
             totalGuides={featureGuides.length}
             onPrevious={showPreviousGuide}
             onNext={showNextGuide}

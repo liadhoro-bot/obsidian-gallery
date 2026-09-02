@@ -491,6 +491,7 @@ export default function ProjectsV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
+          guides={featureGuides}
           onClose={closeFeatureTour}
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}

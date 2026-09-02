@@ -1473,6 +1473,7 @@ export default function PaintsV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
+          guides={featureGuides}
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>

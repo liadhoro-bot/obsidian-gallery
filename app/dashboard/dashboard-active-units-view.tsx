@@ -643,6 +643,7 @@ export default function DashboardActiveUnitsView({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
+          guides={featureGuides}
           onClose={closeFeatureTour}
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}

@@ -248,6 +248,7 @@ export default function ProjectDetailClient({
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
+          guides={featureGuides}
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>
