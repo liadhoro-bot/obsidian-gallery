@@ -49,7 +49,7 @@ export default function ProjectAddUnitTab({
   }
 
   return (
-    <section className={`${styles.panel} mt-3`}>
+    <section className={`${styles.panel} ${styles.addUnitDrawer} mobile-scroll mt-3`}>
       <p className={styles.eyebrow}>
         Add Unit
       </p>
@@ -58,7 +58,7 @@ export default function ProjectAddUnitTab({
         Add a unit, squad, character, vehicle, or display piece to this project.
       </p>
 
-      <form action={addUnitAction} className="mt-5 space-y-4">
+      <form action={addUnitAction} className="mt-5 space-y-4 pb-2">
         <input type="hidden" name="projectId" value={projectId} />
 
         <div className={styles.formField}>
@@ -194,11 +194,13 @@ export default function ProjectAddUnitTab({
           </div>
         </div>
 
-        <SubmitButton
-          idleText="Add Unit"
-          pendingText="Adding unit..."
-          className={`${styles.primaryButton} w-full px-4 py-3 text-sm font-bold`}
-        />
+        <div className={styles.addUnitSubmitDock}>
+          <SubmitButton
+            idleText="Add Unit"
+            pendingText="Adding unit..."
+            className={`${styles.primaryButton} w-full px-4 py-3 text-sm font-bold`}
+          />
+        </div>
       </form>
     </section>
   )
