@@ -11,11 +11,36 @@ import { prefetchRoute } from './route-prefetch'
 import styles from './mobile-nav.module.css'
 
 const navItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: '/icons/nav/dashboard.svg' },
-  { name: 'Projects', href: '/projects', icon: '/icons/nav/projects.svg' },
-  { name: 'Paints', href: '/paints', icon: '/icons/nav/vault.svg' },
-  { name: 'Guides', href: '/guides', icon: '/icons/nav/recipes.svg' },
-  { name: 'Community', href: '/community', icon: '/icons/nav/community.svg' },
+  {
+    name: 'Dashboard',
+    href: '/dashboard',
+    icon: '/icons/nav/dashboard.svg',
+    activeIcon: '/icons/nav/dashboard-active.svg',
+  },
+  {
+    name: 'Projects',
+    href: '/projects',
+    icon: '/icons/nav/projects.svg',
+    activeIcon: '/icons/nav/projects-active.svg',
+  },
+  {
+    name: 'Paints',
+    href: '/paints',
+    icon: '/icons/nav/vault.svg',
+    activeIcon: '/icons/nav/vault-active.svg',
+  },
+  {
+    name: 'Guides',
+    href: '/guides',
+    icon: '/icons/nav/recipes.svg',
+    activeIcon: '/icons/nav/recipes-active.svg',
+  },
+  {
+    name: 'Community',
+    href: '/community',
+    icon: '/icons/nav/community.svg',
+    activeIcon: '/icons/nav/community-active.svg',
+  },
 ]
 
 function subscribeToUrlChanges(callback: () => void) {
@@ -155,7 +180,11 @@ export default function MobileNav() {
             >
               <span
                 className={styles.icon}
-                style={{ '--nav-icon': `url(${item.icon})` } as CSSProperties}
+                style={
+                  {
+                    '--nav-icon': `url(${isActive ? item.activeIcon : item.icon})`,
+                  } as CSSProperties
+                }
                 aria-hidden="true"
               />
 
