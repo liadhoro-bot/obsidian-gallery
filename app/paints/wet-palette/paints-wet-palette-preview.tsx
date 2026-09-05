@@ -21,6 +21,7 @@ type PaintRecord = {
   line: string
   finish: string
   size: string
+  msrp?: string
   color: string
   swatchImageUrl?: string | null
   owned: boolean
@@ -1310,6 +1311,7 @@ export default function PaintsWetPalettePreview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
+          tourName="paints_wet_palette"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>
@@ -1473,12 +1475,9 @@ function PaintInfoPanel({
         <div className="min-w-0 p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-black uppercase text-white">
+              <h2 className="line-clamp-2 text-base font-black uppercase leading-[1.05] text-white">
                 {paint.name}
               </h2>
-              <p className="mt-1 text-[10px] font-bold text-white/36">
-                {paint.line}
-              </p>
             </div>
             <div
               className="grid shrink-0 grid-cols-2 gap-2"
@@ -1517,23 +1516,16 @@ function PaintInfoPanel({
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-2 text-[9px] font-black text-white/34">
+          <div className="mt-3 grid grid-cols-4 gap-3 text-[11px] text-white/34">
             <InfoPair label="Brand" value={paint.brand} />
             <InfoPair label="Line" value={paint.line} />
-            <InfoPair label="Finish" value={paint.finish} />
             <InfoPair label="Size" value={paint.size} />
+            <InfoPair label="MSRP" value={paint.msrp ?? '-'} />
           </div>
 
           <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-white/46">
             {paint.notes}
           </p>
-
-          <button
-            className="mt-2 h-8 w-full rounded-[8px] border border-white/10 bg-black/20 text-[10px] font-black text-white/52 transition hover:border-cyan-300/45 hover:text-cyan-300"
-            data-v3-paints-indicator="paint-details-button"
-          >
-            View Details -&gt;
-          </button>
         </div>
       </div>
     </aside>
@@ -1543,8 +1535,8 @@ function PaintInfoPanel({
 function InfoPair({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="uppercase tracking-[0.12em]">{label}</p>
-      <p className="mt-1 truncate text-white/62">{value}</p>
+      <p className="font-black uppercase tracking-[0.12em]">{label}</p>
+      <p className="mt-1 line-clamp-2 text-[12px] font-semibold leading-[1.15] text-white/62">{value}</p>
     </div>
   )
 }

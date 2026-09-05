@@ -484,6 +484,7 @@ export default function DashboardV3Preview({
             onPrevious={showPreviousGuide}
             onNext={showNextGuide}
             onClose={closeFeatureTour}
+            tourName="dashboard_overview"
           />
         ) : null}
       </div>

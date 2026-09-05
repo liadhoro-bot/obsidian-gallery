@@ -9,6 +9,7 @@ export type PaintsV3Paint = {
   line: string
   finish: string
   size: string
+  msrp: string
   color: string
   swatchImageUrl: string | null
   owned: boolean
@@ -42,6 +43,7 @@ type CatalogPaintRow = {
   swatch_image_url: string | null
   paint_type: string | null
   color_match_enabled: boolean | null
+  price_usd: number | string | null
 }
 
 type CustomPaintRow = {
@@ -96,6 +98,19 @@ function cleanLabel(value: string | null | undefined, fallback: string) {
   return cleanValue || fallback
 }
 
+function formatMsrp(value: CatalogPaintRow['price_usd']) {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+
+  const price = Number(value)
+  if (!Number.isFinite(price)) {
+    return '-'
+  }
+
+  return `$${price.toFixed(2)}`
+}
+
 function getPaintSwatchImageUrl(value: string | null | undefined) {
   const swatchUrl =
     getSupabaseImageUrl(value, {
@@ -137,6 +152,7 @@ function toCatalogPaint(
     line,
     finish,
     size: defaultPaintSize,
+    msrp: formatMsrp(paint.price_usd),
     color: isHexColor(paint.hex_approx) ? paint.hex_approx!.toUpperCase() : fallbackColor(paint.id),
     swatchImageUrl: getPaintSwatchImageUrl(paint.swatch_image_url),
     owned: ownership?.is_owned === true,
@@ -161,6 +177,7 @@ function toCustomPaint(
     line,
     finish,
     size: 'Custom',
+    msrp: '-',
     color: isHexColor(paint.color_hex) ? paint.color_hex!.toUpperCase() : fallbackColor(paint.id),
     swatchImageUrl: getPaintSwatchImageUrl(imageByPaintId.get(paint.id)),
     owned: true,
@@ -215,7 +232,7 @@ async function loadCatalogPaintRows(
   while (true) {
     const { data, error } = await supabase
       .from('paint_catalog')
-      .select('id, brand, line, name, sku, hex_approx, swatch_image_url, paint_type, color_match_enabled')
+      .select('id, brand, line, name, sku, hex_approx, swatch_image_url, paint_type, color_match_enabled, price_usd')
       .eq('is_active', true)
       .order('brand', { ascending: true })
       .order('line', { ascending: true })
@@ -267,7 +284,8 @@ export const getPaintsV3Payload = cache(async (userId: string) => {
           hex_approx,
           swatch_image_url,
           paint_type,
-          color_match_enabled
+          color_match_enabled,
+          price_usd
         )
       `
       )

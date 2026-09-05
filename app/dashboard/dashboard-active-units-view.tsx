@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
@@ -12,7 +13,6 @@ import {
 } from '@/src/components/v3'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
-import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import PrefetchLink from '../components/prefetch-link'
 import DashboardQuickActionStartButton from './dashboard-quick-action-start-button'
@@ -41,6 +41,10 @@ const statusOptions: StatusOption[] = [
   { value: 'complete', label: 'Complete' },
   { value: 'other', label: 'Other' },
 ]
+
+const FeatureGuideTour = dynamic(() => import('../components/feature-guide-tour'), {
+  ssr: false,
+})
 
 function HelpIcon() {
   return (
@@ -556,12 +560,21 @@ export default function DashboardActiveUnitsView({
   source?: 'fixture' | 'live'
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const requestedTab = searchParams.get('tab')
-  const currentTab = requestedTab === 'profile' || requestedTab === 'painting-table' ? requestedTab : initialTab
+  const routeTab =
+    requestedTab === 'profile' || requestedTab === 'painting-table'
+      ? requestedTab
+      : initialTab
+  const [currentTab, setCurrentTab] = useState<ActiveTab>(routeTab)
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
+
+  useEffect(() => {
+    setCurrentTab(routeTab)
+  }, [routeTab])
 
   function showGuideAt(index: number) {
     setActiveGuideIndex(index)
@@ -571,7 +584,15 @@ export default function DashboardActiveUnitsView({
     if (nextTab === currentTab) return
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', nextTab)
-    window.history.replaceState(null, '', `${pathname}?${params.toString()}`)
+    const nextUrl = `${pathname}?${params.toString()}`
+
+    if (nextTab === 'painting-table' || profilePanel) {
+      setCurrentTab(nextTab)
+      window.history.replaceState(null, '', nextUrl)
+      return
+    }
+
+    router.push(nextUrl, { scroll: false })
   }
 
   function startFeatureTour() {
@@ -647,6 +668,7 @@ export default function DashboardActiveUnitsView({
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}
           totalGuides={featureGuides.length}
+          tourName="dashboard_active_units"
         />
       ) : null}
     </div>
