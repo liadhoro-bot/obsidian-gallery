@@ -698,6 +698,31 @@
   border-color: var(--og-border-subtle);
 }
 
+.guidesSilver [data-v3-guides-indicator="primary-button"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700));
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.guidesSilver [data-v3-guides-indicator="primary-button"]:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+.guidesSilver [data-v3-guides-indicator="primary-button"]:disabled {
+  cursor: wait;
+  border-color: var(--og-border-subtle);
+  background-color: var(--og-surface-primary);
+  background-image: none;
+  color: var(--og-text-muted);
+  box-shadow: none;
+  opacity: 0.7;
+}
+
 .guidesSilver a,
 .guidesSilver button {
   transition:

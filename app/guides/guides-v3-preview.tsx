@@ -8,6 +8,7 @@ import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './guides-v3-silver.module.css'
+import { capturePostHog } from '../../utils/analytics/client'
 import { createDeckFromForge } from './actions'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type {
@@ -41,9 +42,18 @@ type DeckDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 type DeckStatus = 'Draft' | 'Private' | 'Public'
 type CardTemplate = 'title' | 'step' | 'theme' | 'image' | 'paints' | 'video'
 
-type GuideFile = GuidesV3GuideFile
+type GuideFile = GuidesV3GuideFile & {
+  draft?: ForgeGuideDraft
+}
 type Deck = GuidesV3Deck & {
   draft?: ForgeDeck
+}
+
+type ForgeGuideDraft = {
+  deckIds: string[]
+  name: string
+  description: string
+  image: string
 }
 
 type ForgeDeck = {
@@ -810,6 +820,10 @@ export default function GuidesV3Preview({
   }
 
   function startFromTemplate(template: BlankTemplate) {
+    void capturePostHog('guide_template_used', {
+      template_id: template.id,
+      template_name: template.name,
+    })
     setForgeMode('deck')
     setSourceKind('blank')
     setSelectedTemplateId(template.id)
@@ -943,13 +957,16 @@ export default function GuidesV3Preview({
     } else {
       const guideDeckTotal = selectedGuideDecks.length
       const cardTotal = selectedGuideDecks.reduce((sum, deck) => sum + deck.cards, 0)
+      const guideName_ = guideName.trim() || 'New Guide'
+      const guideDescription_ =
+        guideDescription.trim() ||
+        'A custom guide assembled from decks in your collection.'
+
       setGuideFiles((current) => [
         {
           id: `forge-guide-${Date.now()}`,
-          title: guideName.trim() || 'New Guide',
-          subtitle:
-            guideDescription.trim() ||
-            'A custom guide assembled from decks in your collection.',
+          title: guideName_,
+          subtitle: guideDescription_,
           image: guideImage,
           decks: guideDeckTotal,
           cards: cardTotal,
@@ -958,6 +975,12 @@ export default function GuidesV3Preview({
           palette: selectedGuideDecks.length
             ? selectedGuideDecks.slice(0, 5).map((deck) => deck.accent)
             : ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
+          draft: {
+            deckIds: selectedGuideDecks.map((deck) => deck.id),
+            name: guideName_,
+            description: guideDescription_,
+            image: guideImage,
+          },
         },
         ...current,
       ])
@@ -1015,6 +1038,18 @@ export default function GuidesV3Preview({
     setBuildTab('details')
     setForgeScreen('build')
     setActiveTab('decks')
+  }
+
+  function editDraftGuide(guide: GuideFile) {
+    if (!guide.draft) return
+    setForgeMode('guide')
+    setSelectedGuideDeckIds(new Set(guide.draft.deckIds))
+    setGuideDeckSearch('')
+    setGuideName(guide.draft.name)
+    setGuideDescription(guide.draft.description)
+    setGuideImage(guide.draft.image)
+    setSaveError(null)
+    setForgeScreen('guide-compose')
   }
 
   function addCardToDeck(cardType: CardTemplate) {
@@ -1357,7 +1392,9 @@ export default function GuidesV3Preview({
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {activeTab === 'guides' ? <GuidesTab guideFiles={guideFiles} /> : null}
+        {activeTab === 'guides' ? (
+          <GuidesTab guideFiles={guideFiles} onOpenDraft={editDraftGuide} />
+        ) : null}
         {activeTab === 'decks' ? (
           <DecksTab
             decks={decks}
@@ -1391,6 +1428,7 @@ export default function GuidesV3Preview({
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}
           totalGuides={featureGuides.length}
+          tourName="guides_list"
         />
       ) : null}
     </main>
@@ -1534,8 +1572,10 @@ function GuideDeckPickerScreen({
   return (
     <section className="grid gap-4">
       <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
-        <p className="text-sm font-black text-white">Add decks from your collection</p>
-        <p className="mt-2 text-xs font-semibold leading-5 text-white/45">
+        <p className="text-sm font-black text-[color:var(--og-text-primary)]">
+          Add decks from your collection
+        </p>
+        <p className="mt-2 text-xs font-semibold leading-5 text-[color:var(--og-text-muted)]">
           Guides are folders for decks. Search your saved deck library, add the
           pieces you want, then order and name the guide.
         </p>
@@ -1549,10 +1589,10 @@ function GuideDeckPickerScreen({
 
       <section className="overflow-hidden rounded-[10px] border border-white/10 bg-[#111821]">
         <div className="flex items-center justify-between px-4 py-3">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
             Deck Collection
           </h2>
-          <span className="text-[10px] font-black text-cyan-300">
+          <span className="text-[10px] font-black text-[color:var(--og-brass-700)]">
             {selectedDecks.length} selected
           </span>
         </div>
@@ -1569,8 +1609,14 @@ function GuideDeckPickerScreen({
       </section>
 
       {selectedDecks.length ? (
-        <section className="rounded-[10px] border border-cyan-300/18 bg-cyan-300/8 p-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-300">
+        <section
+          className="rounded-[10px] border p-3"
+          style={{
+            borderColor: 'color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle))',
+            backgroundColor: 'color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary))',
+          }}
+        >
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--og-brass-700)]">
             Current Guide
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -1579,7 +1625,12 @@ function GuideDeckPickerScreen({
                 key={deck.id}
                 type="button"
                 onClick={() => onToggleDeck(deck.id)}
-                className="rounded-full border border-cyan-300/25 bg-black/20 px-3 py-1.5 text-[10px] font-black text-white/72"
+                className="rounded-full border px-3 py-1.5 text-[10px] font-black"
+                style={{
+                  borderColor: 'color-mix(in srgb, var(--og-ink-950) 24%, var(--og-border-subtle))',
+                  backgroundColor: 'var(--og-surface-primary)',
+                  color: 'var(--og-text-secondary)',
+                }}
               >
                 {deck.title} x
               </button>
@@ -1592,12 +1643,8 @@ function GuideDeckPickerScreen({
         type="button"
         onClick={onContinue}
         disabled={!selectedDecks.length}
-        className={[
-          'tap-press h-12 rounded-[10px] text-sm font-black transition',
-          selectedDecks.length
-            ? 'bg-cyan-300 text-black shadow-[0_0_24px_rgba(34,211,238,0.22)] hover:bg-cyan-200'
-            : 'bg-white/[0.08] text-white/28',
-        ].join(' ')}
+        data-v3-guides-indicator="primary-button"
+        className="tap-press h-12 rounded-[10px] text-sm font-black transition"
       >
         Continue to Guide Details
       </button>
@@ -1628,20 +1675,28 @@ function GuideDeckSelectRow({
         />
       </span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-black text-white">
+        <span className="block truncate text-sm font-black text-[color:var(--og-text-primary)]">
           {deck.title}
         </span>
-        <span className="mt-1 block text-[10px] font-semibold text-white/38">
+        <span className="mt-1 block text-[10px] font-semibold text-[color:var(--og-text-muted)]">
           {deck.category} - {deck.cards} cards - {deck.paints} paints
         </span>
       </span>
       <span
-        className={[
-          'grid h-8 w-8 place-items-center rounded-full border text-sm font-black',
+        className="grid h-8 w-8 place-items-center rounded-full border text-sm font-black"
+        style={
           selected
-            ? 'border-cyan-300 bg-cyan-300 text-black'
-            : 'border-white/14 bg-white/[0.04] text-white/42',
-        ].join(' ')}
+            ? {
+                borderColor: 'color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700))',
+                backgroundColor: 'var(--og-brass-500)',
+                color: 'var(--og-ink-950)',
+              }
+            : {
+                borderColor: 'var(--og-border-subtle)',
+                backgroundColor: 'var(--og-surface-primary)',
+                color: 'var(--og-text-muted)',
+              }
+        }
       >
         {selected ? <CheckIcon /> : '+'}
       </span>
@@ -1685,15 +1740,15 @@ function GuideComposeScreen({
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/82" />
           <div className="absolute inset-x-0 bottom-0 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-brass-500)]">
               Guide Draft
             </p>
-            <h2 className="mt-1 line-clamp-2 text-2xl font-black">
+            <h2 className="mt-1 line-clamp-2 text-2xl font-black text-white">
               {name || 'New Guide'}
             </h2>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 p-3 text-center text-[10px] font-black text-white/38">
+        <div className="grid grid-cols-3 gap-2 p-3 text-center text-[10px] font-black text-[color:var(--og-text-muted)]">
           <span>{selectedDecks.length} decks</span>
           <span>{cardTotal} cards</span>
           <span>Draft</span>
@@ -1702,34 +1757,44 @@ function GuideComposeScreen({
 
       <section className="grid gap-3 rounded-[10px] border border-white/10 bg-[#111821] p-4">
         <label className="grid gap-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
             Guide Name
           </span>
           <input
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
-            className="h-11 rounded-[8px] border border-white/10 bg-white/[0.04] px-3 text-sm font-black text-white outline-none focus:border-cyan-300/60"
+            className="h-11 rounded-[8px] border px-3 text-sm font-black outline-none"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle))',
+              backgroundColor: 'color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary))',
+              color: 'var(--og-text-primary)',
+            }}
           />
         </label>
         <label className="grid gap-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
             Description
           </span>
           <textarea
             value={description}
             onChange={(event) => onDescriptionChange(event.target.value)}
             rows={3}
-            className="resize-none rounded-[8px] border border-white/10 bg-white/[0.04] px-3 py-3 text-sm font-semibold leading-5 text-white outline-none focus:border-cyan-300/60"
+            className="resize-none rounded-[8px] border px-3 py-3 text-sm font-semibold leading-5 outline-none"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle))',
+              backgroundColor: 'color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary))',
+              color: 'var(--og-text-primary)',
+            }}
           />
         </label>
       </section>
 
       <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
             Cover Image
           </h3>
-          <span className="text-[10px] font-black text-white/32">
+          <span className="text-[10px] font-black text-[color:var(--og-text-muted)]">
             From selected decks
           </span>
         </div>
@@ -1739,10 +1804,13 @@ function GuideComposeScreen({
               key={deck.id}
               type="button"
               onClick={() => onImageChange(deck.image)}
-              className={[
-                'relative aspect-square overflow-hidden rounded-[8px] border bg-black',
-                image === deck.image ? 'border-cyan-300' : 'border-white/10',
-              ].join(' ')}
+              className="relative aspect-square overflow-hidden rounded-[8px] border bg-black"
+              style={{
+                borderColor:
+                  image === deck.image
+                    ? 'var(--og-brass-500)'
+                    : 'var(--og-border-subtle)',
+              }}
             >
               <Image src={deck.image} alt="" fill sizes="25vw" className="object-cover" />
             </button>
@@ -1752,10 +1820,10 @@ function GuideComposeScreen({
 
       <section className="overflow-hidden rounded-[10px] border border-white/10 bg-[#111821]">
         <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
             Deck Order
           </h3>
-          <span className="text-[10px] font-black text-cyan-300">
+          <span className="text-[10px] font-black text-[color:var(--og-brass-700)]">
             Top to bottom
           </span>
         </div>
@@ -1765,17 +1833,17 @@ function GuideComposeScreen({
               key={deck.id}
               className="grid grid-cols-[auto_48px_1fr_auto] items-center gap-3 px-4 py-3"
             >
-              <span className="text-[10px] font-black text-white/26">
+              <span className="text-[10px] font-black text-[color:var(--og-text-muted)]">
                 {String(index + 1).padStart(2, '0')}
               </span>
               <span className="relative h-12 w-12 overflow-hidden rounded-[8px] bg-black">
                 <Image src={deck.image} alt="" fill sizes="48px" className="object-cover" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm font-black">
+                <span className="block truncate text-sm font-black text-[color:var(--og-text-primary)]">
                   {deck.title}
                 </span>
-                <span className="mt-1 block text-[10px] font-semibold text-white/36">
+                <span className="mt-1 block text-[10px] font-semibold text-[color:var(--og-text-muted)]">
                   {deck.cards} cards
                 </span>
               </span>
@@ -1784,7 +1852,7 @@ function GuideComposeScreen({
                   type="button"
                   onClick={() => onMoveDeck(deck.id, -1)}
                   disabled={index === 0}
-                  className="grid h-8 w-8 place-items-center text-xs font-black text-white/54 disabled:text-white/16"
+                  className="grid h-8 w-8 place-items-center text-xs font-black text-[color:var(--og-text-primary)] disabled:text-[color:var(--og-text-muted)] disabled:opacity-45"
                 >
                   up
                 </button>
@@ -1792,7 +1860,7 @@ function GuideComposeScreen({
                   type="button"
                   onClick={() => onMoveDeck(deck.id, 1)}
                   disabled={index === selectedDecks.length - 1}
-                  className="grid h-8 w-8 place-items-center border-l border-white/10 text-xs font-black text-white/54 disabled:text-white/16"
+                  className="grid h-8 w-8 place-items-center border-l border-white/10 text-xs font-black text-[color:var(--og-text-primary)] disabled:text-[color:var(--og-text-muted)] disabled:opacity-45"
                 >
                   dn
                 </button>
@@ -3020,7 +3088,13 @@ function Tabs({
   )
 }
 
-function GuidesTab({ guideFiles }: { guideFiles: GuideFile[] }) {
+function GuidesTab({
+  guideFiles,
+  onOpenDraft,
+}: {
+  guideFiles: GuideFile[]
+  onOpenDraft: (guide: GuideFile) => void
+}) {
   return (
     <section
       className="grid gap-3"
@@ -3029,7 +3103,9 @@ function GuidesTab({ guideFiles }: { guideFiles: GuideFile[] }) {
       data-feature-guide-target="guides.tabs.guides"
     >
       {guideFiles.length ? (
-        guideFiles.map((guide) => <GuideFileCard key={guide.id} guide={guide} />)
+        guideFiles.map((guide) => (
+          <GuideFileCard key={guide.id} guide={guide} onOpenDraft={onOpenDraft} />
+        ))
       ) : (
         <EmptyPanel
           title="No guide files yet"
@@ -3168,14 +3244,18 @@ function EmptyPanel({ text, title }: { text: string; title: string }) {
   )
 }
 
-function GuideFileCard({ guide }: { guide: GuideFile }) {
-  return (
-    <Link
-      href={`/guides/${guide.id}?preview=1`}
-      data-v3-guides-indicator="guide-card"
-      data-feature-guide-target="guides.tabs.guides"
-      className="block overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45"
-    >
+function GuideFileCard({
+  guide,
+  onOpenDraft,
+}: {
+  guide: GuideFile
+  onOpenDraft: (guide: GuideFile) => void
+}) {
+  const className =
+    'block w-full text-left overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45'
+
+  const content = (
+    <>
       <div className="grid grid-cols-[110px_1fr] gap-3 p-3">
         <div className="relative min-h-[116px] overflow-hidden rounded-[8px] bg-black">
           <Image
@@ -3213,6 +3293,31 @@ function GuideFileCard({ guide }: { guide: GuideFile }) {
           {guide.ownedPercent}% Owned
         </span>
       </div>
+    </>
+  )
+
+  if (guide.draft) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpenDraft(guide)}
+        data-v3-guides-indicator="guide-card"
+        data-feature-guide-target="guides.tabs.guides"
+        className={className}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <Link
+      href={`/guides/${guide.id}?preview=1`}
+      data-v3-guides-indicator="guide-card"
+      data-feature-guide-target="guides.tabs.guides"
+      className={className}
+    >
+      {content}
     </Link>
   )
 }

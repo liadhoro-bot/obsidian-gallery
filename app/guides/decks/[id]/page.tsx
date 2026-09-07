@@ -17,7 +17,7 @@ import {
   type GuidesV3DeckStep,
 } from '../../guides-v3-detail-data'
 import DeckCardViewer, { type DeckCardEntry } from './deck-card-viewer'
-import DeckEditorClient from './deck-editor-client'
+import DeckEditPageClient from './deck-edit-page-client'
 
 type DeckDetailPageProps = {
   params: Promise<{ id: string }>
@@ -141,11 +141,7 @@ export default async function DeckDetailPage({
     return (
       <main>
         <V3PerfIndicator surface="deck-editor" detail="main" />
-        <DeckEditorClient
-          deck={deck}
-          backHref="/guides?preview=1"
-          featureGuides={featureGuides}
-        />
+        <DeckEditPageClient deck={deck} featureGuides={featureGuides} />
       </main>
     )
   }

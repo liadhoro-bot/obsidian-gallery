@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
+import { captureServerEvent } from '../../utils/analytics/server'
 import { getGuideDeckThumbnail } from './guides-v3-data'
 
 export type CreateDeckCardInput = {
@@ -179,8 +180,166 @@ export async function createDeckFromForge(
     if (stepPaintsError) throw new Error(stepPaintsError.message)
   }
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'deck_created',
+    properties: {
+      deck_id: recipe.id,
+      card_count: stepCards.length,
+      is_public: isPublic,
+      category: categoryFor(input),
+    },
+  })
+
   revalidatePath('/guides')
   revalidatePath('/recipes')
+
+  return {
+    id: recipe.id,
+    title: cleanText(recipe.name, title),
+    category: categoryFor(input),
+    cards: stepCards.length,
+    paints: new Set(stepPaintsToInsert.map((paint) =>
+      paint.paint_catalog_id
+        ? `catalog:${paint.paint_catalog_id}`
+        : `custom:${paint.custom_paint_id}`
+    )).size,
+    usedIn: 0,
+    image: getGuideDeckThumbnail(recipe.image_url, '/onboarding/pains/tough-choices.jpeg'),
+    saved: true,
+    accent: accentFor(recipe.id),
+  }
+}
+
+export async function updateDeckFromForge(
+  deckId: string,
+  input: CreateDeckInput
+): Promise<CreatedDeckResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+  if (!deckId) throw new Error('Missing deck id')
+
+  const title = cleanText(input.title, 'New Deck')
+  const description = cleanText(input.description, 'A custom painting deck.')
+  const coverCard = input.cards.find((card) =>
+    card.template === 'title' || card.template === 'cover'
+  )
+  const coverImage = safePersistedImage(input.image ?? coverCard?.image)
+  const isPublic = input.status === 'Public'
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .update({
+      name: title,
+      description,
+      image_url: coverImage,
+      is_public: isPublic,
+    })
+    .eq('id', deckId)
+    .eq('user_id', user.id)
+    .select('id, name, image_url')
+    .single()
+
+  if (recipeError || !recipe) {
+    throw new Error(recipeError?.message || 'Could not save deck')
+  }
+
+  const { data: existingSteps, error: existingStepsError } = await supabase
+    .from('recipe_steps')
+    .select('id')
+    .eq('recipe_id', deckId)
+
+  if (existingStepsError) throw new Error(existingStepsError.message)
+
+  const existingStepIds = (existingSteps ?? []).map((step) => step.id)
+
+  if (existingStepIds.length) {
+    const { error: deleteStepPaintsError } = await supabase
+      .from('recipe_step_paints')
+      .delete()
+      .in('recipe_step_id', existingStepIds)
+
+    if (deleteStepPaintsError) throw new Error(deleteStepPaintsError.message)
+
+    const { error: deleteStepsError } = await supabase
+      .from('recipe_steps')
+      .delete()
+      .eq('recipe_id', deckId)
+
+    if (deleteStepsError) throw new Error(deleteStepsError.message)
+  }
+
+  const stepCards = input.cards.filter((card) =>
+    card.template !== 'title' && card.template !== 'cover'
+  )
+  const steps = stepCards.map((card, index) => ({
+    recipe_id: deckId,
+    user_id: user.id,
+    step_number: index + 1,
+    title: cleanText(card.title, `Card ${index + 1}`),
+    instructions: cleanText(card.body, 'No instructions yet.'),
+    image_url: safePersistedImage(card.image),
+  }))
+
+  let insertedSteps: Array<{ id: string; step_number: number }> = []
+
+  if (steps.length) {
+    const { data: stepRows, error: stepsError } = await supabase
+      .from('recipe_steps')
+      .insert(steps)
+      .select('id, step_number')
+
+    if (stepsError) throw new Error(stepsError.message)
+    insertedSteps = stepRows ?? []
+  }
+
+  const stepPaintsToInsert = stepCards.flatMap((card, cardIndex) => {
+    const step = insertedSteps.find((row) => row.step_number === cardIndex + 1)
+    if (!step) return []
+
+    return (card.paints ?? []).flatMap((paint, paintIndex) => {
+      const parsedPaint = parsePaintSelection(paint.id)
+      if (!parsedPaint) return []
+
+      return {
+        recipe_step_id: step.id,
+        user_id: user.id,
+        paint_source: parsedPaint.paint_source,
+        paint_catalog_id: parsedPaint.paint_catalog_id,
+        custom_paint_id: parsedPaint.custom_paint_id,
+        paint_order: paintIndex + 1,
+        ratio_text: paint.ratio_text?.trim() || null,
+      }
+    })
+  })
+
+  if (stepPaintsToInsert.length) {
+    const { error: stepPaintsError } = await supabase
+      .from('recipe_step_paints')
+      .insert(stepPaintsToInsert)
+
+    if (stepPaintsError) throw new Error(stepPaintsError.message)
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'deck_updated',
+    properties: {
+      deck_id: recipe.id,
+      card_count: stepCards.length,
+      is_public: isPublic,
+      category: categoryFor(input),
+    },
+  })
+
+  revalidatePath(`/guides/decks/${deckId}`)
+  revalidatePath('/guides')
+  revalidatePath('/recipes')
+  revalidatePath(`/recipes/${deckId}`)
 
   return {
     id: recipe.id,
