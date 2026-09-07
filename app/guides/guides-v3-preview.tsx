@@ -1571,13 +1571,13 @@ function GuideDeckPickerScreen({
   return (
     <section className="grid gap-4">
       <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
-        <p className="text-sm font-black text-[color:var(--og-text-primary)]">
+        <span className="block text-sm font-black text-[color:var(--og-text-primary)]">
           Add decks from your collection
-        </p>
-        <p className="mt-2 text-xs font-semibold leading-5 text-[color:var(--og-text-muted)]">
+        </span>
+        <span className="mt-2 block text-xs font-semibold leading-5 text-[color:var(--og-text-muted)]">
           Guides are folders for decks. Search your saved deck library, add the
           pieces you want, then order and name the guide.
-        </p>
+        </span>
       </section>
 
       <SearchInput
@@ -1588,7 +1588,7 @@ function GuideDeckPickerScreen({
 
       <section className="overflow-hidden rounded-[10px] border border-white/10 bg-[#111821]">
         <div className="flex items-center justify-between px-4 py-3">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">
             Deck Collection
           </h2>
           <span className="text-[10px] font-black text-[color:var(--og-brass-700)]">
@@ -1615,9 +1615,9 @@ function GuideDeckPickerScreen({
             backgroundColor: 'color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary))',
           }}
         >
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--og-brass-700)]">
+          <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-[color:var(--og-brass-700)]">
             Current Guide
-          </p>
+          </span>
           <div className="mt-3 flex flex-wrap gap-2">
             {selectedDecks.map((deck) => (
               <button
@@ -1739,10 +1739,10 @@ function GuideComposeScreen({
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/82" />
           <div className="absolute inset-x-0 bottom-0 p-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-brass-500)]">
+            <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-brass-500)]">
               Guide Draft
-            </p>
-            <h2 className="mt-1 line-clamp-2 text-2xl font-black text-white">
+            </span>
+            <h2 className="mt-1 line-clamp-2 text-2xl font-black" style={{ color: '#fff' }}>
               {name || 'New Guide'}
             </h2>
           </div>
@@ -1790,7 +1790,7 @@ function GuideComposeScreen({
 
       <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">
             Cover Image
           </h3>
           <span className="text-[10px] font-black text-[color:var(--og-text-muted)]">
@@ -1819,7 +1819,7 @@ function GuideComposeScreen({
 
       <section className="overflow-hidden rounded-[10px] border border-white/10 bg-[#111821]">
         <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[color:var(--og-text-muted)]">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">
             Deck Order
           </h3>
           <span className="text-[10px] font-black text-[color:var(--og-brass-700)]">
