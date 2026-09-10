@@ -172,7 +172,7 @@ async function loadRecipeStats(
   const statsByRecipeId = new Map<string, { cards: number; paintIds: Set<string> }>()
 
   for (const recipeId of recipeIds) {
-    statsByRecipeId.set(recipeId, { cards: 0, paintIds: new Set() })
+    statsByRecipeId.set(recipeId, { cards: 1, paintIds: new Set() })
   }
 
   for (const step of stepRows) {

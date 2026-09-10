@@ -758,6 +758,323 @@ button:disabled {
   margin-top: clamp(4px, 1.4cqw, 8px);
 }
 
+.recipe-guide-image-card {
+  border-radius: clamp(13px, 3.8cqw, 18px);
+  background-color: color-mix(in srgb, var(--og-ink-950) 88%, var(--og-walnut-950));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    inset 0 0 0 2px color-mix(in srgb, var(--og-walnut-700) 46%, transparent),
+    0 2px 8px rgba(77, 52, 28, 0.26);
+}
+
+.recipe-guide-image-card > img {
+  object-fit: cover;
+}
+
+.recipe-guide-image-card-shade {
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 244, 216, 0.16), transparent 30%),
+    linear-gradient(
+      to bottom,
+      rgba(6, 7, 8, 0.1) 0%,
+      transparent 34%,
+      transparent 55%,
+      rgba(2, 8, 6, 0.48) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(2, 8, 6, 0.2),
+      transparent 18%,
+      transparent 82%,
+      rgba(2, 8, 6, 0.2)
+    );
+}
+
+.recipe-guide-image-card-panel {
+  left: clamp(24px, 6.6cqw, 34px);
+  right: clamp(24px, 6.6cqw, 34px);
+  bottom: clamp(31px, 8.4cqw, 44px);
+  display: grid;
+  gap: clamp(5px, 1.4cqw, 8px);
+  max-height: 28%;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--og-brass-700) 40%, var(--og-walnut-700));
+  border-radius: clamp(8px, 2.4cqw, 12px);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 220, 0.06), rgba(0, 0, 0, 0.16)),
+    color-mix(in srgb, var(--og-ink-950) 88%, var(--og-walnut-950));
+  padding: clamp(13px, 3.2cqw, 17px) clamp(16px, 4.2cqw, 22px)
+    clamp(14px, 3.8cqw, 20px);
+  color: color-mix(in srgb, var(--og-paper-100) 88%, var(--og-brass-500));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+    0 12px 26px rgba(0, 0, 0, 0.42);
+  text-shadow: none;
+}
+
+.recipe-guide-image-card-title {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--og-brass-500) 72%, var(--og-paper-50));
+  font-size: clamp(1.05rem, 4.6cqw, 1.54rem);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 0.94;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.recipe-guide-image-card-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  color: color-mix(in srgb, var(--og-paper-100) 82%, var(--og-brass-500));
+  font-size: clamp(0.76rem, 3.08cqw, 1.02rem);
+  font-weight: 600;
+  line-height: 1.18;
+}
+
+.recipe-guide-small-image-card {
+  color: color-mix(in srgb, var(--og-ink-950) 86%, var(--og-walnut-700));
+}
+
+.recipe-guide-small-image-mount {
+  border-color: color-mix(in srgb, var(--og-walnut-700) 42%, var(--og-paper-50));
+  background-color: color-mix(in srgb, var(--og-ink-950) 84%, var(--og-walnut-950));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 2px 8px rgba(77, 52, 28, 0.26);
+}
+
+.recipe-guide-small-image-shade {
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(6, 7, 8, 0.1) 0%,
+      rgba(6, 7, 8, 0) 44%,
+      rgba(6, 7, 8, 0.18) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(2, 8, 6, 0.16),
+      transparent 20%,
+      transparent 80%,
+      rgba(2, 8, 6, 0.16)
+    );
+}
+
+.recipe-guide-small-image-body {
+  padding: clamp(14px, 4cqw, 22px) clamp(18px, 5.2cqw, 28px)
+    clamp(22px, 6cqw, 32px);
+}
+
+.recipe-guide-small-image-title {
+  display: grid;
+  min-height: clamp(58px, 16.5cqw, 86px);
+  place-items: center;
+  padding-inline: clamp(4px, 1.2cqw, 8px);
+}
+
+.recipe-guide-small-image-heading {
+  overflow: hidden;
+  max-width: 100%;
+  color: color-mix(in srgb, var(--og-ink-950) 86%, var(--og-walnut-700));
+  font-size: clamp(1.5rem, 7.2cqw, 2.42rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.96;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.recipe-guide-small-image-copy-panel {
+  display: grid;
+  align-items: start;
+  padding-top: clamp(4px, 1.2cqw, 8px);
+}
+
+.recipe-guide-small-image-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0 auto;
+  max-width: 92%;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 12;
+  color: color-mix(in srgb, var(--og-ink-950) 78%, var(--og-walnut-700));
+  font-size: clamp(0.9rem, 3.75cqw, 1.24rem);
+  line-height: 1.23;
+  text-wrap: balance;
+}
+
+.recipe-guide-theme-card {
+  border-radius: clamp(13px, 3.8cqw, 18px);
+  background:
+    radial-gradient(circle at 78% 28%, rgba(23, 185, 194, 0.18), transparent 24%),
+    linear-gradient(135deg, #15130f, #030504);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 2px color-mix(in srgb, var(--og-walnut-700) 48%, transparent),
+    0 2px 8px rgba(77, 52, 28, 0.26);
+  text-shadow: none;
+}
+
+.recipe-guide-theme-card > img {
+  filter: brightness(0.9) saturate(1.08) contrast(1.04);
+  object-fit: cover;
+}
+
+.recipe-guide-theme-card-shade {
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 73% 42%, transparent 0%, rgba(3, 7, 6, 0.08) 38%, rgba(3, 7, 6, 0.34) 100%),
+    linear-gradient(90deg, rgba(2, 5, 4, 0.6) 0%, rgba(2, 5, 4, 0.34) 45%, rgba(2, 5, 4, 0.06) 100%),
+    linear-gradient(to bottom, rgba(2, 5, 4, 0.2), transparent 18%, transparent 72%, rgba(2, 5, 4, 0.46));
+}
+
+.recipe-guide-theme-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(8px, 2.4cqw, 13px);
+  padding: clamp(28px, 7.5cqw, 40px) clamp(24px, 6.5cqw, 35px)
+    clamp(24px, 6.5cqw, 35px);
+  color: color-mix(in srgb, var(--og-paper-50) 86%, var(--og-brass-500));
+}
+
+.recipe-guide-theme-heading {
+  display: grid;
+  gap: clamp(2px, 0.8cqw, 5px);
+  justify-items: center;
+  text-align: center;
+}
+
+.recipe-guide-theme-title {
+  overflow: hidden;
+  max-width: 100%;
+  color: color-mix(in srgb, var(--og-brass-500) 78%, var(--og-paper-50));
+  font-size: clamp(1.92rem, 8.4cqw, 3.04rem);
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  line-height: 0.9;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow:
+    0 1px 0 rgba(255, 246, 210, 0.18),
+    0 3px 12px rgba(0, 0, 0, 0.64);
+}
+
+.recipe-guide-theme-kicker {
+  margin: 0;
+  color: color-mix(in srgb, var(--og-paper-50) 64%, var(--og-brass-500));
+  font-size: clamp(0.66rem, 2.55cqw, 0.88rem);
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  line-height: 1;
+}
+
+.recipe-guide-theme-paint-list {
+  display: grid;
+  align-content: center;
+  gap: clamp(5px, 1.4cqw, 8px);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe-guide-theme-paint-row {
+  display: grid;
+  grid-template-columns: clamp(44px, 13cqw, 58px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(9px, 2.6cqw, 14px);
+  min-height: clamp(47px, 14.2cqw, 64px);
+}
+
+.recipe-guide-theme-swatch {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: clamp(44px, 13cqw, 58px);
+  aspect-ratio: 1;
+  border: 2px solid color-mix(in srgb, var(--og-brass-500) 86%, var(--og-paper-50));
+  border-radius: clamp(7px, 2cqw, 10px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -10px 18px rgba(0, 0, 0, 0.16),
+    0 2px 0 rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(0, 0, 0, 0.36);
+}
+
+.recipe-guide-theme-paint-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  color: color-mix(in srgb, var(--og-paper-50) 84%, var(--og-brass-500));
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.72);
+}
+
+.recipe-guide-theme-paint-hex {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--og-paper-50) 58%, var(--og-brass-500));
+  font-family: var(--font-og-mono), monospace;
+  font-size: clamp(0.58rem, 2.1cqw, 0.78rem);
+  font-weight: 700;
+  line-height: 1.03;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.recipe-guide-theme-paint-name {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--og-paper-50) 88%, var(--og-brass-500));
+  font-size: clamp(0.72rem, 2.72cqw, 0.94rem);
+  font-weight: 900;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-guide-theme-paint-source {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--og-paper-50) 72%, var(--og-brass-500));
+  font-size: clamp(0.58rem, 2.18cqw, 0.78rem);
+  font-weight: 700;
+  line-height: 1.06;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipe-guide-theme-footer,
+.recipe-guide-theme-empty {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: color-mix(in srgb, var(--og-brass-500) 76%, var(--og-paper-50));
+  font-size: clamp(0.55rem, 2.05cqw, 0.72rem);
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.recipe-guide-theme-empty {
+  align-self: center;
+  padding-inline: clamp(12px, 4cqw, 22px);
+  color: color-mix(in srgb, var(--og-paper-50) 78%, var(--og-brass-500));
+  font-size: clamp(0.9rem, 3.4cqw, 1.12rem);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .recipe-guide-paints-label {
   color: color-mix(in srgb, var(--og-walnut-700) 72%, var(--og-brass-700));
   font-size: clamp(0.56rem, 2.45cqw, 0.78rem);
@@ -844,13 +1161,46 @@ button:disabled {
   line-height: 1.23;
 }
 
+.recipe-guide-paints-card {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: clamp(15px, 4.4cqw, 24px) clamp(16px, 4.6cqw, 26px)
+    clamp(14px, 4cqw, 22px);
+}
+
+.recipe-guide-paint-list-head {
+  display: grid;
+  gap: clamp(3px, 0.9cqw, 6px);
+  padding-top: clamp(2px, 0.8cqw, 6px);
+}
+
+.recipe-guide-paint-list-title {
+  margin: 0;
+  color: color-mix(in srgb, var(--og-ink-950) 84%, var(--og-walnut-700));
+  font-size: clamp(2.05rem, 8.7cqw, 3rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+.recipe-guide-paint-list-count {
+  margin: 0;
+  color: color-mix(in srgb, var(--og-walnut-700) 82%, var(--og-ink-950));
+  font-size: clamp(0.58rem, 2.15cqw, 0.76rem);
+  font-weight: 900;
+  letter-spacing: 0.28em;
+  line-height: 1.1;
+}
+
 .recipe-guide-paint-list {
-  padding: clamp(6px, 1.8cqw, 10px) clamp(14px, 4cqw, 22px);
+  padding: clamp(8px, 2.4cqw, 13px) clamp(2px, 0.8cqw, 5px) 0;
 }
 
 .recipe-guide-paint-list-items {
   display: grid;
-  gap: clamp(6px, 1.8cqw, 10px);
+  gap: 0;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -858,30 +1208,35 @@ button:disabled {
 
 .recipe-guide-paint-list-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: clamp(38px, 10.5cqw, 52px) minmax(0, 1fr) auto;
   align-items: center;
-  gap: clamp(8px, 2.2cqw, 12px);
-  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 26%, transparent);
-  border-radius: clamp(10px, 2.6cqw, 14px);
-  background: color-mix(in srgb, var(--og-paper-50) 46%, transparent);
-  padding: clamp(6px, 1.8cqw, 10px) clamp(8px, 2.2cqw, 12px);
+  min-height: clamp(49px, 12.8cqw, 62px);
+  gap: clamp(9px, 2.4cqw, 13px);
+  border-bottom: 1px solid color-mix(in srgb, var(--og-walnut-700) 18%, transparent);
+  padding: clamp(5px, 1.4cqw, 8px) 0;
+}
+
+.recipe-guide-paint-list-row:first-child {
+  border-top: 1px solid color-mix(in srgb, var(--og-walnut-700) 18%, transparent);
 }
 
 .recipe-guide-paint-list-swatch {
   position: relative;
   overflow: hidden;
-  width: clamp(30px, 8.6cqw, 42px);
-  height: clamp(30px, 8.6cqw, 42px);
+  width: clamp(36px, 10.2cqw, 50px);
+  height: clamp(36px, 10.2cqw, 50px);
   flex: 0 0 auto;
-  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 46%, transparent);
+  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 34%, transparent);
   border-radius: 999px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 1px 2px rgba(44, 29, 17, 0.18);
 }
 
 .recipe-guide-paint-list-copy {
   display: grid;
   min-width: 0;
-  gap: 2px;
+  gap: 1px;
 }
 
 .recipe-guide-paint-list-copy strong {
@@ -889,7 +1244,8 @@ button:disabled {
   color: color-mix(in srgb, var(--og-ink-950) 84%, var(--og-walnut-700));
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(0.78rem, 3cqw, 1.02rem);
+  font-size: clamp(0.72rem, 2.75cqw, 0.94rem);
+  line-height: 1.08;
 }
 
 .recipe-guide-paint-list-copy small {
@@ -897,34 +1253,26 @@ button:disabled {
   color: color-mix(in srgb, var(--og-walnut-700) 76%, var(--og-ink-950));
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(0.6rem, 2.2cqw, 0.76rem);
+  font-size: clamp(0.56rem, 2cqw, 0.7rem);
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .recipe-guide-paint-list-pill {
   flex: 0 0 auto;
-  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 32%, transparent);
+  min-width: clamp(67px, 18.4cqw, 88px);
+  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 24%, transparent);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--og-paper-100) 60%, transparent);
+  background: color-mix(in srgb, var(--og-paper-100) 66%, var(--og-fern-300) 10%);
   color: color-mix(in srgb, var(--og-walnut-700) 74%, var(--og-ink-950));
-  padding: clamp(3px, 1cqw, 5px) clamp(8px, 2.2cqw, 12px);
-  font-size: clamp(0.52rem, 1.9cqw, 0.66rem);
+  padding: clamp(4px, 1cqw, 5px) clamp(7px, 2cqw, 10px);
+  font-size: clamp(0.48rem, 1.75cqw, 0.62rem);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-align: center;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.recipe-guide-paint-list-pill-owned {
-  border-color: color-mix(in srgb, var(--og-status-success) 54%, transparent);
-  background: color-mix(in srgb, var(--og-status-success) 18%, var(--og-paper-100));
-  color: color-mix(in srgb, var(--og-status-success) 82%, var(--og-ink-950));
-}
-
-.recipe-guide-paint-list-pill-wishlist {
-  border-color: color-mix(in srgb, var(--og-status-warning) 54%, transparent);
-  background: color-mix(in srgb, var(--og-status-warning) 18%, var(--og-paper-100));
-  color: color-mix(in srgb, var(--og-status-warning) 82%, var(--og-ink-950));
 }
 
 .recipe-guide-paint-list-empty {
@@ -934,8 +1282,59 @@ button:disabled {
   text-align: center;
 }
 
+.recipe-guide-paint-list-footer {
+  display: grid;
+  gap: clamp(5px, 1.3cqw, 8px);
+  padding: clamp(8px, 2.2cqw, 12px) clamp(12px, 3.5cqw, 20px) 0;
+}
+
+.recipe-guide-paint-list-footer-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: color-mix(in srgb, var(--og-walnut-700) 84%, var(--og-ink-950));
+  font-size: clamp(0.66rem, 2.35cqw, 0.86rem);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.recipe-guide-video-card {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: clamp(10px, 2.7cqw, 15px) clamp(13px, 3.6cqw, 20px)
+    clamp(16px, 4.4cqw, 25px);
+}
+
+.recipe-guide-video-card-copy {
+  display: grid;
+  gap: clamp(5px, 1.4cqw, 8px);
+  padding: clamp(6px, 1.8cqw, 10px) clamp(4px, 1.2cqw, 8px)
+    clamp(4px, 1.1cqw, 7px);
+}
+
+.recipe-guide-video-card-title {
+  overflow: hidden;
+  margin: 0;
+  color: color-mix(in srgb, var(--og-ink-950) 84%, var(--og-walnut-700));
+  font-size: clamp(1.78rem, 7.35cqw, 2.62rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.94;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .recipe-guide-video-frame {
-  border-color: color-mix(in srgb, var(--og-walnut-700) 42%, var(--og-paper-50));
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 42%, var(--og-paper-50));
+  border-radius: clamp(8px, 2.3cqw, 12px);
   background-color: color-mix(in srgb, var(--og-ink-950) 90%, var(--og-walnut-950));
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.16),
@@ -952,6 +1351,128 @@ button:disabled {
 .recipe-guide-video-empty {
   color: color-mix(in srgb, var(--og-paper-100) 70%, transparent);
   font-size: clamp(0.82rem, 3.2cqw, 1.02rem);
+}
+
+.recipe-guide-video-meta {
+  display: grid;
+  gap: clamp(5px, 1.3cqw, 8px);
+  padding: clamp(8px, 2.2cqw, 12px) clamp(2px, 0.8cqw, 5px)
+    clamp(4px, 1.1cqw, 7px);
+}
+
+.recipe-guide-video-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: color-mix(in srgb, var(--og-ink-950) 84%, var(--og-walnut-700));
+  font-size: clamp(1.05rem, 4.1cqw, 1.44rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.02;
+}
+
+.recipe-guide-video-byline {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: clamp(6px, 1.6cqw, 10px);
+}
+
+.recipe-guide-video-creator {
+  display: inline-flex;
+  max-width: min(100%, 220px);
+  align-items: center;
+  gap: clamp(4px, 1.1cqw, 7px);
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 14%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-paper-50) 34%, transparent);
+  color: color-mix(in srgb, var(--og-walnut-700) 78%, var(--og-ink-950));
+  padding: clamp(2px, 0.6cqw, 3px) clamp(7px, 1.9cqw, 10px)
+    clamp(2px, 0.6cqw, 3px) clamp(3px, 0.8cqw, 4px);
+  font-size: clamp(0.62rem, 2.25cqw, 0.78rem);
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.recipe-guide-video-creator-avatar {
+  display: grid;
+  width: clamp(18px, 5.2cqw, 24px);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 22%, transparent);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.24), transparent 34%),
+    color-mix(in srgb, var(--og-ink-950) 78%, var(--og-walnut-700));
+  background-position: center;
+  background-size: cover;
+  color: color-mix(in srgb, var(--og-paper-50) 88%, var(--og-brass-500));
+  font-family: var(--font-og-sans), sans-serif;
+  font-size: clamp(0.58rem, 2cqw, 0.72rem);
+  font-weight: 800;
+}
+
+.recipe-guide-video-creator-by {
+  flex: 0 0 auto;
+  color: color-mix(in srgb, var(--og-walnut-700) 62%, var(--og-ink-950));
+  font-weight: 600;
+}
+
+.recipe-guide-video-creator-name {
+  overflow: hidden;
+  min-width: 0;
+  color: color-mix(in srgb, var(--og-ink-950) 76%, var(--og-walnut-700));
+  text-overflow: ellipsis;
+}
+
+.recipe-guide-video-duration {
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--og-walnut-700) 18%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-paper-50) 42%, transparent);
+  color: color-mix(in srgb, var(--og-walnut-700) 78%, var(--og-ink-950));
+  padding: clamp(3px, 0.8cqw, 4px) clamp(7px, 1.8cqw, 10px);
+  font-size: clamp(0.58rem, 2.05cqw, 0.72rem);
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.recipe-guide-video-description {
+  display: grid;
+  align-items: start;
+  gap: clamp(8px, 2cqw, 12px);
+  padding: clamp(2px, 0.7cqw, 4px) clamp(9px, 2.6cqw, 15px) 0;
+}
+
+.recipe-guide-video-description-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--og-walnut-700) 26%, transparent) 16%,
+    color-mix(in srgb, var(--og-walnut-700) 30%, transparent) 50%,
+    color-mix(in srgb, var(--og-walnut-700) 26%, transparent) 84%,
+    transparent
+  );
+}
+
+.recipe-guide-video-description-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  color: color-mix(in srgb, var(--og-ink-950) 76%, var(--og-walnut-700));
+  font-size: clamp(0.78rem, 2.9cqw, 1rem);
+  font-weight: 600;
+  line-height: 1.24;
 }
 
 .v3-material-walnut {

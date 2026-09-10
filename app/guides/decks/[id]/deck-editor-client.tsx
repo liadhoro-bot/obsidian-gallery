@@ -12,18 +12,21 @@ import {
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
   RecipeGuidePaintsCard,
+  RecipeGuideSmallImageStepCard,
+  RecipeGuideThemeStepCard,
   RecipeGuideVideoCard,
 } from '../../../recipes/[id]/components/recipe-guide-cards'
 import PaintPickerDialog, {
   type PaintPickerPaint,
 } from '../../../../components/paints/paint-picker-dialog'
+import { uploadDeckEditorImage } from '../../actions'
 import type { GuidesV3DeckDetail } from '../../guides-v3-detail-data'
 import styles from './deck-editor-client.module.css'
 
 type DeckEditorTab = 'details' | 'cards' | 'preview'
 type DeckDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 type DeckStatus = 'Draft' | 'Private' | 'Public'
-export type DeckEditorCardTemplate = 'cover' | 'step' | 'theme' | 'image' | 'paints' | 'video'
+export type DeckEditorCardTemplate = 'cover' | 'step' | 'theme' | 'image' | 'small-image' | 'paints' | 'video'
 type CardTemplate = DeckEditorCardTemplate
 
 export type DeckEditorSavePaint = {
@@ -83,13 +86,61 @@ type DropTarget = {
 
 const difficultyOptions: DeckDifficulty[] = ['Beginner', 'Intermediate', 'Advanced']
 const statusOptions: DeckStatus[] = ['Draft', 'Private', 'Public']
-const cardTemplateOptions: CardTemplate[] = ['step', 'theme', 'image', 'paints', 'video']
-const addCardTemplateOptions: CardTemplate[] = ['cover', 'step', 'theme', 'image', 'paints', 'video']
+const cardTemplateOptions: CardTemplate[] = ['step', 'theme', 'image', 'small-image', 'paints', 'video']
+const addCardTemplateOptions: CardTemplate[] = ['cover', 'step', 'theme', 'image', 'small-image', 'paints', 'video']
+const themePaintLimit = 7
+const stepPaintLimit = 4
 
 function inferDifficulty(cardCount: number): DeckDifficulty {
   if (cardCount >= 8) return 'Advanced'
   if (cardCount >= 4) return 'Intermediate'
   return 'Beginner'
+}
+
+function paintLimitForTemplate(template: CardTemplate) {
+  if (template === 'theme') return themePaintLimit
+  if (template === 'paints') return Infinity
+  return stepPaintLimit
+}
+
+function cardTemplateFromSavedStep(
+  template: string | null | undefined,
+  image: string | null,
+  videoUrl: string | null,
+  title: string,
+  paintCount: number
+): CardTemplate {
+  const lowerTitle = title.toLowerCase()
+  const looksLikeTheme = lowerTitle.includes('theme') || lowerTitle.includes('palette')
+
+  if (videoUrl) {
+    return 'video'
+  }
+
+  if (template === 'image' && looksLikeTheme) {
+    return 'theme'
+  }
+
+  if (
+    template === 'step' ||
+    template === 'theme' ||
+    template === 'image' ||
+    template === 'small-image' ||
+    template === 'paints' ||
+    template === 'video'
+  ) {
+    return template
+  }
+
+  if (looksLikeTheme) {
+    return 'theme'
+  }
+
+  if (paintCount >= 4 && image) {
+    return 'theme'
+  }
+
+  return image ? 'image' : 'step'
 }
 
 function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
@@ -106,7 +157,13 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
     ...deck.steps.map((step) => ({
       id: step.id,
       title: step.title,
-      template: step.image ? 'image' as const : 'step' as const,
+      template: cardTemplateFromSavedStep(
+        step.template,
+        step.image,
+        step.videoUrl,
+        step.title,
+        step.paints.length
+      ),
       body: step.instructions,
       image: step.image,
       paints: step.paints.map((paint) => ({
@@ -120,7 +177,7 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
         is_owned: paint.isOwned,
         is_wishlist: paint.isWishlist,
       })),
-      videoUrl: null,
+      videoUrl: step.videoUrl,
     })),
   ]
 }
@@ -193,7 +250,8 @@ function getYoutubeEmbedUrl(url: string | null) {
 function templateLabel(template: CardTemplate) {
   if (template === 'cover') return 'Cover'
   if (template === 'theme') return 'Theme'
-  if (template === 'image') return 'Image'
+  if (template === 'image') return 'Big Image'
+  if (template === 'small-image') return 'Small Image'
   if (template === 'paints') return 'Paints'
   if (template === 'video') return 'Video'
   return 'Step'
@@ -202,7 +260,8 @@ function templateLabel(template: CardTemplate) {
 function templateDescription(template: CardTemplate) {
   if (template === 'cover') return 'Deck title, hero image, and description'
   if (template === 'theme') return 'Palette intent, mood, and reference notes'
-  if (template === 'image') return 'Image-first checkpoint or reference card'
+  if (template === 'image') return 'Full-card image with a small title and notes panel'
+  if (template === 'small-image') return 'Cover-style image above title and longer notes'
   if (template === 'paints') return 'Deck paints and current ownership status'
   if (template === 'video') return 'YouTube walkthrough with a short caption'
   return 'Instruction, paints, ratios, and optional image'
@@ -212,6 +271,8 @@ function templateEditorSubtitle(template: CardTemplate) {
   if (template === 'cover') return 'Cover image, title, and deck description'
   if (template === 'paints') return 'Choose deck paints and show ownership status'
   if (template === 'video') return 'YouTube link and a short caption'
+  if (template === 'image') return 'Large image card with a compact title and instruction panel'
+  if (template === 'small-image') return 'Small image card with a top reference image and more room for text'
   return 'Step content, paints, ratios, and image'
 }
 
@@ -322,11 +383,13 @@ function makeNewCard(
           ? 'Describe the palette, mood, finish, and visual intent.'
           : template === 'image'
             ? 'Add the visual checkpoint notes for this card.'
-            : template === 'paints'
-              ? 'The full palette for this deck, at a glance.'
-              : template === 'video'
-                ? 'Add a short caption for the video.'
-                : 'Describe the painting action, timing, and result to check.',
+            : template === 'small-image'
+              ? 'Add the reference notes, comparison cues, or longer explanation for this image.'
+              : template === 'paints'
+                ? 'The full palette for this deck, at a glance.'
+                : template === 'video'
+                  ? 'Add a short caption for the video.'
+                  : 'Describe the painting action, timing, and result to check.',
     image: null,
     paints:
       template === 'paints'
@@ -392,6 +455,8 @@ export default function DeckEditorClient({
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([])
   const [expandedImage, setExpandedImage] = useState<EditorImage | null>(null)
   const [editingCardId, setEditingCardId] = useState<string | null>(null)
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null)
+  const [pendingImageUploads, setPendingImageUploads] = useState(0)
   const [isAddCardOpen, setIsAddCardOpen] = useState(false)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
@@ -402,6 +467,7 @@ export default function DeckEditorClient({
   )
   const editingCard = cards.find((card) => card.id === editingCardId) ?? null
   const coverCard = cards.find((card) => card.template === 'cover')
+  const isUploadingImages = pendingImageUploads > 0
 
   function reorderCard(cardId: string, targetId: string, edge: DropTarget['edge']) {
     if (cardId === targetId) return
@@ -421,9 +487,13 @@ export default function DeckEditorClient({
 
   function updateEditingCard(update: Partial<EditorCard>) {
     if (!editingCardId) return
+    updateCardById(editingCardId, update)
+  }
+
+  function updateCardById(cardId: string, update: Partial<EditorCard>) {
     setCards((current) =>
       current.map((card) =>
-        card.id === editingCardId ? { ...card, ...update } : card
+        card.id === cardId ? { ...card, ...update } : card
       )
     )
   }
@@ -444,6 +514,8 @@ export default function DeckEditorClient({
     setCards((current) =>
       current.map((card) => {
         if (card.id !== editingCardId) return card
+        const paintLimit = paintLimitForTemplate(card.template)
+        if (paintIndex >= paintLimit) return card
         const paints = [...card.paints]
         const existing = paints[paintIndex] ?? {
           id: `paint:${Date.now()}:${paintIndex}`,
@@ -465,7 +537,7 @@ export default function DeckEditorClient({
     setCards((current) =>
       current.map((card) =>
         card.id === editingCardId &&
-        (card.template === 'paints' || card.paints.length < 4)
+        card.paints.length < paintLimitForTemplate(card.template)
           ? {
               ...card,
               paints: [
@@ -520,15 +592,42 @@ export default function DeckEditorClient({
     )
   }
 
-  function updateEditingCardImage(event: ChangeEvent<HTMLInputElement>) {
+  async function updateEditingCardImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
-    if (!file) return
+    const activeCardId = editingCardId
+    if (!file || !activeCardId) return
     const url = URL.createObjectURL(file)
-    updateEditingCard({
+    const template =
+      editingCard?.template === 'cover' ||
+      editingCard?.template === 'theme' ||
+      editingCard?.template === 'small-image'
+        ? editingCard.template
+        : 'image'
+
+    setImageUploadError(null)
+    setPendingImageUploads((count) => count + 1)
+    updateCardById(activeCardId, {
       image: url,
-      template: editingCard?.template === 'cover' ? 'cover' : 'image',
+      template,
     })
     event.target.value = ''
+
+    try {
+      const formData = new FormData()
+      formData.set('image', file)
+      const result = await uploadDeckEditorImage(formData)
+      updateCardById(activeCardId, {
+        image: result.url,
+        template,
+      })
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      setImageUploadError(
+        error instanceof Error ? error.message : 'Could not upload image.'
+      )
+    } finally {
+      setPendingImageUploads((count) => Math.max(0, count - 1))
+    }
   }
 
   function deleteEditingCard() {
@@ -549,6 +648,11 @@ export default function DeckEditorClient({
   }
 
   function handleSave() {
+    if (isUploadingImages) {
+      setImageUploadError('Wait for the image upload to finish before saving.')
+      return
+    }
+
     onSaveDraft?.({
       title,
       description,
@@ -644,6 +748,7 @@ export default function DeckEditorClient({
                 guides={featureGuides}
                 label="Deck editor help"
                 buttonClassName={styles.iconButton}
+                tourName="deck_editor"
               />
               {!deck.saved ? (
                 <button className={styles.iconButton} type="button" aria-label="Favorite deck">
@@ -653,11 +758,11 @@ export default function DeckEditorClient({
               <button
                 className={styles.saveButton}
                 type="button"
-                disabled={isSaving}
+                disabled={isSaving || isUploadingImages}
                 onClick={handleSave}
               >
                 <SaveIcon />
-                {isSaving ? 'Saving...' : saveLabel}
+                {isSaving ? 'Saving...' : isUploadingImages ? 'Uploading...' : saveLabel}
               </button>
             </div>
           </div>
@@ -851,8 +956,8 @@ export default function DeckEditorClient({
           />
         ) : null}
 
-        {saveError ? (
-          <p className={styles.saveError}>{saveError}</p>
+        {saveError || imageUploadError ? (
+          <p className={styles.saveError}>{saveError ?? imageUploadError}</p>
         ) : null}
       </div>
 
@@ -1197,9 +1302,11 @@ function CardEditorSheet({
   onSelectPaint: (paintIndex: number, paint: PaintPickerPaint | null) => void
 }) {
   const isCover = card.template === 'cover'
-  const isStepLike = card.template === 'step' || card.template === 'image' || card.template === 'theme'
+  const isStepLike = card.template === 'step' || card.template === 'theme'
+  const isImageCard = card.template === 'image' || card.template === 'small-image'
   const isPaintsList = card.template === 'paints'
   const isVideo = card.template === 'video'
+  const paintLimit = paintLimitForTemplate(card.template)
   const embedUrl = isVideo ? getYoutubeEmbedUrl(card.videoUrl) : null
   const initialPaints = useMemo(
     () => deckPaints.map(deckPaintToPickerPaint),
@@ -1304,7 +1411,7 @@ function CardEditorSheet({
         ) : null}
 
         <label className={styles.descriptionPanel}>
-          <span>{isCover ? 'Description' : isPaintsList || isVideo ? 'Caption' : 'Instructions'}</span>
+          <span>{isCover ? 'Description' : isPaintsList || isVideo ? 'Caption' : isImageCard ? 'Text' : 'Instructions'}</span>
           <textarea
             value={card.body}
             onChange={(event) => onChange({ body: event.target.value })}
@@ -1316,7 +1423,7 @@ function CardEditorSheet({
           <section className={styles.paintEditor}>
             <div className={styles.paintEditorHeader}>
               <h3>Paints & Ratios</h3>
-              {card.paints.length < 4 ? (
+              {card.paints.length < paintLimit ? (
                 <button type="button" onClick={onAddPaint}>
                   Add Paint
                 </button>
@@ -1535,7 +1642,7 @@ function DeckPreview({
         <RecipeGuideCoverCard
           recipe={recipe}
           featuredImage={featuredImage}
-          stepCount={stepCards.length}
+          cardCount={cards.length}
           paintCount={deck.paintList.length}
         />
       </div>
@@ -1561,6 +1668,19 @@ function DeckPreview({
                 title={card.title}
                 description={card.body}
                 youtubeUrl={card.videoUrl}
+              />
+            ) : card.template === 'theme' ? (
+              <RecipeGuideThemeStepCard
+                step={step}
+                stepsLength={stepCards.length}
+                paints={card.paints}
+                fallbackImageUrl={heroImage}
+              />
+            ) : card.template === 'small-image' && isUsableImageUrl(card.image) ? (
+              <RecipeGuideSmallImageStepCard
+                step={step}
+                stepsLength={stepCards.length}
+                paints={card.paints}
               />
             ) : isUsableImageUrl(card.image) ? (
               <RecipeGuideImageStepCard

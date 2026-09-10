@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import type { ReactNode } from 'react'
-import { useId } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import {
   ObsidianShareCardFrame,
   ObsidianShareDividerLabel,
@@ -65,6 +65,69 @@ function getYoutubeVideoId(url: string | null) {
 function getYoutubeEmbedUrl(url: string | null) {
   const id = getYoutubeVideoId(url)
   return id ? `https://www.youtube.com/embed/${id}` : null
+}
+
+type YoutubeOembedMetadata = {
+  title: string
+  authorName: string
+  authorUrl: string
+  authorAvatarUrl: string
+  durationLabel: string
+}
+
+const youtubeMetadataCache = new Map<string, YoutubeOembedMetadata | null>()
+
+function getYoutubeOembedUrl(url: string | null) {
+  const id = getYoutubeVideoId(url)
+  return id ? `/api/youtube-oembed?videoId=${encodeURIComponent(id)}` : null
+}
+
+function useYoutubeMetadata(url: string | null) {
+  const oembedUrl = useMemo(() => getYoutubeOembedUrl(url), [url])
+  const [loadedMetadata, setLoadedMetadata] = useState<{
+    oembedUrl: string
+    metadata: YoutubeOembedMetadata | null
+  } | null>(null)
+
+  useEffect(() => {
+    if (!oembedUrl) return
+
+    if (youtubeMetadataCache.has(oembedUrl)) return
+
+    const controller = new AbortController()
+
+    fetch(oembedUrl, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!data || typeof data !== 'object') {
+          youtubeMetadataCache.set(oembedUrl, null)
+          setLoadedMetadata({ oembedUrl, metadata: null })
+          return
+        }
+
+        const nextMetadata = {
+          title: typeof data.title === 'string' ? data.title : '',
+          authorName: typeof data.authorName === 'string' ? data.authorName : '',
+          authorUrl: typeof data.authorUrl === 'string' ? data.authorUrl : '',
+          authorAvatarUrl: typeof data.authorAvatarUrl === 'string' ? data.authorAvatarUrl : '',
+          durationLabel: typeof data.durationLabel === 'string' ? data.durationLabel : '',
+        }
+
+        youtubeMetadataCache.set(oembedUrl, nextMetadata)
+        setLoadedMetadata({ oembedUrl, metadata: nextMetadata })
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        youtubeMetadataCache.set(oembedUrl, null)
+        setLoadedMetadata({ oembedUrl, metadata: null })
+      })
+
+    return () => controller.abort()
+  }, [oembedUrl])
+
+  if (!oembedUrl) return null
+  if (youtubeMetadataCache.has(oembedUrl)) return youtubeMetadataCache.get(oembedUrl) ?? null
+  return loadedMetadata?.oembedUrl === oembedUrl ? loadedMetadata.metadata : null
 }
 
 function CoverStat({
@@ -240,13 +303,13 @@ function PaintsUsed({
 export function RecipeGuideCoverCard({
   recipe,
   featuredImage,
-  stepCount,
+  cardCount,
   paintCount,
   showBrandMark = false,
 }: {
   recipe: Recipe
   featuredImage: RecipeImage | null
-  stepCount: number
+  cardCount: number
   paintCount: number
   showBrandMark?: boolean
 }) {
@@ -290,7 +353,7 @@ export function RecipeGuideCoverCard({
         ) : null}
         <ObsidianShareOrnament />
         <div className="recipe-guide-stats grid grid-cols-[1fr_auto_1fr] items-center font-serif uppercase">
-          <CoverStat icon={<ObsidianShareStepIcon />} count={stepCount} label="Steps" />
+          <CoverStat icon={<ObsidianShareStepIcon />} count={cardCount} label="Cards" />
           <span className="recipe-guide-stat-divider w-px" />
           <CoverStat icon={<ObsidianSharePaletteIcon />} count={paintCount} label="Paints" />
         </div>
@@ -301,8 +364,6 @@ export function RecipeGuideCoverCard({
 
 export function RecipeGuideImageStepCard({
   step,
-  stepsLength,
-  paints,
   showBrandMark = false,
 }: {
   step: RecipeStep
@@ -314,23 +375,7 @@ export function RecipeGuideImageStepCard({
 
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
-      <div className="recipe-guide-step-head shrink-0 text-center">
-        <p className="recipe-guide-step-number font-serif uppercase">
-          <span className="recipe-guide-step-number-word">Step</span>
-          <span className="recipe-guide-step-number-value">
-            {step.step_number}
-          </span>
-          <span className="recipe-guide-step-number-word">of</span>
-          <span className="recipe-guide-step-number-value">{stepsLength}</span>
-        </p>
-        <ObsidianShareOrnament />
-        <ObsidianShareTitle title={step.title} compact />
-      </div>
-      <div className="recipe-guide-image-paints">
-        <PaintsUsed paints={paints} columns />
-      </div>
-      <ObsidianShareOrnament />
-      <div className="recipe-guide-step-image relative -mx-1 min-h-0 flex-1 overflow-hidden border-y">
+      <div className="recipe-guide-image-card relative min-h-0 flex-1 overflow-hidden">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -341,11 +386,170 @@ export function RecipeGuideImageStepCard({
             unoptimized={isInlinePreviewImageUrl(imageUrl)}
           />
         ) : null}
+        <div className="recipe-guide-image-card-shade absolute inset-0" />
+        <section className="recipe-guide-image-card-panel absolute">
+          <h2 className="recipe-guide-image-card-title font-serif">
+            {step.title}
+          </h2>
+          <p className="recipe-guide-image-card-copy">
+            {step.instructions}
+          </p>
+        </section>
       </div>
-      <div className="recipe-guide-short-description shrink-0 text-center">
-        <p className="recipe-guide-short-copy font-serif">
-          {step.instructions}
-        </p>
+    </ObsidianShareCardFrame>
+  )
+}
+
+export function RecipeGuideSmallImageStepCard({
+  step,
+  showBrandMark = false,
+}: {
+  step: RecipeStep
+  stepsLength: number
+  paints: RecipeGuidePaint[]
+  showBrandMark?: boolean
+}) {
+  const imageUrl = isUsableImageUrl(step.image_url) ? step.image_url : null
+
+  return (
+    <ObsidianShareCardFrame showBrandMark={showBrandMark}>
+      <div className="recipe-guide-small-image-card flex min-h-0 flex-1 flex-col">
+        <div className="recipe-guide-small-image-mount relative -mx-1 -mt-1 h-[36%] shrink-0 overflow-hidden rounded-t-[18px] border">
+          {imageUrl ? (
+            <Image
+              src={imageUrl}
+              alt={step.title}
+              fill
+              sizes="(max-width: 768px) 92vw, 420px"
+              className="object-cover"
+              unoptimized={isInlinePreviewImageUrl(imageUrl)}
+            />
+          ) : null}
+          <div className="recipe-guide-small-image-shade absolute inset-0" />
+        </div>
+
+        <div className="recipe-guide-small-image-body flex min-h-0 flex-1 flex-col text-center">
+          <div className="recipe-guide-small-image-title">
+            <h2 className="recipe-guide-small-image-heading font-serif">
+              {step.title}
+            </h2>
+          </div>
+          <ObsidianShareOrnament />
+          <div className="recipe-guide-small-image-copy-panel min-h-0 flex-1">
+            <p className="recipe-guide-small-image-copy font-serif">
+              {step.instructions}
+            </p>
+          </div>
+        </div>
+      </div>
+    </ObsidianShareCardFrame>
+  )
+}
+
+function ThemePaintReferenceRow({
+  paint,
+}: {
+  paint: RecipeGuidePaint
+}) {
+  const color = paint?.hex_approx || '#8b8b8b'
+  const swatchUrl = isUsableImageUrl(paint?.swatch_image_url)
+    ? paint?.swatch_image_url
+    : null
+  const name = paint?.name || 'Unnamed paint'
+  const source = [paint?.brand, paint?.line].filter(Boolean)
+
+  return (
+    <li className="recipe-guide-theme-paint-row">
+      <span
+        className="recipe-guide-theme-swatch"
+        style={{ backgroundColor: color }}
+        aria-label={`${name} swatch`}
+      >
+        {swatchUrl ? (
+          <Image src={swatchUrl} alt="" fill sizes="72px" className="object-cover" />
+        ) : null}
+      </span>
+      <span className="recipe-guide-theme-paint-copy">
+        <span className="recipe-guide-theme-paint-hex">
+          {paint?.hex_approx || 'Custom Paint'}
+        </span>
+        <strong className="recipe-guide-theme-paint-name">
+          {name}
+        </strong>
+        {source.length ? (
+          <span className="recipe-guide-theme-paint-source">
+            {source.join(' / ')}
+          </span>
+        ) : (
+          <span className="recipe-guide-theme-paint-source">
+            Unknown source
+          </span>
+        )}
+      </span>
+    </li>
+  )
+}
+
+export function RecipeGuideThemeStepCard({
+  step,
+  paints,
+  fallbackImageUrl = null,
+  showBrandMark = false,
+}: {
+  step: RecipeStep
+  stepsLength: number
+  paints: RecipeGuidePaint[]
+  fallbackImageUrl?: string | null
+  showBrandMark?: boolean
+}) {
+  const imageUrl = isUsableImageUrl(step.image_url)
+    ? step.image_url
+    : isUsableImageUrl(fallbackImageUrl)
+      ? fallbackImageUrl
+      : null
+  const footerText = step.instructions?.trim() || 'A curated palette for stunning results'
+  const shownPaints = paints.slice(0, 7)
+  const hiddenPaintCount = Math.max(0, paints.length - shownPaints.length)
+
+  return (
+    <ObsidianShareCardFrame showBrandMark={showBrandMark}>
+      <div className="recipe-guide-theme-card relative min-h-0 flex-1 overflow-hidden">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={step.title}
+            fill
+            sizes="(max-width: 768px) 92vw, 420px"
+            className="object-cover"
+            unoptimized={isInlinePreviewImageUrl(imageUrl)}
+          />
+        ) : null}
+        <div className="recipe-guide-theme-card-shade absolute inset-0" />
+        <section className="recipe-guide-theme-content absolute inset-0">
+          <div className="recipe-guide-theme-heading">
+            <h2 className="recipe-guide-theme-title font-serif">
+              {step.title}
+            </h2>
+            <p className="recipe-guide-theme-kicker font-serif uppercase">
+              Colour Reference
+            </p>
+          </div>
+
+          <ul className="recipe-guide-theme-paint-list">
+            {shownPaints.map((paint, index) => (
+              <ThemePaintReferenceRow
+                key={`${paint?.id || 'paint'}-${index}`}
+                paint={paint}
+              />
+            ))}
+          </ul>
+
+          <p className="recipe-guide-theme-footer font-serif uppercase">
+            {hiddenPaintCount > 0
+              ? `${footerText} + ${hiddenPaintCount} more`
+              : footerText}
+          </p>
+        </section>
       </div>
     </ObsidianShareCardFrame>
   )
@@ -389,15 +593,11 @@ export function RecipeGuideDescriptiveStepCard({
 }
 
 function PaintOwnershipPill({ paint }: { paint: RecipeGuidePaint }) {
-  if (paint?.is_owned) {
-    return <span className="recipe-guide-paint-list-pill recipe-guide-paint-list-pill-owned">Owned</span>
-  }
-
-  if (paint?.is_wishlist) {
-    return <span className="recipe-guide-paint-list-pill recipe-guide-paint-list-pill-wishlist">Wishlist</span>
-  }
-
-  return <span className="recipe-guide-paint-list-pill">Not Owned</span>
+  return (
+    <span className="recipe-guide-paint-list-pill">
+      {paint?.is_owned ? 'Owned' : 'Not Owned'}
+    </span>
+  )
 }
 
 function PaintListSwatch({ paint }: { paint: RecipeGuidePaint }) {
@@ -429,46 +629,55 @@ export function RecipeGuidePaintsCard({
   paints: RecipeGuidePaint[]
   showBrandMark?: boolean
 }) {
+  const paintCountLabel = `${paints.length} ${paints.length === 1 ? 'paint' : 'paints'} in this guide`
+  const footerText = description.trim()
+
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
-      <div className="recipe-guide-step-head shrink-0 text-center">
-        <p className="recipe-guide-step-number font-serif uppercase">
-          <span className="recipe-guide-step-number-word">The Palette</span>
-        </p>
-        <ObsidianShareOrnament />
-        <ObsidianShareTitle title={title} compact />
-      </div>
-      <ObsidianShareOrnament />
-      <div className="recipe-guide-paint-list min-h-0 flex-1 overflow-y-auto">
-        {paints.length ? (
-          <ul className="recipe-guide-paint-list-items">
-            {paints.map((paint, index) => (
-              <li
-                key={`${paint?.id || 'paint'}-${index}`}
-                className="recipe-guide-paint-list-row"
-              >
-                <PaintListSwatch paint={paint} />
-                <span className="recipe-guide-paint-list-copy">
-                  <strong className="font-serif">{paint?.name || 'Unnamed paint'}</strong>
-                  <small>
-                    {[paint?.brand, paint?.line].filter(Boolean).join(' - ') || 'Unknown source'}
-                  </small>
-                </span>
-                <PaintOwnershipPill paint={paint} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="recipe-guide-paint-list-empty font-serif">
-            No paints have been added yet.
+      <section className="recipe-guide-paints-card min-h-0 flex-1">
+        <header className="recipe-guide-paint-list-head text-center">
+          <h2 className="recipe-guide-paint-list-title font-serif">
+            {title || 'Paint List'}
+          </h2>
+          <p className="recipe-guide-paint-list-count font-serif uppercase">
+            {paintCountLabel}
           </p>
-        )}
-      </div>
-      {description ? (
-        <div className="recipe-guide-short-description shrink-0 text-center">
-          <p className="recipe-guide-short-copy font-serif">{description}</p>
+        </header>
+        <ObsidianShareOrnament />
+        <div className="recipe-guide-paint-list min-h-0 flex-1 overflow-y-auto">
+          {paints.length ? (
+            <ul className="recipe-guide-paint-list-items">
+              {paints.map((paint, index) => (
+                <li
+                  key={`${paint?.id || 'paint'}-${index}`}
+                  className="recipe-guide-paint-list-row"
+                >
+                  <PaintListSwatch paint={paint} />
+                  <span className="recipe-guide-paint-list-copy">
+                    <strong className="font-serif">{paint?.name || 'Unnamed paint'}</strong>
+                    <small>
+                      {[paint?.brand, paint?.line].filter(Boolean).join(' - ') || 'Unknown source'}
+                    </small>
+                  </span>
+                  <PaintOwnershipPill paint={paint} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="recipe-guide-paint-list-empty font-serif">
+              No paints have been added yet.
+            </p>
+          )}
         </div>
-      ) : null}
+        {footerText ? (
+          <footer className="recipe-guide-paint-list-footer shrink-0 text-center">
+            <ObsidianShareOrnament />
+            <p className="recipe-guide-paint-list-footer-copy font-serif">
+              {footerText}
+            </p>
+          </footer>
+        ) : null}
+      </section>
     </ObsidianShareCardFrame>
   )
 }
@@ -485,37 +694,73 @@ export function RecipeGuideVideoCard({
   showBrandMark?: boolean
 }) {
   const embedUrl = getYoutubeEmbedUrl(youtubeUrl)
+  const metadata = useYoutubeMetadata(youtubeUrl)
+  const videoTitle = metadata?.title || (embedUrl ? 'YouTube tutorial video' : 'No video linked')
+  const creator = metadata?.authorName || (embedUrl ? 'Loading creator' : 'Add a YouTube link')
+  const durationLabel = metadata?.durationLabel || null
+  const authorAvatarUrl = metadata?.authorAvatarUrl ?? null
+  const creatorAvatarUrl = isUsableImageUrl(authorAvatarUrl)
+    ? authorAvatarUrl
+    : null
+  const creatorInitial = creator.trim().charAt(0).toUpperCase() || 'Y'
+  const footerText = description.trim()
 
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
-      <div className="recipe-guide-step-head shrink-0 text-center">
-        <p className="recipe-guide-step-number font-serif uppercase">
-          <span className="recipe-guide-step-number-word">Video</span>
-        </p>
-        <ObsidianShareOrnament />
-        <ObsidianShareTitle title={title} compact />
-      </div>
-      <ObsidianShareOrnament />
-      <div className="recipe-guide-video-frame relative -mx-1 min-h-0 flex-1 overflow-hidden border-y">
-        {embedUrl ? (
-          <iframe
-            src={embedUrl}
-            title={title}
-            className="recipe-guide-video-iframe"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        ) : (
-          <div className="recipe-guide-video-empty grid h-full place-items-center text-center font-serif">
-            No video linked yet.
-          </div>
-        )}
-      </div>
-      {description ? (
-        <div className="recipe-guide-short-description shrink-0 text-center">
-          <p className="recipe-guide-short-copy font-serif">{description}</p>
+      <section className="recipe-guide-video-card min-h-0 flex-1">
+        <div className="recipe-guide-video-frame relative shrink-0 overflow-hidden">
+          {embedUrl ? (
+            <iframe
+              src={embedUrl}
+              title={videoTitle}
+              className="recipe-guide-video-iframe"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          ) : (
+            <div className="recipe-guide-video-empty grid h-full place-items-center text-center font-serif">
+              No video linked yet.
+            </div>
+          )}
         </div>
-      ) : null}
+        <section className="recipe-guide-video-meta shrink-0">
+          <h3 className="recipe-guide-video-title font-serif">
+            {videoTitle}
+          </h3>
+          <div className="recipe-guide-video-byline">
+            <p className="recipe-guide-video-creator">
+              <span
+                className="recipe-guide-video-creator-avatar"
+                style={creatorAvatarUrl ? { backgroundImage: `url("${creatorAvatarUrl}")` } : undefined}
+                aria-hidden="true"
+              >
+                {creatorAvatarUrl ? null : creatorInitial}
+              </span>
+              <span className="recipe-guide-video-creator-by">by</span>
+              <span className="recipe-guide-video-creator-name">{creator}</span>
+            </p>
+            {durationLabel ? (
+              <span className="recipe-guide-video-duration font-serif">
+                {durationLabel}
+              </span>
+            ) : null}
+          </div>
+        </section>
+        <section className="recipe-guide-video-card-copy shrink-0 text-center">
+          <ObsidianShareOrnament />
+          <h2 className="recipe-guide-video-card-title font-serif">
+            {title || 'Tutorial Video'}
+          </h2>
+        </section>
+        {footerText ? (
+          <section className="recipe-guide-video-description min-h-0 flex-1">
+            <div className="recipe-guide-video-description-divider" aria-hidden="true" />
+            <p className="recipe-guide-video-description-copy">
+              {footerText}
+            </p>
+          </section>
+        ) : null}
+      </section>
     </ObsidianShareCardFrame>
   )
 }

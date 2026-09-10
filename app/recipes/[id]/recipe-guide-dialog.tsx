@@ -186,7 +186,7 @@ export default function RecipeGuideDialog({
           <RecipeGuideCoverCard
             recipe={recipe}
             featuredImage={featuredImage}
-            stepCount={steps.length}
+            cardCount={totalCards}
             paintCount={paintCount}
             showBrandMark={showBrandMark}
           />
@@ -211,7 +211,7 @@ export default function RecipeGuideDialog({
         />
       )
     },
-    [featuredImage, getPaintsForStep, paintCount, recipe, steps.length]
+    [featuredImage, getPaintsForStep, paintCount, recipe, steps.length, totalCards]
   )
 
   const captureRecipeCardFiles = useCallback(async () => {
