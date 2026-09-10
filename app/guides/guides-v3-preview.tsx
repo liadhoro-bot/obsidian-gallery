@@ -1439,7 +1439,6 @@ export default function GuidesV3Preview({
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}
           totalGuides={featureGuides.length}
-          tourName="guides_list"
         />
       ) : null}
     </main>

@@ -748,7 +748,6 @@ export default function DeckEditorClient({
                 guides={featureGuides}
                 label="Deck editor help"
                 buttonClassName={styles.iconButton}
-                tourName="deck_editor"
               />
               {!deck.saved ? (
                 <button className={styles.iconButton} type="button" aria-label="Favorite deck">
