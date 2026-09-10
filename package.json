@@ -9,16 +9,19 @@
     "lint": "eslint",
     "perf:audit": "tsx scripts/run-performance-audit.ts",
     "perf:audit:important": "tsx scripts/run-performance-audit.ts --important",
+    "perf:report": "tsx scripts/run-performance-report.ts",
+    "perf:report:skip-build": "tsx scripts/run-performance-report.ts --skip-build",
     "perf:lighthouse": "node scripts/run-lighthouse-ci.mjs",
-    "perf:flows": "tsx scripts/run-performance-flows.ts",
-    "perf:v3": "tsx scripts/run-v3-performance-test.ts",
-    "perf:v3:benchmark": "tsx scripts/run-v3-benchmark.ts",
+    "perf:test": "tsx scripts/run-v3-performance-test.ts",
+    "perf:benchmark": "tsx scripts/run-v3-benchmark.ts",
     "perf:install-browsers": "playwright install chromium",
     "qa": "npm run qa:functional",
     "qa:functional": "tsx scripts/run-functional-qa.ts",
     "import-curator-templates": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/import-curator-templates.ts",
     "audit:paint-swatches": "tsx scripts/audit-paint-swatches.ts",
-    "fix:paint-swatches": "tsx scripts/audit-paint-swatches.ts --apply"
+    "fix:paint-swatches": "tsx scripts/audit-paint-swatches.ts --apply",
+    "seed:test-users": "node scripts/seed-test-users.mjs",
+    "seed:test-users:reset-onboarding": "node scripts/seed-test-users.mjs --reset-onboarding"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

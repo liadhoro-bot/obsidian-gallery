@@ -9,6 +9,7 @@ export type PaintsV3Paint = {
   line: string
   finish: string
   size: string
+  msrp: string
   color: string
   swatchImageUrl: string | null
   owned: boolean
@@ -39,9 +40,10 @@ type CatalogPaintRow = {
   name: string | null
   sku: string | null
   hex_approx: string | null
-  swatch_image_url: string | null
+  swatch_image_url?: string | null
   paint_type: string | null
   color_match_enabled: boolean | null
+  price_usd: number | string | null
 }
 
 type CustomPaintRow = {
@@ -96,7 +98,42 @@ function cleanLabel(value: string | null | undefined, fallback: string) {
   return cleanValue || fallback
 }
 
-function getPaintSwatchImageUrl(value: string | null | undefined) {
+function formatMsrp(value: CatalogPaintRow['price_usd']) {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+
+  const price = Number(value)
+  if (!Number.isFinite(price)) {
+    return '-'
+  }
+
+  return `$${price.toFixed(2)}`
+}
+
+type PaintsV3PayloadOptions = {
+  includeSwatchImages?: boolean
+  libraryLimit?: number
+}
+
+const catalogPaintFields = [
+  'id',
+  'brand',
+  'line',
+  'name',
+  'sku',
+  'hex_approx',
+  'paint_type',
+  'color_match_enabled',
+  'price_usd',
+]
+
+const catalogPaintFieldsWithSwatchImages = [
+  ...catalogPaintFields,
+  'swatch_image_url',
+]
+
+export function getPaintSwatchImageUrl(value: string | null | undefined) {
   const swatchUrl =
     getSupabaseImageUrl(value, {
       width: 180,
@@ -123,7 +160,8 @@ function getPaintSwatchImageUrl(value: string | null | undefined) {
 
 function toCatalogPaint(
   paint: CatalogPaintRow,
-  ownershipByPaintId: Map<string, OwnershipRow>
+  ownershipByPaintId: Map<string, OwnershipRow>,
+  includeSwatchImages: boolean
 ): PaintsV3Paint {
   const ownership = ownershipByPaintId.get(paint.id)
   const brand = cleanLabel(paint.brand, 'Catalog')
@@ -137,8 +175,11 @@ function toCatalogPaint(
     line,
     finish,
     size: defaultPaintSize,
+    msrp: formatMsrp(paint.price_usd),
     color: isHexColor(paint.hex_approx) ? paint.hex_approx!.toUpperCase() : fallbackColor(paint.id),
-    swatchImageUrl: getPaintSwatchImageUrl(paint.swatch_image_url),
+    swatchImageUrl: includeSwatchImages
+      ? getPaintSwatchImageUrl(paint.swatch_image_url)
+      : null,
     owned: ownership?.is_owned === true,
     wish: ownership?.is_wishlist === true,
     colorMatchEnabled: paint.color_match_enabled !== false,
@@ -148,7 +189,8 @@ function toCatalogPaint(
 
 function toCustomPaint(
   paint: CustomPaintRow,
-  imageByPaintId: Map<string, string>
+  imageByPaintId: Map<string, string>,
+  includeSwatchImages: boolean
 ): PaintsV3Paint {
   const brand = cleanLabel(paint.manufacturer, 'Custom')
   const line = cleanLabel(paint.series, 'Mix')
@@ -161,8 +203,11 @@ function toCustomPaint(
     line,
     finish,
     size: 'Custom',
+    msrp: '-',
     color: isHexColor(paint.color_hex) ? paint.color_hex!.toUpperCase() : fallbackColor(paint.id),
-    swatchImageUrl: getPaintSwatchImageUrl(imageByPaintId.get(paint.id)),
+    swatchImageUrl: includeSwatchImages
+      ? getPaintSwatchImageUrl(imageByPaintId.get(paint.id))
+      : null,
     owned: true,
     wish: false,
     colorMatchEnabled: false,
@@ -207,24 +252,37 @@ async function loadCustomPaintImages(
 }
 
 async function loadCatalogPaintRows(
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  includeSwatchImages: boolean,
+  maxRows = Number.POSITIVE_INFINITY
 ) {
   let from = 0
   let allRows: CatalogPaintRow[] = []
 
   while (true) {
+    const remainingRows = maxRows - allRows.length
+    if (remainingRows <= 0) {
+      break
+    }
+
+    const to = from + Math.min(libraryPageSize, remainingRows) - 1
     const { data, error } = await supabase
       .from('paint_catalog')
-      .select('id, brand, line, name, sku, hex_approx, swatch_image_url, paint_type, color_match_enabled')
+      .select(
+        (includeSwatchImages
+          ? catalogPaintFieldsWithSwatchImages
+          : catalogPaintFields
+        ).join(', ')
+      )
       .eq('is_active', true)
       .order('brand', { ascending: true })
       .order('line', { ascending: true })
       .order('name', { ascending: true })
-      .range(from, from + libraryPageSize - 1)
+      .range(from, to)
 
     if (error) throw new Error(error.message)
 
-    const rows = (data ?? []) as CatalogPaintRow[]
+    const rows = (data ?? []) as unknown as CatalogPaintRow[]
     allRows = [...allRows, ...rows]
 
     if (rows.length < libraryPageSize) {
@@ -237,108 +295,110 @@ async function loadCatalogPaintRows(
   return allRows
 }
 
-export const getPaintsV3Payload = cache(async (userId: string) => {
-  const supabase = await createClient()
+export const getPaintsV3Payload = cache(
+  async (userId: string, options: PaintsV3PayloadOptions = {}) => {
+    const supabase = await createClient()
+    const includeSwatchImages = options.includeSwatchImages !== false
+    const maxLibraryRows = options.libraryLimit ?? Number.POSITIVE_INFINITY
+    const collectionPaintSelectFields = (
+      includeSwatchImages
+        ? catalogPaintFieldsWithSwatchImages
+        : catalogPaintFields
+    )
+      .map((field) => `          ${field}`)
+      .join(',\n')
 
-  const [
-    ownershipResult,
-    collectionResult,
-    customResult,
-    libraryRows,
-  ] =
-    await Promise.all([
-    supabase
-      .from('user_paint_ownership')
-      .select('paint_catalog_id, is_owned, is_wishlist')
-      .eq('user_id', userId),
-    supabase
-      .from('user_paint_ownership')
-      .select(
-        `
+    const [ownershipResult, collectionResult, customResult, libraryRows] =
+      await Promise.all([
+        supabase
+          .from('user_paint_ownership')
+          .select('paint_catalog_id, is_owned, is_wishlist')
+          .eq('user_id', userId),
+        supabase
+          .from('user_paint_ownership')
+          .select(
+            `
         paint_catalog_id,
         is_owned,
         is_wishlist,
         paint:paint_catalog!inner (
-          id,
-          brand,
-          line,
-          name,
-          sku,
-          hex_approx,
-          swatch_image_url,
-          paint_type,
-          color_match_enabled
+${collectionPaintSelectFields}
         )
       `
-      )
-      .eq('user_id', userId)
-      .or('is_owned.eq.true,is_wishlist.eq.true')
-      .order('brand', { ascending: true, referencedTable: 'paint' })
-      .order('line', { ascending: true, referencedTable: 'paint' })
-      .order('name', { ascending: true, referencedTable: 'paint' })
-      .limit(collectionLimit),
-    supabase
-      .from('paints')
-      .select('id, name, manufacturer, series, paint_type, color_hex')
-      .eq('user_id', userId)
-      .order('manufacturer', { ascending: true })
-      .order('series', { ascending: true })
-      .order('name', { ascending: true })
-      .limit(customLimit),
-    loadCatalogPaintRows(supabase),
-  ])
+          )
+          .eq('user_id', userId)
+          .or('is_owned.eq.true,is_wishlist.eq.true')
+          .order('brand', { ascending: true, referencedTable: 'paint' })
+          .order('line', { ascending: true, referencedTable: 'paint' })
+          .order('name', { ascending: true, referencedTable: 'paint' })
+          .limit(collectionLimit),
+        supabase
+          .from('paints')
+          .select('id, name, manufacturer, series, paint_type, color_hex')
+          .eq('user_id', userId)
+          .order('manufacturer', { ascending: true })
+          .order('series', { ascending: true })
+          .order('name', { ascending: true })
+          .limit(customLimit),
+        loadCatalogPaintRows(supabase, includeSwatchImages, maxLibraryRows),
+      ])
 
-  if (ownershipResult.error) throw new Error(ownershipResult.error.message)
-  if (collectionResult.error) throw new Error(collectionResult.error.message)
-  if (customResult.error) throw new Error(customResult.error.message)
+    if (ownershipResult.error) throw new Error(ownershipResult.error.message)
+    if (collectionResult.error) throw new Error(collectionResult.error.message)
+    if (customResult.error) throw new Error(customResult.error.message)
 
-  const ownershipRows = (ownershipResult.data ?? []) as OwnershipRow[]
-  const customRows = (customResult.data ?? []) as CustomPaintRow[]
-  const customImageByPaintId = await loadCustomPaintImages(
-    supabase,
-    userId,
-    customRows.map((paint) => paint.id)
-  )
-  const ownershipByPaintId = new Map(
-    ownershipRows.map((row) => [row.paint_catalog_id, row])
-  )
-  const collectionCatalogPaints = ((collectionResult.data ??
-    []) as CollectionOwnershipRow[])
-    .map((row) => {
-      const paint = Array.isArray(row.paint) ? row.paint[0] : row.paint
-      if (!paint) return null
-      return toCatalogPaint(paint, ownershipByPaintId)
-    })
-    .filter((paint) => paint !== null)
-  const customPaints = customRows.map((paint) =>
-    toCustomPaint(paint, customImageByPaintId)
-  )
-  const ownedPaints = [...collectionCatalogPaints, ...customPaints]
-    .sort(sortPaints)
-    .slice(0, collectionLimit)
-  const libraryPaints = libraryRows.map(
-    (paint) => toCatalogPaint(paint, ownershipByPaintId)
-  )
-  const filterRows = [
-    ...libraryPaints,
-    ...ownedPaints.map((paint) => ({
-      brand: paint.brand,
-      line: paint.line,
-    })),
-  ]
+    const ownershipRows = (ownershipResult.data ?? []) as OwnershipRow[]
+    const customRows = (customResult.data ?? []) as CustomPaintRow[]
+    const customImageByPaintId = includeSwatchImages
+      ? await loadCustomPaintImages(
+          supabase,
+          userId,
+          customRows.map((paint) => paint.id)
+        )
+      : new Map<string, string>()
+    const ownershipByPaintId = new Map(
+      ownershipRows.map((row) => [row.paint_catalog_id, row])
+    )
+    const collectionCatalogPaints = ((collectionResult.data ??
+      []) as unknown as CollectionOwnershipRow[])
+      .map((row) => {
+        const paint = Array.isArray(row.paint) ? row.paint[0] : row.paint
+        if (!paint) return null
+        return toCatalogPaint(paint, ownershipByPaintId, includeSwatchImages)
+      })
+      .filter((paint) => paint !== null)
+    const customPaints = customRows.map((paint) =>
+      toCustomPaint(paint, customImageByPaintId, includeSwatchImages)
+    )
+    const ownedPaints = [...collectionCatalogPaints, ...customPaints]
+      .sort(sortPaints)
+      .slice(0, collectionLimit)
+    const libraryPaints = libraryRows.map((paint) =>
+      toCatalogPaint(paint, ownershipByPaintId, includeSwatchImages)
+    )
+    const filterRows = [
+      ...libraryPaints,
+      ...ownedPaints.map((paint) => ({
+        brand: paint.brand,
+        line: paint.line,
+      })),
+    ]
 
-  return {
-    ownedPaints,
-    libraryPaints,
-    counts: {
-      owned: ownershipRows.filter((row) => row.is_owned).length + customPaints.length,
-      wishlist: ownershipRows.filter((row) => row.is_wishlist).length,
-      custom: customPaints.length,
-      libraryLoaded: libraryPaints.length,
-    },
-    filters: {
-      brands: uniqueSorted(filterRows.map((paint) => paint.brand)),
-      lines: uniqueSorted(filterRows.map((paint) => paint.line)),
-    },
-  } satisfies PaintsV3Payload
-})
+    return {
+      ownedPaints,
+      libraryPaints,
+      counts: {
+        owned:
+          ownershipRows.filter((row) => row.is_owned).length +
+          customPaints.length,
+        wishlist: ownershipRows.filter((row) => row.is_wishlist).length,
+        custom: customPaints.length,
+        libraryLoaded: libraryPaints.length,
+      },
+      filters: {
+        brands: uniqueSorted(filterRows.map((paint) => paint.brand)),
+        lines: uniqueSorted(filterRows.map((paint) => paint.line)),
+      },
+    } satisfies PaintsV3Payload
+  }
+)

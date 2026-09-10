@@ -377,7 +377,8 @@
 :global([data-v3-paints-indicator="sort-panel"]) select,
 :global([data-v3-paints-indicator="filter-panel"]) label:has(input[type="color"]),
 :global([data-v3-paints-indicator="filter-panel"]) button,
-:global([data-v3-paints-indicator="sort-panel"]) button {
+:global([data-v3-paints-indicator="sort-panel"]) button,
+:global([data-v3-paints-indicator="showing-count"]) {
   min-width: 0;
   font-size: 0.78rem;
 }
@@ -386,7 +387,8 @@
 :global([data-v3-paints-indicator="sort-panel"]) select,
 :global([data-v3-paints-indicator="filter-panel"]) label:has(input[type="color"]),
 :global([data-v3-paints-indicator="filter-panel"]) button,
-:global([data-v3-paints-indicator="sort-panel"]) button {
+:global([data-v3-paints-indicator="sort-panel"]) button,
+:global([data-v3-paints-indicator="showing-count"]) {
   border-width: 1.5px;
   border-style: solid;
   border-color: rgba(255, 255, 255, 0.9);
@@ -403,6 +405,34 @@
     inset 0 -2px 0 rgba(86, 55, 27, 0.2),
     0 4px 14px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
+}
+
+:global([data-v3-paints-indicator="showing-count"]) {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding-inline: 10px;
+  color: var(--og-text-primary);
+  font-family: var(--og-font-ui);
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+:global([data-v3-paints-indicator="showing-count"]) span,
+:global([data-v3-paints-indicator="showing-count"]) strong {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+:global([data-v3-paints-indicator="showing-count"]) strong {
+  font-variant-numeric: tabular-nums;
 }
 
 :global([data-v3-paints-indicator="filter-panel"]) select:hover,
@@ -599,17 +629,6 @@
   padding-inline: 8px;
   text-align: center;
   white-space: nowrap;
-}
-
-.paintsSilver [data-v3-paints-indicator="paint-details-button"] {
-  width: 100%;
-  border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
-  background-color: var(--og-walnut-950);
-  background-image: var(--og-material-walnut-control);
-  color: var(--og-paper-50);
-  font-family: var(--og-font-display);
-  font-size: 0.88rem;
-  font-weight: 600;
 }
 
 .paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) {

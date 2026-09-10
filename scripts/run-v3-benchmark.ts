@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import net from 'node:net'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
@@ -56,6 +56,7 @@ type BenchmarkResult = NavigationBenchmark | InteractionBenchmark
 
 type NavigationTarget = {
   detail: string
+  fallbackReadySelector?: string
   label: string
   route: string
   surface: string
@@ -97,6 +98,8 @@ const BUDGETS = {
   transferSize: Number(process.env.V3_BENCHMARK_MAX_TRANSFER_BYTES ?? 1_500_000),
 }
 
+const RETIRED_V2_ROUTE_PATTERNS = [/^\/recipes(?:\/|\?|$)/, /^\/vault(?:\/|\?|$)/]
+
 const MAIN_PAGE_TARGETS: NavigationTarget[] = [
   {
     detail: 'active-units',
@@ -123,8 +126,8 @@ const MAIN_PAGE_TARGETS: NavigationTarget[] = [
     surface: 'guides',
   },
   {
-    detail: 'feed',
-    label: 'Community / Feed',
+    detail: 'contests',
+    label: 'Community / Contests',
     route: '/community?preview=1',
     surface: 'community',
   },
@@ -139,6 +142,7 @@ const SUPPORTING_TARGETS: NavigationTarget[] = [
   },
   {
     detail: 'mine',
+    fallbackReadySelector: 'main',
     label: 'Themes / My Themes',
     route: '/themes?preview=1',
     surface: 'themes',
@@ -183,6 +187,153 @@ function formatBytes(bytes: number) {
   if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(2)} MB`
   if (bytes >= 1_000) return `${Math.round(bytes / 1_000)} KB`
   return `${bytes} B`
+}
+
+function formatBudgetBytes(bytes: number) {
+  return bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : formatBytes(bytes)
+}
+
+function assertPublishedV3Route(route: string) {
+  if (RETIRED_V2_ROUTE_PATTERNS.some((pattern) => pattern.test(route))) {
+    throw new Error(`Refusing to benchmark retired V2 route: ${route}`)
+  }
+
+  if (!route.includes('preview=1')) {
+    throw new Error(`Refusing to benchmark non-V3 preview route: ${route}`)
+  }
+}
+
+function metricLine(label: string, actual: string, benchmark: string) {
+  return `- ${label}: ${actual}, benchmark: ${benchmark}`
+}
+
+function budgetStatus(actual: number, budget: number) {
+  return actual <= budget ? 'within' : 'over'
+}
+
+function createNavigationCards(
+  navigation: ReturnType<typeof groupedNavigationSummaries>
+) {
+  return navigation.flatMap((row) => [
+    `### ${row.label}`,
+    '',
+    `Route: \`${row.route}\``,
+    '',
+    metricLine(
+      'Response',
+      `${row.responseMs.p95}ms`,
+      `<=${BUDGETS.responseMs}ms (${budgetStatus(row.responseMs.p95, BUDGETS.responseMs)})`
+    ),
+    metricLine(
+      'FCP',
+      `${row.fcp.p95}ms`,
+      `<=${BUDGETS.lcp}ms reference (${budgetStatus(row.fcp.p95, BUDGETS.lcp)})`
+    ),
+    metricLine(
+      'LCP',
+      `${row.lcp.p95}ms`,
+      `<=${BUDGETS.lcp}ms (${budgetStatus(row.lcp.p95, BUDGETS.lcp)})`
+    ),
+    metricLine(
+      'Control ready',
+      `${row.controlReadyMs.p95}ms`,
+      `<=${BUDGETS.controlReadyMs}ms (${budgetStatus(row.controlReadyMs.p95, BUDGETS.controlReadyMs)})`
+    ),
+    metricLine(
+      'TBT',
+      `${row.totalBlockingTime.p95}ms`,
+      `<=${BUDGETS.totalBlockingTime}ms (${budgetStatus(row.totalBlockingTime.p95, BUDGETS.totalBlockingTime)})`
+    ),
+    metricLine(
+      'Longest task',
+      `${row.longestTask.p95}ms`,
+      `<=${BUDGETS.longestTask}ms (${budgetStatus(row.longestTask.p95, BUDGETS.longestTask)})`
+    ),
+    metricLine(
+      'Transfer',
+      formatBytes(row.transferSize.p95),
+      `<=${formatBudgetBytes(BUDGETS.transferSize)} (${budgetStatus(row.transferSize.p95, BUDGETS.transferSize)})`
+    ),
+    metricLine(
+      'CLS',
+      (row.cls.p95 / 1000).toFixed(3),
+      `<=${BUDGETS.cls} (${budgetStatus(row.cls.p95 / 1000, BUDGETS.cls)})`
+    ),
+    '',
+  ])
+}
+
+function createInteractionCards(
+  interactions: ReturnType<typeof groupedInteractionSummaries>
+) {
+  if (!interactions.length) return ['No interactions measured for this scope.', '']
+
+  return interactions.flatMap((row) => [
+    `### ${row.label}`,
+    '',
+    metricLine(
+      'Event to ready',
+      `${row.readyMs.p95}ms`,
+      `<=${BUDGETS.interactionMs}ms (${budgetStatus(row.readyMs.p95, BUDGETS.interactionMs)})`
+    ),
+    '',
+  ])
+}
+
+function createAnalysis(
+  navigation: ReturnType<typeof groupedNavigationSummaries>,
+  interactions: ReturnType<typeof groupedInteractionSummaries>,
+  resources: ReturnType<typeof topResourceSummaries>
+) {
+  const overControl = navigation
+    .filter((row) => row.controlReadyMs.p95 > BUDGETS.controlReadyMs)
+    .sort((first, second) => second.controlReadyMs.p95 - first.controlReadyMs.p95)
+  const overTransfer = navigation
+    .filter((row) => row.transferSize.p95 > BUDGETS.transferSize)
+    .sort((first, second) => second.transferSize.p95 - first.transferSize.p95)
+  const overInteractions = interactions
+    .filter((row) => row.readyMs.p95 > BUDGETS.interactionMs)
+    .sort((first, second) => second.readyMs.p95 - first.readyMs.p95)
+  const slowResources = resources.slice(0, 5)
+
+  const lines = [
+    '## Bottleneck Analysis',
+    '',
+    overControl.length
+      ? `Control readiness is the most visible page-level issue. Slowest: ${overControl
+          .slice(0, 4)
+          .map((row) => `${row.label} ${row.controlReadyMs.p95}ms`)
+          .join(', ')}.`
+      : 'Control readiness is within budget on the measured pages.',
+    overTransfer.length
+      ? `Transfer weight is over budget on: ${overTransfer
+          .slice(0, 4)
+          .map((row) => `${row.label} ${formatBytes(row.transferSize.p95)}`)
+          .join(', ')}.`
+      : 'Measured document transfer is within budget for this benchmark scope.',
+    overInteractions.length
+      ? `Interactions need attention, especially ${overInteractions
+          .slice(0, 3)
+          .map((row) => `${row.label} ${row.readyMs.p95}ms`)
+          .join(', ')}.`
+      : 'Measured interactions are within budget.',
+    slowResources.length
+      ? `Slowest observed resources: ${slowResources
+          .map((row) => `${row.name} ${row.duration.p95}ms`)
+          .join('; ')}.`
+      : 'No slow resources were captured.',
+    '',
+    '## Suggested Workpath',
+    '',
+    '1. Reduce shared V3 visual payload first: resize/convert material and hero images, avoid loading offscreen decorative images during initial route readiness, and keep route-specific assets lazy.',
+    '2. Keep dashboard initial render focused on Active Units: defer My Progress metadata, achievements, and non-current nav prefetch work until intent.',
+    '3. Trim client runtime and analytics startup: lazy-load nonessential PostHog modules and feature-guide/tour code after first route readiness.',
+    '4. Bring Themes onto the same perf-marker instrumentation as the other V3 pages so fallback coverage becomes first-class coverage.',
+    '5. Expand coverage only for current user-facing V3 branches; keep retired V2 and unreleased flows out of the main budget gate.',
+    '',
+  ]
+
+  return lines
 }
 
 function storageStateMatchesBaseUrl(storageStatePath: string, baseUrl: string) {
@@ -296,11 +447,6 @@ async function withTimeout<T>(
   } finally {
     if (timeout) clearTimeout(timeout)
   }
-}
-
-async function benchmarkStep<T>(label: string, promise: Promise<T>) {
-  console.log(`- ${label}`)
-  return withTimeout(label, promise, stepTimeoutMs)
 }
 
 async function installPerfObservers(page: Page) {
@@ -483,22 +629,34 @@ async function measureNavigation(
   sample: number,
   resources: ResourceBenchmark[]
 ): Promise<NavigationBenchmark> {
+  assertPublishedV3Route(target.route)
   console.log(`- ${target.label} (${target.route})`)
   const started = performance.now()
   const response = await page.goto(target.route, { waitUntil: 'commit' })
   const responseMs = Math.round(performance.now() - started)
 
   await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => {})
-  await waitForV3Indicator(page, target.surface, target.detail)
+  const firstControl = page.locator('button, input, select, textarea, a[href]').first()
+  const fallbackReadyPromise = target.fallbackReadySelector
+    ? page
+        .locator(target.fallbackReadySelector)
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 })
+    : null
+  const readyPromise = fallbackReadyPromise
+    ? Promise.race([
+        waitForV3Indicator(page, target.surface, target.detail),
+        fallbackReadyPromise,
+      ])
+    : waitForV3Indicator(page, target.surface, target.detail)
+
+  await Promise.all([
+    readyPromise,
+    firstControl.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+  ])
+  const controlReadyMs = Math.round(performance.now() - started)
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   await page.waitForTimeout(350)
-
-  const controlReadyStarted = performance.now()
-  const firstControl = page.locator('button, input, select, textarea, a[href]').first()
-  if ((await firstControl.count()) > 0) {
-    await firstControl.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-  }
-  const controlReadyMs = Math.round(performance.now() - controlReadyStarted)
   const snapshot = await readPageSnapshot(page)
 
   resources.push(
@@ -547,14 +705,11 @@ async function measureInteraction(
   const previousCount = await markCount(page, surface, detail).catch(() => 0)
   const started = performance.now()
   await action()
-  const elapsedMs = Math.round(performance.now() - started)
-  const readyStarted = performance.now()
   if (waitForReadyMark) {
     await waitForNextV3Mark(page, surface, detail, previousCount)
   }
-  const readyMs = waitForReadyMark
-    ? Math.round(performance.now() - readyStarted)
-    : elapsedMs
+  const elapsedMs = Math.round(performance.now() - started)
+  const readyMs = elapsedMs
   await page.waitForTimeout(150)
 
   return {
@@ -607,39 +762,36 @@ async function runLoginAndOnboarding(
       resources
     )
   )
-  results.push(
-    await measureInteraction(
-      page,
-      'Login / Start Here',
-      'login',
-      'preview',
-      sample,
-      () => page.getByRole('button', { name: /start here/i }).click()
+  const isReturningVisitor = await page
+    .getByRole('button', { name: /continue as current account/i })
+    .isVisible()
+    .catch(() => false)
+
+  if (!isReturningVisitor) {
+    results.push(
+      await measureInteraction(
+        page,
+        'Login / Start Here',
+        'login',
+        'preview',
+        sample,
+        () => page.getByRole('button', { name: /start here/i }).click(),
+        false
+      )
     )
-  )
+  }
 
   results.push(
     await measureNavigation(
       page,
       {
-        detail: 'terms',
-        label: 'Onboarding / Terms',
+        detail: 'persona',
+        label: 'Onboarding / Persona',
         route: '/onboarding?preview=1&reset=v3-benchmark',
         surface: 'onboarding',
       },
       sample,
       resources
-    )
-  )
-  await page.getByRole('checkbox').first().check()
-  results.push(
-    await measureInteraction(
-      page,
-      'Onboarding / Accept Terms',
-      'onboarding',
-      'persona',
-      sample,
-      () => page.getByRole('button', { name: /accept and continue/i }).click()
     )
   )
   results.push(
@@ -757,6 +909,7 @@ async function runMainPages(
     }
 
     if (target.surface === 'community') {
+      await clickTab(page, /news/i, 'Community / News tab', 'community', 'news', sample, results)
       await clickTab(
         page,
         /contests/i,
@@ -766,17 +919,6 @@ async function runMainPages(
         sample,
         results
       )
-      await clickTab(page, /news/i, 'Community / News tab', 'community', 'news', sample, results)
-      await clickTab(
-        page,
-        /events/i,
-        'Community / Events tab',
-        'community',
-        'events',
-        sample,
-        results
-      )
-      await clickTab(page, /feed/i, 'Community / Feed tab', 'community', 'feed', sample, results)
     }
   }
 }
@@ -817,7 +959,7 @@ async function runSubpages(
     )
     await clickTab(
       page,
-      /project details/i,
+      /^details$/i,
       'Project Detail / Details tab',
       'project-detail',
       'details',
@@ -826,12 +968,23 @@ async function runSubpages(
     )
     await clickTab(
       page,
-      /add units/i,
-      'Project Detail / Add Units tab',
+      /^units$/i,
+      'Project Detail / Units tab',
       'project-detail',
-      'add',
+      'units',
       sample,
       results
+    )
+    results.push(
+      await measureInteraction(
+        page,
+        'Project Detail / Toggle Add Unit',
+        'project-detail',
+        'units',
+        sample,
+        () => page.getByRole('button', { name: /^add unit$/i }).click(),
+        false
+      )
     )
   }
 
@@ -839,7 +992,7 @@ async function runSubpages(
     await measureNavigation(
       page,
       {
-        detail: 'units',
+        detail: 'projects',
         label: 'Projects / Resolve Unit Detail',
         route: '/projects?preview=1',
         surface: 'projects',
@@ -952,23 +1105,27 @@ async function runSupportingSurfaces(
   for (const target of SUPPORTING_TARGETS) {
     results.push(await measureNavigation(page, target, sample, resources))
     if (target.surface === 'themes') {
-      await clickTab(
-        page,
-        /theme library/i,
-        'Themes / Library tab',
-        'themes',
-        'library',
-        sample,
-        results
+      results.push(
+        await measureInteraction(
+          page,
+          'Themes / Discover tab',
+          'themes',
+          'library',
+          sample,
+          () => page.getByRole('button', { name: /discover/i }).click(),
+          false
+        )
       )
-      await clickTab(
-        page,
-        /my themes/i,
-        'Themes / My Themes tab',
-        'themes',
-        'mine',
-        sample,
-        results
+      results.push(
+        await measureInteraction(
+          page,
+          'Themes / My Themes tab',
+          'themes',
+          'mine',
+          sample,
+          () => page.getByRole('button', { name: /my themes/i }).click(),
+          false
+        )
       )
     }
   }
@@ -1056,7 +1213,7 @@ function createMarkdownReport(
     .sort((first, second) => scoreNavigationBottleneck(second) - scoreNavigationBottleneck(first))
     .slice(0, 10)
   const slowInteractions = [...interactions]
-    .sort((first, second) => second.elapsedMs.p95 - first.elapsedMs.p95)
+    .sort((first, second) => second.readyMs.p95 - first.readyMs.p95)
     .slice(0, 10)
   const resourceRows = topResourceSummaries(resources)
 
@@ -1065,11 +1222,18 @@ function createMarkdownReport(
     '',
     `Generated: ${new Date().toISOString()}`,
     `Base URL: ${baseUrl}`,
-    `Scope: ${benchmarkScope}`,
+    `Scope: ${benchmarkScope} V3 published surfaces only`,
     `Samples per route/interaction: ${samples}`,
     `Timeouts: run ${Math.round(benchmarkTimeoutMs / 1000)}s, sample ${Math.round(sampleTimeoutMs / 1000)}s, step ${Math.round(stepTimeoutMs / 1000)}s`,
     '',
-    '## Main Bottlenecks',
+    '## Page And Subpage Cards',
+    '',
+    ...createNavigationCards(navigation),
+    '## Interaction Cards',
+    '',
+    ...createInteractionCards(interactions),
+    ...createAnalysis(navigation, interactions, resourceRows),
+    '## Main Bottleneck Table',
     '',
     '| Rank | Surface | p95 response | p95 FCP | p95 LCP | p95 INP | p95 control | p95 longest task | p95 TBT | p95 transfer |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
@@ -1078,7 +1242,7 @@ function createMarkdownReport(
         `| ${index + 1} | ${row.label} | ${row.responseMs.p95}ms | ${row.fcp.p95}ms | ${row.lcp.p95}ms | ${row.inp.p95}ms | ${row.controlReadyMs.p95}ms | ${row.longestTask.p95}ms | ${row.totalBlockingTime.p95}ms | ${formatBytes(row.transferSize.p95)} |`
     ),
     '',
-    '## Navigation Coverage',
+    '## Navigation Coverage Table',
     '',
     '| Surface | Route | p95 response | p95 DCL | p95 FCP | p95 LCP | p95 INP | p95 control | p95 CLS | p95 longest task | p95 TBT | p95 transfer |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
@@ -1087,7 +1251,7 @@ function createMarkdownReport(
         `| ${row.label} | \`${row.route}\` | ${row.responseMs.p95}ms | ${row.domContentLoaded.p95}ms | ${row.fcp.p95}ms | ${row.lcp.p95}ms | ${row.inp.p95}ms | ${row.controlReadyMs.p95}ms | ${(row.cls.p95 / 1000).toFixed(3)} | ${row.longestTask.p95}ms | ${row.totalBlockingTime.p95}ms | ${formatBytes(row.transferSize.p95)} |`
     ),
     '',
-    '## Interaction Coverage',
+    '## Interaction Coverage Table',
     '',
     '| Interaction | p95 event | p95 ready mark |',
     '| --- | ---: | ---: |',
@@ -1112,6 +1276,11 @@ function createMarkdownReport(
       (row) =>
         `| ${row.name.split(' ')[0]} | \`${row.name.slice(row.name.indexOf(' ') + 1)}\` | ${row.duration.p95}ms | ${formatBytes(row.transferSize.p95)} | ${row.labels.join(', ')} |`
     ),
+    '',
+    '## Coverage Boundary',
+    '',
+    'This report is intentionally scoped to current user-facing V3 preview surfaces. Retired V2 routes such as `/recipes` and `/vault`, plus unreleased/non-primary flows, are excluded from the main budget gate.',
+    'Themes is currently measured with a visible-page fallback because the live route redirects to `?tab=mine` and does not expose a V3 perf indicator yet.',
     '',
     '## Budget Reference',
     '',
@@ -1205,6 +1374,8 @@ async function main() {
   const resources: ResourceBenchmark[] = []
 
   try {
+    rmSync(jsonReportPath, { force: true })
+    rmSync(markdownReportPath, { force: true })
     await waitForServer(baseUrl)
     const shouldCreateStorageState =
       refreshPerfStorageState ||

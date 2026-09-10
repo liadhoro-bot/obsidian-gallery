@@ -173,16 +173,14 @@ async function gotoMeasured(
   const responseMs = Math.round(performance.now() - started)
 
   await page.waitForLoadState('domcontentloaded', { timeout: 15_000 }).catch(() => {})
-  await waitForV3Indicator(page, surface, detail)
+  const firstControl = page.locator('button, input, select, textarea, a[href]').first()
+  await Promise.all([
+    waitForV3Indicator(page, surface, detail),
+    firstControl.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {}),
+  ])
+  const controlReadyMs = Math.round(performance.now() - started)
   await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   await page.waitForTimeout(150)
-
-  const controlReadyStarted = performance.now()
-  const firstControl = page.locator('button, input, select, textarea, a[href]').first()
-  if ((await firstControl.count()) > 0) {
-    await firstControl.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-  }
-  const controlReadyMs = Math.round(performance.now() - controlReadyStarted)
   const metrics = await readMetrics(page)
   const result = {
     ...metrics,
@@ -215,10 +213,12 @@ async function gotoMeasured(
 async function clickMeasured(
   label: string,
   action: () => Promise<void>,
-  testInfo: TestInfo
+  testInfo: TestInfo,
+  waitForReady?: () => Promise<void>
 ) {
   const started = performance.now()
   await action()
+  await waitForReady?.()
   const elapsed = Math.round(performance.now() - started)
 
   testInfo.annotations.push({
@@ -240,9 +240,9 @@ async function switchTab(
   await clickMeasured(
     `${surface}:${detail}`,
     () => page.getByRole('tab', { name: label }).click(),
-    testInfo
+    testInfo,
+    () => waitForV3Indicator(page, surface, detail)
   )
-  await waitForV3Indicator(page, surface, detail)
 }
 
 async function firstHref(page: Page, selector: string) {
@@ -259,27 +259,28 @@ test.describe('V3 Perf Test', () => {
   }, testInfo) => {
     await gotoMeasured(page, '/login?preview=1', 'login', 'preview', testInfo)
 
-    await clickMeasured(
-      'login:start here opens sign-in card',
-      () => page.getByRole('button', { name: /start here/i }).click(),
-      testInfo
-    )
-    await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible()
+    const continueAsCurrentAccount = page.getByRole('button', {
+      name: /continue as current account/i,
+    })
+    if (await continueAsCurrentAccount.isVisible().catch(() => false)) {
+      // Perf storage state is already authenticated, so this is the returning-visitor card, not the anonymous hero.
+      await expect(continueAsCurrentAccount).toBeVisible()
+    } else {
+      await clickMeasured(
+        'login:start here opens sign-in card',
+        () => page.getByRole('button', { name: /start here/i }).click(),
+        testInfo
+      )
+      await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible()
+    }
 
     await gotoMeasured(
       page,
       '/onboarding?preview=1&reset=v3-perf',
       'onboarding',
-      'terms',
+      'persona',
       testInfo
     )
-    await page.getByRole('checkbox').first().check()
-    await clickMeasured(
-      'onboarding:terms accept',
-      () => page.getByRole('button', { name: /accept and continue/i }).click(),
-      testInfo
-    )
-    await waitForV3Indicator(page, 'onboarding', 'persona')
 
     await clickMeasured(
       'onboarding:persona select',
@@ -292,23 +293,23 @@ test.describe('V3 Perf Test', () => {
     await clickMeasured(
       'onboarding:persona continue',
       () => page.getByRole('button', { name: /start my first miniature/i }).click(),
-      testInfo
+      testInfo,
+      () => waitForV3Indicator(page, 'onboarding', 'creation')
     )
-    await waitForV3Indicator(page, 'onboarding', 'creation')
 
     await clickMeasured(
       'onboarding:creation skip',
       () => page.getByRole('button', { name: /i'll add one later/i }).click(),
-      testInfo
+      testInfo,
+      () => waitForV3Indicator(page, 'onboarding', 'curator')
     )
-    await waitForV3Indicator(page, 'onboarding', 'curator')
 
     await clickMeasured(
       'onboarding:enter gallery',
       () => page.getByRole('button', { name: /enter the gallery/i }).click(),
-      testInfo
+      testInfo,
+      () => waitForV3Indicator(page, 'dashboard', 'active-units')
     )
-    await waitForV3Indicator(page, 'dashboard', 'active-units')
   })
 
   test('five V3 nav pages and their tabs stay responsive', async ({
@@ -339,10 +340,9 @@ test.describe('V3 Perf Test', () => {
     await switchTab(page, /library/i, 'guides', 'library', testInfo)
     await switchTab(page, /^guides$/i, 'guides', 'guides', testInfo)
 
-    await gotoMeasured(page, '/community?preview=1', 'community', 'feed', testInfo)
-    await switchTab(page, /contests/i, 'community', 'contests', testInfo)
+    await gotoMeasured(page, '/community?preview=1', 'community', 'contests', testInfo)
     await switchTab(page, /news/i, 'community', 'news', testInfo)
-    await switchTab(page, /events/i, 'community', 'events', testInfo)
+    await switchTab(page, /contests/i, 'community', 'contests', testInfo)
   })
 
   test('settings and V3 subpages expose perf marks without route errors', async ({
@@ -365,9 +365,9 @@ test.describe('V3 Perf Test', () => {
       'units',
       testInfo
     )
-    await switchTab(page, /project details/i, 'project-detail', 'details', testInfo)
+    await switchTab(page, /^details$/i, 'project-detail', 'details', testInfo)
 
-    await gotoMeasured(page, '/projects?preview=1', 'projects', 'units', testInfo)
+    await gotoMeasured(page, '/projects?preview=1', 'projects', 'projects', testInfo)
     await switchTab(page, /units/i, 'projects', 'units', testInfo)
     const unitHref = await firstHref(page, 'a[href^="/units/"][href*="preview=1"]')
     expect(unitHref, 'first unit detail href').toBeTruthy()
