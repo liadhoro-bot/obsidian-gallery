@@ -32,6 +32,7 @@ export default function DeckEditPageClient({
             template: card.template,
             body: card.body,
             image: card.image,
+            videoUrl: card.videoUrl,
             paints: card.paints?.map((paint) => ({
               id: paint.id,
               ratio_text: paint.ratio_text ?? null,
@@ -39,7 +40,6 @@ export default function DeckEditPageClient({
           })),
         })
 
-        router.push(`/guides/decks/${deck.id}?preview=1`)
         router.refresh()
       } catch (error) {
         setSaveError(
@@ -52,7 +52,7 @@ export default function DeckEditPageClient({
   return (
     <DeckEditorClient
       deck={deck}
-      backHref={`/guides/decks/${deck.id}?preview=1`}
+      backHref="/guides?preview=1"
       featureGuides={featureGuides}
       isSaving={isSaving}
       onSaveDraft={handleSaveDraft}

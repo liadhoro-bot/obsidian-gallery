@@ -4,6 +4,9 @@ import {
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
+  RecipeGuideSmallImageStepCard,
+  RecipeGuideThemeStepCard,
+  RecipeGuideVideoCard,
 } from '../../../recipes/[id]/components/recipe-guide-cards'
 import V3PerfIndicator from '../../../components/v3-perf-indicator'
 import { getFeatureGuidesForPage } from '../../../components/feature-guide-data'
@@ -92,6 +95,18 @@ function toRecipePaints(step: GuidesV3DeckStep): DeckGuidePaint[] {
   }))
 }
 
+function isThemeTemplateStep(step: GuidesV3DeckStep, imageUrl: string | null) {
+  const lowerTitle = step.title.toLowerCase()
+  const looksLikeTheme = lowerTitle.includes('theme') || lowerTitle.includes('palette')
+
+  return (
+    step.template === 'theme' ||
+    (step.template === 'image' && looksLikeTheme) ||
+    (!step.template && looksLikeTheme) ||
+    (!step.template && Boolean(imageUrl) && step.paints.length >= 4)
+  )
+}
+
 export default async function DeckDetailPage({
   params,
   searchParams,
@@ -159,7 +174,7 @@ export default async function DeckDetailPage({
         <RecipeGuideCoverCard
           recipe={recipe}
           featuredImage={featuredImage}
-          stepCount={recipeSteps.length}
+          cardCount={deck.steps.length + 1}
           paintCount={paintCount}
         />
       ),
@@ -171,7 +186,26 @@ export default async function DeckDetailPage({
       return {
         key: step.id,
         featureGuideTarget: 'guides.deck.steps',
-        node: isUsableImageUrl(recipeStep.image_url) ? (
+        node: step.template === 'video' ? (
+          <RecipeGuideVideoCard
+            title={step.title}
+            description={step.instructions}
+            youtubeUrl={step.videoUrl}
+          />
+        ) : isThemeTemplateStep(step, recipeStep.image_url) ? (
+          <RecipeGuideThemeStepCard
+            step={recipeStep}
+            stepsLength={recipeSteps.length}
+            paints={paints}
+            fallbackImageUrl={deck.image}
+          />
+        ) : step.template === 'small-image' && isUsableImageUrl(recipeStep.image_url) ? (
+          <RecipeGuideSmallImageStepCard
+            step={recipeStep}
+            stepsLength={recipeSteps.length}
+            paints={paints}
+          />
+        ) : isUsableImageUrl(recipeStep.image_url) ? (
           <RecipeGuideImageStepCard
             step={recipeStep}
             stepsLength={recipeSteps.length}

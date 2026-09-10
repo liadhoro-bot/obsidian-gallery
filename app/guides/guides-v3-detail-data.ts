@@ -11,8 +11,10 @@ export type GuidesV3DeckStep = {
   id: string
   number: number
   title: string
+  template: string | null
   instructions: string
   image: string | null
+  videoUrl: string | null
   paints: GuidesV3DeckStepPaint[]
 }
 
@@ -56,8 +58,10 @@ type StepRow = {
   id: string
   step_number: number | null
   title: string | null
+  card_template: string | null
   instructions: string | null
   image_url: string | null
+  youtube_url: string | null
 }
 
 type StepPaintRow = {
@@ -98,6 +102,21 @@ type StepPaintRow = {
 
 const fallbackImage = '/onboarding/pains/tough-choices.jpeg'
 
+type SupabaseErrorLike = {
+  code?: string
+  message?: string
+}
+
+function isMissingColumn(error: SupabaseErrorLike | null | undefined, column: string) {
+  const message = error?.message ?? ''
+
+  return (
+    error?.code === '42703' ||
+    (message.includes(column) &&
+      (message.includes('does not exist') || message.includes('schema cache')))
+  )
+}
+
 function firstValue<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
@@ -105,6 +124,77 @@ function firstValue<T>(value: T | T[] | null | undefined) {
 function clean(value: string | null | undefined, fallback: string) {
   const trimmed = value?.trim()
   return trimmed || fallback
+}
+
+function isYoutubeUrl(value: string | null | undefined) {
+  const trimmed = value?.trim()
+  if (!trimmed) return false
+
+  try {
+    const parsed = new URL(trimmed)
+    return (
+      parsed.hostname === 'youtube.com' ||
+      parsed.hostname.endsWith('.youtube.com') ||
+      parsed.hostname === 'youtu.be'
+    )
+  } catch {
+    return false
+  }
+}
+
+const deckCardMetaPrefix = 'OG_DECK_CARD_META:'
+
+function parseDeckCardMetaTemplate(value: unknown) {
+  if (
+    value === 'step' ||
+    value === 'theme' ||
+    value === 'image' ||
+    value === 'small-image' ||
+    value === 'paints' ||
+    value === 'video'
+  ) {
+    return value
+  }
+
+  return null
+}
+
+function parseDeckCardInstructions(value: string | null | undefined) {
+  const text = value ?? ''
+  const [firstLine = '', ...rest] = text.split(/\r?\n/)
+
+  if (!firstLine.startsWith(deckCardMetaPrefix)) {
+    return {
+      instructions: text,
+      template: null as string | null,
+      videoUrl: null as string | null,
+    }
+  }
+
+  try {
+    const metadata = JSON.parse(firstLine.slice(deckCardMetaPrefix.length)) as {
+      template?: unknown
+      youtubeUrl?: unknown
+    }
+    const body = rest.join('\n').replace(/^\s+/, '')
+    const youtubeUrl =
+      typeof metadata.youtubeUrl === 'string' &&
+      isYoutubeUrl(metadata.youtubeUrl)
+        ? metadata.youtubeUrl
+        : null
+
+    return {
+      instructions: body,
+      template: parseDeckCardMetaTemplate(metadata.template),
+      videoUrl: youtubeUrl,
+    }
+  } catch {
+    return {
+      instructions: text,
+      template: null as string | null,
+      videoUrl: null as string | null,
+    }
+  }
 }
 
 function accentFor(seed: string) {
@@ -161,14 +251,45 @@ export const getGuidesV3DeckDetail = cache(
     if (!recipe) return null
 
     const typedRecipe = recipe as RecipeRow
-    const [{ data: steps, error: stepsError }, rawImage] = await Promise.all([
-      supabase
+    const rawImagePromise = loadRecipeImage(supabase, typedRecipe)
+    let { data: steps, error: stepsError } = await supabase
+      .from('recipe_steps')
+      .select('id, step_number, title, card_template, instructions, image_url, youtube_url')
+      .eq('recipe_id', deckId)
+      .order('step_number', { ascending: true })
+
+    if (isMissingColumn(stepsError, 'youtube_url')) {
+      const fallbackResult = await supabase
+        .from('recipe_steps')
+        .select('id, step_number, title, card_template, instructions, image_url')
+        .eq('recipe_id', deckId)
+        .order('step_number', { ascending: true })
+
+      steps =
+        fallbackResult.data?.map((step) => ({
+          ...step,
+          youtube_url: null,
+        })) ?? null
+      stepsError = fallbackResult.error
+    }
+
+    if (isMissingColumn(stepsError, 'card_template')) {
+      const fallbackResult = await supabase
         .from('recipe_steps')
         .select('id, step_number, title, instructions, image_url')
         .eq('recipe_id', deckId)
-        .order('step_number', { ascending: true }),
-      loadRecipeImage(supabase, typedRecipe),
-    ])
+        .order('step_number', { ascending: true })
+
+      steps =
+        fallbackResult.data?.map((step) => ({
+          ...step,
+          card_template: null,
+          youtube_url: null,
+        })) ?? null
+      stepsError = fallbackResult.error
+    }
+
+    const rawImage = await rawImagePromise
 
     if (stepsError) throw new Error(stepsError.message)
 
@@ -297,11 +418,38 @@ export const getGuidesV3DeckDetail = cache(
 
     const paints = Array.from(paintsById.values())
 
+    const normalizedSteps = typedSteps.map((step, index) => {
+      const hasCompatVideoUrl = isYoutubeUrl(step.image_url)
+      const parsedInstructions = parseDeckCardInstructions(step.instructions)
+      const template =
+        step.card_template ??
+        parsedInstructions.template ??
+        (hasCompatVideoUrl ? 'video' : null)
+      const usesCompatVideoUrl = template === 'video' && hasCompatVideoUrl
+      const videoUrl =
+        step.youtube_url ||
+        parsedInstructions.videoUrl ||
+        (usesCompatVideoUrl ? step.image_url : null)
+
+      return {
+        id: step.id,
+        number: step.step_number ?? index + 1,
+        title: clean(step.title, `Card ${index + 1}`),
+        template,
+        instructions: clean(parsedInstructions.instructions, 'No instructions yet.'),
+        image: !usesCompatVideoUrl && step.image_url
+          ? getGuideDeckThumbnail(step.image_url, fallbackImage)
+          : null,
+        videoUrl,
+        paints: paintsByStepId.get(step.id) ?? [],
+      }
+    })
+
     return {
       id: typedRecipe.id,
       title: clean(typedRecipe.name, 'Untitled Deck'),
       category: categoryFor(typedRecipe),
-      cards: typedSteps.length,
+      cards: normalizedSteps.length + 1,
       paints: paints.length,
       usedIn: 0,
       image: getGuideDeckThumbnail(rawImage, fallbackImage),
@@ -313,14 +461,7 @@ export const getGuidesV3DeckDetail = cache(
       ),
       isPublic: typedRecipe.is_public === true,
       ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public deck',
-      steps: typedSteps.map((step, index) => ({
-        id: step.id,
-        number: step.step_number ?? index + 1,
-        title: clean(step.title, `Card ${index + 1}`),
-        instructions: clean(step.instructions, 'No instructions yet.'),
-        image: step.image_url ? getGuideDeckThumbnail(step.image_url, fallbackImage) : null,
-        paints: paintsByStepId.get(step.id) ?? [],
-      })),
+      steps: normalizedSteps,
       paintList: paints,
     } satisfies GuidesV3DeckDetail
   }

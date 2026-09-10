@@ -40,7 +40,7 @@ type SourceKind = 'unit' | 'project' | 'photos' | 'paints' | 'blank' | 'scratch'
 type BuildTab = 'details' | 'cards' | 'preview'
 type DeckDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 type DeckStatus = 'Draft' | 'Private' | 'Public'
-type CardTemplate = 'title' | 'step' | 'theme' | 'image' | 'paints' | 'video'
+type CardTemplate = 'title' | 'step' | 'theme' | 'image' | 'small-image' | 'paints' | 'video'
 
 type GuideFile = GuidesV3GuideFile & {
   draft?: ForgeGuideDraft
@@ -436,8 +436,13 @@ const cardTemplateOptions: Array<{
   },
   {
     template: 'image',
-    title: 'Image',
-    body: 'Reference photo, finished result, or visual checkpoint.',
+    title: 'Big Image',
+    body: 'Full-card reference photo with a small title and notes panel.',
+  },
+  {
+    template: 'small-image',
+    title: 'Small Image',
+    body: 'Cover-style image above title and longer reference notes.',
   },
   {
     template: 'paints',
@@ -453,14 +458,17 @@ const cardTemplateOptions: Array<{
 
 function makeForgeCard(title: string, index: number): ForgeCard {
   const lowerTitle = title.toLowerCase()
-  const template: CardTemplate =
-    lowerTitle.includes('palette') || lowerTitle.includes('theme')
-      ? 'theme'
-      : lowerTitle.includes('image') || lowerTitle.includes('photo')
-        ? 'image'
-        : lowerTitle.includes('cover') || lowerTitle.includes('title')
-          ? 'title'
-          : 'step'
+  let template: CardTemplate = 'step'
+
+  if (lowerTitle.includes('palette') || lowerTitle.includes('theme')) {
+    template = 'theme'
+  } else if (lowerTitle.includes('small image')) {
+    template = 'small-image'
+  } else if (lowerTitle.includes('image') || lowerTitle.includes('photo')) {
+    template = 'image'
+  } else if (lowerTitle.includes('cover') || lowerTitle.includes('title')) {
+    template = 'title'
+  }
 
   return {
     id: `card-${index}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
@@ -473,9 +481,11 @@ function makeForgeCard(title: string, index: number): ForgeCard {
           ? 'Capture the palette, finish, and visual intent for this deck.'
           : template === 'image'
             ? 'Use this card as a visual checkpoint for comparison.'
-            : 'Describe the painting action, timing, and result to check before moving on.',
+            : template === 'small-image'
+              ? 'Use this card for reference notes, comparison cues, or a longer explanation.'
+              : 'Describe the painting action, timing, and result to check before moving on.',
     image:
-      template === 'image'
+      template === 'image' || template === 'small-image'
         ? '/onboarding/pains/paint-management.jpeg'
         : '/onboarding/pains/tough-choices.jpeg',
   }
@@ -493,7 +503,7 @@ function makeTemplateCard(template: CardTemplate, existingCards: ForgeCard[]): F
     template,
     body: option?.body ?? 'Add the card notes here.',
     image:
-      template === 'image'
+      template === 'image' || template === 'small-image'
         ? '/onboarding/pains/paint-management.jpeg'
         : template === 'theme'
           ? '/onboarding/first-project-bg.jpeg'
@@ -1006,6 +1016,7 @@ export default function GuidesV3Preview({
             template: card.template === 'cover' ? 'title' : card.template,
             body: card.body,
             image: card.image,
+            videoUrl: card.videoUrl,
             paints: card.paints?.map((paint) => ({
               id: paint.id,
               ratio_text: paint.ratio_text ?? null,
