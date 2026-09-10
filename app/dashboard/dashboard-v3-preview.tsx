@@ -2,9 +2,9 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
-import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { setDashboardNextActionDone } from './actions'
@@ -17,6 +17,10 @@ import type {
 } from './dashboard-data'
 
 type DashboardTab = 'active-units' | 'my-progress'
+
+const FeatureGuideTour = dynamic(() => import('../components/feature-guide-tour'), {
+  ssr: false,
+})
 
 type NextAction = {
   id: string
@@ -480,11 +484,11 @@ export default function DashboardV3Preview({
           <FeatureGuideTour
             guide={activeGuide}
             activeIndex={activeGuideIndex}
-            guides={featureGuides}
             totalGuides={featureGuides.length}
             onPrevious={showPreviousGuide}
             onNext={showNextGuide}
             onClose={closeFeatureTour}
+            tourName="dashboard_overview"
           />
         ) : null}
       </div>
@@ -1049,6 +1053,7 @@ function FeaturedUnitCard({ unit }: { unit: DashboardV3UnitCard | null }) {
               sizes="(max-width: 640px) 42vw, 178px"
               className="object-cover transition duration-500 hover:scale-[1.025]"
               priority
+              fetchPriority="high"
             />
           </div>
         </div>

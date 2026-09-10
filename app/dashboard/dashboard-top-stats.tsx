@@ -53,7 +53,6 @@ export default async function DashboardTopStats() {
 
         <PrefetchLink
           href="/projects"
-          viewportPrefetch
           className="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
         >
           <p className="text-sm text-white/60">Go to</p>

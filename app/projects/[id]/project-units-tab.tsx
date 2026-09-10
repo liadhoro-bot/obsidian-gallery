@@ -92,7 +92,6 @@ export default function ProjectUnitsTab({
             <PrefetchLink
               key={heroUnit.id}
               href={`/units/${heroUnit.id}?preview=1`}
-              viewportPrefetch
               className={`${styles.unitHeroCard} block transition active:scale-[0.98] active:opacity-70`}
             >
               <div className="relative min-h-[220px]">
@@ -163,7 +162,6 @@ export default function ProjectUnitsTab({
             <PrefetchLink
               key={unit.id}
               href={`/units/${unit.id}?preview=1`}
-              viewportPrefetch
               className={`${styles.unitRowCard} flex transition active:scale-[0.98] active:opacity-70`}
             >
               <div className="relative min-h-[110px] w-[30%]">

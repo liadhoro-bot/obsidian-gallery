@@ -310,6 +310,20 @@ export async function updateCustomPaintAction(formData: FormData) {
     file,
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'custom_paint_updated',
+    properties: {
+      custom_paint_id: paintId,
+      paint_name: name,
+      manufacturer,
+      series,
+      has_color_hex: Boolean(color_hex),
+      has_swatch_image: Boolean(file && file.size > 0),
+      has_description: Boolean(description),
+    },
+  })
+
   revalidatePath('/vault')
   revalidatePath(`/vault/custom/${paintId}`)
 }
@@ -381,6 +395,14 @@ export async function deleteCustomPaintAction(formData: FormData) {
   }
 
   if (error) throw new Error(error.message)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'custom_paint_deleted',
+    properties: {
+      custom_paint_id: paintId,
+    },
+  })
 
   revalidatePath('/vault')
   redirect('/vault?tab=collection')

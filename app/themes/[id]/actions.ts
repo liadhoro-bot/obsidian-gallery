@@ -97,6 +97,16 @@ export async function toggleThemeVisibility(themeId: string, nextValue: boolean)
   if (error) throw error
   perf.mark('Supabase mutation')
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'theme_visibility_changed',
+    properties: {
+      theme_id: themeId,
+      is_public: nextValue,
+    },
+  })
+  perf.mark('analytics event')
+
   revalidateThemeCaches(themeId)
   perf.mark('revalidation duration')
   perf.total()
@@ -144,6 +154,15 @@ export async function assignThemeToProjects(formData: FormData) {
     .in('id', allowedProjectIds)
 
   if (updateError) throw updateError
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'theme_assigned_to_projects',
+    properties: {
+      theme_id: themeId,
+      project_count: allowedProjectIds.length,
+    },
+  })
 
   for (const projectId of allowedProjectIds) {
     revalidatePath(`/projects/${projectId}`)
@@ -259,6 +278,15 @@ export async function assignThemeToUnits(formData: FormData) {
     if (updateThemeError) throw updateThemeError
   }
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'theme_assigned_to_units',
+    properties: {
+      theme_id: themeId,
+      unit_count: allowedUnitIds.length,
+    },
+  })
+
   for (const unitId of allowedUnitIds) {
     revalidatePath(`/units/${unitId}`)
   }
@@ -321,6 +349,16 @@ export async function updateTheme(themeId: string, formData: FormData) {
     })
     .eq('id', themeId)
     .eq('user_id', user.id)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'theme_updated',
+    properties: {
+      theme_id: themeId,
+      has_image: Boolean(imageUrl),
+      tag_count: tags.length,
+    },
+  })
 
   revalidateThemeCaches(themeId)
 }
@@ -438,6 +476,14 @@ export async function deleteTheme(formData: FormData) {
     .eq('id', themeId)
     .eq('user_id', user.id)
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'theme_deleted',
+    properties: {
+      theme_id: themeId,
+    },
+  })
+
   revalidatePath('/themes')
   revalidatePath('/projects')
   revalidatePath('/dashboard')
@@ -483,6 +529,17 @@ export async function setThemePaintSlot(
     paint_source: paintSource,
     paint_catalog_id: paintSource === 'catalog' ? paintId : null,
     custom_paint_id: paintSource === 'custom' ? paintId : null,
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'palette_slot_set',
+    properties: {
+      source_type: 'theme',
+      theme_id: themeId,
+      slot_index: slotIndex,
+      paint_source: paintSource,
+    },
   })
 
   revalidateThemeCaches(themeId)

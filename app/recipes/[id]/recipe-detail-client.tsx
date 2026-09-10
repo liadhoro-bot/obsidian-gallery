@@ -1,7 +1,8 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import RecipeHero from './components/recipe-hero'
 import {
@@ -78,8 +79,14 @@ export default function RecipeDetailClient({
   deleteRecipeAction,
   actionRow,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<RecipeDetailTab>('details')
-  const [isEditingHeader, setIsEditingHeader] = useState(false)
+  const searchParams = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const initialTab: RecipeDetailTab =
+    requestedTab === 'edit' && isOwner ? 'edit' : 'details'
+  const [activeTab, setActiveTab] = useState<RecipeDetailTab>(initialTab)
+  const [isEditingHeader, setIsEditingHeader] = useState(
+    isOwner && searchParams.get('edit') === 'header'
+  )
   const [isEditingInventory, setIsEditingInventory] = useState(false)
   const [isRecipeGuideOpen, setIsRecipeGuideOpen] = useState(false)
   const [activeStepIndex, setActiveStepIndex] = useState(0)
@@ -130,6 +137,13 @@ export default function RecipeDetailClient({
       void markRecipePreviewed(recipe.id).catch(() => {})
     }
   }
+
+  useEffect(() => {
+    if (searchParams.get('preview') === '1') {
+      openRecipeGuidePreview()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="w-full">

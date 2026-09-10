@@ -151,7 +151,7 @@ export default function GuideCreationScreen({
             disabled={!canSubmit}
             className={`tap-press tap-target ${styles.ctaButton}`}
           >
-            {isPending ? 'Creating...' : 'Build my first guide -&gt;'}
+            {isPending ? 'Creating...' : 'Build my first guide ->'}
           </button>
 
           <button

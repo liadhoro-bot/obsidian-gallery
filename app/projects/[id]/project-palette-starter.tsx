@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import type { KeyboardEvent, MouseEvent } from 'react'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { setProjectPaletteSlot } from './actions'
 import { setUnitPaletteSlot } from '../../units/[id]/actions'
@@ -39,6 +40,9 @@ export default function ProjectPaletteStarter({
   const [error, setError] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [pendingOwnershipKeys, setPendingOwnershipKeys] = useState<Set<string>>(
+    new Set()
+  )
 
   useEffect(() => {
     if (activeSlot === null) return
@@ -120,6 +124,75 @@ export default function ProjectPaletteStarter({
     })
   }
 
+  async function toggleOwnership(
+    event: MouseEvent<HTMLButtonElement>,
+    paint: PaintOption,
+    kind: 'owned' | 'wishlist'
+  ) {
+    event.stopPropagation()
+    event.preventDefault()
+
+    const ownershipKey = `${paint.source}-${paint.id}-${kind}`
+
+    if (paint.source !== 'catalog' || pendingOwnershipKeys.has(ownershipKey)) {
+      return
+    }
+
+    const field = kind === 'owned' ? 'is_owned' : 'is_wishlist'
+    const previousValue = Boolean(paint[field])
+
+    setPendingOwnershipKeys((current) => new Set(current).add(ownershipKey))
+    setPaints((current) =>
+      current.map((item) =>
+        item.source === paint.source && item.id === paint.id
+          ? { ...item, [field]: !previousValue }
+          : item
+      )
+    )
+
+    try {
+      const response = await fetch('/api/vault/ownership', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paintId: paint.id,
+          action: kind,
+          currentValue: previousValue,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Ownership update failed')
+      }
+    } catch (toggleError) {
+      console.error(toggleError)
+      setPaints((current) =>
+        current.map((item) =>
+          item.source === paint.source && item.id === paint.id
+            ? { ...item, [field]: previousValue }
+            : item
+        )
+      )
+      setError('Could not update ownership.')
+    } finally {
+      setPendingOwnershipKeys((current) => {
+        const next = new Set(current)
+        next.delete(ownershipKey)
+        return next
+      })
+    }
+  }
+
+  function choosePaintFromKeyboard(
+    event: KeyboardEvent<HTMLDivElement>,
+    paint: PaintOption
+  ) {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+
+    event.preventDefault()
+    choosePaint(paint)
+  }
+
   return (
     <>
       <div className={slotIndex === undefined ? 'grid grid-cols-5 gap-2' : ''}>
@@ -196,68 +269,85 @@ export default function ProjectPaletteStarter({
             </p>
 
             <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
-              {filteredPaints.map((paint) => (
-                <button
-                  key={`${paint.source}-${paint.id}`}
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => choosePaint(paint)}
-                  className={`${styles.paintPickerRow} flex w-full items-center gap-3 p-2 text-left transition disabled:cursor-not-allowed disabled:opacity-70`}
-                >
-                  <div className={`${styles.paintPickerSwatch} h-10 w-10 shrink-0 overflow-hidden`}>
-                    {paint.swatch_image_url ? (
-                      <Image
-                        src={paint.swatch_image_url}
-                        alt={paint.name}
-                        width={40}
-                        height={40}
-                        sizes="40px"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : paint.hex ? (
-                      <div
-                        className="h-full w-full"
-                        style={{ backgroundColor: paint.hex }}
-                      />
+              {filteredPaints.map((paint) => {
+                const isOwnedBusy = pendingOwnershipKeys.has(
+                  `${paint.source}-${paint.id}-owned`
+                )
+                const isWishlistBusy = pendingOwnershipKeys.has(
+                  `${paint.source}-${paint.id}-wishlist`
+                )
+
+                return (
+                  <div
+                    key={`${paint.source}-${paint.id}`}
+                    role="button"
+                    tabIndex={isPending ? -1 : 0}
+                    aria-disabled={isPending}
+                    onClick={() => !isPending && choosePaint(paint)}
+                    onKeyDown={(event) => !isPending && choosePaintFromKeyboard(event, paint)}
+                    className={`${styles.paintPickerRow} flex w-full cursor-pointer items-center gap-3 p-2 text-left transition aria-disabled:cursor-not-allowed aria-disabled:opacity-70`}
+                  >
+                    <div className={`${styles.paintPickerSwatch} h-10 w-10 shrink-0 overflow-hidden`}>
+                      {paint.swatch_image_url ? (
+                        <Image
+                          src={paint.swatch_image_url}
+                          alt={paint.name}
+                          width={40}
+                          height={40}
+                          sizes="40px"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : paint.hex ? (
+                        <div
+                          className="h-full w-full"
+                          style={{ backgroundColor: paint.hex }}
+                        />
+                      ) : null}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[color:var(--og-text-primary)]">
+                        {paint.name}
+                      </p>
+                      <p className="truncate text-xs text-[color:var(--og-text-secondary)]">
+                        {[paint.brand, paint.line, paint.sku]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          disabled={paint.source !== 'catalog' || isOwnedBusy}
+                          onClick={(event) => toggleOwnership(event, paint, 'owned')}
+                          className={`${
+                            paint.is_owned
+                              ? styles.paintOwnershipPillActive
+                              : styles.paintOwnershipPill
+                          } disabled:cursor-default`}
+                        >
+                          Owned
+                        </button>
+                        <button
+                          type="button"
+                          disabled={paint.source !== 'catalog' || isWishlistBusy}
+                          onClick={(event) => toggleOwnership(event, paint, 'wishlist')}
+                          className={`${
+                            paint.is_wishlist
+                              ? styles.paintWishlistPillActive
+                              : styles.paintOwnershipPill
+                          } disabled:cursor-default`}
+                        >
+                          Wishlist
+                        </button>
+                      </div>
+                    </div>
+
+                    {isPending ? (
+                      <span className="ml-auto h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent text-white/70" />
                     ) : null}
                   </div>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[color:var(--og-text-primary)]">
-                      {paint.name}
-                    </p>
-                    <p className="truncate text-xs text-[color:var(--og-text-secondary)]">
-                      {[paint.brand, paint.line, paint.sku]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      <span
-                        className={
-                          paint.is_owned
-                            ? styles.paintOwnershipPillActive
-                            : styles.paintOwnershipPill
-                        }
-                      >
-                        Owned
-                      </span>
-                      <span
-                        className={
-                          paint.is_wishlist
-                            ? styles.paintWishlistPillActive
-                            : styles.paintOwnershipPill
-                        }
-                      >
-                        Wishlist
-                      </span>
-                    </div>
-                  </div>
-
-                  {isPending ? (
-                    <span className="ml-auto h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent text-white/70" />
-                  ) : null}
-                </button>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>

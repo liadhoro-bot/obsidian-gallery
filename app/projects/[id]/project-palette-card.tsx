@@ -106,10 +106,6 @@ export default function ProjectPaletteCard({ theme, projectId, unitId }: Props) 
         />
       </div>
 
-      <h2 className="mt-1 text-xl">
-        {theme.name || 'Untitled Theme'}
-      </h2>
-
       <p className="mt-2 text-sm">
         {displayDescription(theme.description) || 'No description'}
       </p>

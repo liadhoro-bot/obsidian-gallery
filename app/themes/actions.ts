@@ -220,6 +220,15 @@ export async function unsaveTheme(formData: FormData) {
   if (error) throw error
   perf.mark('Supabase mutation')
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'theme_unsaved',
+    properties: {
+      theme_id: themeId,
+    },
+  })
+  perf.mark('analytics event')
+
   revalidatePath('/themes')
   perf.mark('revalidation duration')
   perf.total()

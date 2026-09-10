@@ -11,7 +11,7 @@ import {
 } from '../../utils/images/gallery-upload'
 import {
   completeOnboardingActions,
-  reconcileOnboardingFlowStart,
+  resetOnboardingFlowSubjects,
 } from '../../lib/onboarding/completion'
 import type { OnboardingFlowName } from '../../lib/onboarding/action-definitions'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
@@ -89,6 +89,10 @@ export async function saveOnboardingGoalAction(
     }
   }
 
+  if (flowName) {
+    await resetOnboardingFlowSubjects({ userId: user.id, flowName })
+  }
+
   await captureServerEvent({
     distinctId: user.id,
     event: flowName ? 'onboarding_flow_started' : 'onboarding_flow_dismissed',
@@ -97,11 +101,6 @@ export async function saveOnboardingGoalAction(
       goal_key: goal,
       experience_level: experienceLevel,
     },
-  })
-
-  await reconcileOnboardingFlowStart({
-    userId: user.id,
-    flowName,
   })
 
   return { ok: true }
@@ -218,11 +217,15 @@ export async function createOnboardingProject(
     }
   }
 
-  const { error } = await supabase.from('projects').insert({
-    user_id: user.id,
-    name,
-    description: description || null,
-  })
+  const { data: project, error } = await supabase
+    .from('projects')
+    .insert({
+      user_id: user.id,
+      name,
+      description: description || null,
+    })
+    .select('id')
+    .single()
 
   if (error) {
     return {
@@ -230,6 +233,15 @@ export async function createOnboardingProject(
       error: error.message,
     }
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'project_created',
+    properties: {
+      project_id: project?.id ?? null,
+      source: 'onboarding',
+    },
+  })
 
   return {
     success: true,

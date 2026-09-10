@@ -11,6 +11,7 @@ import {
   getSafeImageExtension,
   validateGalleryImageFile,
 } from '../../utils/images/gallery-upload'
+import { captureServerEvent } from '../../utils/analytics/server'
 
 const IMAGE_BUCKET = 'obsidian-images'
 
@@ -123,6 +124,16 @@ export async function addProject(formData: FormData) {
     subjectProjectId: newProject.id,
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'project_created',
+    properties: {
+      project_id: newProject.id,
+      has_image: imageFile instanceof File && imageFile.size > 0,
+      source: 'add_project_form',
+    },
+  })
+
   redirect(`/projects/${newProject.id}`)
 }
 
@@ -227,6 +238,16 @@ export async function createProjectsPageProjectAction(
     userId: user.id,
     actionKey: 'create_project',
     subjectProjectId: newProject.id,
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'project_created',
+    properties: {
+      project_id: newProject.id,
+      has_image: imageFile instanceof File && imageFile.size > 0,
+      source: 'projects_page',
+    },
   })
 
   revalidatePath('/dashboard')
@@ -426,6 +447,18 @@ export async function createProjectsPageUnitAction(
       'add_unit_to_active_bench',
       'feature_unit',
     ],
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_created',
+    properties: {
+      unit_id: unit.id,
+      project_id: linkedProjectId,
+      created_new_project: Boolean(createdProjectId),
+      has_image: imageFile instanceof File && imageFile.size > 0,
+      source: 'projects_page',
+    },
   })
 
   revalidatePath('/dashboard')

@@ -155,5 +155,13 @@ export async function unsaveRecipe(formData: FormData) {
 
   if (error) throw error
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'recipe_unsaved',
+    properties: {
+      recipe_id: recipeId,
+    },
+  })
+
   revalidatePath('/recipes')
 }

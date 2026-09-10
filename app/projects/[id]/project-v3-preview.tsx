@@ -179,6 +179,7 @@ export default function ProjectV3Preview({ id }: ProjectV3PreviewProps) {
               sizes="(max-width: 640px) 100vw, 448px"
               className="object-cover"
               priority
+              fetchPriority="high"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/12 via-black/28 to-black/84" />
 
@@ -263,6 +264,7 @@ function TopNav() {
             sizes="48px"
             className="object-cover"
             priority
+            fetchPriority="high"
           />
         </div>
         <div className="min-w-0">

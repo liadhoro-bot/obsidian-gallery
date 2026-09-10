@@ -47,6 +47,19 @@ function isMissingUnitColumn(
   return error?.code === '42703' && error.message?.includes(column)
 }
 
+function isMissingScheduledSessionsTable(
+  error: UnitColumnQueryError | null | undefined
+) {
+  return (
+    error?.code === '42P01' ||
+    error?.code === 'PGRST205' ||
+    Boolean(error?.message?.includes('unit_scheduled_sessions'))
+  )
+}
+
+const scheduledSessionsUnavailableMessage =
+  'Scheduling is not set up for this workspace yet. Ask an admin to run the latest database migrations.'
+
 async function requireSessionUser(
   supabase: Awaited<ReturnType<typeof createClient>>
 ) {
@@ -67,7 +80,7 @@ function revalidateUnitThemePages(unitId: string, themeId: string) {
 
 export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   const supabase = await createClient()
-  await requireSessionUser(supabase)
+  const user = await requireSessionUser(supabase)
 
   const { error } = await supabase
     .from('units')
@@ -77,6 +90,15 @@ export async function toggleUnitActive(unitId: string, nextValue: boolean) {
   if (error) {
     throw error
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_active_toggled',
+    properties: {
+      unit_id: unitId,
+      next_value: nextValue,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 }
@@ -201,6 +223,15 @@ export async function updateUnitStatus(
       sourceId: unitId,
     })
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_status_changed',
+    properties: {
+      unit_id: unitId,
+      status,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 
@@ -551,6 +582,17 @@ export async function updateProgressStep(
     sourceId: stepId,
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_progress_step_updated',
+    properties: {
+      unit_id: unitId,
+      step_id: stepId,
+      status,
+      progress: safeProgress,
+    },
+  })
+
   revalidatePath(`/units/${unitId}`)
 }
 
@@ -583,6 +625,15 @@ export async function setFeaturedUnitImage(unitId: string, imageId: string) {
     userId: user.id,
     actionKey: 'add_unit_image',
     subjectUnitId: unitId,
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_featured_image_set',
+    properties: {
+      unit_id: unitId,
+      image_id: imageId,
+    },
   })
 
   revalidatePath(`/units/${unitId}`)
@@ -801,6 +852,15 @@ export async function unassignUnitTheme(formData: FormData) {
     }
   }
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_theme_unassigned',
+    properties: {
+      unit_id: unitId,
+      theme_id: themeId,
+    },
+  })
+
   revalidateUnitThemePages(unitId, themeId)
 }
 
@@ -924,6 +984,18 @@ export async function setUnitPaletteSlot(
     userId: user.id,
     subjectUnitId: unitId,
     actionKeys: ['add_unit_paints', 'use_project_palette'],
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'palette_slot_set',
+    properties: {
+      source_type: 'unit',
+      unit_id: unitId,
+      theme_id: themeId,
+      slot_index: slotIndex,
+      paint_source: paintSource,
+    },
   })
 
   revalidatePath(`/units/${unitId}`)
@@ -1227,6 +1299,18 @@ export async function updateUnitDetails(formData: FormData) {
     ],
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_details_updated',
+    properties: {
+      unit_id: unitId,
+      complexity_set: complexity !== null,
+      unit_size_set: unitSize !== null,
+      deadline_set: Boolean(deadline),
+      project_count: selectedProjectIds.length,
+    },
+  })
+
   revalidatePath(`/units/${unitId}`)
   affectedProjectIds.forEach((projectId) => {
     revalidatePath(`/projects/${projectId}`)
@@ -1270,6 +1354,15 @@ export async function updateUnitHeader(formData: FormData) {
       'organize_set_progress_stage',
       'update_unit_progress',
     ],
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_note_updated',
+    properties: {
+      unit_id: unitId,
+      has_notes: Boolean(description),
+    },
   })
 
   revalidatePath(`/units/${unitId}`)
@@ -1340,6 +1433,15 @@ export async function deleteUnit(formData: FormData) {
     .delete()
     .eq('id', unitId)
     .eq('user_id', user.id)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_deleted',
+    properties: {
+      unit_id: unitId,
+      project_id: unit.project_id,
+    },
+  })
 
   revalidatePath('/dashboard')
   revalidatePath('/projects')
@@ -1561,6 +1663,17 @@ export async function toggleStepDone(formData: FormData) {
     sourceId: stepId,
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_step_toggled',
+    properties: {
+      unit_id: unitId,
+      step_id: stepId,
+      next_status: nextStatus,
+      all_steps_done: allVisibleDone,
+    },
+  })
+
   revalidatePath(`/units/${unitId}`)
 
   return {
@@ -1627,6 +1740,16 @@ export async function updateUnitSession(formData: FormData) {
     sourceId: session.id,
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_session_updated',
+    properties: {
+      unit_id: unitId,
+      session_id: sessionId,
+      duration_seconds: durationSeconds,
+    },
+  })
+
   revalidatePath(`/units/${unitId}`)
 
   return session
@@ -1651,6 +1774,15 @@ export async function deleteUnitSession(formData: FormData) {
     .eq('user_id', user.id)
 
   if (error) throw error
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_session_deleted',
+    properties: {
+      unit_id: unitId,
+      session_id: sessionId,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 
@@ -1728,7 +1860,11 @@ export async function scheduleUnitSession(formData: FormData) {
     .single()
 
   if (error) {
-    throw error
+    throw new Error(
+      isMissingScheduledSessionsTable(error as UnitColumnQueryError)
+        ? scheduledSessionsUnavailableMessage
+        : error.message
+    )
   }
 
   await captureServerEvent({
@@ -1776,8 +1912,23 @@ export async function updateUnitScheduledSession(formData: FormData) {
     .single()
 
   if (error) {
-    throw error
+    throw new Error(
+      isMissingScheduledSessionsTable(error as UnitColumnQueryError)
+        ? scheduledSessionsUnavailableMessage
+        : error.message
+    )
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_scheduled_session_updated',
+    properties: {
+      unit_id: unitId,
+      scheduled_session_id: scheduledSessionId,
+      scheduled_start_at: scheduledStartAt.toISOString(),
+      notify,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 
@@ -1804,8 +1955,21 @@ export async function deleteUnitScheduledSession(formData: FormData) {
     .eq('user_id', user.id)
 
   if (error) {
-    throw error
+    throw new Error(
+      isMissingScheduledSessionsTable(error as UnitColumnQueryError)
+        ? scheduledSessionsUnavailableMessage
+        : error.message
+    )
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_scheduled_session_deleted',
+    properties: {
+      unit_id: unitId,
+      scheduled_session_id: scheduledSessionId,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 
@@ -1908,6 +2072,16 @@ export async function assignRecipeToStage(formData: FormData) {
     actionKeys: ['choose_unit_guide', 'assign_guide_to_unit'],
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_stage_recipe_assigned',
+    properties: {
+      unit_id: unitId,
+      progress_step_id: progressStepId,
+      recipe_id: recipeId,
+    },
+  })
+
   revalidatePath(`/units/${unitId}`)
 }
 
@@ -1932,6 +2106,15 @@ export async function removeRecipeFromStage(formData: FormData) {
   if (error) {
     throw error
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_stage_recipe_removed',
+    properties: {
+      unit_id: unitId,
+      progress_step_id: progressStepId,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 }
@@ -2115,6 +2298,17 @@ export async function addPaintToStage(formData: FormData) {
     sourceId: stagePaint.id,
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_stage_paint_added',
+    properties: {
+      unit_id: unitId,
+      progress_step_id: progressStepId,
+      paint_source: paintSource,
+      paint_id: paintId,
+    },
+  })
+
   revalidatePath(`/units/${unitId}`)
   return stagePaint
 }
@@ -2140,6 +2334,15 @@ export async function removePaintFromStage(formData: FormData) {
   if (error) {
     throw error
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_stage_paint_removed',
+    properties: {
+      unit_id: unitId,
+      stage_paint_id: stagePaintId,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 }
@@ -2208,6 +2411,15 @@ export async function deleteUnitImage(formData: FormData) {
   if (deleteError) {
     throw deleteError
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_image_deleted',
+    properties: {
+      unit_id: unitId,
+      image_count: images.length,
+    },
+  })
 
   revalidatePath(`/units/${unitId}`)
 }

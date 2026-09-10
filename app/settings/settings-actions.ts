@@ -4,11 +4,26 @@ import { redirect } from 'next/navigation'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { headers } from 'next/headers'
 import { createClient } from '../../utils/supabase/server'
+import { captureServerEvent } from '../../utils/analytics/server'
 
 export async function logout() {
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   await supabase.auth.signOut()
+
+  if (user) {
+    await captureServerEvent({
+      distinctId: user.id,
+      event: 'user_signed_out',
+      properties: {
+        source: 'settings_page',
+      },
+    })
+  }
 
   redirect('/login')
 }
@@ -59,6 +74,11 @@ export async function updateAvatar(formData: FormData) {
   if (profileError) {
     throw new Error(profileError.message)
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'profile_avatar_updated',
+  })
 
   revalidatePath('/settings')
   revalidatePath('/dashboard')
@@ -137,6 +157,14 @@ export async function updateProfileAction(
       return { error: emailError.message, message: null }
     }
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'profile_updated',
+    properties: {
+      email_changed: emailChanged,
+    },
+  })
 
   revalidatePath('/settings')
   revalidatePath('/dashboard')

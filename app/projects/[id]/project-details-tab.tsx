@@ -49,7 +49,6 @@ export default function ProjectDetailsTab({
         <p className={styles.eyebrow}>
           Description
         </p>
-        <h2 className="mt-1 text-xl">Project Notes</h2>
         <p className="mt-3 text-sm leading-6">
           {project?.description || 'No description'}
         </p>
@@ -59,7 +58,6 @@ export default function ProjectDetailsTab({
         <p className={styles.eyebrow}>
           Project Data
         </p>
-        <h2 className="mt-1 text-xl">Stats</h2>
         <div className={styles.metricGrid}>
           <div className={styles.metric}>
             <p>

@@ -1,10 +1,12 @@
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import DashboardTopBar from '../dashboard/dashboard-top-bar'
 import RecipesPageClient from './recipes-page-client'
 import { createPerfTimer } from '../../utils/perf/server'
 import { getCachedPublicRecipes } from '../../lib/public-cache'
 import { getDashboardProfile } from '../dashboard/dashboard-data'
+import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 
 type RecipeRow = {
   id: string
@@ -24,6 +26,7 @@ type SavedRecipeRow = {
 type RecipesPageProps = {
   searchParams?: Promise<{
     tab?: string
+    preview?: string
   }>
 }
 
@@ -188,12 +191,18 @@ function RecipesContentSkeleton() {
 
 export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const perf = createPerfTimer('/recipes')
+  const resolvedSearchParams = searchParams ? await searchParams : undefined
+  const isPreview = await hasV3PreviewSession(resolvedSearchParams?.preview)
+
+  if (isPreview) {
+    redirect('/guides')
+  }
+
   const supabase = await createClient()
 
   const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
-  const resolvedSearchParams = searchParams ? await searchParams : undefined
   const requestedTab =
     resolvedSearchParams?.tab === 'find' ||
     resolvedSearchParams?.tab === 'custom' ||

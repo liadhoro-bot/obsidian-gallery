@@ -1,11 +1,12 @@
 'use client'
 
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import BackButton from '../../components/back-button'
-import FeatureGuideTour from '../../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
+import V3PerfIndicator from '../../components/v3-perf-indicator'
 import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
@@ -22,6 +23,10 @@ import type {
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import styles from './project-detail-silver.module.css'
+
+const FeatureGuideTour = dynamic(() => import('../../components/feature-guide-tour'), {
+  ssr: false,
+})
 
 type Props = {
   activeTab: ProjectDetailTab
@@ -93,6 +98,7 @@ export default function ProjectDetailClient({
 
   return (
     <div className={styles.projectDetailClient}>
+      <V3PerfIndicator surface="project-detail" detail={activeTab} />
       <div className={styles.projectHero}>
         {featuredProjectImage ? (
           <Image
@@ -101,6 +107,7 @@ export default function ProjectDetailClient({
             fill
             sizes="(max-width: 768px) 100vw, 420px"
             priority
+            fetchPriority="high"
             className="object-cover"
           />
         ) : (
@@ -112,30 +119,32 @@ export default function ProjectDetailClient({
         <div className={styles.heroControls}>
           <BackButton fallbackHref="/projects" className={styles.headerControl} />
 
-          <button
-            type="button"
-            aria-expanded={activeGuide !== null}
-            aria-label="Show project explanation"
-            data-feature-guide-launcher-button="true"
-            onClick={() => {
-              if (featureGuides.length) {
-                setActiveGuideIndex(
-                  findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0
-                )
-              }
-            }}
-            className={styles.secondaryButton}
-          >
-            <span>?</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={activeGuide !== null}
+              aria-label="Show project explanation"
+              data-feature-guide-launcher-button="true"
+              onClick={() => {
+                if (featureGuides.length) {
+                  setActiveGuideIndex(
+                    findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0
+                  )
+                }
+              }}
+              className={styles.secondaryButton}
+            >
+              <span>?</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setIsEditingHeader((current) => !current)}
-            className={styles.secondaryButton}
-          >
-            <span>{isEditingHeader ? 'Close' : 'Edit'}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsEditingHeader((current) => !current)}
+              className={styles.secondaryButton}
+            >
+              <span>{isEditingHeader ? 'Close' : 'Edit'}</span>
+            </button>
+          </div>
         </div>
 
         <div className={styles.heroTitle}>
@@ -248,7 +257,7 @@ export default function ProjectDetailClient({
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
-          guides={featureGuides}
+          tourName="project_detail"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>

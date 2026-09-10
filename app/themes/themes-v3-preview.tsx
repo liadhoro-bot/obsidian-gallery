@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { FormEvent, useMemo, useState } from 'react'
-import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import FeatureGuideTour from '../components/feature-guide-tour'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import V3PerfIndicator from '../components/v3-perf-indicator'
@@ -98,9 +97,7 @@ export default function ThemesV3Preview({
   function startFeatureTour() {
     if (!featureGuides.length) return
     setIsCreateOpen(false)
-    setActiveGuideIndex(
-      findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0
-    )
+    setActiveGuideIndex(0)
   }
 
   function createPreviewTheme(event: FormEvent<HTMLFormElement>) {
@@ -341,23 +338,21 @@ export default function ThemesV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
-          guides={featureGuides}
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>
-              findVisibleFeatureGuideIndex(featureGuides, current, 1) ??
-              current ??
-              0
+              current === null
+                ? 0
+                : Math.min(featureGuides.length - 1, current + 1)
             )
           }
           onPrevious={() =>
             setActiveGuideIndex((current) =>
-              findVisibleFeatureGuideIndex(featureGuides, current, -1) ??
-              current ??
-              0
+              current === null ? 0 : Math.max(0, current - 1)
             )
           }
           totalGuides={featureGuides.length}
+          tourName="themes_list"
         />
       ) : null}
     </main>

@@ -1,10 +1,10 @@
 'use client'
 
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useMemo, useState, useTransition } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
-import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
@@ -24,6 +24,10 @@ type ViewMode = 'cards' | 'grid'
 
 type PreviewProject = ProjectsV3Project
 type PreviewUnit = ProjectsV3Unit
+
+const FeatureGuideTour = dynamic(() => import('../components/feature-guide-tour'), {
+  ssr: false,
+})
 
 const initialProjects: PreviewProject[] = [
   {
@@ -491,11 +495,11 @@ export default function ProjectsV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
-          guides={featureGuides}
           onClose={closeFeatureTour}
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}
           totalGuides={featureGuides.length}
+          tourName="projects_list"
         />
       ) : null}
     </main>

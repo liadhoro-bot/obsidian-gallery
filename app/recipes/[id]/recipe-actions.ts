@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '../../../utils/supabase/server'
+import { captureServerEvent } from '../../../utils/analytics/server'
 import {
   completeOnboardingAction,
   completeOnboardingActions,
@@ -34,6 +35,15 @@ export async function updateRecipeVisibility(formData: FormData) {
     actionKeys: ['set_guide_visibility', 'finish_first_guide'],
   })
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'recipe_visibility_changed',
+    properties: {
+      recipe_id: recipeId,
+      is_public: isPublic,
+    },
+  })
+
   revalidatePath(`/recipes/${recipeId}`)
   revalidatePath('/recipes')
   revalidateTag(`recipe:${recipeId}`, 'max')
@@ -64,6 +74,15 @@ export async function updateRecipeYoutubeUrl(formData: FormData) {
 
   if (error) throw error
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'recipe_youtube_url_updated',
+    properties: {
+      recipe_id: recipeId,
+      has_youtube_url: Boolean(youtubeUrl),
+    },
+  })
+
   revalidatePath(`/recipes/${recipeId}`)
   revalidateTag(`recipe:${recipeId}`, 'max')
   revalidateTag('public-recipes', 'max')
@@ -93,5 +112,13 @@ export async function markRecipePreviewed(recipeId: string) {
     userId: user.id,
     actionKey: 'preview_guide',
     subjectGuideId: recipeId,
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'guide_stage_preview_opened',
+    properties: {
+      recipe_id: recipeId,
+    },
   })
 }

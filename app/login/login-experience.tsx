@@ -26,7 +26,7 @@ export default function LoginExperience({
   useLocalPreviewAuth = false,
 }: LoginExperienceProps) {
   const [showSignIn, setShowSignIn] = useState(
-    Boolean(authError) || previewMode || defaultOpen || Boolean(currentUserEmail)
+    Boolean(authError) || defaultOpen || Boolean(currentUserEmail)
   )
   const [audience, setAudience] = useState<LoginAudience>('new')
 

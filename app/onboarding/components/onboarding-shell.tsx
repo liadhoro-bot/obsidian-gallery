@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
 import styles from '../../auth-flow-silver.module.css'
+import { capturePostHog } from '../../../utils/analytics/client'
 import CuratorBridgeScreen from './screens/curator-bridge-screen'
 import FirstProjectScreen from './screens/first-project-screen'
 import GoalScreen from './screens/goal-screen'
@@ -37,9 +38,29 @@ export default function OnboardingShell({
   const [selectedGoal, setSelectedGoal] =
     useState<OnboardingGoal>(initialGoal)
 
+  const displayedScreen =
+    currentStep === 'creation'
+      ? selectedGoal === 'create_content'
+        ? 'create_guide'
+        : 'create_unit'
+      : currentStep === 'terms'
+        ? 'terms_and_conditions'
+        : currentStep === 'persona'
+          ? 'goal_screen'
+          : 'curator_bridge'
+
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [currentStep])
+
+  useEffect(() => {
+    void capturePostHog('onboarding_step_viewed', {
+      step: displayedScreen,
+      goal: selectedGoal,
+      preview_mode: canBypassPersistence,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayedScreen])
 
   function continueFromPersona(goal: OnboardingGoal) {
     setSelectedGoal(goal)

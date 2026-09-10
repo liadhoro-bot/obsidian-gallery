@@ -152,7 +152,7 @@ export default function FirstProjectScreen({
             disabled={!canSubmit}
             className={`tap-press tap-target ${styles.ctaButton}`}
           >
-            {isPending ? 'Creating...' : 'Show me my first step -&gt;'}
+            {isPending ? 'Creating...' : 'Show me my first step ->'}
           </button>
 
           <button
