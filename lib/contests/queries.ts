@@ -76,11 +76,21 @@ function getDemoContest(): Contest {
     voting_open_at: votingOpenAt.toISOString(),
     voting_close_at: votingCloseAt.toISOString(),
     results_published_at: null,
+    results_target_at: null,
     published_at: submissionsOpenAt.toISOString(),
     cancelled_at: null,
     archived_at: null,
     created_at: submissionsOpenAt.toISOString(),
     updated_at: now.toISOString(),
+    sponsor_name: null,
+    sponsor_logo_url: null,
+    prize_first_place: '₪1,200',
+    prize_second_place: '₪400',
+    how_it_works: [
+      { title: 'Create', body: 'Publish as many entries as you like during the contest.' },
+      { title: 'Inspire', body: 'Your entries become part of your showcase.' },
+      { title: 'Earn the vote', body: 'Each member votes for their 1st and 2nd favorites (2 and 1 points).' },
+    ],
     allowed_nominee_types: [
       { nominee_type: 'project' },
       { nominee_type: 'unit' },
@@ -671,4 +681,42 @@ export async function getNominationPickerSources(
   }
 
   return sources
+}
+
+export async function getContestNominationById(nominationId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('contest_nominations')
+    .select('*')
+    .eq('id', nominationId)
+    .maybeSingle()
+
+  if (isContestSchemaMissing(error)) return null
+  if (error) throw new Error(error.message)
+
+  return (data ?? null) as ContestNomination | null
+}
+
+export async function getEntityGalleryImages(
+  entityType: 'project' | 'unit' | 'recipe',
+  entityId: string
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('image_assets')
+    .select('id, image_url, alt_text, is_featured, created_at')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: true })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []) as Array<{
+    id: string
+    image_url: string
+    alt_text: string | null
+    is_featured: boolean
+    created_at: string
+  }>
 }

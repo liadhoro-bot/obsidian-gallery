@@ -12,7 +12,11 @@ import {
   getViewerBallot,
 } from '../../../lib/contests/queries'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
-import { canManageContest, canViewContest } from '../../../lib/contests/permissions'
+import {
+  canManageContest,
+  canNominateInContest,
+  canViewContest,
+} from '../../../lib/contests/permissions'
 import type { ContestNomination } from '../../../lib/contests/types'
 import styles from '../../../components/contests/contest-v3-silver.module.css'
 
@@ -50,6 +54,7 @@ export default async function ContestDetailPage({
   const ballot = user && !isDemoContest ? await getViewerBallot(contest.id, user.id) : null
   const hideIdentity =
     contest.hide_nominee_identity_during_voting && phase === 'voting_open'
+  const canNominate = isDemoContest ? true : await canNominateInContest(user?.id, contest)
 
   return (
     <main className={styles.contestSilver}>
@@ -64,6 +69,7 @@ export default async function ContestDetailPage({
 
         <ContestDetailTabs
           ballot={ballot}
+          canNominate={canNominate}
           contest={contest}
           nominations={nominations}
           results={results}

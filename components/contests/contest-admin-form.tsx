@@ -219,6 +219,101 @@ export default function ContestAdminForm({
           </Field>
         </FormSection>
 
+        <FormSection eyebrow="Contest" title="Prizes & Sponsor">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="1st place prize">
+              <input
+                name="prizeFirstPlace"
+                defaultValue={contest?.prize_first_place ?? ''}
+                placeholder="₪1,200"
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="2nd place prize (optional)">
+              <input
+                name="prizeSecondPlace"
+                defaultValue={contest?.prize_second_place ?? ''}
+                placeholder="₪400"
+                className={fieldClass}
+              />
+            </Field>
+          </div>
+
+          <Field label="Sponsor name (optional)">
+            <input
+              name="sponsorName"
+              defaultValue={contest?.sponsor_name ?? ''}
+              placeholder="Geek Shelter"
+              className={fieldClass}
+            />
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Sponsor logo URL">
+              <input
+                name="sponsorLogoUrl"
+                defaultValue={contest?.sponsor_logo_url ?? ''}
+                placeholder="https://..."
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Upload sponsor logo">
+              <input
+                name="sponsorLogoFile"
+                type="file"
+                accept="image/*"
+                className={`${fieldClass} file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-400 file:px-3 file:py-2 file:text-xs file:font-black file:text-black`}
+              />
+            </Field>
+          </div>
+
+          {contest?.sponsor_logo_url ? (
+            <div className="flex items-center gap-3">
+              <Image
+                src={contest.sponsor_logo_url}
+                alt=""
+                width={56}
+                height={56}
+                className="rounded-lg border border-white/10 bg-black/30 object-contain"
+              />
+              <label className={checkboxClass}>
+                <input type="checkbox" name="removeSponsorLogo" className="mr-2" />
+                Remove logo
+              </label>
+            </div>
+          ) : null}
+
+          <Field label="How it works — 3 steps">
+            <div className="grid gap-3">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="grid gap-2 rounded-xl border border-white/10 bg-black/20 p-3 sm:grid-cols-[1fr_2fr]">
+                  <input
+                    name={`howItWorksTitle${step}`}
+                    defaultValue={contest?.how_it_works?.[step - 1]?.title ?? ''}
+                    placeholder={`Step ${step} title`}
+                    className={fieldClass}
+                  />
+                  <input
+                    name={`howItWorksBody${step}`}
+                    defaultValue={contest?.how_it_works?.[step - 1]?.body ?? ''}
+                    placeholder={`Step ${step} description`}
+                    className={fieldClass}
+                  />
+                </div>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="Winners announcement target (optional, informational only)">
+            <input
+              type="datetime-local"
+              name="resultsTargetAt"
+              defaultValue={toDatetimeLocal(contest?.results_target_at)}
+              className={fieldClass}
+            />
+          </Field>
+        </FormSection>
+
         <FormSection eyebrow="Nominations" title="Accepted Objects">
           <div className="grid gap-2 sm:grid-cols-3">
             {(Object.keys(nomineeTypeLabels) as ContestNomineeType[]).map((value) => (

@@ -20,6 +20,7 @@ export default function ContestHeader({
   showFooter?: boolean
 }) {
   const phase = getContestPhase(contest)
+  const countdownTarget = getContestCountdownTarget(contest, phase)
   const allowedTypes =
     contest.allowed_nominee_types?.map((row) => row.nominee_type).join(', ') ||
     'entries'
@@ -62,7 +63,10 @@ export default function ContestHeader({
           ) : (
             <span />
           )}
-          <ContestPhaseBadge phase={phase} />
+          <span className={styles.heroCountdownPill}>
+            <span aria-hidden="true">◷</span>
+            {formatRemaining(countdownTarget) || <ContestPhaseBadge phase={phase} />}
+          </span>
         </div>
         <div className={styles.heroContent}>
           <h1 className={styles.heroTitle}>
@@ -81,7 +85,7 @@ export default function ContestHeader({
         <div className={styles.headerMeta}>
           <ContestCountdown
             phase={phase}
-            target={getContestCountdownTarget(contest, phase)}
+            target={countdownTarget}
           />
           <p className={styles.acceptedTypes}>
             Accepting {allowedTypes.replaceAll('_', ' ')}
@@ -107,4 +111,16 @@ export default function ContestHeader({
       ) : null}
     </section>
   )
+}
+
+function formatRemaining(target: string | null) {
+  if (!target) return null
+  const days = Math.max(
+    0,
+    Math.ceil((new Date(target).getTime() - Date.now()) / 86400000)
+  )
+
+  if (days === 0) return 'Today'
+  if (days === 1) return '1 day left'
+  return `${days} days left`
 }

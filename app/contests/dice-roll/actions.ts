@@ -7,6 +7,7 @@ import {
   createClient as createServerSupabaseClient,
   getSessionUser,
 } from '../../../utils/supabase/server'
+import { captureServerEvent } from '../../../utils/analytics/server'
 
 export type DiceRollResult = {
   id: string
@@ -166,7 +167,7 @@ async function sendDiceRollEmail(result: DiceRollResult) {
   }
 }
 
-async function getCurrentUsername() {
+async function getCurrentUser() {
   const authSupabase = await createServerSupabaseClient()
   const user = await getSessionUser(authSupabase)
 
@@ -182,10 +183,10 @@ async function getCurrentUsername() {
 
   if (error) {
     console.error('Could not load campaign dice roll username:', error)
-    return null
+    return { id: user.id, username: user.email?.split('@')[0] ?? null }
   }
 
-  return profile?.username ?? user.email?.split('@')[0] ?? null
+  return { id: user.id, username: profile?.username ?? user.email?.split('@')[0] ?? null }
 }
 
 export async function rollCampaignDice(
@@ -226,7 +227,8 @@ export async function rollCampaignDice(
   }
 
   const headerStore = await headers()
-  const appUsername = await getCurrentUsername()
+  const currentUser = await getCurrentUser()
+  const appUsername = currentUser?.username ?? null
   const forwardedFor = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || null
   const realIp = headerStore.get('x-real-ip')
 
@@ -280,6 +282,17 @@ export async function rollCampaignDice(
       p_email_sent: emailSent,
     })
   }
+
+  await captureServerEvent({
+    distinctId: currentUser?.id ?? `anonymous:${playerName}`,
+    event: 'campaign_dice_rolled',
+    properties: {
+      roll_type: result.rollType,
+      total: result.total,
+      is_signed_in: Boolean(currentUser),
+      duplicate: result.duplicate,
+    },
+  })
 
   return { error: null, result }
 }
