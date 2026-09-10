@@ -89,44 +89,64 @@ export async function updatePaintOwnership({
     throw new Error(upsertError.message)
   }
 
-  const { data: paint } = await supabase
-    .from('paint_catalog')
-    .select(`
-      id,
-      name,
-      brand,
-      line,
-      sku,
-      paint_type,
-      finish
-    `)
-    .eq('id', paintCatalogId)
-    .single()
+  try {
+    const { data: paint } = await supabase
+      .from('paint_catalog')
+      .select(
+        `
+        id,
+        name,
+        brand,
+        line,
+        sku,
+        paint_type,
+        finish
+      `
+      )
+      .eq('id', paintCatalogId)
+      .single()
 
-  await captureServerEvent({
-    distinctId: userId,
-    event: 'paint_ownership_updated',
-    properties: {
-      paint_source: 'catalog',
-      paint_id: paintCatalogId,
-      paint_name: paint?.name ?? null,
-      brand: paint?.brand ?? null,
-      line: paint?.line ?? null,
-      sku: paint?.sku ?? null,
-      paint_type: paint?.paint_type ?? null,
-      finish: paint?.finish ?? null,
+    await captureServerEvent({
+      distinctId: userId,
+      event: 'paint_ownership_updated',
+      properties: {
+        paint_source: 'catalog',
+        paint_id: paintCatalogId,
+        paint_name: paint?.name ?? null,
+        brand: paint?.brand ?? null,
+        line: paint?.line ?? null,
+        sku: paint?.sku ?? null,
+        paint_type: paint?.paint_type ?? null,
+        finish: paint?.finish ?? null,
+        action,
+        is_owned: updated.is_owned,
+        is_wishlist: updated.is_wishlist,
+        units_owned: updated.units_owned,
+      },
+    })
+  } catch (error) {
+    console.error('[paint ownership] post-update analytics failed', {
+      userId,
+      paintCatalogId,
       action,
-      is_owned: updated.is_owned,
-      is_wishlist: updated.is_wishlist,
-      units_owned: updated.units_owned,
-    },
-  })
+      error,
+    })
+  }
 
   if (updated.is_owned) {
-    await completeOnboardingActions({
-      userId,
-      actionKeys: ['mark_paints_owned', 'add_owned_paints'],
-    })
+    try {
+      await completeOnboardingActions({
+        userId,
+        actionKeys: ['mark_paints_owned', 'add_owned_paints'],
+      })
+    } catch (error) {
+      console.error('[paint ownership] onboarding completion failed', {
+        userId,
+        paintCatalogId,
+        action,
+        error,
+      })
+    }
 
     await safeEvaluateAchievements(userId, {
       triggers: ['paints_catalogued_total'],

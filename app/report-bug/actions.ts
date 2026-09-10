@@ -5,6 +5,7 @@ import { Resend } from 'resend'
 import { createClient } from '../../utils/supabase/server'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const BUG_REPORT_EMAIL_TIMEOUT_MS = 3500
 
 export type ReportBugResult = {
   ok: boolean
@@ -56,18 +57,34 @@ export async function submitBugReport(formData: FormData): Promise<ReportBugResu
   }
 
   if (process.env.RESEND_API_KEY && process.env.FEEDBACK_TO_EMAIL) {
-    await resend.emails.send({
-      from: 'Obsidian Gallery <onboarding@resend.dev>',
-      to: process.env.FEEDBACK_TO_EMAIL,
-      subject: 'New Obsidian Gallery bug report',
-      text: [
-        'New bug report received.',
-        '',
-        `User ID: ${user.id}`,
-        '',
-        message,
-      ].join('\n'),
-    })
+    try {
+      await Promise.race([
+        resend.emails.send({
+          from: 'Obsidian Gallery <onboarding@resend.dev>',
+          to: process.env.FEEDBACK_TO_EMAIL,
+          subject: 'New Obsidian Gallery bug report',
+          text: [
+            'New bug report received.',
+            '',
+            `User ID: ${user.id}`,
+            '',
+            message,
+          ].join('\n'),
+        }),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Bug report email timed out')),
+            BUG_REPORT_EMAIL_TIMEOUT_MS
+          )
+        ),
+      ])
+    } catch (emailError) {
+      console.error('[report bug] feedback email failed', {
+        userId: user.id,
+        buggedPage,
+        error: emailError,
+      })
+    }
   }
 
   revalidatePath('/report-bug')

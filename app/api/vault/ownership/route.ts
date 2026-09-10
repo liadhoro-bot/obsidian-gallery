@@ -56,6 +56,13 @@ export async function POST(req: Request) {
       ownership: result,
     })
   } catch (error) {
+    console.error('[vault ownership] update failed', {
+      userId: user.id,
+      paintId,
+      action,
+      error,
+    })
+
     return NextResponse.json(
       {
         error:
