@@ -8,6 +8,10 @@ import {
   isLocalV3PreviewHost,
   isV3DeploymentHost,
 } from './lib/v3-preview'
+import {
+  getSubscriptionStatus,
+  isSubscriptionGateEnabled,
+} from './lib/subscription/subscription-guard'
 
 const TERMS_VERSION = '2026-05-13'
 const TERMS_ACCEPTANCE_COOKIE = 'og_terms_acceptance'
@@ -108,6 +112,8 @@ export default async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/offline' ||
     pathname === '/onboarding' ||
+    pathname === '/subscribe' ||
+    pathname === '/payment-success' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
     pathname === '/contests/dice-roll' ||
@@ -121,6 +127,8 @@ export default async function proxy(request: NextRequest) {
     pathname.startsWith('/themes/') ||
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
+    pathname === '/api/youtube-oembed' ||
+    pathname.startsWith('/api/subscription/') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||
     pathname.includes('.')
@@ -128,7 +136,10 @@ export default async function proxy(request: NextRequest) {
   const shouldRequireAuthenticatedPreview =
     isInspectionPreview && isInspectionPreviewRoute && pathname !== '/onboarding'
   const shouldCheckSession =
-    !isPublicRoute || pathname === '/onboarding' || shouldRequireAuthenticatedPreview
+    !isPublicRoute ||
+    pathname === '/onboarding' ||
+    pathname === '/subscribe' ||
+    shouldRequireAuthenticatedPreview
 
   if (!shouldCheckSession) {
     return finalizeResponse(
@@ -218,6 +229,22 @@ export default async function proxy(request: NextRequest) {
     return finalizeResponse(
       NextResponse.redirect(new URL('/onboarding', request.url))
     )
+  }
+
+  // Payment gate: runs after the terms check so a brand-new user finishes
+  // onboarding basics first, then gets sent to pay. Disabled by default
+  // (SUBSCRIPTION_REQUIRED unset/false) so this has zero effect until you
+  // flip it on in Vercel's environment variables once Make/Grow are wired
+  // up and tested. /subscribe, /payment-success and /api/subscription/*
+  // are all in isPublicRoute above, so they never get caught by this check.
+  if (isSubscriptionGateEnabled() && !isPublicRoute) {
+    const subscription = await getSubscriptionStatus(activeUser.email)
+
+    if (!subscription.isActive) {
+      const subscribeUrl = new URL('/subscribe', request.url)
+      subscribeUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+      return finalizeResponse(NextResponse.redirect(subscribeUrl))
+    }
   }
 
   return finalizeResponse(response)
