@@ -9,7 +9,7 @@ import { captureServerEvent } from '../../utils/analytics/server'
 import { isCurrentUserAdmin } from '../admin'
 import { getContestPhase } from './phases'
 import { validateContestConfig } from './validation'
-import { canManageContest, canModerateContest } from './permissions'
+import { canManageContest, canModerateContest, canNominateInContest } from './permissions'
 import {
   getSafeImageExtension,
   validateGalleryImageFile,
@@ -155,6 +155,13 @@ export async function saveContestAction(formData: FormData) {
   const maximumSelections = Number(getString(formData, 'maximumSelections') || 1)
   const rulesMarkdown = getString(formData, 'rulesMarkdown')
   const headerImage = getUploadedImageFile(formData, 'coverImageFile')
+  const sponsorLogoImage = getUploadedImageFile(formData, 'sponsorLogoFile')
+  const howItWorks = [1, 2, 3]
+    .map((step) => ({
+      title: getString(formData, `howItWorksTitle${step}`),
+      body: getString(formData, `howItWorksBody${step}`),
+    }))
+    .filter((step) => step.title || step.body)
 
   const validationErrors = validateContestConfig({
     title,
@@ -178,6 +185,11 @@ export async function saveContestAction(formData: FormData) {
     if (validationError) throw new Error(validationError)
   }
 
+  if (sponsorLogoImage) {
+    const validationError = validateGalleryImageFile(sponsorLogoImage)
+    if (validationError) throw new Error(validationError)
+  }
+
   const { data: existingContest } = contestId
     ? await supabase
         .from('contests')
@@ -189,6 +201,9 @@ export async function saveContestAction(formData: FormData) {
 
   const typedCoverImageUrl = getString(formData, 'coverImageUrl')
   const shouldRemoveCoverImage = getBoolean(formData, 'removeCoverImage')
+  const typedSponsorLogoUrl = getString(formData, 'sponsorLogoUrl')
+  const shouldRemoveSponsorLogo = getBoolean(formData, 'removeSponsorLogo')
+  const resultsTargetAt = getString(formData, 'resultsTargetAt')
 
   const payload = {
     title,
@@ -197,6 +212,12 @@ export async function saveContestAction(formData: FormData) {
     description: getString(formData, 'description') || null,
     rules_markdown: rulesMarkdown,
     cover_image_url: shouldRemoveCoverImage ? null : typedCoverImageUrl || null,
+    sponsor_name: getString(formData, 'sponsorName') || null,
+    sponsor_logo_url: shouldRemoveSponsorLogo ? null : typedSponsorLogoUrl || null,
+    prize_first_place: getString(formData, 'prizeFirstPlace') || null,
+    prize_second_place: getString(formData, 'prizeSecondPlace') || null,
+    how_it_works: howItWorks.length > 0 ? howItWorks : null,
+    results_target_at: resultsTargetAt ? toIsoFromInput(resultsTargetAt) : null,
     visibility: getString(formData, 'visibility') || 'public',
     max_nominations_per_user: Number(getString(formData, 'maxNominations') || 1),
     requires_nomination_approval: getBoolean(formData, 'requiresApproval'),
@@ -292,6 +313,35 @@ export async function saveContestAction(formData: FormData) {
     }
   }
 
+  if (sponsorLogoImage) {
+    const fileExt = getSafeImageExtension(sponsorLogoImage.name)
+    const filePath = `contests/${savedContestId}/sponsor-${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+    const { error: uploadError } = await supabase.storage
+      .from('obsidian-images')
+      .upload(filePath, sponsorLogoImage, {
+        contentType: sponsorLogoImage.type || 'image/jpeg',
+        upsert: false,
+      })
+
+    if (uploadError) {
+      throw new Error(uploadError.message)
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('obsidian-images').getPublicUrl(filePath)
+
+    const { error: sponsorLogoError } = await supabase
+      .from('contests')
+      .update({ sponsor_logo_url: publicUrl })
+      .eq('id', savedContestId)
+
+    if (sponsorLogoError) {
+      await supabase.storage.from('obsidian-images').remove([filePath])
+      throw new Error(sponsorLogoError.message)
+    }
+  }
+
   await replaceAllowedNomineeTypes(supabase, savedContestId, nomineeTypes)
 
   await recordContestAuditEvent({
@@ -366,20 +416,20 @@ export async function createMvpContestsAction() {
       contest: {
         slug: 'best-painting-guide',
         title: 'Best Painting Guide',
-        short_description: 'An open contest for the strongest painting guide in the gallery.',
+        short_description: 'An open contest for the strongest painting guides in the Gallery.',
         description:
-          'An open prize contest where authenticated app users can nominate guides and vote on their top three. Voting is protected by verified email and minimum collection activity.',
+          'The Best Painting Guide contest celebrates creativity, knowledge, and the spirit of sharing in our community. Create and publish painting guides during the launch month, then compete for the community vote.',
         rules_markdown:
-          'Users may nominate eligible painting guides. Ranked ballots must choose exactly three guides: 1st place is worth 3 points, 2nd place is worth 2 points, and 3rd place is worth 1 point. Voters must have a verified email plus at least one project and one unit in the app.',
+          'Users may enter eligible original painting guides created during the contest period. Ranked ballots must choose exactly two different creators: 1st place is worth 2 points and 2nd place is worth 1 point. Votes are for creators, not individual guides. Voters must have a verified email plus at least one project and one unit in the app.',
         cover_image_url: '/onboarding/welcome-hero.jpeg',
         created_by: user.id,
         publication_status: 'published',
         visibility: 'private',
-        max_nominations_per_user: 1,
+        max_nominations_per_user: 999,
         requires_nomination_approval: true,
         voting_method: 'ranked',
-        minimum_selections_per_ballot: 3,
-        maximum_selections_per_ballot: 3,
+        minimum_selections_per_ballot: 2,
+        maximum_selections_per_ballot: 2,
         require_exact_selection_count: true,
         allow_ballot_changes: true,
         allow_self_vote: false,
@@ -547,18 +597,8 @@ export async function submitNominationAction(formData: FormData) {
     throw new Error('This contest does not accept that source type.')
   }
 
-  if (contest.voter_access_mode === 'allowlist') {
-    const { data: allowedUser, error: allowlistError } = await supabase
-      .from('contest_voter_allowlist')
-      .select('user_id')
-      .eq('contest_id', contestId)
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (allowlistError) throw new Error(allowlistError.message)
-    if (!allowedUser) {
-      throw new Error('This contest only accepts nominations from invited participants.')
-    }
+  if (!(await canNominateInContest(user.id, contest))) {
+    throw new Error('This contest only accepts nominations from invited participants.')
   }
 
   const countResult = await supabase
@@ -667,6 +707,12 @@ export async function withdrawNominationAction(formData: FormData) {
     action: 'contest_nomination_withdrawn',
     target_type: 'contest_nomination',
     target_id: nominationId,
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'contest_nomination_withdrawn',
+    properties: { contest_id: contestId },
   })
 
   contestRevalidate(contest.slug)
@@ -790,6 +836,13 @@ export async function finalizeContestResultsAction(formData: FormData) {
     p_contest_id: contestId,
   })
   if (error) throw new Error(error.message)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'contest_results_finalized',
+    properties: { contest_id: contestId },
+  })
+
   revalidatePath(`/contests/manage/${contestId}`)
 }
 

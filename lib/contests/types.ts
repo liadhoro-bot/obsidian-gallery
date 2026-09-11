@@ -54,12 +54,23 @@ export type Contest = {
   voting_open_at: string
   voting_close_at: string
   results_published_at: string | null
+  results_target_at: string | null
   published_at: string | null
   cancelled_at: string | null
   archived_at: string | null
   created_at: string
   updated_at: string
+  sponsor_name: string | null
+  sponsor_logo_url: string | null
+  prize_first_place: string | null
+  prize_second_place: string | null
+  how_it_works: ContestHowItWorksStep[] | null
   allowed_nominee_types?: { nominee_type: ContestNomineeType }[]
+}
+
+export type ContestHowItWorksStep = {
+  title: string
+  body: string
 }
 
 export type ContestInvitedParticipant = {

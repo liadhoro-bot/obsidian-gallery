@@ -35,11 +35,17 @@ const baseContest = {
   voting_open_at: '2026-07-25T00:00:00.000Z',
   voting_close_at: '2026-07-30T00:00:00.000Z',
   results_published_at: null,
+  results_target_at: null,
   published_at: null,
   cancelled_at: null,
   archived_at: null,
   created_at: '2026-07-01T00:00:00.000Z',
   updated_at: '2026-07-01T00:00:00.000Z',
+  sponsor_name: null,
+  sponsor_logo_url: null,
+  prize_first_place: null,
+  prize_second_place: null,
+  how_it_works: null,
 } satisfies Contest
 
 test('contest lifecycle phases honor persistent status overrides and schedule boundaries', () => {

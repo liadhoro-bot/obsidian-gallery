@@ -1,6 +1,7 @@
 import { isCurrentUserAdmin } from '../admin'
 import { createClient } from '../../utils/supabase/server'
 import { isContestSchemaMissing } from './schema'
+import type { Contest } from './types'
 
 type ContestVisibilityRow = {
   id: string
@@ -76,4 +77,25 @@ export async function canViewContest(
 export async function canModerateContest(userId: string, contestId: string) {
   void contestId
   return isCurrentUserAdmin(userId)
+}
+
+export async function canNominateInContest(
+  userId: string | null | undefined,
+  contest: Pick<Contest, 'id' | 'voter_access_mode'>
+) {
+  if (!userId) return false
+  if (contest.voter_access_mode !== 'allowlist') return true
+
+  const supabase = await createClient()
+  const { data: allowedUser, error } = await supabase
+    .from('contest_voter_allowlist')
+    .select('user_id')
+    .eq('contest_id', contest.id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (isContestSchemaMissing(error)) return false
+  if (error) throw new Error(error.message)
+
+  return Boolean(allowedUser)
 }
