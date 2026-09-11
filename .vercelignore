@@ -21,6 +21,7 @@ playwright-report/
 .codex-remote-attachments/
 _prodrestore/
 downloads/
+Claude outputs/
 debug.log
 perf-debug-flows.log
 *.tsbuildinfo
