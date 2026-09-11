@@ -498,6 +498,17 @@ export default function DeckEditorClient({
     )
   }
 
+  function syncCoverImage(url: string | null) {
+    setCards((current) =>
+      current.map((card) => (card.template === 'cover' ? { ...card, image: url } : card))
+    )
+  }
+
+  function selectHeroImage(image: EditorImage) {
+    setHeroImageId(image.id)
+    syncCoverImage(image.url)
+  }
+
   function updateActiveCard(update: Partial<EditorCard>) {
     if (editingCard?.template === 'cover') {
       if (typeof update.title === 'string') setTitle(update.title)
@@ -671,19 +682,58 @@ export default function DeckEditorClient({
     })
   }
 
-  function addGalleryFiles(event: ChangeEvent<HTMLInputElement>, source: 'camera' | 'gallery') {
+  async function addGalleryFiles(
+    event: ChangeEvent<HTMLInputElement>,
+    source: 'camera' | 'gallery'
+  ) {
     const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
     if (!files.length) return
 
-    const nextImages = files.map((file, index) => ({
+    const pendingUploads = files.map((file, index) => ({
       id: `${source}:${Date.now()}:${index}:${file.name}`,
       url: URL.createObjectURL(file),
       alt: file.name,
+      file,
     }))
+    const wasGalleryEmpty = !heroImageId
+    const firstNewImage = pendingUploads[0]
 
-    setGallery((current) => [...current, ...nextImages])
-    if (!heroImageId && nextImages[0]) setHeroImageId(nextImages[0].id)
-    event.target.value = ''
+    setGallery((current) => [
+      ...current,
+      ...pendingUploads.map(({ id, url, alt }) => ({ id, url, alt })),
+    ])
+    if (wasGalleryEmpty && firstNewImage) {
+      setHeroImageId(firstNewImage.id)
+      syncCoverImage(firstNewImage.url)
+    }
+
+    setImageUploadError(null)
+    setPendingImageUploads((count) => count + pendingUploads.length)
+
+    await Promise.all(
+      pendingUploads.map(async ({ id, url, file }) => {
+        try {
+          const formData = new FormData()
+          formData.set('image', file)
+          const result = await uploadDeckEditorImage(formData)
+          setGallery((current) =>
+            current.map((image) => (image.id === id ? { ...image, url: result.url } : image))
+          )
+          setHeroImageId((currentHeroId) => {
+            if (currentHeroId === id) syncCoverImage(result.url)
+            return currentHeroId
+          })
+          URL.revokeObjectURL(url)
+        } catch (error) {
+          setImageUploadError(
+            error instanceof Error ? error.message : 'Could not upload image.'
+          )
+        } finally {
+          setPendingImageUploads((count) => Math.max(0, count - 1))
+        }
+      })
+    )
   }
 
   function toggleImageSelection(imageId: string) {
@@ -695,13 +745,13 @@ export default function DeckEditorClient({
   }
 
   function deleteSelectedImages() {
-    setGallery((current) => {
-      const next = current.filter((image) => !selectedImageIds.includes(image.id))
-      if (!next.some((image) => image.id === heroImageId)) {
-        setHeroImageId(next[0]?.id ?? '')
-      }
-      return next
-    })
+    const next = gallery.filter((image) => !selectedImageIds.includes(image.id))
+    if (!next.some((image) => image.id === heroImageId)) {
+      const fallbackHero = next[0] ?? null
+      setHeroImageId(fallbackHero?.id ?? '')
+      syncCoverImage(fallbackHero?.url ?? null)
+    }
+    setGallery(next)
     setSelectedImageIds([])
     setIsEditingGallery(false)
   }
@@ -853,7 +903,7 @@ export default function DeckEditorClient({
               onReorderImage={reorderGalleryImage}
               onSetDraggingImageId={setDraggingImageId}
               onSetDropTarget={setGalleryDropTarget}
-              onSetHeroImage={setHeroImageId}
+              onSetHeroImage={selectHeroImage}
               onToggleEdit={() => {
                 setIsEditingGallery((current) => !current)
                 setSelectedImageIds([])
@@ -1048,7 +1098,7 @@ function DeckGallery({
   onReorderImage: (imageId: string, targetId: string, edge: DropTarget['edge']) => void
   onSetDraggingImageId: (imageId: string | null) => void
   onSetDropTarget: (target: DropTarget | null) => void
-  onSetHeroImage: (imageId: string) => void
+  onSetHeroImage: (image: EditorImage) => void
   onToggleEdit: () => void
   onToggleSelection: (imageId: string) => void
   selectedImageIds: string[]
@@ -1220,7 +1270,7 @@ function DeckGallery({
               <button
                 type="button"
                 className={isHero ? styles.heroBadge : styles.makeHeroButton}
-                onClick={() => onSetHeroImage(image.id)}
+                onClick={() => onSetHeroImage(image)}
               >
                 {isHero ? 'Hero' : 'Hero'}
               </button>
