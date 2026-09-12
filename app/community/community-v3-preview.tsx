@@ -43,11 +43,11 @@ const newsItems = [
 
 const openChallenges = [
   {
-    title: 'Path to Glory: Coolest Army',
-    text: 'A campaign-only ranked vote for invited Path to Glory army projects.',
-    meta: 'Limited seats',
-    href: '/contests/path-to-glory-coolest-army',
-    mark: '12',
+    title: 'Best Painting Guide',
+    text: 'Nominate a guide that teaches clearly, photographs the process, and helps another painter level up.',
+    meta: 'Open contest',
+    href: '/contests/best-painting-guide',
+    mark: '★',
   },
   {
     title: 'Remote Campaign Roll',
@@ -217,11 +217,11 @@ function ContestsTab() {
     <section className="grid gap-4">
       <HeroCard
         eyebrow="Featured Contest"
-        title="Best Painting Guide"
-        text="Nominate a guide that teaches clearly, photographs the process, and helps another painter level up."
+        title="Path to Glory: Coolest Army"
+        text="Nominate your army and vote for the coolest force in the Path to Glory campaign."
         action="Open contest"
-        href="/contests/best-painting-guide"
-        image="/onboarding/pains/pile-of-shame.jpeg"
+        href="/contests/path-to-glory-coolest-army"
+        image="https://ckzrvjisesooqcmmtvwl.supabase.co/storage/v1/object/public/obsidian-images/contests/8a19c894-1ff2-4cc5-b95d-8abf88045fac/header-1783350653896-2429dd08-b539-4390-9a72-6fa61a86cf9a.png"
       />
 
       <SectionCard title="Open Challenges">
