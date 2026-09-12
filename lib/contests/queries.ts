@@ -697,6 +697,74 @@ export async function getContestNominationById(nominationId: string) {
   return (data ?? null) as ContestNomination | null
 }
 
+export async function withLiveNomineeData(
+  nominations: ContestNomination[]
+): Promise<ContestNomination[]> {
+  const projectIds = nominations
+    .filter((nomination) => nomination.source_type === 'project' && nomination.source_project_id)
+    .map((nomination) => nomination.source_project_id as string)
+  const unitIds = nominations
+    .filter((nomination) => nomination.source_type === 'unit' && nomination.source_unit_id)
+    .map((nomination) => nomination.source_unit_id as string)
+  const guideIds = nominations
+    .filter((nomination) => nomination.source_type === 'guide' && nomination.source_guide_id)
+    .map((nomination) => nomination.source_guide_id as string)
+  const allSourceIds = [...projectIds, ...unitIds, ...guideIds]
+
+  if (allSourceIds.length === 0) return nominations
+
+  const supabase = await createClient()
+  const [projectsResult, unitsResult, guidesResult, imagesResult] = await Promise.all([
+    projectIds.length
+      ? supabase.from('projects').select('id, name').in('id', projectIds)
+      : Promise.resolve({ data: [], error: null }),
+    unitIds.length
+      ? supabase.from('units').select('id, name').in('id', unitIds)
+      : Promise.resolve({ data: [], error: null }),
+    guideIds.length
+      ? supabase.from('recipes').select('id, name').in('id', guideIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from('image_assets')
+      .select('entity_id, image_url, is_featured, created_at')
+      .in('entity_id', allSourceIds)
+      .order('is_featured', { ascending: false })
+      .order('created_at', { ascending: true }),
+  ])
+
+  const nameById = new Map<string, string>()
+  for (const row of (projectsResult.data ?? []) as { id: string; name: string | null }[]) {
+    if (row.name) nameById.set(row.id, row.name)
+  }
+  for (const row of (unitsResult.data ?? []) as { id: string; name: string | null }[]) {
+    if (row.name) nameById.set(row.id, row.name)
+  }
+  for (const row of (guidesResult.data ?? []) as { id: string; name: string | null }[]) {
+    if (row.name) nameById.set(row.id, row.name)
+  }
+
+  const imageById = new Map<string, string>()
+  for (const row of (imagesResult.data ?? []) as { entity_id: string; image_url: string }[]) {
+    if (!imageById.has(row.entity_id)) imageById.set(row.entity_id, row.image_url)
+  }
+
+  return nominations.map((nomination) => {
+    const sourceId =
+      nomination.source_project_id ?? nomination.source_unit_id ?? nomination.source_guide_id
+    if (!sourceId) return nomination
+
+    const liveTitle = nameById.get(sourceId)
+    const liveImage = imageById.get(sourceId)
+    if (!liveTitle && !liveImage) return nomination
+
+    return {
+      ...nomination,
+      snapshot_title: liveTitle || nomination.snapshot_title,
+      snapshot_image_url: liveImage || nomination.snapshot_image_url,
+    }
+  })
+}
+
 export async function getEntityGalleryImages(
   entityType: 'project' | 'unit' | 'recipe',
   entityId: string

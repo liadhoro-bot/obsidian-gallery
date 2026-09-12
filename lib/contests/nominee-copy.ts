@@ -1,3 +1,4 @@
+import { getContestPhase, getPhaseLabel } from './phases'
 import type { Contest, ContestNomineeType } from './types'
 
 export type NomineeCopy = {
@@ -52,4 +53,15 @@ export function getNomineeType(contest: Contest): ContestNomineeType | undefined
 export function getNomineeCopy(contest: Contest): NomineeCopy {
   const type = getNomineeType(contest)
   return (type && nomineeCopyByType[type]) || fallbackNomineeCopy
+}
+
+export function getPhaseHeadline(contest: Contest): string {
+  const phase = getContestPhase(contest)
+  if (phase === 'upcoming') return 'Accepting Nominations'
+  if (phase === 'submissions_open') return 'Accepting Nominations'
+  if (phase === 'moderation') return 'Voting Opens Soon'
+  if (phase === 'voting_open') return 'Voting Open'
+  if (phase === 'voting_closed') return 'Winners Coming Soon'
+  if (phase === 'results_published') return 'Winners Announced'
+  return getPhaseLabel(phase)
 }

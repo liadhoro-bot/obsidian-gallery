@@ -10,6 +10,7 @@ import {
   getNominationPickerSources,
   getUserContestNominations,
   getViewerBallot,
+  withLiveNomineeData,
 } from '../../../lib/contests/queries'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import {
@@ -42,19 +43,31 @@ export default async function ContestDetailPage({
   const phase = getContestPhase(contest)
   const allowedTypes =
     contest.allowed_nominee_types?.map((row) => row.nominee_type) ?? []
-  const nominations = isDemoContest && user
+  const rawNominations = isDemoContest && user
     ? await getDemoNominations(user.id, contest.id, allowedTypes)
     : await getContestNominations(contest.id)
   const results = isDemoContest ? [] : await getContestResults(contest.id)
-  const userNominations = user
+  const rawUserNominations = user
     ? isDemoContest
-      ? nominations.filter((nomination) => nomination.owner_user_id === user.id)
+      ? rawNominations.filter((nomination) => nomination.owner_user_id === user.id)
       : await getUserContestNominations(contest.id, user.id)
     : []
+  const [nominations, userNominations] = isDemoContest
+    ? [rawNominations, rawUserNominations]
+    : await Promise.all([
+        withLiveNomineeData(rawNominations),
+        withLiveNomineeData(rawUserNominations),
+      ])
   const ballot = user && !isDemoContest ? await getViewerBallot(contest.id, user.id) : null
   const hideIdentity =
     contest.hide_nominee_identity_during_voting && phase === 'voting_open'
-  const canNominate = isDemoContest ? true : await canNominateInContest(user?.id, contest)
+  const isEligibleParticipant = isDemoContest
+    ? true
+    : await canNominateInContest(user?.id, contest)
+  const pickerSources =
+    user && isEligibleParticipant
+      ? await getNominationPickerSources(user.id, allowedTypes)
+      : []
 
   return (
     <main className={styles.contestSilver}>
@@ -69,9 +82,10 @@ export default async function ContestDetailPage({
 
         <ContestDetailTabs
           ballot={ballot}
-          canNominate={canNominate}
+          isEligibleParticipant={isEligibleParticipant}
           contest={contest}
           nominations={nominations}
+          pickerSources={pickerSources}
           results={results}
           userNominations={userNominations}
           hideIdentity={hideIdentity}

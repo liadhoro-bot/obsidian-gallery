@@ -6,6 +6,7 @@ import {
   getContestBySlug,
   getContestNominationById,
   getEntityGalleryImages,
+  withLiveNomineeData,
 } from '../../../../../lib/contests/queries'
 import { canViewContest } from '../../../../../lib/contests/permissions'
 import { createClient, getSessionUser } from '../../../../../utils/supabase/server'
@@ -26,8 +27,9 @@ export default async function ContestEntryDetailPage({
     notFound()
   }
 
-  const nomination = await getContestNominationById(nominationId)
-  if (!nomination || nomination.contest_id !== contest.id) notFound()
+  const rawNomination = await getContestNominationById(nominationId)
+  if (!rawNomination || rawNomination.contest_id !== contest.id) notFound()
+  const [nomination] = await withLiveNomineeData([rawNomination])
 
   const isOwner = user?.id === nomination.owner_user_id
   if (nomination.status !== 'approved' && !isOwner) notFound()

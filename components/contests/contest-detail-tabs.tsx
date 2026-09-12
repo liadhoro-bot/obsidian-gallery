@@ -4,24 +4,25 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { getContestPhase } from '../../lib/contests/phases'
-import { getNomineeCopy, getNomineeType, type NomineeCopy } from '../../lib/contests/nominee-copy'
+import {
+  getNomineeCopy,
+  getNomineeType,
+  getPhaseHeadline,
+  type NomineeCopy,
+} from '../../lib/contests/nominee-copy'
+import { submitNominationAction } from '../../lib/contests/actions'
+import type { ContestPickerSource } from '../../lib/contests/queries'
 import type {
   Contest,
   ContestBallot,
   ContestNomination,
   ContestNomineeType,
 } from '../../lib/contests/types'
+import NominateModal from './nominate-modal'
 import styles from './contest-v3-silver.module.css'
 
 type ContestDetailTab = 'details' | 'entries' | 'my-activity'
-type EntrySort = 'newest' | 'name'
-
-type EntryGroup = {
-  id: string
-  name: string
-  nominations: ContestNomination[]
-  latestSubmittedAt: string
-}
+type EntrySort = 'newest' | 'title'
 
 const tabs: Array<{ key: ContestDetailTab; label: string }> = [
   { key: 'details', label: 'Details' },
@@ -49,16 +50,6 @@ function daysUntil(value: string | null) {
   return Math.max(0, Math.ceil(diff / 86400000))
 }
 
-function phaseLabel(contest: Contest, nomineeCopy: NomineeCopy) {
-  const phase = getContestPhase(contest)
-  if (phase === 'submissions_open') return nomineeCopy.periodLabel
-  if (phase === 'moderation') return 'Voting Opens Soon'
-  if (phase === 'voting_open') return 'Community Voting'
-  if (phase === 'voting_closed') return 'Winners Soon'
-  if (phase === 'results_published') return 'Winners Announced'
-  return 'Upcoming'
-}
-
 function entryOwnerName(nomination: ContestNomination, hideIdentity?: boolean) {
   if (hideIdentity) return 'Gallery Member'
   return nomination.snapshot_owner_display_name || 'Gallery Member'
@@ -67,35 +58,6 @@ function entryOwnerName(nomination: ContestNomination, hideIdentity?: boolean) {
 function initialsFor(name: string) {
   const letters = name.replace(/^@/, '').match(/[a-z0-9]/gi)
   return letters?.slice(0, 2).join('').toUpperCase() || 'OG'
-}
-
-function buildEntryGroups(
-  nominations: ContestNomination[],
-  hideIdentity?: boolean
-): EntryGroup[] {
-  const byOwner = new Map<string, EntryGroup>()
-
-  for (const nomination of nominations) {
-    const key = nomination.owner_user_id || nomination.id
-    const current = byOwner.get(key)
-
-    if (current) {
-      current.nominations.push(nomination)
-      if (new Date(nomination.submitted_at) > new Date(current.latestSubmittedAt)) {
-        current.latestSubmittedAt = nomination.submitted_at
-      }
-      continue
-    }
-
-    byOwner.set(key, {
-      id: key,
-      name: entryOwnerName(nomination, hideIdentity),
-      nominations: [nomination],
-      latestSubmittedAt: nomination.submitted_at,
-    })
-  }
-
-  return Array.from(byOwner.values())
 }
 
 function ballotEntryNames(
@@ -117,23 +79,26 @@ function ballotEntryNames(
 
 export default function ContestDetailTabs({
   ballot,
-  canNominate = true,
   contest,
   hideIdentity,
+  isEligibleParticipant = true,
   nominations,
+  pickerSources = [],
   userNominations,
 }: {
   ballot: ContestBallot | null
-  canNominate?: boolean
   contest: Contest
   hideIdentity?: boolean
+  isEligibleParticipant?: boolean
   nominations: ContestNomination[]
+  pickerSources?: ContestPickerSource[]
   results: unknown[]
   userNominations: ContestNomination[]
 }) {
   const [activeTab, setActiveTab] = useState<ContestDetailTab>('details')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<EntrySort>('newest')
+  const [isNominateModalOpen, setIsNominateModalOpen] = useState(false)
   const phase = getContestPhase(contest)
   const votingIsOpen = phase === 'voting_open'
   const votingHasClosed = ['voting_closed', 'results_published'].includes(phase)
@@ -142,32 +107,31 @@ export default function ContestDetailTabs({
   const activeUserNominations = userNominations.filter((nomination) =>
     ['approved', 'pending'].includes(nomination.status)
   )
-  const allEntryGroups = useMemo(
-    () => buildEntryGroups(nominations, hideIdentity),
-    [hideIdentity, nominations]
-  )
-  const sortedEntryGroups = useMemo(() => {
+  const sortedNominations = useMemo(() => {
     const needle = search.trim().toLowerCase()
     const filtered = needle
-      ? allEntryGroups.filter((entry) => entry.name.toLowerCase().includes(needle))
-      : allEntryGroups
+      ? nominations.filter(
+          (nomination) =>
+            nomination.snapshot_title.toLowerCase().includes(needle) ||
+            entryOwnerName(nomination, hideIdentity).toLowerCase().includes(needle)
+        )
+      : nominations
 
     return [...filtered].sort((first, second) => {
-      if (sort === 'name') return first.name.localeCompare(second.name)
-      return (
-        new Date(second.latestSubmittedAt).getTime() -
-        new Date(first.latestSubmittedAt).getTime()
-      )
+      if (sort === 'title') return first.snapshot_title.localeCompare(second.snapshot_title)
+      return new Date(second.submitted_at).getTime() - new Date(first.submitted_at).getTime()
     })
-  }, [allEntryGroups, search, sort])
+  }, [hideIdentity, nominations, search, sort])
   const submittedEntryNames = ballotEntryNames(ballot, nominations, hideIdentity)
   const votingOpensIn = daysUntil(contest.voting_open_at)
   const votingClosesIn = daysUntil(contest.voting_close_at)
   const hasReachedNominationLimit =
     activeUserNominations.length >= contest.max_nominations_per_user
+  const canOpenNominateModal =
+    isEligibleParticipant && phase === 'submissions_open' && !hasReachedNominationLimit
 
   function cycleSort() {
-    setSort((current) => (current === 'newest' ? 'name' : 'newest'))
+    setSort((current) => (current === 'newest' ? 'title' : 'newest'))
   }
 
   return (
@@ -241,12 +205,19 @@ export default function ContestDetailTabs({
                 />
               ))}
             </div>
-            <Link
-              href={`/contests/${contest.slug}/submit`}
-              className={`${styles.brassButton} ${styles.ctaButtonFull}`}
-            >
-              {nomineeCopy.actionVerb}
-            </Link>
+            {canOpenNominateModal ? (
+              <button
+                type="button"
+                onClick={() => setIsNominateModalOpen(true)}
+                className={`${styles.brassButton} ${styles.ctaButtonFull}`}
+              >
+                {nomineeCopy.actionVerb}
+              </button>
+            ) : !isEligibleParticipant ? (
+              <p className={styles.mutedText}>
+                Nominations are limited to invited participants.
+              </p>
+            ) : null}
             <div className={styles.dateStrip}>
               <DateChip label={nomineeCopy.periodLabel} value={formatDateRange(contest.submissions_open_at, contest.submissions_close_at)} />
               <DateChip label="Voting" value={formatDateRange(contest.voting_open_at, contest.voting_close_at)} />
@@ -282,21 +253,28 @@ export default function ContestDetailTabs({
             </button>
           </div>
 
-          {sortedEntryGroups.length === 0 ? (
+          {sortedNominations.length === 0 ? (
             <article className={styles.emptyState}>
               <p className={styles.emptyTitle}>The gallery is waiting for its first entries.</p>
               <p className={styles.mutedText}>Enter the contest and become part of the challenge.</p>
-              <Link href={`/contests/${contest.slug}/submit`} className={styles.brassButton}>
-                {nomineeCopy.actionVerb}
-              </Link>
+              {canOpenNominateModal ? (
+                <button
+                  type="button"
+                  onClick={() => setIsNominateModalOpen(true)}
+                  className={styles.brassButton}
+                >
+                  {nomineeCopy.actionVerb}
+                </button>
+              ) : null}
             </article>
           ) : (
-            <div className={styles.creatorList}>
-              {sortedEntryGroups.map((entry) => (
-                <EntryCard
-                  key={entry.id}
-                  entry={entry}
+            <div className={styles.entryGrid}>
+              {sortedNominations.map((nomination) => (
+                <EntryTile
+                  key={nomination.id}
                   contestSlug={contest.slug}
+                  hideIdentity={hideIdentity}
+                  nomination={nomination}
                   nomineeType={nomineeType}
                 />
               ))}
@@ -323,21 +301,29 @@ export default function ContestDetailTabs({
                   </div>
                 </div>
                 <NomineeThumbStrip nominations={activeUserNominations} prominent />
-                {!hasReachedNominationLimit ? (
-                  <Link href={`/contests/${contest.slug}/submit`} className={styles.brassButton}>
+                {canOpenNominateModal ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsNominateModalOpen(true)}
+                    className={styles.brassButton}
+                  >
                     {contest.max_nominations_per_user > 1
                       ? `Add Another ${nomineeCopy.entryNounCapitalized}`
                       : nomineeCopy.actionVerb}
-                  </Link>
+                  </button>
                 ) : null}
               </>
-            ) : canNominate ? (
+            ) : canOpenNominateModal ? (
               <div className={styles.emptyParticipation}>
                 <h2>Your place in the Gallery is still empty.</h2>
                 <p>Enter the contest to strengthen your showcase.</p>
-                <Link href={`/contests/${contest.slug}/submit`} className={styles.brassButton}>
+                <button
+                  type="button"
+                  onClick={() => setIsNominateModalOpen(true)}
+                  className={styles.brassButton}
+                >
                   {nomineeCopy.actionVerb}
-                </Link>
+                </button>
                 <small>
                   No entry fee ·{' '}
                   {contest.max_nominations_per_user > 1
@@ -358,7 +344,15 @@ export default function ContestDetailTabs({
 
           <article className={styles.paperPanel}>
             <p className={styles.eyebrow}>Your Vote</p>
-            {ballot?.status !== 'submitted' && votingHasClosed ? (
+            {!isEligibleParticipant ? (
+              <div className={styles.voteState}>
+                <span className={styles.clockIcon} aria-hidden="true">○</span>
+                <div>
+                  <h2>Voting is limited to invited participants.</h2>
+                  <p>You haven&apos;t been added to the participant list for this contest.</p>
+                </div>
+              </div>
+            ) : ballot?.status !== 'submitted' && votingHasClosed ? (
               <div className={styles.voteState}>
                 <span className={styles.clockIcon} aria-hidden="true">○</span>
                 <div>
@@ -410,6 +404,16 @@ export default function ContestDetailTabs({
           </article>
         </div>
       </div>
+
+      {isNominateModalOpen ? (
+        <NominateModal
+          action={submitNominationAction}
+          contest={contest}
+          entryNounCapitalized={nomineeCopy.entryNounCapitalized}
+          onClose={() => setIsNominateModalOpen(false)}
+          sources={pickerSources}
+        />
+      ) : null}
     </section>
   )
 }
@@ -469,30 +473,43 @@ function DateChip({ label, value }: { label: string; value: string }) {
   )
 }
 
-function EntryCard({
+function EntryTile({
   contestSlug,
-  entry,
+  hideIdentity,
+  nomination,
   nomineeType,
 }: {
   contestSlug: string
-  entry: EntryGroup
+  hideIdentity?: boolean
+  nomination: ContestNomination
   nomineeType: ContestNomineeType | undefined
 }) {
   const href =
     nomineeType === 'guide'
-      ? `/contests/${contestSlug}/vote?creator=${encodeURIComponent(entry.id)}`
-      : `/contests/${contestSlug}/entries/${entry.nominations[0].id}`
-  const count = entry.nominations.length
+      ? `/contests/${contestSlug}/vote?creator=${encodeURIComponent(nomination.owner_user_id)}`
+      : `/contests/${contestSlug}/entries/${nomination.id}`
+  const ownerName = entryOwnerName(nomination, hideIdentity)
 
   return (
-    <Link href={href} className={styles.creatorCard}>
-      <span className={styles.creatorAvatar}>{initialsFor(entry.name)}</span>
-      <span className={styles.creatorCardBody}>
-        <strong>{entry.name}</strong>
-        <small>{count} eligible {count === 1 ? 'nomination' : 'nominations'}</small>
-        <NomineeThumbStrip nominations={entry.nominations} />
-      </span>
-      <span className={styles.chevron} aria-hidden="true">›</span>
+    <Link href={href} className={`${styles.nomineeTile} block`}>
+      <div className={styles.nomineeTileImage}>
+        <Image
+          src={nomination.snapshot_image_url}
+          alt=""
+          fill
+          sizes="(max-width: 640px) 50vw, 220px"
+          className="object-cover"
+        />
+      </div>
+      <div className={styles.nomineeBody}>
+        <h3 className={styles.tileTitle}>{nomination.snapshot_title}</h3>
+        {!hideIdentity ? (
+          <div className={styles.entryOwnerRow}>
+            <span className={styles.entryOwnerAvatar}>{initialsFor(ownerName)}</span>
+            <span className={styles.tileOwner}>{ownerName}</span>
+          </div>
+        ) : null}
+      </div>
     </Link>
   )
 }
@@ -567,7 +584,7 @@ function Timeline({ contest, nomineeCopy }: { contest: Contest; nomineeCopy: Nom
             <strong>{item.title}</strong>
             <small>{item.date}</small>
           </div>
-          {item.state === 'current' ? <em>{phaseLabel(contest, nomineeCopy)}</em> : null}
+          {item.state === 'current' ? <em>{getPhaseHeadline(contest)}</em> : null}
         </div>
       ))}
     </div>

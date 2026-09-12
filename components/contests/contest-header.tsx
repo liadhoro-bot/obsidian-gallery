@@ -1,9 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getContestCountdownTarget, getContestPhase } from '../../lib/contests/phases'
+import { getPhaseHeadline } from '../../lib/contests/nominee-copy'
 import type { Contest } from '../../lib/contests/types'
 import ContestCountdown from './contest-countdown'
-import ContestPhaseBadge from './contest-phase-badge'
 import styles from './contest-v3-silver.module.css'
 
 export default function ContestHeader({
@@ -65,7 +65,7 @@ export default function ContestHeader({
           )}
           <span className={styles.heroCountdownPill}>
             <span aria-hidden="true">◷</span>
-            {formatRemaining(countdownTarget) || <ContestPhaseBadge phase={phase} />}
+            {getPhaseHeadline(contest)}
           </span>
         </div>
         <div className={styles.heroContent}>
@@ -111,16 +111,4 @@ export default function ContestHeader({
       ) : null}
     </section>
   )
-}
-
-function formatRemaining(target: string | null) {
-  if (!target) return null
-  const days = Math.max(
-    0,
-    Math.ceil((new Date(target).getTime() - Date.now()) / 86400000)
-  )
-
-  if (days === 0) return 'Today'
-  if (days === 1) return '1 day left'
-  return `${days} days left`
 }

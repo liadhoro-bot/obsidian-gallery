@@ -1043,6 +1043,138 @@
   padding: 14px 12px;
 }
 
+.entryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.entryOwnerRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.entryOwnerAvatar {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 54%, var(--og-border-subtle));
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--og-walnut-700) 72%, var(--og-brass-500));
+  color: var(--og-paper-50);
+  font-size: 0.56rem;
+  font-weight: 900;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--og-ink-950) 74%, transparent);
+  padding: 0;
+}
+
+.modalPanel {
+  display: grid;
+  width: 100%;
+  max-width: var(--og-workbench-compact-max-width, 390px);
+  max-height: 86dvh;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-ink-950));
+  border-radius: var(--og-radius-l) var(--og-radius-l) 0 0;
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  box-shadow: var(--og-shadow-large);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-block-end: var(--og-border-width) solid color-mix(in srgb, var(--og-walnut-700) 18%, transparent);
+  padding: 14px 14px 12px;
+}
+
+.modalHeader h2 {
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.modalCloseButton {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 54%, var(--og-border-subtle));
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--og-paper-50) 54%, transparent);
+  color: var(--og-text-primary);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.modalList {
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+
+.modalPickerRow {
+  display: grid;
+  grid-template-columns: auto 54px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 34%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: color-mix(in srgb, var(--og-paper-50) 46%, transparent);
+  padding: 8px 10px;
+}
+
+.modalPickerRow:has(input:checked) {
+  border-color: color-mix(in srgb, var(--og-brass-500) 76%, var(--og-walnut-700));
+  background-color: color-mix(in srgb, var(--og-brass-500) 16%, var(--og-paper-50));
+}
+
+.modalPickerRow input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--og-brass-500);
+}
+
+.modalPickerThumb {
+  position: relative;
+  overflow: hidden;
+  width: 54px;
+  height: 54px;
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-bg-recess);
+}
+
+.modalPickerTitle {
+  overflow: hidden;
+  color: var(--og-text-primary);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modalFooter {
+  border-block-start: var(--og-border-width) solid color-mix(in srgb, var(--og-walnut-700) 18%, transparent);
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+}
+
 .rankedGallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -9,7 +9,8 @@ import {
   getContestNominations,
   getViewerBallot,
 } from '../../../../lib/contests/queries'
-import { canViewContest } from '../../../../lib/contests/permissions'
+import { canNominateInContest, canViewContest } from '../../../../lib/contests/permissions'
+import { getNomineeCopy } from '../../../../lib/contests/nominee-copy'
 import styles from '../../../../components/contests/contest-v3-silver.module.css'
 
 export default async function ContestVotePage({
@@ -34,6 +35,8 @@ export default async function ContestVotePage({
   const phase = getContestPhase(contest)
   const nominations = await getContestNominations(contest.id)
   const ballot = await getViewerBallot(contest.id, user.id)
+  const canVote = await canNominateInContest(user.id, contest)
+  const nomineeCopy = getNomineeCopy(contest)
 
   return (
     <main className={styles.contestSilver}>
@@ -56,13 +59,21 @@ export default async function ContestVotePage({
           </article>
         ) : null}
 
-        {phase !== 'voting_open' ? (
+        {!canVote ? (
+          <article className={`${styles.paperPanel} ${styles.closedPanel}`}>
+            <p className={styles.eyebrow}>Your Vote</p>
+            <h2 className={styles.sectionTitle}>Voting is limited to invited participants.</h2>
+            <p className={styles.bodyText}>
+              You haven&apos;t been added to the participant list for this contest.
+            </p>
+          </article>
+        ) : phase !== 'voting_open' ? (
           <article className={`${styles.paperPanel} ${styles.closedPanel}`}>
             <p className={styles.eyebrow}>Your Vote</p>
             <h2 className={styles.sectionTitle}>Voting is not open.</h2>
             <p className={styles.bodyText}>
-              You will be able to choose one creator for 1st place and one different
-              creator for 2nd place once community voting begins.
+              You will be able to choose one {nomineeCopy.voteNoun} for 1st place and one different{' '}
+              {nomineeCopy.voteNoun} for 2nd place once community voting begins.
             </p>
           </article>
         ) : ballot?.status === 'submitted' && !contest.allow_ballot_changes ? (
