@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import type { ContestNomination } from '../../lib/contests/types'
+import ContestNomineeGalleryLightbox from './contest-nominee-gallery-lightbox'
 import styles from './contest-v3-silver.module.css'
 
 type GalleryImage = {
@@ -35,7 +36,6 @@ export default function ContestNomineeDetail({
           />
         </div>
         <div className={styles.nomineeDetailHeroBody}>
-          <p className={styles.eyebrow}>{nomination.source_type}</p>
           <h1 className={styles.sectionTitle}>{nomination.snapshot_title}</h1>
           {!hideIdentity && nomination.snapshot_owner_display_name ? (
             <p className={styles.mutedText}>By {nomination.snapshot_owner_display_name}</p>
@@ -48,19 +48,7 @@ export default function ContestNomineeDetail({
 
       <article className={styles.paperPanel}>
         <p className={styles.eyebrow}>Gallery</p>
-        <div className={`${styles.tileGrid} mt-3`}>
-          {images.map((image) => (
-            <div key={image.id} className={styles.nomineeTileImage}>
-              <Image
-                src={image.image_url}
-                alt={image.alt_text || ''}
-                fill
-                sizes="(max-width: 640px) 33vw, 220px"
-                className="object-cover"
-              />
-            </div>
-          ))}
-        </div>
+        <ContestNomineeGalleryLightbox images={images} title={nomination.snapshot_title} />
       </article>
     </div>
   )

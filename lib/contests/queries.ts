@@ -716,13 +716,13 @@ export async function withLiveNomineeData(
   const supabase = await createClient()
   const [projectsResult, unitsResult, guidesResult, imagesResult] = await Promise.all([
     projectIds.length
-      ? supabase.from('projects').select('id, name').in('id', projectIds)
+      ? supabase.from('projects').select('id, name, description').in('id', projectIds)
       : Promise.resolve({ data: [], error: null }),
     unitIds.length
-      ? supabase.from('units').select('id, name').in('id', unitIds)
+      ? supabase.from('units').select('id, name, notes').in('id', unitIds)
       : Promise.resolve({ data: [], error: null }),
     guideIds.length
-      ? supabase.from('recipes').select('id, name').in('id', guideIds)
+      ? supabase.from('recipes').select('id, name, description').in('id', guideIds)
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from('image_assets')
@@ -733,14 +733,30 @@ export async function withLiveNomineeData(
   ])
 
   const nameById = new Map<string, string>()
-  for (const row of (projectsResult.data ?? []) as { id: string; name: string | null }[]) {
+  const descriptionById = new Map<string, string>()
+  for (const row of (projectsResult.data ?? []) as {
+    id: string
+    name: string | null
+    description: string | null
+  }[]) {
     if (row.name) nameById.set(row.id, row.name)
+    if (row.description) descriptionById.set(row.id, row.description)
   }
-  for (const row of (unitsResult.data ?? []) as { id: string; name: string | null }[]) {
+  for (const row of (unitsResult.data ?? []) as {
+    id: string
+    name: string | null
+    notes: string | null
+  }[]) {
     if (row.name) nameById.set(row.id, row.name)
+    if (row.notes) descriptionById.set(row.id, row.notes)
   }
-  for (const row of (guidesResult.data ?? []) as { id: string; name: string | null }[]) {
+  for (const row of (guidesResult.data ?? []) as {
+    id: string
+    name: string | null
+    description: string | null
+  }[]) {
     if (row.name) nameById.set(row.id, row.name)
+    if (row.description) descriptionById.set(row.id, row.description)
   }
 
   const imageById = new Map<string, string>()
@@ -754,12 +770,14 @@ export async function withLiveNomineeData(
     if (!sourceId) return nomination
 
     const liveTitle = nameById.get(sourceId)
+    const liveDescription = descriptionById.get(sourceId)
     const liveImage = imageById.get(sourceId)
-    if (!liveTitle && !liveImage) return nomination
+    if (!liveTitle && !liveDescription && !liveImage) return nomination
 
     return {
       ...nomination,
       snapshot_title: liveTitle || nomination.snapshot_title,
+      snapshot_description: liveDescription || nomination.snapshot_description,
       snapshot_image_url: liveImage || nomination.snapshot_image_url,
     }
   })
