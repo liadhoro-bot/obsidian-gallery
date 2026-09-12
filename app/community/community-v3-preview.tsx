@@ -43,9 +43,9 @@ const newsItems = [
 
 const openChallenges = [
   {
-    title: 'Best Painting Guide',
-    text: 'Nominate a guide that teaches clearly, photographs the process, and helps another painter level up.',
-    meta: 'Open contest',
+    title: 'Top Hobby Guides',
+    text: 'Huge prizes for winning guide creators.',
+    meta: 'Opening soon',
     href: '/contests/best-painting-guide',
     mark: '★',
   },
