@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { getContestPhase } from '../../lib/contests/phases'
 import {
+  getBallotSummary,
   getNomineeCopy,
   getNomineeType,
+  getOrdinal,
   getPhaseHeadline,
   type NomineeCopy,
 } from '../../lib/contests/nominee-copy'
@@ -139,8 +141,14 @@ export default function ContestDetailTabs({
   const votingClosesIn = daysUntil(contest.voting_close_at)
   const hasReachedNominationLimit =
     activeUserNominations.length >= contest.max_nominations_per_user
+  const isGuideAutoNominate = nomineeType === 'guide'
+  const guideCreationHref = '/guides'
   const canOpenNominateModal =
-    isEligibleParticipant && phase === 'submissions_open' && !hasReachedNominationLimit
+    !isGuideAutoNominate &&
+    isEligibleParticipant &&
+    phase === 'submissions_open' &&
+    !hasReachedNominationLimit
+  const myGuideCount = guideCreatorLeaderboard.find((entry) => entry.isViewer)?.guideCount ?? 0
 
   function cycleSort() {
     setSort((current) => (current === 'newest' ? 'title' : 'newest'))
@@ -217,7 +225,14 @@ export default function ContestDetailTabs({
                 />
               ))}
             </div>
-            {canOpenNominateModal ? (
+            {isGuideAutoNominate ? (
+              <Link
+                href={guideCreationHref}
+                className={`${styles.brassButton} ${styles.ctaButtonFull}`}
+              >
+                {nomineeCopy.actionVerb}
+              </Link>
+            ) : canOpenNominateModal ? (
               <button
                 type="button"
                 onClick={() => setIsNominateModalOpen(true)}
@@ -272,6 +287,9 @@ export default function ContestDetailTabs({
               <article className={styles.emptyState}>
                 <p className={styles.emptyTitle}>The gallery is waiting for its first public guides.</p>
                 <p className={styles.mutedText}>Publish a public guide to appear on the leaderboard.</p>
+                <Link href={guideCreationHref} className={styles.brassButton}>
+                  {nomineeCopy.actionVerb}
+                </Link>
               </article>
             ) : (
               <div className={styles.entryGrid}>
@@ -314,7 +332,33 @@ export default function ContestDetailTabs({
         <div className={styles.standingStack}>
           <article className={styles.paperPanel}>
             <p className={styles.eyebrow}>Your Status</p>
-            {activeUserNominations.length > 0 ? (
+            {isGuideAutoNominate ? (
+              myGuideCount > 0 ? (
+                <>
+                  <div className={styles.statusLead}>
+                    <span className={styles.successDot} aria-hidden="true">✓</span>
+                    <div>
+                      <h2>You&apos;re in!</h2>
+                      <p>
+                        {myGuideCount} public {myGuideCount === 1 ? 'guide' : 'guides'} putting you on
+                        the leaderboard.
+                      </p>
+                    </div>
+                  </div>
+                  <Link href={guideCreationHref} className={styles.brassButton}>
+                    Publish Another Guide
+                  </Link>
+                </>
+              ) : (
+                <div className={styles.emptyParticipation}>
+                  <h2>Your place in the Gallery is still empty.</h2>
+                  <p>Publish a public guide to enter the contest — no limit on how many.</p>
+                  <Link href={guideCreationHref} className={styles.brassButton}>
+                    {nomineeCopy.actionVerb}
+                  </Link>
+                </div>
+              )
+            ) : activeUserNominations.length > 0 ? (
               <>
                 <div className={styles.statusLead}>
                   <span className={styles.successDot} aria-hidden="true">✓</span>
@@ -394,7 +438,7 @@ export default function ContestDetailTabs({
                   <h2>
                     Voting opens {votingOpensIn === 1 ? 'in 1 day' : `in ${votingOpensIn ?? 0} days`}.
                   </h2>
-                  <p>You&apos;ll be able to choose one {nomineeCopy.voteNoun} for 1st place (2 points) and one for 2nd place (1 point).</p>
+                  <p>You&apos;ll be able to choose {getBallotSummary(contest, nomineeCopy.voteNoun)}.</p>
                 </div>
               </div>
             ) : ballot?.status === 'submitted' ? (
@@ -402,8 +446,11 @@ export default function ContestDetailTabs({
                 <span className={styles.successDot} aria-hidden="true">✓</span>
                 <div>
                   <h2>Ballot cast</h2>
-                  <p><strong>1st</strong> — {submittedEntryNames[0] || 'Selection recorded'}</p>
-                  <p><strong>2nd</strong> — {submittedEntryNames[1] || 'Selection recorded'}</p>
+                  {Array.from({ length: contest.maximum_selections_per_ballot }, (_, index) => (
+                    <p key={index}>
+                      <strong>{getOrdinal(index + 1)}</strong> — {submittedEntryNames[index] || 'Selection recorded'}
+                    </p>
+                  ))}
                   {contest.allow_ballot_changes && votingIsOpen ? (
                     <Link href={`/contests/${contest.slug}/vote`} className={styles.inlineTextLink}>
                       Edit ballot →

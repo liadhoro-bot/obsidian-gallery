@@ -66,13 +66,14 @@ export default async function ContestDetailPage({
   const isEligibleParticipant = isDemoContest
     ? true
     : await canNominateInContest(user?.id, contest)
+  const isGuideContest = getNomineeType(contest) === 'guide'
   const pickerSources =
-    user && isEligibleParticipant
+    user && isEligibleParticipant && !isGuideContest
       ? await getNominationPickerSources(user.id, allowedTypes)
       : []
   const guideCreatorLeaderboard =
-    !isDemoContest && getNomineeType(contest) === 'guide'
-      ? await getPublicGuideCreatorLeaderboard(hideIdentity)
+    !isDemoContest && isGuideContest
+      ? await getPublicGuideCreatorLeaderboard(hideIdentity, user?.id)
       : []
 
   return (
