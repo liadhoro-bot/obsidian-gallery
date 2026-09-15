@@ -73,7 +73,7 @@ export async function toggleRecipeLike(recipeId: string): Promise<ToggleResult> 
       },
     })
 
-    revalidatePath(`/recipes/${recipeId}`)
+    revalidatePath(`/guides/decks/${recipeId}`)
     revalidateTag(`recipe:${recipeId}`, 'max')
     return { active: false }
   }
@@ -95,7 +95,7 @@ export async function toggleRecipeLike(recipeId: string): Promise<ToggleResult> 
     },
   })
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidatePath(`/guides/decks/${recipeId}`)
   revalidateTag(`recipe:${recipeId}`, 'max')
   return { active: true }
 }
@@ -202,8 +202,8 @@ export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> 
     })
     perf.mark('analytics event')
 
-    revalidatePath('/recipes')
-    revalidatePath(`/recipes/${recipeId}`)
+    revalidatePath('/guides')
+    revalidatePath(`/guides/decks/${recipeId}`)
     perf.mark('revalidation duration')
     perf.total()
     return { active: false }
@@ -228,8 +228,8 @@ export async function toggleRecipeSave(recipeId: string): Promise<ToggleResult> 
   })
   perf.mark('analytics event')
 
-  revalidatePath('/recipes')
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidatePath('/guides')
+  revalidatePath(`/guides/decks/${recipeId}`)
   perf.mark('revalidation duration')
   perf.total()
   return { active: true }
@@ -359,7 +359,7 @@ export async function reportRecipe(
     reason: reportReason,
   })
 
-  revalidatePath(`/recipes/${recipeId}`)
+  revalidatePath(`/guides/decks/${recipeId}`)
   return {
     status: 'reported',
     message: 'Thank you, report received.',

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
-import { Recipe, RecipeImage } from './types'
+import { Recipe, RecipeImage } from '../../../guides/shared/types'
 import BackButton from '../../../components/back-button'
 import DeleteConfirmationCard from '../../../components/delete-confirmation-card'
 import RecipeVisibilityPill from './recipe-visibility-pill'

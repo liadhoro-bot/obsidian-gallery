@@ -5,31 +5,21 @@ import V3PerfIndicator from '../../components/v3-perf-indicator'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
 import { getFeatureGuidesForPage } from '../../components/feature-guide-data'
 import { guideDetailFeatureGuides } from '../../components/feature-guide-presets'
-import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
 import { createPerfTimer } from '../../../utils/perf/server'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import { getGuidesV3GuideDetail } from '../guides-v3-detail-data'
+import GuideSocialActions from '../shared/guide-social-actions'
 import styles from '../guide-detail-silver.module.css'
 
 type GuideDetailPageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ preview?: string }>
 }
 
 export default async function GuideDetailPage({
   params,
-  searchParams,
 }: GuideDetailPageProps) {
   const perf = createPerfTimer('/guides/[id]')
-  const [{ id }, resolvedSearchParams] = await Promise.all([
-    params,
-    searchParams ?? Promise.resolve({} as { preview?: string }),
-  ])
-  const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
-
-  if (!isPreview) {
-    redirect('/recipes')
-  }
+  const { id } = await params
 
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
@@ -85,6 +75,16 @@ export default async function GuideDetailPage({
               priority
             />
             <div className={styles.heroScrim} />
+            {guide.deckId ? (
+              <GuideSocialActions
+                recipeId={guide.deckId}
+                likeCount={guide.likeCount}
+                saveCount={guide.saveCount}
+                viewerHasLiked={guide.viewerHasLiked}
+                viewerHasSaved={guide.viewerHasSaved}
+                className="absolute right-3 top-3 z-10"
+              />
+            ) : null}
             <div className={styles.heroContent}>
               <p className={styles.eyebrow}>
                 Guide Detail
@@ -116,15 +116,6 @@ export default async function GuideDetailPage({
           <p className={styles.bodyText}>
             {guide.subtitle}
           </p>
-          <div className={styles.paletteRow}>
-            {guide.palette.map((color, index) => (
-              <span
-                key={`${guide.id}-${color}-${index}`}
-                className={styles.swatch}
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
         </section>
 
         <section

@@ -1,12 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useSyncExternalStore, useTransition } from 'react'
+import { useCallback, useEffect, useTransition } from 'react'
 import type { CSSProperties } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import {
-  hasV3PreviewDocumentSession,
-  isV3PreviewValue,
-} from '../../lib/v3-preview'
 import { prefetchRoute } from './route-prefetch'
 import styles from './mobile-nav.module.css'
 
@@ -18,34 +14,10 @@ const navItems = [
   { name: 'Community', href: '/community', icon: '/icons/nav/community.svg' },
 ]
 
-function subscribeToUrlChanges(callback: () => void) {
-  window.addEventListener('popstate', callback)
-
-  return () => {
-    window.removeEventListener('popstate', callback)
-  }
-}
-
-function getPreviewSnapshot() {
-  return (
-    isV3PreviewValue(new URLSearchParams(window.location.search).get('preview')) ||
-    hasV3PreviewDocumentSession(document.cookie, window.location.host)
-  )
-}
-
-function getPreviewServerSnapshot() {
-  return false
-}
-
 export default function MobileNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const isPreview = useSyncExternalStore(
-    subscribeToUrlChanges,
-    getPreviewSnapshot,
-    getPreviewServerSnapshot
-  )
   const shouldHide =
     pathname === '/' ||
     pathname.startsWith('/login') ||
@@ -56,16 +28,7 @@ export default function MobileNav() {
     pathname.startsWith('/settings/terms') ||
     pathname.startsWith('/guides/decks')
 
-  const getNavHref = useCallback(
-    (href: string) => {
-      if (href === '/dashboard') {
-        return href
-      }
-
-      return isPreview ? `${href}?preview=1` : href
-    },
-    [isPreview]
-  )
+  const getNavHref = useCallback((href: string) => href, [])
 
   useEffect(() => {
     let cancelled = false

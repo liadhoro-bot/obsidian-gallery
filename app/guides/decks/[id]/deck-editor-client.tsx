@@ -6,7 +6,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, RefObject } from 'react'
 import FeatureGuideLauncher from '../../../components/feature-guide-launcher'
 import type { FeatureGuideEntry } from '../../../components/feature-guide-types'
-import type { Recipe, RecipeImage, RecipeStep } from '../../../recipes/[id]/components/types'
+import type { Recipe, RecipeImage, RecipeStep } from '../../shared/types'
 import {
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
@@ -15,7 +15,7 @@ import {
   RecipeGuideSmallImageStepCard,
   RecipeGuideThemeStepCard,
   RecipeGuideVideoCard,
-} from '../../../recipes/[id]/components/recipe-guide-cards'
+} from '../../shared/recipe-guide-cards'
 import PaintPickerDialog, {
   type PaintPickerPaint,
 } from '../../../../components/paints/paint-picker-dialog'
@@ -59,6 +59,8 @@ export type DeckEditorSavePayload = {
   status: DeckStatus
   heroImage: string | null
   cards: DeckEditorInitialCard[]
+  inventoryNotes: string
+  expertTips: string
 }
 
 type EditorCard = {
@@ -413,9 +415,12 @@ export default function DeckEditorClient({
   deck,
   featureGuides,
   initialCards,
+  initialInventoryNotes = '',
+  initialExpertTips = '',
   isSaving = false,
   onBack,
   onSaveDraft,
+  onTogglePaintOwnership,
   saveError,
   saveLabel = 'Save',
 }: {
@@ -423,15 +428,20 @@ export default function DeckEditorClient({
   deck: GuidesV3DeckDetail
   featureGuides: FeatureGuideEntry[]
   initialCards?: DeckEditorInitialCard[]
+  initialInventoryNotes?: string
+  initialExpertTips?: string
   isSaving?: boolean
   onBack?: () => void
   onSaveDraft?: (payload: DeckEditorSavePayload) => void
+  onTogglePaintOwnership?: (formData: FormData) => void | Promise<void>
   saveError?: string | null
   saveLabel?: string
 }) {
   const [activeTab, setActiveTab] = useState<DeckEditorTab>('details')
   const [title, setTitle] = useState(deck.title)
   const [description, setDescription] = useState(deck.description)
+  const [inventoryNotes, setInventoryNotes] = useState(initialInventoryNotes)
+  const [expertTips, setExpertTips] = useState(initialExpertTips)
   const [difficulty, setDifficulty] = useState<DeckDifficulty>(
     inferDifficulty(deck.cards)
   )
@@ -670,6 +680,8 @@ export default function DeckEditorClient({
       difficulty,
       status,
       heroImage: coverCard?.image ?? heroImage,
+      inventoryNotes,
+      expertTips,
       cards: cards.map((card) => ({
         id: card.id,
         title: card.title,
@@ -799,11 +811,6 @@ export default function DeckEditorClient({
                 label="Deck editor help"
                 buttonClassName={styles.iconButton}
               />
-              {!deck.saved ? (
-                <button className={styles.iconButton} type="button" aria-label="Favorite deck">
-                  <HeartIcon />
-                </button>
-              ) : null}
               <button
                 className={styles.saveButton}
                 type="button"
@@ -819,8 +826,8 @@ export default function DeckEditorClient({
             <p className={styles.eyebrow}>Deck Editor</p>
             <h1>{title || 'Untitled Deck'}</h1>
             <div className={styles.counters}>
-              <span>{deck.usedIn} hearts</span>
-              <span>{deck.saved ? 1 : 0} saves</span>
+              <span>{deck.likeCount ?? 0} likes</span>
+              <span>{deck.saveCount ?? 0} saves</span>
             </div>
           </div>
         </header>
@@ -885,7 +892,33 @@ export default function DeckEditorClient({
                   rows={7}
                 />
               </label>
+              <label className={styles.descriptionPanel}>
+                <span>Inventory Notes</span>
+                <textarea
+                  value={inventoryNotes}
+                  onChange={(event) => setInventoryNotes(event.target.value)}
+                  placeholder="Brushes, mediums, or other supplies this deck needs"
+                  rows={4}
+                />
+              </label>
+              <label className={styles.descriptionPanel}>
+                <span>Expert Tips</span>
+                <textarea
+                  value={expertTips}
+                  onChange={(event) => setExpertTips(event.target.value)}
+                  placeholder="Pro tips for painters following this deck"
+                  rows={4}
+                />
+              </label>
             </section>
+
+            {deck.paintList.length ? (
+              <DeckPaletteOwnership
+                deckId={deck.id}
+                paints={deck.paintList}
+                onTogglePaintOwnership={onTogglePaintOwnership}
+              />
+            ) : null}
 
             <DeckGallery
               cameraInputRef={cameraInputRef}
@@ -1285,6 +1318,73 @@ function DeckGallery({
         >
           Add Image
         </button>
+      </div>
+    </section>
+  )
+}
+
+function DeckPaletteOwnership({
+  deckId,
+  paints,
+  onTogglePaintOwnership,
+}: {
+  deckId: string
+  paints: GuidesV3DeckDetail['paintList']
+  onTogglePaintOwnership?: (formData: FormData) => void | Promise<void>
+}) {
+  return (
+    <section className={styles.panel}>
+      <div className={styles.paintEditorHeader}>
+        <h3>Palette Ownership</h3>
+      </div>
+      <div className={styles.paintRows}>
+        {paints.map((paint) => {
+          const isCatalogPaint = paint.id.startsWith('catalog:')
+          const catalogId = isCatalogPaint ? paint.id.slice('catalog:'.length) : null
+          const label = [paint.brand, paint.line, paint.name].filter(Boolean).join(' / ')
+
+          return (
+            <div key={paint.id} className={styles.paintsListRow}>
+              <span
+                className={styles.paintPickerSwatch}
+                style={{ backgroundColor: paint.color || 'var(--og-brass-500)' }}
+              />
+              <span className={styles.paintPickerCopy}>
+                <strong>{label || 'Unnamed paint'}</strong>
+              </span>
+              {catalogId && onTogglePaintOwnership ? (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <form action={onTogglePaintOwnership}>
+                    <input type="hidden" name="deckId" value={deckId} />
+                    <input type="hidden" name="paintCatalogId" value={catalogId} />
+                    <input type="hidden" name="action" value="owned" />
+                    <input type="hidden" name="currentValue" value={String(paint.isOwned)} />
+                    <button
+                      type="submit"
+                      className={paint.isOwned ? styles.ownershipBadgeOwned : styles.ownershipBadge}
+                    >
+                      Owned
+                    </button>
+                  </form>
+                  <form action={onTogglePaintOwnership}>
+                    <input type="hidden" name="deckId" value={deckId} />
+                    <input type="hidden" name="paintCatalogId" value={catalogId} />
+                    <input type="hidden" name="action" value="wishlist" />
+                    <input type="hidden" name="currentValue" value={String(paint.isWishlist)} />
+                    <button
+                      type="submit"
+                      className={paint.isWishlist ? styles.ownershipBadgeWishlist : styles.ownershipBadge}
+                    >
+                      Wishlist
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <span className={styles.ownershipBadge}>Custom paint</span>
+              )}
+            </div>
+          )
+        })}
       </div>
     </section>
   )
@@ -1748,23 +1848,6 @@ function DeckPreview({
         )
       })}
     </section>
-  )
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className={styles.buttonIcon}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20.8 4.6c-1.8-1.7-4.7-1.6-6.4.2L12 7.2 9.6 4.8C7.9 3 5 2.9 3.2 4.6c-2 1.9-2.1 5.1-.2 7.1L12 21l9-9.3c1.9-2 1.8-5.2-.2-7.1Z" />
-    </svg>
   )
 }
 

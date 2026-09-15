@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import type { Recipe, RecipeImage, RecipeStep } from '../../../recipes/[id]/components/types'
+import type { Recipe, RecipeImage, RecipeStep } from '../../shared/types'
 import {
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
@@ -7,11 +7,10 @@ import {
   RecipeGuideSmallImageStepCard,
   RecipeGuideThemeStepCard,
   RecipeGuideVideoCard,
-} from '../../../recipes/[id]/components/recipe-guide-cards'
+} from '../../shared/recipe-guide-cards'
 import V3PerfIndicator from '../../../components/v3-perf-indicator'
 import { getFeatureGuidesForPage } from '../../../components/feature-guide-data'
 import { deckDetailFeatureGuides } from '../../../components/feature-guide-presets'
-import { hasV3PreviewSession } from '../../../../lib/v3-preview-server'
 import { createPerfTimer } from '../../../../utils/perf/server'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 import {
@@ -21,6 +20,7 @@ import {
 } from '../../guides-v3-detail-data'
 import DeckCardViewer, { type DeckCardEntry } from './deck-card-viewer'
 import DeckEditPageClient from './deck-edit-page-client'
+import DeckHeroActions from './deck-hero-actions'
 
 type DeckDetailPageProps = {
   params: Promise<{ id: string }>
@@ -116,15 +116,10 @@ export default async function DeckDetailPage({
     params,
     searchParams ?? Promise.resolve({} as { edit?: string; preview?: string }),
   ])
-  const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
   const isEditing = resolvedSearchParams.edit === '1'
 
   if (!isUuid(id)) {
     redirect('/guides?preview=1')
-  }
-
-  if (!isPreview) {
-    redirect(`/recipes/${id}`)
   }
 
   const supabase = await createClient()
@@ -153,10 +148,21 @@ export default async function DeckDetailPage({
   if (!deck) notFound()
 
   if (isEditing) {
+    const { data: notesRow } = await supabase
+      .from('recipes')
+      .select('inventory_required, expert_tips')
+      .eq('id', id)
+      .maybeSingle()
+
     return (
       <main>
         <V3PerfIndicator surface="deck-editor" detail="main" />
-        <DeckEditPageClient deck={deck} featureGuides={featureGuides} />
+        <DeckEditPageClient
+          deck={deck}
+          featureGuides={featureGuides}
+          initialInventoryNotes={notesRow?.inventory_required ?? ''}
+          initialExpertTips={notesRow?.expert_tips ?? ''}
+        />
       </main>
     )
   }
@@ -171,12 +177,22 @@ export default async function DeckDetailPage({
       key: 'cover',
       featureGuideTarget: 'guides.deck.cover',
       node: (
-        <RecipeGuideCoverCard
-          recipe={recipe}
-          featuredImage={featuredImage}
-          cardCount={deck.steps.length + 1}
-          paintCount={paintCount}
-        />
+        <div className="relative h-full">
+          <RecipeGuideCoverCard
+            recipe={recipe}
+            featuredImage={featuredImage}
+            cardCount={deck.steps.length + 1}
+            paintCount={paintCount}
+          />
+          <DeckHeroActions
+            recipeId={deck.id}
+            likeCount={deck.likeCount ?? 0}
+            saveCount={deck.saveCount ?? 0}
+            viewerHasLiked={deck.viewerHasLiked ?? false}
+            viewerHasSaved={deck.viewerHasSaved ?? false}
+            className="absolute right-3 top-3 z-30"
+          />
+        </div>
       ),
     },
     ...deck.steps.map((step) => {

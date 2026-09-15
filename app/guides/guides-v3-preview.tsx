@@ -21,6 +21,7 @@ import DeckEditorClient, {
   type DeckEditorInitialCard,
   type DeckEditorSavePayload,
 } from './decks/[id]/deck-editor-client'
+import GuideSocialActions from './shared/guide-social-actions'
 
 type GuideTab = 'guides' | 'decks' | 'library'
 type ForgeMode = 'guide' | 'deck'
@@ -109,6 +110,11 @@ const initialGuideFiles: GuideFile[] = [
     level: 'Beginner',
     ownedPercent: 78,
     palette: ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
+    likeCount: 12,
+    saveCount: 8,
+    viewerHasLiked: false,
+    viewerHasSaved: false,
+    createdAt: '2026-08-20T00:00:00.000Z',
   },
   {
     id: 'ultramarines-battleline',
@@ -120,6 +126,11 @@ const initialGuideFiles: GuideFile[] = [
     level: 'Beginner',
     ownedPercent: 63,
     palette: ['#1e4f92', '#9aafbd', '#d29631', '#171815', '#efe3c5'],
+    likeCount: 9,
+    saveCount: 5,
+    viewerHasLiked: false,
+    viewerHasSaved: false,
+    createdAt: '2026-08-15T00:00:00.000Z',
   },
   {
     id: 'emerald-grave-guard',
@@ -131,6 +142,11 @@ const initialGuideFiles: GuideFile[] = [
     level: 'Intermediate',
     ownedPercent: 68,
     palette: ['#4eb282', '#17b9c2', '#d8bd83', '#5943a7', '#111417'],
+    likeCount: 6,
+    saveCount: 3,
+    viewerHasLiked: false,
+    viewerHasSaved: false,
+    createdAt: '2026-08-10T00:00:00.000Z',
   },
 ]
 
@@ -145,6 +161,7 @@ const initialDecks: Deck[] = [
     image: '/onboarding/pains/pile-of-shame.jpeg',
     saved: true,
     accent: '#d8bd83',
+    createdAt: '2026-08-20T00:00:00.000Z',
   },
   {
     id: 'forgotten-tomb-gold',
@@ -156,6 +173,7 @@ const initialDecks: Deck[] = [
     image: '/onboarding/first-project-bg.jpeg',
     saved: true,
     accent: '#d29631',
+    createdAt: '2026-08-18T00:00:00.000Z',
   },
   {
     id: 'verdigris-brass-weapons',
@@ -167,6 +185,7 @@ const initialDecks: Deck[] = [
     image: '/onboarding/pains/tough-choices.jpeg',
     saved: true,
     accent: '#17b9c2',
+    createdAt: '2026-08-16T00:00:00.000Z',
   },
   {
     id: 'classic-turquoise-armour',
@@ -178,6 +197,7 @@ const initialDecks: Deck[] = [
     image: '/onboarding/pains/paint-management.jpeg',
     saved: true,
     accent: '#17b9c2',
+    createdAt: '2026-08-14T00:00:00.000Z',
   },
   {
     id: 'desert-sand-bases',
@@ -189,6 +209,7 @@ const initialDecks: Deck[] = [
     image: '/onboarding/pains/scheme-loss.jpeg',
     saved: true,
     accent: '#d29631',
+    createdAt: '2026-08-12T00:00:00.000Z',
   },
 ]
 
@@ -356,6 +377,65 @@ const libraryTags = [
   'Weathering',
 ]
 
+const LIBRARY_PAGE_SIZE = 9
+
+type GuideSortMode = 'name-asc' | 'name-desc' | 'popularity' | 'new-old' | 'old-new'
+type GuideViewMode = 'card' | 'grid'
+
+const guideSortOptions: { value: GuideSortMode; label: string }[] = [
+  { value: 'name-asc', label: 'Name A-Z' },
+  { value: 'name-desc', label: 'Name Z-A' },
+  { value: 'popularity', label: 'Popularity' },
+  { value: 'new-old', label: 'Newest First' },
+  { value: 'old-new', label: 'Oldest First' },
+]
+
+function sortGuideFiles(guides: GuideFile[], mode: GuideSortMode): GuideFile[] {
+  const sorted = [...guides]
+  switch (mode) {
+    case 'name-asc':
+      sorted.sort((a, b) => a.title.localeCompare(b.title))
+      break
+    case 'name-desc':
+      sorted.sort((a, b) => b.title.localeCompare(a.title))
+      break
+    case 'popularity':
+      sorted.sort(
+        (a, b) => b.likeCount + b.saveCount - (a.likeCount + a.saveCount)
+      )
+      break
+    case 'new-old':
+      sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      break
+    case 'old-new':
+      sorted.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      break
+  }
+  return sorted
+}
+
+function sortDecks(decks: Deck[], mode: GuideSortMode): Deck[] {
+  const sorted = [...decks]
+  switch (mode) {
+    case 'name-asc':
+      sorted.sort((a, b) => a.title.localeCompare(b.title))
+      break
+    case 'name-desc':
+      sorted.sort((a, b) => b.title.localeCompare(a.title))
+      break
+    case 'popularity':
+      sorted.sort((a, b) => b.usedIn - a.usedIn)
+      break
+    case 'new-old':
+      sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      break
+    case 'old-new':
+      sorted.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      break
+  }
+  return sorted
+}
+
 const publicGuideFiles: GuideFile[] = [
   {
     id: 'khemri-royal-guard',
@@ -367,6 +447,11 @@ const publicGuideFiles: GuideFile[] = [
     level: 'Intermediate',
     ownedPercent: 42,
     palette: ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
+    likeCount: 21,
+    saveCount: 14,
+    viewerHasLiked: false,
+    viewerHasSaved: false,
+    createdAt: '2026-08-22T00:00:00.000Z',
   },
   {
     id: 'ultramarines-intercessors',
@@ -378,31 +463,11 @@ const publicGuideFiles: GuideFile[] = [
     level: 'Beginner',
     ownedPercent: 55,
     palette: ['#1e4f92', '#9aafbd', '#d29631', '#171815', '#efe3c5'],
-  },
-]
-
-const publicDecks: Deck[] = [
-  {
-    id: 'weathered-bronze',
-    title: 'Weathered Bronze',
-    category: 'Metal',
-    cards: 4,
-    paints: 5,
-    usedIn: 0,
-    image: '/onboarding/first-project-bg.jpeg',
-    saved: false,
-    accent: '#7a5d37',
-  },
-  {
-    id: 'cracked-earth-bases',
-    title: 'Cracked Earth Bases',
-    category: 'Basing',
-    cards: 5,
-    paints: 7,
-    usedIn: 0,
-    image: '/onboarding/pains/scheme-loss.jpeg',
-    saved: false,
-    accent: '#d29631',
+    likeCount: 17,
+    saveCount: 11,
+    viewerHasLiked: false,
+    viewerHasSaved: false,
+    createdAt: '2026-08-19T00:00:00.000Z',
   },
 ]
 
@@ -585,6 +650,7 @@ function toEditorDeckDetail(deck: ForgeDeck): GuidesV3DeckDetail {
     ownerLabel: 'Created by you',
     steps: [],
     paintList: [],
+    createdAt: new Date().toISOString(),
   }
 }
 
@@ -678,14 +744,19 @@ export default function GuidesV3Preview({
     initialPayload?.libraryGuides.length
       ? initialPayload.libraryGuides
       : publicGuideFiles
-  const seedLibraryDecks =
-    initialPayload?.libraryDecks.length
-      ? initialPayload.libraryDecks
-      : publicDecks
   const [activeTab, setActiveTab] = useState<GuideTab>('guides')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks, setDecks] = useState<Deck[]>(seedDecks)
   const [query, setQuery] = useState('')
+  const [librarySortMode, setLibrarySortMode] = useState<GuideSortMode>('new-old')
+  const [libraryVisibleCount, setLibraryVisibleCount] = useState(LIBRARY_PAGE_SIZE)
+  const [guidesQuery, setGuidesQuery] = useState('')
+  const [guidesSortMode, setGuidesSortMode] = useState<GuideSortMode>('new-old')
+  const [decksQuery, setDecksQuery] = useState('')
+  const [decksSortMode, setDecksSortMode] = useState<GuideSortMode>('new-old')
+  const [guidesViewMode, setGuidesViewMode] = useState<GuideViewMode>('card')
+  const [decksViewMode, setDecksViewMode] = useState<GuideViewMode>('card')
+  const [libraryViewMode, setLibraryViewMode] = useState<GuideViewMode>('card')
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false)
   const [forgeMode, setForgeMode] = useState<ForgeMode>('guide')
@@ -733,9 +804,22 @@ export default function GuidesV3Preview({
       .toLowerCase()
       .includes(normalizedQuery)
   )
-  const filteredLibraryDecks = seedLibraryDecks.filter((deck) =>
-    `${deck.title} ${deck.category}`.toLowerCase().includes(normalizedQuery)
+  const sortedLibraryGuides = sortGuideFiles(filteredLibraryGuides, librarySortMode)
+  const visibleLibraryGuides = sortedLibraryGuides.slice(0, libraryVisibleCount)
+  const hasMoreLibraryGuides = sortedLibraryGuides.length > libraryVisibleCount
+
+  const normalizedGuidesQuery = guidesQuery.trim().toLowerCase()
+  const filteredGuideFiles = guideFiles.filter((guide) =>
+    `${guide.title} ${guide.subtitle}`.toLowerCase().includes(normalizedGuidesQuery)
   )
+  const sortedGuideFiles = sortGuideFiles(filteredGuideFiles, guidesSortMode)
+
+  const normalizedDecksTabQuery = decksQuery.trim().toLowerCase()
+  const filteredDecksTabDecks = decks.filter((deck) =>
+    `${deck.title} ${deck.category}`.toLowerCase().includes(normalizedDecksTabQuery)
+  )
+  const sortedDecksTabDecks = sortDecks(filteredDecksTabDecks, decksSortMode)
+
   const normalizedGuideDeckSearch = guideDeckSearch.trim().toLowerCase()
   const filteredCollectionDecks = decks.filter((deck) =>
     `${deck.title} ${deck.category}`.toLowerCase().includes(normalizedGuideDeckSearch)
@@ -961,6 +1045,8 @@ export default function GuidesV3Preview({
           editingDeck.gallery.find((image) => image.id === editingDeck.heroImageId)?.url ??
           editingDeck.gallery[0]?.url ??
           null,
+        inventoryNotes: '',
+        expertTips: '',
         cards: toEditorCards(editingDeck),
       })
       return
@@ -985,6 +1071,11 @@ export default function GuidesV3Preview({
           palette: selectedGuideDecks.length
             ? selectedGuideDecks.slice(0, 5).map((deck) => deck.accent)
             : ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
+          likeCount: 0,
+          saveCount: 0,
+          viewerHasLiked: false,
+          viewerHasSaved: false,
+          createdAt: new Date().toISOString(),
           draft: {
             deckIds: selectedGuideDecks.map((deck) => deck.id),
             name: guideName_,
@@ -1404,21 +1495,49 @@ export default function GuidesV3Preview({
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === 'guides' ? (
-          <GuidesTab guideFiles={guideFiles} onOpenDraft={editDraftGuide} />
+          <GuidesTab
+            guideFiles={sortedGuideFiles}
+            onOpenDraft={editDraftGuide}
+            query={guidesQuery}
+            onQueryChange={setGuidesQuery}
+            sortMode={guidesSortMode}
+            onSortChange={setGuidesSortMode}
+            viewMode={guidesViewMode}
+            onViewModeChange={setGuidesViewMode}
+          />
         ) : null}
         {activeTab === 'decks' ? (
           <DecksTab
-            decks={decks}
+            decks={sortedDecksTabDecks}
             onAddDeck={openCreateChoice}
             onEditDraftDeck={editDraftDeck}
+            query={decksQuery}
+            onQueryChange={setDecksQuery}
+            sortMode={decksSortMode}
+            onSortChange={setDecksSortMode}
+            viewMode={decksViewMode}
+            onViewModeChange={setDecksViewMode}
           />
         ) : null}
         {activeTab === 'library' ? (
           <LibraryTab
             query={query}
-            onQueryChange={setQuery}
-            guides={filteredLibraryGuides}
-            decks={filteredLibraryDecks}
+            onQueryChange={(value) => {
+              setQuery(value)
+              setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
+            }}
+            guides={visibleLibraryGuides}
+            hasMore={hasMoreLibraryGuides}
+            onLoadMore={() =>
+              setLibraryVisibleCount((count) => count + LIBRARY_PAGE_SIZE)
+            }
+            viewMode={libraryViewMode}
+            onViewModeChange={setLibraryViewMode}
+            sortMode={librarySortMode}
+            onSortChange={(mode) => {
+              setLibrarySortMode(mode)
+              setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
+            }}
           />
         ) : null}
       </div>
@@ -3101,21 +3220,62 @@ function Tabs({
 function GuidesTab({
   guideFiles,
   onOpenDraft,
+  query,
+  onQueryChange,
+  sortMode,
+  onSortChange,
+  viewMode,
+  onViewModeChange,
 }: {
   guideFiles: GuideFile[]
   onOpenDraft: (guide: GuideFile) => void
+  query: string
+  onQueryChange: (query: string) => void
+  sortMode: GuideSortMode
+  onSortChange: (mode: GuideSortMode) => void
+  viewMode: GuideViewMode
+  onViewModeChange: (mode: GuideViewMode) => void
 }) {
   return (
-    <section
-      className="grid gap-3"
-      aria-label="Guide files"
-      data-v3-guides-indicator="guides-list"
-      data-feature-guide-target="guides.tabs.guides"
-    >
+    <section className="grid gap-3">
+      <GuideSearchSortBar
+        placeholder="Search your guides..."
+        query={query}
+        onQueryChange={onQueryChange}
+        sortMode={sortMode}
+        onSortChange={onSortChange}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+      />
       {guideFiles.length ? (
-        guideFiles.map((guide) => (
-          <GuideFileCard key={guide.id} guide={guide} onOpenDraft={onOpenDraft} />
-        ))
+        viewMode === 'grid' ? (
+          <div
+            data-v3-guides-indicator="guide-grid"
+            aria-label="Guide files"
+            data-feature-guide-target="guides.tabs.guides"
+          >
+            {guideFiles.map((guide) => (
+              <GuideGridTile
+                key={guide.id}
+                image={guide.image}
+                title={guide.title}
+                href={guide.draft ? undefined : `/guides/${guide.id}?preview=1`}
+                onClick={guide.draft ? () => onOpenDraft(guide) : undefined}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            className="grid gap-3"
+            aria-label="Guide files"
+            data-v3-guides-indicator="guides-list"
+            data-feature-guide-target="guides.tabs.guides"
+          >
+            {guideFiles.map((guide) => (
+              <GuideFileCard key={guide.id} guide={guide} onOpenDraft={onOpenDraft} />
+            ))}
+          </div>
+        )
       ) : (
         <EmptyPanel
           title="No guide files yet"
@@ -3130,115 +3290,382 @@ function DecksTab({
   decks,
   onAddDeck,
   onEditDraftDeck,
+  query,
+  onQueryChange,
+  sortMode,
+  onSortChange,
+  viewMode,
+  onViewModeChange,
 }: {
   decks: Deck[]
   onAddDeck: () => void
   onEditDraftDeck: (deck: Deck) => void
+  query: string
+  onQueryChange: (query: string) => void
+  sortMode: GuideSortMode
+  onSortChange: (mode: GuideSortMode) => void
+  viewMode: GuideViewMode
+  onViewModeChange: (mode: GuideViewMode) => void
 }) {
   return (
-    <section
-      className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
-      data-v3-guides-indicator="decks-list"
-      data-feature-guide-target="guides.tabs.decks"
-    >
-      <div className="flex items-center justify-between px-4 py-4">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-          Your Deck Library
-        </h2>
-        <button
-          type="button"
-          onClick={onAddDeck}
-          className="rounded-full px-2 py-1 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-300/10"
-        >
-          Add Deck +
-        </button>
-      </div>
-      <div className="divide-y divide-white/[0.06]">
-        {decks.length ? (
-          decks.map((deck) => (
-            <DeckRow
-              key={deck.id}
-              deck={deck}
-              onEditDraftDeck={onEditDraftDeck}
+    <section className="grid gap-3">
+      <GuideSearchSortBar
+        placeholder="Search your decks..."
+        query={query}
+        onQueryChange={onQueryChange}
+        sortMode={sortMode}
+        onSortChange={onSortChange}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+      />
+      {viewMode === 'grid' ? (
+        <div data-v3-guides-indicator="guide-grid" data-feature-guide-target="guides.tabs.decks">
+          {decks.length ? (
+            decks.map((deck) => (
+              <GuideGridTile
+                key={deck.id}
+                image={deck.image}
+                title={deck.title}
+                href={deck.draft ? undefined : `/guides/decks/${deck.id}?preview=1`}
+                onClick={deck.draft ? () => onEditDraftDeck(deck) : undefined}
+              />
+            ))
+          ) : (
+            <EmptyPanel
+              title="No decks yet"
+              text="Every previous recipe now appears here as a deck."
             />
-          ))
-        ) : (
-          <EmptyPanel
-            title="No decks yet"
-            text="Every previous recipe now appears here as a deck."
-          />
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <section
+          className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
+          data-v3-guides-indicator="decks-list"
+          data-feature-guide-target="guides.tabs.decks"
+        >
+          <div className="flex items-center justify-between px-4 py-4">
+            <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
+              Your Deck Library
+            </h2>
+            <button
+              type="button"
+              onClick={onAddDeck}
+              className="rounded-full px-2 py-1 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-300/10"
+            >
+              Add Deck +
+            </button>
+          </div>
+          <div className="divide-y divide-white/[0.06]">
+            {decks.length ? (
+              decks.map((deck) => (
+                <DeckRow
+                  key={deck.id}
+                  deck={deck}
+                  onEditDraftDeck={onEditDraftDeck}
+                />
+              ))
+            ) : (
+              <EmptyPanel
+                title="No decks yet"
+                text="Every previous recipe now appears here as a deck."
+              />
+            )}
+          </div>
+        </section>
+      )}
     </section>
   )
 }
 
 function LibraryTab({
-  decks,
   guides,
   onQueryChange,
   query,
+  sortMode,
+  onSortChange,
+  viewMode,
+  onViewModeChange,
+  hasMore,
+  onLoadMore,
 }: {
-  decks: Deck[]
   guides: GuideFile[]
   onQueryChange: (query: string) => void
   query: string
+  sortMode: GuideSortMode
+  onSortChange: (mode: GuideSortMode) => void
+  viewMode: GuideViewMode
+  onViewModeChange: (mode: GuideViewMode) => void
+  hasMore: boolean
+  onLoadMore: () => void
 }) {
   return (
     <section className="grid gap-4">
-      <SearchInput
-        placeholder="Search guides and decks..."
-        value={query}
-        onChange={onQueryChange}
+      <GuideSearchSortBar
+        placeholder="Search guides..."
+        query={query}
+        onQueryChange={onQueryChange}
+        sortMode={sortMode}
+        onSortChange={onSortChange}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        tags={libraryTags}
+        onTagClick={onQueryChange}
       />
-      <section
-        className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4"
-        data-v3-guides-indicator="library-tags"
+      {viewMode === 'grid' ? (
+        <div data-v3-guides-indicator="guide-grid">
+          {guides.length ? (
+            guides.map((guide) => (
+              <GuideGridTile
+                key={guide.id}
+                image={guide.image}
+                title={guide.title}
+                href={`/guides/${guide.id}?preview=1`}
+              />
+            ))
+          ) : (
+            <EmptyPanel title="No public guides found" text="Try another search." />
+          )}
+        </div>
+      ) : (
+        <LibrarySection title="Public Guides">
+          {guides.length ? (
+            guides.map((guide) => (
+              <CompactGuideCard key={guide.id} guide={guide} />
+            ))
+          ) : (
+            <EmptyPanel title="No public guides found" text="Try another search." />
+          )}
+        </LibrarySection>
+      )}
+      {hasMore ? (
+        <button
+          type="button"
+          onClick={onLoadMore}
+          data-v3-guides-indicator="library-load-more"
+          className="rounded-[8px] border border-white/10 bg-[#111821] py-3 text-xs font-black text-cyan-300 transition hover:border-cyan-300/45"
+        >
+          Load More
+        </button>
+      ) : null}
+    </section>
+  )
+}
+
+function GuideSearchSortBar({
+  placeholder,
+  query,
+  onQueryChange,
+  sortMode,
+  onSortChange,
+  viewMode,
+  onViewModeChange,
+  tags,
+  onTagClick,
+}: {
+  placeholder: string
+  query: string
+  onQueryChange: (query: string) => void
+  sortMode: GuideSortMode
+  onSortChange: (mode: GuideSortMode) => void
+  viewMode: GuideViewMode
+  onViewModeChange: (mode: GuideViewMode) => void
+  tags?: string[]
+  onTagClick?: (tag: string) => void
+}) {
+  const [isTagsOpen, setIsTagsOpen] = useState(false)
+  const [isSortOpen, setIsSortOpen] = useState(false)
+  const hasTags = Boolean(tags?.length)
+
+  return (
+    <div data-v3-guides-indicator="search-sort-toolbar">
+      <div
+        className={
+          hasTags
+            ? 'grid grid-cols-[minmax(0,1fr)_64px_64px] gap-2'
+            : 'grid grid-cols-[minmax(0,1fr)_64px] gap-2'
+        }
       >
-        <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-          Popular Tags
-        </h2>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {libraryTags.map((tag) => (
+        <label className="relative block">
+          <span className="sr-only">{placeholder}</span>
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <input
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder={placeholder}
+            className="h-12 w-full pl-10 pr-3 text-sm font-semibold outline-none"
+          />
+        </label>
+        {hasTags ? (
+          <button
+            type="button"
+            aria-expanded={isTagsOpen}
+            onClick={() => {
+              setIsSortOpen(false)
+              setIsTagsOpen((open) => !open)
+            }}
+            className="flex h-12 items-center justify-center text-xs font-black"
+          >
+            Tags
+          </button>
+        ) : null}
+        <button
+          type="button"
+          aria-expanded={isSortOpen}
+          onClick={() => {
+            setIsTagsOpen(false)
+            setIsSortOpen((open) => !open)
+          }}
+          className="flex h-12 items-center justify-center text-xs font-black"
+        >
+          Sort
+        </button>
+      </div>
+
+      {isTagsOpen && tags?.length ? (
+        <div
+          className="mt-2 flex flex-wrap gap-2"
+          data-v3-guides-indicator="tags-panel"
+        >
+          {tags.map((tag) => (
             <button
               key={tag}
               type="button"
-              onClick={() => onQueryChange(tag)}
-              data-v3-guides-indicator="library-tag"
-              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black text-white/52 transition hover:border-cyan-300/45 hover:text-cyan-300"
+              onClick={() => {
+                onTagClick?.(tag)
+                setIsTagsOpen(false)
+              }}
+              className="rounded-full px-3 py-1.5 text-[10px] font-black"
             >
               {tag}
             </button>
           ))}
         </div>
-      </section>
-      <LibrarySection title="Public Guides" action="See all ->">
-        {guides.length ? (
-          guides.map((guide) => (
-            <CompactGuideCard key={guide.id} guide={guide} />
-          ))
-        ) : (
-          <EmptyPanel title="No public guides found" text="Try another search." />
-        )}
-      </LibrarySection>
-      <LibrarySection title="Public Decks" action="See all ->">
-        <div
-          data-v3-guides-indicator="library-decks-list"
-          data-feature-guide-target="guides.tabs.library"
-        >
-          {decks.length ? (
-            decks.map((deck) => (
-              <DeckRow
-                key={deck.id}
-                deck={deck}
-              />
-            ))
-          ) : (
-            <EmptyPanel title="No public decks found" text="Try another search." />
-          )}
+      ) : null}
+
+      {isSortOpen ? (
+        <div className="mt-2" data-v3-guides-indicator="sort-panel">
+          <div data-v3-guides-indicator="sort-row">
+            <label className="relative block">
+              <span className="sr-only">Sort</span>
+              <select
+                value={sortMode}
+                onChange={(event) => {
+                  onSortChange(event.target.value as GuideSortMode)
+                  setIsSortOpen(false)
+                }}
+                className="h-11 w-full appearance-none px-3 pr-8 text-sm font-black outline-none"
+              >
+                {guideSortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                v
+              </span>
+            </label>
+            <div data-v3-guides-indicator="view-toggle" role="group" aria-label="Guide view">
+              <button
+                type="button"
+                aria-pressed={viewMode === 'card'}
+                data-active={viewMode === 'card' ? 'true' : undefined}
+                onClick={() => onViewModeChange('card')}
+                className="grid h-11 w-11 place-items-center"
+                aria-label="Card view"
+              >
+                <CardViewIcon />
+              </button>
+              <button
+                type="button"
+                aria-pressed={viewMode === 'grid'}
+                data-active={viewMode === 'grid' ? 'true' : undefined}
+                onClick={() => onViewModeChange('grid')}
+                className="grid h-11 w-11 place-items-center"
+                aria-label="Grid view"
+              >
+                <GridViewIcon />
+              </button>
+            </div>
+          </div>
         </div>
-      </LibrarySection>
-    </section>
+      ) : null}
+    </div>
+  )
+}
+
+function SearchIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={`h-4 w-4 ${className}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  )
+}
+
+function CardViewIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="3" width="16" height="8" rx="1.5" />
+      <rect x="4" y="13" width="16" height="8" rx="1.5" />
+    </svg>
+  )
+}
+
+function GridViewIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  )
+}
+
+function GuideGridTile({
+  href,
+  image,
+  title,
+  onClick,
+}: {
+  href?: string
+  image: string
+  title: string
+  onClick?: () => void
+}) {
+  const inner = (
+    <>
+      <span data-v3-guides-indicator="guide-grid-image">
+        <span>
+          <Image src={image} alt="" fill sizes="33vw" className="object-cover" />
+        </span>
+      </span>
+      <span data-v3-guides-indicator="guide-grid-name">{title}</span>
+    </>
+  )
+
+  return (
+    <div data-v3-guides-indicator="guide-grid-tile">
+      {href ? (
+        <Link href={href} aria-label={title}>
+          {inner}
+        </Link>
+      ) : (
+        <button type="button" onClick={onClick} aria-label={title}>
+          {inner}
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -3284,24 +3711,7 @@ function GuideFileCard({
           <p className="mt-2 line-clamp-2 text-xs font-semibold leading-4 text-white/52">
             {guide.subtitle}
           </p>
-          <div className="mt-3 flex gap-1">
-            {guide.palette.map((color, index) => (
-              <span
-                key={`${guide.id}-${color}-${index}`}
-                className="h-3 w-3 rounded-full border border-white/10"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-[1fr_1fr_1fr_auto] items-center gap-2 border-t border-white/[0.06] px-3 py-3 text-[10px] font-black text-white/38">
-        <span>{guide.decks} Decks</span>
-        <span>{guide.cards} Cards</span>
-        <span>{guide.level}</span>
-        <span className="rounded-full border border-cyan-300/35 bg-cyan-300/10 px-2 py-1 text-cyan-300">
-          {guide.ownedPercent}% Owned
-        </span>
       </div>
     </>
   )
@@ -3351,9 +3761,17 @@ function CompactGuideCard({ guide }: { guide: GuideFile }) {
           {guide.subtitle}
         </span>
       </span>
-      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] font-black text-white/42">
-        {guide.decks} Decks
-      </span>
+      {guide.deckId ? (
+        <GuideSocialActions
+          recipeId={guide.deckId}
+          likeCount={guide.likeCount}
+          saveCount={guide.saveCount}
+          viewerHasLiked={guide.viewerHasLiked}
+          viewerHasSaved={guide.viewerHasSaved}
+          size="sm"
+          stopClickPropagation
+        />
+      ) : null}
     </Link>
   )
 }
@@ -3465,7 +3883,7 @@ function LibrarySection({
   children,
   title,
 }: {
-  action: string
+  action?: string
   children: ReactNode
   title: string
 }) {
@@ -3478,12 +3896,14 @@ function LibrarySection({
         <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
           {title}
         </h2>
-        <button
-          type="button"
-          className="text-[10px] font-black text-cyan-300 transition hover:text-cyan-200"
-        >
-          {action}
-        </button>
+        {action ? (
+          <button
+            type="button"
+            className="text-[10px] font-black text-cyan-300 transition hover:text-cyan-200"
+          >
+            {action}
+          </button>
+        ) : null}
       </div>
       <div className="divide-y divide-white/[0.06]">{children}</div>
     </section>

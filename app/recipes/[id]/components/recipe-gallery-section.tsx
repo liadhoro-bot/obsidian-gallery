@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import type { ChangeEvent } from 'react'
 import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFromImageAction'
 import SubmitButton from '../../../components/SubmitButton'
-import { Recipe, RecipeImage } from './types'
+import { Recipe, RecipeImage } from '../../../guides/shared/types'
 import type { GalleryUploadResult } from '../../../../utils/images/gallery-upload'
 
 export default function RecipeGallerySection({

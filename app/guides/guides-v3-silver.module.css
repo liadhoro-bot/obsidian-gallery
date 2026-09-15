@@ -297,6 +297,244 @@
   color: var(--og-text-muted);
 }
 
+.guidesSilver [data-v3-guides-indicator="search-sort-toolbar"] {
+  position: relative;
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.85);
+  border-radius: var(--og-radius-m);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.3) 100%),
+    rgba(250, 246, 236, 0.32);
+  color: var(--og-text-primary);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28),
+    inset 0 -2px 0 rgba(86, 55, 27, 0.18),
+    0 8px 20px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.06) contrast(0.97);
+  padding: 8px;
+  overflow: hidden;
+}
+
+.guidesSilver [data-v3-guides-indicator="search-sort-toolbar"] input {
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.9);
+  border-radius: var(--og-radius-s);
+  background-color: transparent;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 100%),
+    linear-gradient(rgba(250, 246, 236, 0.36), rgba(250, 246, 236, 0.36));
+  color: var(--og-text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(86, 55, 27, 0.2),
+    0 4px 14px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
+}
+
+.guidesSilver [data-v3-guides-indicator="search-sort-toolbar"] input::placeholder {
+  color: var(--og-text-muted);
+}
+
+.guidesSilver [data-v3-guides-indicator="search-sort-toolbar"] svg {
+  color: var(--og-text-primary);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
+}
+
+.guidesSilver [data-v3-guides-indicator="search-sort-toolbar"] > div > button {
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.9);
+  background-color: transparent;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 100%),
+    linear-gradient(rgba(250, 246, 236, 0.36), rgba(250, 246, 236, 0.36));
+  border-radius: var(--og-radius-s);
+  color: var(--og-text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(86, 55, 27, 0.2),
+    0 4px 14px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
+}
+
+.guidesSilver [data-v3-guides-indicator="search-sort-toolbar"] > div > button:hover {
+  border-color: color-mix(in srgb, var(--og-focus) 60%, rgba(255, 255, 255, 0.4));
+  color: var(--og-text-primary);
+}
+
+.guidesSilver [data-v3-guides-indicator="tags-panel"],
+.guidesSilver [data-v3-guides-indicator="sort-panel"] {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--og-radius-m);
+  background: rgba(255, 255, 255, 0.01);
+  color: var(--og-text-primary);
+  box-shadow:
+    0 24px 58px rgba(0, 0, 0, 0.45),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(45px) saturate(130%) brightness(1.05) contrast(0.96);
+  padding: 12px;
+}
+
+.guidesSilver [data-v3-guides-indicator="tags-panel"] button,
+.guidesSilver [data-v3-guides-indicator="sort-panel"] button,
+.guidesSilver [data-v3-guides-indicator="sort-panel"] select {
+  min-width: 0;
+  font-size: 0.78rem;
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.9);
+  background-color: transparent;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 100%),
+    linear-gradient(rgba(250, 246, 236, 0.36), rgba(250, 246, 236, 0.36));
+  border-radius: var(--og-radius-s);
+  color: var(--og-text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.85),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 0 rgba(86, 55, 27, 0.2),
+    0 4px 14px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
+}
+
+.guidesSilver [data-v3-guides-indicator="tags-panel"] button:hover,
+.guidesSilver [data-v3-guides-indicator="sort-panel"] button:hover,
+.guidesSilver [data-v3-guides-indicator="sort-panel"] select:hover {
+  border-color: color-mix(in srgb, var(--og-focus) 60%, rgba(255, 255, 255, 0.4));
+  color: var(--og-text-primary);
+}
+
+.guidesSilver [data-v3-guides-indicator="sort-panel"] option {
+  background-color: var(--og-paper-100);
+  color: var(--og-text-primary);
+}
+
+.guidesSilver [data-v3-guides-indicator="sort-row"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.guidesSilver [data-v3-guides-indicator="view-toggle"] {
+  display: flex;
+  border-width: 1.5px;
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.85);
+  border-radius: var(--og-radius-s);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0.24) 100%),
+    rgba(250, 246, 236, 0.32);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16),
+    0 8px 20px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px) saturate(140%) brightness(1.06) contrast(0.97);
+  padding: 4px;
+}
+
+.guidesSilver [data-v3-guides-indicator="view-toggle"] button {
+  color: var(--og-text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.guidesSilver [data-v3-guides-indicator="view-toggle"] button[data-active="true"] {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.12)),
+    rgba(255, 255, 255, 0.2);
+  color: var(--og-text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-grid"] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-grid-tile"] {
+  position: relative;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 64%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-surface-secondary);
+  background-image: var(--og-material-paper-card);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 210px auto, 100% 100%;
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-grid-tile"] > a,
+.guidesSilver [data-v3-guides-indicator="guide-grid-tile"] > button {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  padding: 7px 6px 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-grid-image"] {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 78%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-paper-200);
+  background-image: var(--og-material-photo-mount);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 220px auto, 100% 100%;
+  box-shadow: var(--og-shadow-photo-mount);
+  padding: 4px;
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-grid-image"] > span {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: calc(var(--og-radius-s) - 2px);
+  background: var(--og-bg-recess);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-grid-image"] img {
+  object-fit: cover;
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-grid-name"] {
+  overflow: hidden;
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .guidesSilver [data-v3-guides-indicator="guide-card"],
 .guidesSilver [data-v3-guides-indicator="decks-list"],
 .guidesSilver [data-v3-guides-indicator="library-section"],
@@ -359,14 +597,6 @@
   color: var(--og-text-secondary);
 }
 
-.guidesSilver [data-v3-guides-indicator="guide-card"] > div:last-child {
-  border-block-start: var(--og-border-width) solid var(--og-border-subtle);
-  background-color: color-mix(in srgb, var(--og-paper-50) 42%, transparent);
-  color: var(--og-text-muted);
-  font-family: var(--og-font-mono);
-}
-
-.guidesSilver [data-v3-guides-indicator="guide-card"] > div:last-child span:last-child,
 .guidesSilver [data-v3-guides-indicator="compact-guide-card"] > span:last-child,
 .guidesSilver [data-v3-guides-indicator="deck-row"] > button,
 .guidesSilver [data-v3-guides-indicator="deck-row"] > a[data-v3-guides-indicator="deck-edit-link"],
