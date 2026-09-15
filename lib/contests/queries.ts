@@ -783,6 +783,83 @@ export async function withLiveNomineeData(
   })
 }
 
+export type GuideCreatorLeaderboardEntry = {
+  ownerId: string
+  ownerName: string
+  guideCount: number
+  imageUrl: string | null
+}
+
+export async function getPublicGuideCreatorLeaderboard(
+  hideIdentity?: boolean
+): Promise<GuideCreatorLeaderboardEntry[]> {
+  const supabase = await createClient()
+  const { data: recipes, error } = await supabase
+    .from('recipes')
+    .select('id, user_id, image_url, created_at')
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+  if (!recipes || recipes.length === 0) return []
+
+  const recipeIdsByOwner = new Map<string, string[]>()
+  const countByOwner = new Map<string, number>()
+  const directImageByRecipeId = new Map<string, string>()
+
+  for (const recipe of recipes) {
+    countByOwner.set(recipe.user_id, (countByOwner.get(recipe.user_id) ?? 0) + 1)
+    const existing = recipeIdsByOwner.get(recipe.user_id) ?? []
+    existing.push(recipe.id)
+    recipeIdsByOwner.set(recipe.user_id, existing)
+    if (recipe.image_url) directImageByRecipeId.set(recipe.id, recipe.image_url)
+  }
+
+  const allRecipeIds = recipes.map((recipe) => recipe.id)
+  const { data: assets } = await supabase
+    .from('image_assets')
+    .select('entity_id, image_url, is_featured, created_at')
+    .eq('entity_type', 'recipe')
+    .in('entity_id', allRecipeIds)
+    .order('is_featured', { ascending: false })
+    .order('created_at', { ascending: true })
+
+  const assetImageByRecipeId = new Map<string, string>()
+  for (const asset of assets ?? []) {
+    if (!assetImageByRecipeId.has(asset.entity_id)) {
+      assetImageByRecipeId.set(asset.entity_id, asset.image_url)
+    }
+  }
+
+  const ownerIds = Array.from(countByOwner.keys())
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .in('id', ownerIds)
+
+  const nameByOwner = new Map<string, string>()
+  for (const profile of (profiles ?? []) as { id: string; username: string | null }[]) {
+    if (profile.username) nameByOwner.set(profile.id, profile.username)
+  }
+
+  return ownerIds
+    .map((ownerId) => {
+      const recipeIds = recipeIdsByOwner.get(ownerId) ?? []
+      const imageUrl =
+        recipeIds
+          .map((id) => assetImageByRecipeId.get(id) ?? directImageByRecipeId.get(id))
+          .find((url) => Boolean(url)) ?? null
+
+      return {
+        ownerId,
+        ownerName: hideIdentity ? 'Gallery Member' : nameByOwner.get(ownerId) || 'Gallery Member',
+        guideCount: countByOwner.get(ownerId) ?? 0,
+        imageUrl,
+      }
+    })
+    .sort((first, second) => second.guideCount - first.guideCount)
+}
+
 export async function getEntityGalleryImages(
   entityType: 'project' | 'unit' | 'recipe',
   entityId: string

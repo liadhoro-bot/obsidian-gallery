@@ -11,7 +11,10 @@ import {
   type NomineeCopy,
 } from '../../lib/contests/nominee-copy'
 import { submitNominationAction } from '../../lib/contests/actions'
-import type { ContestPickerSource } from '../../lib/contests/queries'
+import type {
+  ContestPickerSource,
+  GuideCreatorLeaderboardEntry,
+} from '../../lib/contests/queries'
 import type {
   Contest,
   ContestBallot,
@@ -80,6 +83,7 @@ function ballotEntryNames(
 export default function ContestDetailTabs({
   ballot,
   contest,
+  guideCreatorLeaderboard = [],
   hideIdentity,
   isEligibleParticipant = true,
   nominations,
@@ -88,6 +92,7 @@ export default function ContestDetailTabs({
 }: {
   ballot: ContestBallot | null
   contest: Contest
+  guideCreatorLeaderboard?: GuideCreatorLeaderboardEntry[]
   hideIdentity?: boolean
   isEligibleParticipant?: boolean
   nominations: ContestNomination[]
@@ -122,6 +127,13 @@ export default function ContestDetailTabs({
       return new Date(second.submitted_at).getTime() - new Date(first.submitted_at).getTime()
     })
   }, [hideIdentity, nominations, search, sort])
+  const sortedGuideCreatorLeaderboard = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) return guideCreatorLeaderboard
+    return guideCreatorLeaderboard.filter((entry) =>
+      entry.ownerName.toLowerCase().includes(needle)
+    )
+  }, [guideCreatorLeaderboard, search])
   const submittedEntryNames = ballotEntryNames(ballot, nominations, hideIdentity)
   const votingOpensIn = daysUntil(contest.voting_open_at)
   const votingClosesIn = daysUntil(contest.voting_close_at)
@@ -243,17 +255,32 @@ export default function ContestDetailTabs({
                 placeholder="Search entries..."
               />
             </label>
-            <button
-              type="button"
-              className={styles.sortButton}
-              onClick={cycleSort}
-              aria-label={`Sort entries by ${sort}`}
-            >
-              ☰
-            </button>
+            {nomineeType !== 'guide' ? (
+              <button
+                type="button"
+                className={styles.sortButton}
+                onClick={cycleSort}
+                aria-label={`Sort entries by ${sort}`}
+              >
+                ☰
+              </button>
+            ) : null}
           </div>
 
-          {sortedNominations.length === 0 ? (
+          {nomineeType === 'guide' ? (
+            sortedGuideCreatorLeaderboard.length === 0 ? (
+              <article className={styles.emptyState}>
+                <p className={styles.emptyTitle}>The gallery is waiting for its first public guides.</p>
+                <p className={styles.mutedText}>Publish a public guide to appear on the leaderboard.</p>
+              </article>
+            ) : (
+              <div className={styles.entryGrid}>
+                {sortedGuideCreatorLeaderboard.map((entry) => (
+                  <CreatorLeaderboardTile key={entry.ownerId} contestSlug={contest.slug} entry={entry} />
+                ))}
+              </div>
+            )
+          ) : sortedNominations.length === 0 ? (
             <article className={styles.emptyState}>
               <p className={styles.emptyTitle}>The gallery is waiting for its first entries.</p>
               <p className={styles.mutedText}>Enter the contest and become part of the challenge.</p>
@@ -509,6 +536,42 @@ function EntryTile({
             <span className={styles.tileOwner}>{ownerName}</span>
           </div>
         ) : null}
+      </div>
+    </Link>
+  )
+}
+
+function CreatorLeaderboardTile({
+  contestSlug,
+  entry,
+}: {
+  contestSlug: string
+  entry: GuideCreatorLeaderboardEntry
+}) {
+  return (
+    <Link
+      href={`/contests/${contestSlug}/vote?creator=${encodeURIComponent(entry.ownerId)}`}
+      className={`${styles.nomineeTile} block`}
+    >
+      <div className={styles.nomineeTileImage}>
+        {entry.imageUrl ? (
+          <Image
+            src={entry.imageUrl}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 50vw, 220px"
+            className="object-cover"
+          />
+        ) : null}
+      </div>
+      <div className={styles.nomineeBody}>
+        <h3 className={styles.tileTitle}>{entry.ownerName}</h3>
+        <div className={styles.entryOwnerRow}>
+          <span className={styles.entryOwnerAvatar}>{initialsFor(entry.ownerName)}</span>
+          <span className={styles.tileOwner}>
+            {entry.guideCount} public {entry.guideCount === 1 ? 'guide' : 'guides'}
+          </span>
+        </div>
       </div>
     </Link>
   )

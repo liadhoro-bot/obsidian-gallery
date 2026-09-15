@@ -8,6 +8,7 @@ import {
   getContestNominations,
   getContestResults,
   getNominationPickerSources,
+  getPublicGuideCreatorLeaderboard,
   getUserContestNominations,
   getViewerBallot,
   withLiveNomineeData,
@@ -18,6 +19,7 @@ import {
   canNominateInContest,
   canViewContest,
 } from '../../../lib/contests/permissions'
+import { getNomineeType } from '../../../lib/contests/nominee-copy'
 import type { ContestNomination } from '../../../lib/contests/types'
 import styles from '../../../components/contests/contest-v3-silver.module.css'
 
@@ -68,6 +70,10 @@ export default async function ContestDetailPage({
     user && isEligibleParticipant
       ? await getNominationPickerSources(user.id, allowedTypes)
       : []
+  const guideCreatorLeaderboard =
+    !isDemoContest && getNomineeType(contest) === 'guide'
+      ? await getPublicGuideCreatorLeaderboard(hideIdentity)
+      : []
 
   return (
     <main className={styles.contestSilver}>
@@ -84,6 +90,7 @@ export default async function ContestDetailPage({
           ballot={ballot}
           isEligibleParticipant={isEligibleParticipant}
           contest={contest}
+          guideCreatorLeaderboard={guideCreatorLeaderboard}
           nominations={nominations}
           pickerSources={pickerSources}
           results={results}
