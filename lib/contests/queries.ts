@@ -788,10 +788,12 @@ export type GuideCreatorLeaderboardEntry = {
   ownerName: string
   guideCount: number
   imageUrl: string | null
+  isViewer: boolean
 }
 
 export async function getPublicGuideCreatorLeaderboard(
-  hideIdentity?: boolean
+  hideIdentity?: boolean,
+  viewerId?: string | null
 ): Promise<GuideCreatorLeaderboardEntry[]> {
   const supabase = await createClient()
   const { data: recipes, error } = await supabase
@@ -854,6 +856,7 @@ export async function getPublicGuideCreatorLeaderboard(
         ownerId,
         ownerName: hideIdentity ? 'Gallery Member' : nameByOwner.get(ownerId) || 'Gallery Member',
         guideCount: countByOwner.get(ownerId) ?? 0,
+        isViewer: ownerId === viewerId,
         imageUrl,
       }
     })

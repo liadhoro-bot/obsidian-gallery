@@ -10,7 +10,7 @@ import {
   getViewerBallot,
 } from '../../../../lib/contests/queries'
 import { canNominateInContest, canViewContest } from '../../../../lib/contests/permissions'
-import { getNomineeCopy } from '../../../../lib/contests/nominee-copy'
+import { getBallotSummary, getNomineeCopy } from '../../../../lib/contests/nominee-copy'
 import styles from '../../../../components/contests/contest-v3-silver.module.css'
 
 export default async function ContestVotePage({
@@ -72,8 +72,8 @@ export default async function ContestVotePage({
             <p className={styles.eyebrow}>Your Vote</p>
             <h2 className={styles.sectionTitle}>Voting is not open.</h2>
             <p className={styles.bodyText}>
-              You will be able to choose one {nomineeCopy.voteNoun} for 1st place and one different{' '}
-              {nomineeCopy.voteNoun} for 2nd place once community voting begins.
+              You will be able to choose {getBallotSummary(contest, nomineeCopy.voteNoun)} once community
+              voting begins.
             </p>
           </article>
         ) : ballot?.status === 'submitted' && !contest.allow_ballot_changes ? (

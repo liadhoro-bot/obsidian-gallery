@@ -1,5 +1,13 @@
 import { getContestPhase, getPhaseLabel } from './phases'
+import { getRankedPoints } from './ranking'
 import type { Contest, ContestNomineeType } from './types'
+
+function ordinal(n: number) {
+  if (n === 1) return '1st'
+  if (n === 2) return '2nd'
+  if (n === 3) return '3rd'
+  return `${n}th`
+}
 
 export type NomineeCopy = {
   entryNoun: string
@@ -64,4 +72,22 @@ export function getPhaseHeadline(contest: Contest): string {
   if (phase === 'voting_closed') return 'Winners Coming Soon'
   if (phase === 'results_published') return 'Winners Announced'
   return getPhaseLabel(phase)
+}
+
+export function getBallotSummary(contest: Contest, voteNoun: string): string {
+  const max = contest.maximum_selections_per_ballot
+  const parts = Array.from({ length: max }, (_, index) => {
+    const rank = index + 1
+    const points = getRankedPoints(max, rank)
+    const noun = index === 0 ? `${voteNoun} ` : ''
+    return `one ${noun}for ${ordinal(rank)} place (${points} point${points === 1 ? '' : 's'})`
+  })
+
+  if (parts.length === 1) return parts[0]
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
+}
+
+export function getOrdinal(n: number) {
+  return ordinal(n)
 }
