@@ -41,6 +41,7 @@ export type CreatedDeckResult = {
   usedIn: number
   image: string
   saved: boolean
+  isOwner: boolean
   accent: string
   createdAt: string
 }
@@ -438,6 +439,7 @@ export async function createDeckFromForge(
     usedIn: 0,
     image: getGuideDeckThumbnail(recipe.image_url, '/onboarding/pains/tough-choices.jpeg'),
     saved: true,
+    isOwner: true,
     accent: accentFor(recipe.id),
     createdAt: recipe.created_at ?? '',
   }
@@ -595,6 +597,7 @@ export async function updateDeckFromForge(
     usedIn: 0,
     image: getGuideDeckThumbnail(recipe.image_url, '/onboarding/pains/tough-choices.jpeg'),
     saved: true,
+    isOwner: true,
     accent: accentFor(recipe.id),
     createdAt: recipe.created_at ?? '',
   }

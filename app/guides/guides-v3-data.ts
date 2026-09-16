@@ -31,7 +31,14 @@ export type GuidesV3Deck = {
   paints: number
   usedIn: number
   image: string
+  // Whether the viewer bookmarked or otherwise has this deck in their own
+  // collection - NOT the same as ownership. A saved (bookmarked) deck can
+  // belong to someone else entirely; see `isOwner` for the actual
+  // creator/editor check.
   saved: boolean
+  // The only thing that should ever gate edit access. True iff the viewer
+  // is the deck's creator (recipes.user_id === viewer's user id).
+  isOwner: boolean
   accent: string
   createdAt: string
 }
@@ -358,11 +365,13 @@ function toDeck({
   recipe,
   saved,
   statsByRecipeId,
+  userId,
 }: {
   imageByRecipeId: Map<string, string>
   recipe: RecipeRow
   saved: boolean
   statsByRecipeId: Map<string, { cards: number; paints: number }>
+  userId: string
 }): GuidesV3Deck {
   const stats = statsByRecipeId.get(recipe.id)
 
@@ -378,6 +387,7 @@ function toDeck({
       fallbackImage
     ),
     saved,
+    isOwner: recipe.user_id === userId,
     accent: accentFor(recipe.id),
     createdAt: recipe.created_at ?? '',
   }
@@ -581,6 +591,7 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
       recipe,
       saved: true,
       statsByRecipeId,
+      userId,
     })
   )
 
@@ -590,6 +601,7 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
       recipe,
       saved: savedRecipeIds.has(recipe.id) || ownedRecipeIds.has(recipe.id),
       statsByRecipeId,
+      userId,
     })
   )
   const libraryDeckById = new Map(libraryDecks.map((deck) => [deck.id, deck]))
@@ -611,6 +623,7 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
         recipe,
         saved: true,
         statsByRecipeId,
+        userId,
       })
       return toGuideFile(guide, recipe, deck, socialByRecipeId)
     })

@@ -160,6 +160,7 @@ const initialDecks: Deck[] = [
     usedIn: 3,
     image: '/onboarding/pains/pile-of-shame.jpeg',
     saved: true,
+    isOwner: true,
     accent: '#d8bd83',
     createdAt: '2026-08-20T00:00:00.000Z',
   },
@@ -172,6 +173,7 @@ const initialDecks: Deck[] = [
     usedIn: 2,
     image: '/onboarding/first-project-bg.jpeg',
     saved: true,
+    isOwner: true,
     accent: '#d29631',
     createdAt: '2026-08-18T00:00:00.000Z',
   },
@@ -184,6 +186,7 @@ const initialDecks: Deck[] = [
     usedIn: 4,
     image: '/onboarding/pains/tough-choices.jpeg',
     saved: true,
+    isOwner: true,
     accent: '#17b9c2',
     createdAt: '2026-08-16T00:00:00.000Z',
   },
@@ -196,6 +199,7 @@ const initialDecks: Deck[] = [
     usedIn: 3,
     image: '/onboarding/pains/paint-management.jpeg',
     saved: true,
+    isOwner: true,
     accent: '#17b9c2',
     createdAt: '2026-08-14T00:00:00.000Z',
   },
@@ -208,6 +212,7 @@ const initialDecks: Deck[] = [
     usedIn: 5,
     image: '/onboarding/pains/scheme-loss.jpeg',
     saved: true,
+    isOwner: true,
     accent: '#d29631',
     createdAt: '2026-08-12T00:00:00.000Z',
   },
@@ -644,6 +649,7 @@ function toEditorDeckDetail(deck: ForgeDeck): GuidesV3DeckDetail {
     usedIn: 0,
     image: heroImage,
     saved: true,
+    isOwner: true,
     accent: '#22d3ee',
     description: deck.description,
     isPublic: deck.status === 'Public',
@@ -3841,7 +3847,7 @@ function DeckRow({
         >
           <EditIcon />
         </button>
-      ) : (
+      ) : deck.isOwner ? (
         <Link
           href={`/guides/decks/${deck.id}?preview=1&edit=1`}
           aria-label={`Edit ${deck.title}`}
@@ -3851,7 +3857,7 @@ function DeckRow({
         >
           <EditIcon />
         </Link>
-      )}
+      ) : null}
     </article>
   )
 }

@@ -497,6 +497,7 @@ export const getGuidesV3DeckDetail = cache(
       usedIn: 0,
       image: getGuideDeckThumbnail(rawImage, fallbackImage),
       saved: typedRecipe.user_id === userId,
+      isOwner: typedRecipe.user_id === userId,
       accent: accentFor(typedRecipe.id),
       description: clean(
         typedRecipe.description,

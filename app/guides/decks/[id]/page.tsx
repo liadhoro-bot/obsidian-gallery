@@ -147,6 +147,13 @@ export default async function DeckDetailPage({
 
   if (!deck) notFound()
 
+  if (isEditing && !deck.isOwner) {
+    // Only the creator may edit a deck. A viewer who merely saved/bookmarked
+    // it (or is looking at any other public deck) gets bounced to the
+    // read-only view instead of the editor.
+    redirect(`/guides/decks/${id}?preview=1`)
+  }
+
   if (isEditing) {
     const { data: notesRow } = await supabase
       .from('recipes')
