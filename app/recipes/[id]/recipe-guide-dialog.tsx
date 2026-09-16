@@ -8,12 +8,12 @@ import type {
   RecipeImage,
   RecipeStep,
   StepPaintLink,
-} from './components/types'
+} from '../../guides/shared/types'
 import {
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
-} from './components/recipe-guide-cards'
+} from '../../guides/shared/recipe-guide-cards'
 
 type Props = {
   isOpen: boolean

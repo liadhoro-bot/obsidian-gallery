@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo, useOptimistic } from 'react'
 import SubmitButton from '../../../components/SubmitButton'
 import PaintSwatch from './paint-swatch'
-import { Recipe, StepPaintLink } from './types'
+import { Recipe, StepPaintLink } from '../../../guides/shared/types'
 
 type InventoryPaint = {
   uniqueKey: string

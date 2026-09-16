@@ -5,7 +5,7 @@ import PaintPickerDialog, {
   PaintPickerPaint,
 } from '../../../../components/paints/paint-picker-dialog'
 import PaintSwatch from './paint-swatch'
-import { Paint } from './types'
+import { Paint } from '../../../guides/shared/types'
 
 type PickerPaint = PaintPickerPaint & {
   hex_approx: string | null

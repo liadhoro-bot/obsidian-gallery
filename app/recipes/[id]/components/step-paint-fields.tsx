@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import PaintPicker from './paint-picker'
-import { Paint, StepPaintLink } from './types'
+import { Paint, StepPaintLink } from '../../../guides/shared/types'
 
 function getPaintSource(link: StepPaintLink | undefined, paints: Paint[]) {
   if (!link?.paint) return null

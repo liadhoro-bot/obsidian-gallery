@@ -19,10 +19,7 @@ import {
   unitPreviewFeatureGuides,
 } from '../../components/feature-guide-presets'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
-import {
-  getGuidesV3DeckDetail,
-  type GuidesV3DeckDetail,
-} from '../../guides/guides-v3-detail-data'
+import { getGuidesV3DeckDetail } from '../../guides/guides-v3-detail-data'
 import { getGuidesV3Payload } from '../../guides/guides-v3-data'
 
 type PageProps = {
@@ -563,10 +560,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         return deck ? { row, deck } : null
       })
     )
-  ).filter(
-    (item): item is { row: UnitV3StageGuideRow; deck: GuidesV3DeckDetail } =>
-      Boolean(item)
-  )
+  ).filter((item): item is NonNullable<typeof item> => Boolean(item))
 
   return {
     id: unit.id,
@@ -671,10 +665,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         image: guide.image,
         cards: guide.cards,
         paints: 0,
-        recipeId:
-          guide.id.startsWith('public-guide-')
-            ? guide.id.replace('public-guide-', '')
-            : guidesPayload.decks[0]?.id ?? '',
+        recipeId: guide.deckId ?? '',
       })),
       ...guidesPayload.decks.map((deck) => ({
         id: deck.id,

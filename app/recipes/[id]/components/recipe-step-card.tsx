@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import StepPaintFields from './step-paint-fields'
-import { Paint, Recipe, RecipeStep, StepPaintLink } from './types'
+import { Paint, Recipe, RecipeStep, StepPaintLink } from '../../../guides/shared/types'
 import SubmitButton from '../../../components/SubmitButton'
 
 function getContrastTextColor(hex?: string | null) {

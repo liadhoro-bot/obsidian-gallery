@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
+import { getRecipeSocialState } from '../components/social/data'
 import {
   getGuideDeckThumbnail,
   getGuidesV3Payload,
@@ -39,6 +40,21 @@ export type GuidesV3DeckDetail = GuidesV3Deck & {
   ownerLabel: string
   steps: GuidesV3DeckStep[]
   paintList: GuidesV3DeckPaint[]
+  // The guide (if any) that currently wraps this deck - null/absent for a
+  // deck that has never gone public (no auto-created guide yet). Every
+  // guide wraps exactly one deck for now, so this is at most one guide;
+  // exposed for a future guide label/breadcrumb on the deck detail page.
+  // Optional so existing object literals that satisfy this type without
+  // guide info (e.g. the client-only Forge draft preview in
+  // guides-v3-preview.tsx) keep type-checking.
+  guideId?: string | null
+  guideTitle?: string | null
+  // Real social state from recipe_likes/saved_recipes, keyed by this deck's
+  // recipe id. Optional for the same reason as guideId/guideTitle above.
+  likeCount?: number
+  saveCount?: number
+  viewerHasLiked?: boolean
+  viewerHasSaved?: boolean
 }
 
 export type GuidesV3GuideDetail = GuidesV3GuideFile & {
@@ -52,6 +68,15 @@ type RecipeRow = {
   image_url: string | null
   is_public: boolean | null
   user_id: string | null
+  created_at: string | null
+}
+
+type GuideDeckLinkRow = {
+  guide_id: string
+  guides?:
+    | { id: string; title: string | null }
+    | { id: string; title: string | null }[]
+    | null
 }
 
 type StepRow = {
@@ -242,7 +267,7 @@ export const getGuidesV3DeckDetail = cache(
 
     const { data: recipe, error: recipeError } = await supabase
       .from('recipes')
-      .select('id, name, description, image_url, is_public, user_id')
+      .select('id, name, description, image_url, is_public, user_id, created_at')
       .eq('id', deckId)
       .or(`user_id.eq.${userId},is_public.eq.true`)
       .maybeSingle()
@@ -252,6 +277,15 @@ export const getGuidesV3DeckDetail = cache(
 
     const typedRecipe = recipe as RecipeRow
     const rawImagePromise = loadRecipeImage(supabase, typedRecipe)
+    // Which guide(s) currently wrap this deck - at most one today, since
+    // multi-deck guides are a later phase. RLS on `guide_decks` already
+    // covers visibility (same own-or-public-recipe rule already applied to
+    // the `recipe` fetch above).
+    const guideLinksPromise = supabase
+      .from('guide_decks')
+      .select('guide_id, guides (id, title)')
+      .eq('recipe_id', deckId)
+    const socialStatePromise = getRecipeSocialState(supabase, deckId, userId)
     let { data: steps, error: stepsError } = await supabase
       .from('recipe_steps')
       .select('id, step_number, title, card_template, instructions, image_url, youtube_url')
@@ -290,8 +324,17 @@ export const getGuidesV3DeckDetail = cache(
     }
 
     const rawImage = await rawImagePromise
+    const { data: guideLinks, error: guideLinksError } = await guideLinksPromise
+    const socialState = await socialStatePromise
 
+    if (guideLinksError) throw new Error(guideLinksError.message)
     if (stepsError) throw new Error(stepsError.message)
+
+    const wrappedGuide =
+      ((guideLinks ?? []) as GuideDeckLinkRow[])
+        .map((link) => firstValue(link.guides))
+        .find((guide): guide is { id: string; title: string | null } => Boolean(guide)) ??
+      null
 
     const typedSteps = (steps ?? []) as StepRow[]
     const stepIds = typedSteps.map((step) => step.id)
@@ -454,6 +497,7 @@ export const getGuidesV3DeckDetail = cache(
       usedIn: 0,
       image: getGuideDeckThumbnail(rawImage, fallbackImage),
       saved: typedRecipe.user_id === userId,
+      isOwner: typedRecipe.user_id === userId,
       accent: accentFor(typedRecipe.id),
       description: clean(
         typedRecipe.description,
@@ -463,6 +507,15 @@ export const getGuidesV3DeckDetail = cache(
       ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public deck',
       steps: normalizedSteps,
       paintList: paints,
+      guideId: wrappedGuide?.id ?? null,
+      guideTitle: wrappedGuide
+        ? clean(wrappedGuide.title, `${clean(typedRecipe.name, 'Untitled Deck')} Guide`)
+        : null,
+      likeCount: socialState.likeCount,
+      saveCount: socialState.saveCount,
+      viewerHasLiked: socialState.viewerHasLiked,
+      viewerHasSaved: socialState.viewerHasSaved,
+      createdAt: typedRecipe.created_at ?? '',
     } satisfies GuidesV3DeckDetail
   }
 )
@@ -475,12 +528,21 @@ export const getGuidesV3GuideDetail = cache(
 
     if (!guide) return null
 
-    const deckId = guideId.startsWith('public-guide-')
-      ? guideId.replace('public-guide-', '')
-      : null
-    const decksList = deckId
-      ? payload.libraryDecks.filter((deck) => deck.id === deckId)
-      : payload.decks
+    // `guide.id` is now the real `guides.id` (not the old synthetic
+    // `public-guide-<recipeId>` string), and every guide wraps exactly one
+    // deck for now - resolve it via the `deckId` populated by
+    // toGuideFile() in guides-v3-data.ts, deduping in case the same deck
+    // shows up in both `decks` and `libraryDecks` (e.g. the viewer owns a
+    // deck that's also public).
+    const decksList = guide.deckId
+      ? Array.from(
+          new Map(
+            [...payload.decks, ...payload.libraryDecks]
+              .filter((deck) => deck.id === guide.deckId)
+              .map((deck) => [deck.id, deck])
+          ).values()
+        )
+      : []
 
     return {
       ...guide,

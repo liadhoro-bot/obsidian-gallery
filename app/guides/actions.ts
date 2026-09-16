@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
+import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
 import { getGuideDeckThumbnail } from './guides-v3-data'
 import {
   getSafeImageExtension,
@@ -26,6 +27,8 @@ export type CreateDeckInput = {
   description: string
   status: string
   image: string | null
+  inventoryRequired?: string | null
+  expertTips?: string | null
   cards: CreateDeckCardInput[]
 }
 
@@ -38,7 +41,9 @@ export type CreatedDeckResult = {
   usedIn: number
   image: string
   saved: boolean
+  isOwner: boolean
   accent: string
+  createdAt: string
 }
 
 export type DeckEditorImageUploadResult = {
@@ -179,7 +184,7 @@ export async function uploadDeckEditorImage(
   if (validationError) throw new Error(validationError)
 
   const extension = getSafeImageExtension(file.name)
-  const fileName = `${user.id}/deck-editor/${Date.now()}-${crypto.randomUUID()}.${extension}`
+  const fileName = `users/${user.id}/deck-editor/${Date.now()}-${crypto.randomUUID()}.${extension}`
 
   const { error: uploadError } = await supabase.storage
     .from('obsidian-images')
@@ -341,7 +346,7 @@ export async function createDeckFromForge(
       image_url: coverImage,
       is_public: isPublic,
     })
-    .select('id, name, image_url')
+    .select('id, name, image_url, created_at')
     .single()
 
   if (recipeError || !recipe) {
@@ -434,7 +439,9 @@ export async function createDeckFromForge(
     usedIn: 0,
     image: getGuideDeckThumbnail(recipe.image_url, '/onboarding/pains/tough-choices.jpeg'),
     saved: true,
+    isOwner: true,
     accent: accentFor(recipe.id),
+    createdAt: recipe.created_at ?? '',
   }
 }
 
@@ -465,10 +472,12 @@ export async function updateDeckFromForge(
       description,
       image_url: coverImage,
       is_public: isPublic,
+      inventory_required: input.inventoryRequired?.trim() || null,
+      expert_tips: input.expertTips?.trim() || null,
     })
     .eq('id', deckId)
     .eq('user_id', user.id)
-    .select('id, name, image_url')
+    .select('id, name, image_url, created_at')
     .single()
 
   if (recipeError || !recipe) {
@@ -588,6 +597,34 @@ export async function updateDeckFromForge(
     usedIn: 0,
     image: getGuideDeckThumbnail(recipe.image_url, '/onboarding/pains/tough-choices.jpeg'),
     saved: true,
+    isOwner: true,
     accent: accentFor(recipe.id),
+    createdAt: recipe.created_at ?? '',
   }
+}
+
+export async function toggleDeckPaintOwnership(formData: FormData) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
+  const deckId = formData.get('deckId')?.toString()
+  const paintCatalogId = formData.get('paintCatalogId')?.toString()
+  const action = formData.get('action')?.toString()
+  const currentValue = formData.get('currentValue')?.toString() === 'true'
+
+  if (!deckId || !paintCatalogId) return
+  if (action !== 'owned' && action !== 'wishlist') return
+
+  await updatePaintOwnership({
+    userId: user.id,
+    paintCatalogId,
+    action,
+    currentValue,
+  })
+
+  revalidatePath(`/guides/decks/${deckId}`)
 }
