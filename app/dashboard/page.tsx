@@ -260,14 +260,6 @@ export default async function DashboardPage({
     </div>
   )
 
-  const profileShell = (
-    <div className="grid gap-5">
-      {xpCardShell}
-      <DashboardHobbyBadges />
-      <StatsSkeleton />
-    </div>
-  )
-
   const paintingTableContent = (
     <Suspense
       fallback={
@@ -285,12 +277,9 @@ export default async function DashboardPage({
     </Suspense>
   )
 
-  const profilePanel =
-    activeTab === 'profile' ? (
-      profileContent
-    ) : (
-      <Suspense fallback={profileShell}>{profileContent}</Suspense>
-    )
+  const profilePanel = activeTab === 'profile' ? profileContent : null
+  const paintingTablePanel =
+    activeTab === 'painting-table' ? paintingTableContent : null
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
@@ -304,7 +293,7 @@ export default async function DashboardPage({
         <DashboardTabSwitcher
           initialTab={activeTab}
           profilePanel={profilePanel}
-          paintingTablePanel={paintingTableContent}
+          paintingTablePanel={paintingTablePanel}
         />
       </div>
     </main>

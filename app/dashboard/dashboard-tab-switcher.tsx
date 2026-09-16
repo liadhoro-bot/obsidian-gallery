@@ -1,14 +1,15 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
 type ActiveTab = 'profile' | 'painting-table'
 
 type DashboardTabSwitcherProps = {
   initialTab: ActiveTab
-  profilePanel: ReactNode
-  paintingTablePanel: ReactNode
+  profilePanel: ReactNode | null
+  paintingTablePanel: ReactNode | null
 }
 
 const tabs: {
@@ -28,12 +29,46 @@ export default function DashboardTabSwitcher({
   paintingTablePanel,
 }: DashboardTabSwitcherProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const requestedTab = searchParams.get('tab')
   const currentTab =
     requestedTab === 'profile' || requestedTab === 'painting-table'
       ? requestedTab
       : initialTab
+
+  useEffect(() => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', currentTab === 'profile' ? 'painting-table' : 'profile')
+    const href = `${pathname}?${params.toString()}`
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+    const prefetchInactiveTab = () => router.prefetch(href)
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(prefetchInactiveTab, {
+        timeout: 1500,
+      })
+    } else {
+      timeoutId = window.setTimeout(prefetchInactiveTab, 500)
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [currentTab, pathname, router, searchParams])
 
   function navigate(nextTab: ActiveTab) {
     if (nextTab === currentTab) {
@@ -44,7 +79,7 @@ export default function DashboardTabSwitcher({
     params.set('tab', nextTab)
     const href = `${pathname}?${params.toString()}`
 
-    window.history.replaceState(null, '', href)
+    router.replace(href, { scroll: false })
   }
 
   return (
@@ -78,14 +113,14 @@ export default function DashboardTabSwitcher({
         hidden={currentTab !== 'profile'}
         aria-hidden={currentTab !== 'profile'}
       >
-        {profilePanel}
+        {currentTab === 'profile' ? profilePanel : null}
       </div>
 
       <div
         hidden={currentTab !== 'painting-table'}
         aria-hidden={currentTab !== 'painting-table'}
       >
-        {paintingTablePanel}
+        {currentTab === 'painting-table' ? paintingTablePanel : null}
       </div>
     </>
   )

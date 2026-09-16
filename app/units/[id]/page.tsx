@@ -257,7 +257,11 @@ function formatUnitV3Status(status: UnitDetailUnit['status']) {
   return 'Active'
 }
 
-async function getUnitV3PreviewUnit(id: string, userId: string) {
+async function getUnitV3PreviewUnit(
+  id: string,
+  userId: string,
+  initialTab: 'details' | 'paint' | 'progress'
+) {
   const supabase = await createClient()
 
   const { data: unit, error: unitError } = await supabase
@@ -276,6 +280,85 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
   if (!unit) {
     return null
   }
+
+  const shouldLoadPaintTab = initialTab === 'paint'
+  const shouldLoadProgressTab = initialTab === 'progress'
+
+  const sessionsPromise = shouldLoadPaintTab
+    ? supabase
+        .from('unit_sessions')
+        .select('id, started_at, duration_seconds, notes, entry_source')
+        .eq('unit_id', id)
+        .eq('user_id', userId)
+        .gt('duration_seconds', 0)
+        .order('started_at', { ascending: false })
+        .limit(50)
+    : Promise.resolve({ data: [], error: null })
+  const scheduledSessionsPromise = shouldLoadPaintTab
+    ? supabase
+        .from('unit_scheduled_sessions')
+        .select('id, scheduled_start_at, focus, notify, status')
+        .eq('unit_id', id)
+        .eq('user_id', userId)
+        .eq('status', 'scheduled')
+        .order('scheduled_start_at', { ascending: true })
+        .limit(20)
+    : Promise.resolve({ data: [], error: null })
+  const previewStagePaintsPromise = shouldLoadProgressTab
+    ? supabase
+        .from('unit_stage_paints')
+        .select(
+          `
+          id,
+          unit_id,
+          progress_step_id,
+          paint_source,
+          paint_catalog_id,
+          custom_paint_id,
+          sort_order,
+          catalog_paint:paint_catalog (
+            id,
+            name,
+            brand,
+            line,
+            hex_approx,
+            swatch_image_url
+          ),
+          custom_paint:paints (
+            id,
+            name,
+            manufacturer,
+            series,
+            color_hex
+          )
+        `
+        )
+        .eq('unit_id', id)
+        .eq('user_id', userId)
+        .order('sort_order', { ascending: true })
+    : Promise.resolve({ data: [], error: null })
+  const stageGuidesPromise = shouldLoadProgressTab
+    ? supabase
+        .from('unit_stage_recipes')
+        .select(
+          `
+          id,
+          progress_step_id,
+          recipe_id,
+          recipe:recipes (
+            id,
+            name,
+            description,
+            image_url
+          )
+        `
+        )
+        .eq('unit_id', id)
+        .eq('user_id', userId)
+    : Promise.resolve({ data: [], error: null })
+  const guidesPayloadPromise = shouldLoadProgressTab
+    ? getGuidesV3Payload(userId)
+    : Promise.resolve(null)
 
   const [
     imagesResult,
@@ -360,22 +443,8 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase
-        .from('unit_sessions')
-        .select('id, started_at, duration_seconds, notes, entry_source')
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-        .gt('duration_seconds', 0)
-        .order('started_at', { ascending: false })
-        .limit(50),
-      supabase
-        .from('unit_scheduled_sessions')
-        .select('id, scheduled_start_at, focus, notify, status')
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-        .eq('status', 'scheduled')
-        .order('scheduled_start_at', { ascending: true })
-        .limit(20),
+      sessionsPromise,
+      scheduledSessionsPromise,
       supabase
         .from('projects')
         .select('id, name')
@@ -386,55 +455,9 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         .select('id, step_key, step_label, step_order, status, progress')
         .eq('unit_id', id)
         .order('step_order', { ascending: true }),
-      supabase
-        .from('unit_stage_paints')
-        .select(
-          `
-          id,
-          unit_id,
-          progress_step_id,
-          paint_source,
-          paint_catalog_id,
-          custom_paint_id,
-          sort_order,
-          catalog_paint:paint_catalog (
-            id,
-            name,
-            brand,
-            line,
-            hex_approx,
-            swatch_image_url
-          ),
-          custom_paint:paints (
-            id,
-            name,
-            manufacturer,
-            series,
-            color_hex
-          )
-        `
-        )
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-        .order('sort_order', { ascending: true }),
-      supabase
-        .from('unit_stage_recipes')
-        .select(
-          `
-          id,
-          progress_step_id,
-          recipe_id,
-          recipe:recipes (
-            id,
-            name,
-            description,
-            image_url
-          )
-        `
-        )
-        .eq('unit_id', id)
-        .eq('user_id', userId),
-      getGuidesV3Payload(userId),
+      previewStagePaintsPromise,
+      stageGuidesPromise,
+      guidesPayloadPromise,
     ])
 
   if (imagesResult.error) {
@@ -552,14 +575,16 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
       custom_paint: firstRelation(paint.custom_paint),
     })) ?? []
   const assignedGuideRows = (stageGuidesResult.data ?? []) as UnitV3StageGuideRow[]
-  const assignedDeckDetails = (
-    await Promise.all(
-      assignedGuideRows.map(async (row) => {
-        const deck = await getGuidesV3DeckDetail(row.recipe_id, userId)
-        return deck ? { row, deck } : null
-      })
-    )
-  ).filter((item): item is NonNullable<typeof item> => Boolean(item))
+  const assignedDeckDetails = shouldLoadProgressTab
+    ? (
+        await Promise.all(
+          assignedGuideRows.map(async (row) => {
+            const deck = await getGuidesV3DeckDetail(row.recipe_id, userId)
+            return deck ? { row, deck } : null
+          })
+        )
+      ).filter((item): item is NonNullable<typeof item> => Boolean(item))
+    : []
 
   return {
     id: unit.id,
@@ -656,7 +681,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
       paintList: deck.paintList,
     })),
     availableGuideChoices: [
-      ...guidesPayload.guideFiles.map((guide) => ({
+      ...(guidesPayload?.guideFiles ?? []).map((guide) => ({
         id: guide.id,
         type: 'guide' as const,
         title: guide.title,
@@ -666,7 +691,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         paints: guide.palette.length,
         recipeId: guide.deckId ?? '',
       })),
-      ...guidesPayload.decks.map((deck) => ({
+      ...(guidesPayload?.decks ?? []).map((deck) => ({
         id: deck.id,
         type: 'deck' as const,
         title: deck.title,
@@ -745,6 +770,39 @@ async function UnitDetailBody({
       )
     )
   `
+
+  const stagePaintsPromise =
+    initialTab === 'progress'
+      ? supabase
+          .from('unit_stage_paints')
+          .select(`
+            id,
+            unit_id,
+            progress_step_id,
+            paint_source,
+            paint_catalog_id,
+            custom_paint_id,
+            sort_order,
+            catalog_paint:paint_catalog (
+              id,
+              name,
+              brand,
+              line,
+              hex_approx,
+              swatch_image_url
+            ),
+            custom_paint:paints (
+              id,
+              name,
+              manufacturer,
+              series,
+              color_hex
+            )
+          `)
+          .eq('unit_id', id)
+          .eq('user_id', userId)
+          .order('sort_order', { ascending: true })
+      : Promise.resolve({ data: [], error: null })
 
   const [
     imageResult,
@@ -840,35 +898,7 @@ async function UnitDetailBody({
       `)
       .eq('unit_id', id)
       .order('step_order', { ascending: true }),
-    supabase
-      .from('unit_stage_paints')
-      .select(`
-        id,
-        unit_id,
-        progress_step_id,
-        paint_source,
-        paint_catalog_id,
-        custom_paint_id,
-        sort_order,
-        catalog_paint:paint_catalog (
-          id,
-          name,
-          brand,
-          line,
-          hex_approx,
-          swatch_image_url
-        ),
-        custom_paint:paints (
-          id,
-          name,
-          manufacturer,
-          series,
-          color_hex
-        )
-      `)
-      .eq('unit_id', id)
-      .eq('user_id', userId)
-      .order('sort_order', { ascending: true }),
+    stagePaintsPromise,
   ])
 
   const images = imageResult.data ?? []
@@ -1133,7 +1163,7 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
       resolvedSearchParams.edit === 'gallery'
         ? resolvedSearchParams.edit
         : null
-    const liveUnit = await getUnitV3PreviewUnit(id, user.id)
+    const liveUnit = await getUnitV3PreviewUnit(id, user.id, previewTab)
 
     if (!liveUnit) {
       notFound()

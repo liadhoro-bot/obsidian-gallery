@@ -5,7 +5,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
 import { unitPreviewFeatureGuides } from '../../components/feature-guide-presets'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
@@ -400,12 +400,19 @@ export default function UnitV3Preview({
   featureGuides = unitPreviewFeatureGuides,
   liveUnit = null,
 }: UnitV3PreviewProps) {
-  const [activeTab, setActiveTab] = useState<UnitTab>(initialTab)
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [localUnit, setLocalUnit] = useState<PreviewUnit | null>(liveUnit)
+  const requestedTab = searchParams.get('tab')
+  const activeTab =
+    requestedTab === 'paint' || requestedTab === 'progress'
+      ? requestedTab
+      : requestedTab === 'details'
+        ? 'details'
+        : initialTab
   const unit = useMemo(
     () =>
       localUnit ??
@@ -417,8 +424,73 @@ export default function UnitV3Preview({
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
+  useEffect(() => {
+    setLocalUnit(liveUnit)
+  }, [liveUnit])
+
+  useEffect(() => {
+    if (!liveUnit) {
+      return
+    }
+
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    const tabs: UnitTab[] = ['details', 'paint', 'progress']
+    const inactiveTabs = tabs.filter((tab) => tab !== activeTab)
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+
+    const prefetchInactiveTabs = () => {
+      for (const tab of inactiveTabs) {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('preview', '1')
+        if (tab === 'details') {
+          params.delete('tab')
+        } else {
+          params.set('tab', tab)
+        }
+        router.prefetch(`${pathname}?${params.toString()}`)
+      }
+    }
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(prefetchInactiveTabs, {
+        timeout: 1500,
+      })
+    } else {
+      timeoutId = window.setTimeout(prefetchInactiveTabs, 500)
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [activeTab, liveUnit, pathname, router, searchParams])
+
   function showGuideAt(index: number) {
     setActiveGuideIndex(index)
+  }
+
+  function navigateTab(tab: UnitTab) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('preview', '1')
+
+    if (tab === 'details') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
   function goBack() {
@@ -627,7 +699,7 @@ export default function UnitV3Preview({
                 role="tab"
                 aria-selected={activeTab === tab}
                 data-feature-guide-target={`units.detail.tabs.${tab}`}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => navigateTab(tab)}
                 className={[
                   'h-10 rounded-[6px] px-1 text-xs font-black transition',
                   activeTab === tab

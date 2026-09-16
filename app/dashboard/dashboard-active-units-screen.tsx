@@ -196,7 +196,7 @@ export async function DashboardActiveUnitsScreen({
 }: {
   featureGuides?: DashboardFeatureGuide[]
   initialTab: ActiveTab
-  profilePanel: ReactNode
+  profilePanel: ReactNode | null
   userId: string
 }) {
   const perf = createPerfTimer('/dashboard:active-units-screen')

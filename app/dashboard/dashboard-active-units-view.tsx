@@ -556,7 +556,7 @@ export default function DashboardActiveUnitsView({
   featureGuides?: DashboardFeatureGuide[]
   initialTab: ActiveTab
   model: DashboardActiveUnitsViewModel
-  profilePanel: ReactNode
+  profilePanel: ReactNode | null
   source?: 'fixture' | 'live'
 }) {
   const pathname = usePathname()
@@ -576,6 +576,43 @@ export default function DashboardActiveUnitsView({
     setCurrentTab(routeTab)
   }, [routeTab])
 
+  useEffect(() => {
+    if (source !== 'live') {
+      return
+    }
+
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', currentTab === 'profile' ? 'painting-table' : 'profile')
+    const href = `${pathname}?${params.toString()}`
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+    const prefetchInactiveTab = () => router.prefetch(href)
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(prefetchInactiveTab, {
+        timeout: 1500,
+      })
+    } else {
+      timeoutId = window.setTimeout(prefetchInactiveTab, 500)
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [currentTab, pathname, router, searchParams, source])
+
   function showGuideAt(index: number) {
     setActiveGuideIndex(index)
   }
@@ -586,13 +623,13 @@ export default function DashboardActiveUnitsView({
     params.set('tab', nextTab)
     const nextUrl = `${pathname}?${params.toString()}`
 
-    if (nextTab === 'painting-table' || profilePanel) {
-      setCurrentTab(nextTab)
-      window.history.replaceState(null, '', nextUrl)
+    router.replace(nextUrl, { scroll: false })
+
+    if (nextTab === 'profile' && !profilePanel) {
       return
     }
 
-    router.push(nextUrl, { scroll: false })
+    setCurrentTab(nextTab)
   }
 
   function startFeatureTour() {
@@ -644,11 +681,13 @@ export default function DashboardActiveUnitsView({
         aria-hidden={currentTab !== 'painting-table'}
         data-v3-dashboard-indicator="active-units"
       >
-        <div className={styles.dashboardBody}>
-          <NextActionsObject nextActions={model.nextActions} />
-          <FeaturedUnit unit={model.featuredUnit} />
-          <ActiveUnitsPanel units={model.units} />
-        </div>
+        {currentTab === 'painting-table' ? (
+          <div className={styles.dashboardBody}>
+            <NextActionsObject nextActions={model.nextActions} />
+            <FeaturedUnit unit={model.featuredUnit} />
+            <ActiveUnitsPanel units={model.units} />
+          </div>
+        ) : null}
       </div>
 
       <div
@@ -657,7 +696,7 @@ export default function DashboardActiveUnitsView({
         className={styles.profilePanel}
         data-v3-dashboard-indicator="my-progress"
       >
-        {profilePanel}
+        {currentTab === 'profile' ? profilePanel : null}
       </div>
 
       {activeGuide !== null && activeGuideIndex !== null ? (

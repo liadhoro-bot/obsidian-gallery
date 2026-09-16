@@ -439,6 +439,47 @@ export default function UnitDetailClient({
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
+  useEffect(() => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    const params = new URLSearchParams(searchParams.toString())
+    const inactiveTab = currentTab === 'overview' ? 'progress' : 'overview'
+
+    if (inactiveTab === 'overview') {
+      params.delete('tab')
+    } else {
+      params.set('tab', inactiveTab)
+    }
+
+    const nextSearch = params.toString()
+    const href = nextSearch ? `${pathname}?${nextSearch}` : pathname
+    let timeoutId: number | null = null
+    let idleId: number | null = null
+    const prefetchInactiveTab = () => router.prefetch(href)
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(prefetchInactiveTab, {
+        timeout: 1500,
+      })
+    } else {
+      timeoutId = window.setTimeout(prefetchInactiveTab, 500)
+    }
+
+    return () => {
+      if (idleId !== null && idleWindow.cancelIdleCallback) {
+        idleWindow.cancelIdleCallback(idleId)
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [currentTab, pathname, router, searchParams])
+
   function showGuideAt(index: number) {
     setActiveGuideIndex(index)
   }
@@ -1259,7 +1300,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
 
     const nextSearch = params.toString()
     const href = nextSearch ? `${pathname}?${nextSearch}` : pathname
-    window.history.replaceState(null, '', href)
+    router.replace(href, { scroll: false })
   }
 
   return (
