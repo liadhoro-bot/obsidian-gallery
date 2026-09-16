@@ -1,9 +1,10 @@
 'use client'
 
 import Image from 'next/image'
-import { useMemo, useState } from 'react'
+import { useActionState, useMemo, useState } from 'react'
 import type { Contest, ContestNomineeType } from '../../lib/contests/types'
 import type { ContestPickerSource } from '../../lib/contests/queries'
+import { submitNominationAction, type SubmitNominationState } from '../../lib/contests/actions'
 import PendingSubmitButton from './pending-submit-button'
 
 const typeLabels: Record<ContestNomineeType, string> = {
@@ -12,21 +13,22 @@ const typeLabels: Record<ContestNomineeType, string> = {
   guide: 'Guides',
 }
 
+const initialState: SubmitNominationState = { error: null }
+
 export default function NominationSourcePicker({
   contest,
   sources,
   selectedSourceType,
   selectedSourceId,
-  action,
   isDemoContest,
 }: {
   contest: Contest
   sources: ContestPickerSource[]
   selectedSourceType?: string
   selectedSourceId?: string
-  action: (formData: FormData) => void
   isDemoContest?: boolean
 }) {
+  const [state, formAction] = useActionState(submitNominationAction, initialState)
   const allowedTypes = contest.allowed_nominee_types?.map((row) => row.nominee_type) ?? []
   const initialType =
     selectedSourceType && allowedTypes.includes(selectedSourceType as ContestNomineeType)
@@ -53,6 +55,12 @@ export default function NominationSourcePicker({
         <p className="rounded-2xl border border-cyan-300/25 bg-cyan-300/[0.08] p-4 text-sm text-cyan-50">
           This is a local demo contest. Pickers and links are active, but saving a
           nomination requires the contest migration in Supabase.
+        </p>
+      ) : null}
+
+      {state.error ? (
+        <p className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-100">
+          {state.error}
         </p>
       ) : null}
 
@@ -93,7 +101,7 @@ export default function NominationSourcePicker({
             return (
               <form
                 key={`${source.sourceType}:${source.id}`}
-                action={action}
+                action={formAction}
               >
                 <input type="hidden" name="contestId" value={contest.id} />
                 <input type="hidden" name="sourceType" value={source.sourceType} />

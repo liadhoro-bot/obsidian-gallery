@@ -1,11 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useActionState, useState } from 'react'
 import type { Contest } from '../../lib/contests/types'
 import type { ContestPickerSource } from '../../lib/contests/queries'
+import type { SubmitNominationState } from '../../lib/contests/actions'
 import PendingSubmitButton from './pending-submit-button'
 import styles from './contest-v3-silver.module.css'
+
+const initialState: SubmitNominationState = { error: null }
 
 export default function NominateModal({
   action,
@@ -14,13 +17,17 @@ export default function NominateModal({
   onClose,
   sources,
 }: {
-  action: (formData: FormData) => void
+  action: (
+    prevState: SubmitNominationState,
+    formData: FormData
+  ) => Promise<SubmitNominationState>
   contest: Contest
   entryNounCapitalized: string
   onClose: () => void
   sources: ContestPickerSource[]
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [state, formAction] = useActionState(action, initialState)
   const selectedSource = sources.find((source) => source.id === selectedId)
 
   return (
@@ -72,10 +79,11 @@ export default function NominateModal({
           </div>
         )}
 
-        <form action={action} className={styles.modalFooter}>
+        <form action={formAction} className={styles.modalFooter}>
           <input type="hidden" name="contestId" value={contest.id} />
           <input type="hidden" name="sourceType" value={selectedSource?.sourceType ?? ''} />
           <input type="hidden" name="sourceId" value={selectedId ?? ''} />
+          {state.error ? <p className={styles.errorPanel}>{state.error}</p> : null}
           <PendingSubmitButton
             disabled={!selectedId}
             pendingLabel="Nominating..."
