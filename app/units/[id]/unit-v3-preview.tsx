@@ -2,10 +2,10 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import FeatureGuideTour from '../../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
 import { unitPreviewFeatureGuides } from '../../components/feature-guide-presets'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
@@ -25,8 +25,15 @@ import {
 } from './actions'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 import ProjectPaletteStarter from '../../projects/[id]/project-palette-starter'
-import StagePaintPicker from './components/stage-paint-picker'
 import styles from './unit-v3-silver.module.css'
+
+const FeatureGuideTour = dynamic(() => import('../../components/feature-guide-tour'), {
+  ssr: false,
+})
+
+const StagePaintPicker = dynamic(() => import('./components/stage-paint-picker'), {
+  ssr: false,
+})
 
 type UnitV3PreviewProps = {
   id: string
@@ -525,6 +532,7 @@ export default function UnitV3Preview({
             sizes="(max-width: 640px) 100vw, 448px"
             className="object-cover"
             priority
+            fetchPriority="high"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/18 to-[#05090b]" />
 
@@ -563,7 +571,8 @@ export default function UnitV3Preview({
                   )
                 }
                 data-v3-unit-indicator="hero-help"
-                className="grid h-10 w-10 place-items-center rounded-full bg-[#111827]/88 text-white backdrop-blur-md transition hover:text-cyan-300"
+                data-feature-guide-launcher-button="true"
+                className="grid h-10 w-10 place-items-center rounded-full"
               >
                 <span className="relative z-10">?</span>
               </button>
@@ -655,7 +664,7 @@ export default function UnitV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
-          guides={featureGuides}
+          tourName="unit_detail_preview"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             showGuideAt(
@@ -1072,6 +1081,7 @@ function DetailsTab({
             {primaryProjectId ? (
               <Link
                 href={`/projects/${primaryProjectId}`}
+                prefetch={false}
                 className="mt-1.5 inline-flex max-w-full rounded-full px-2.5 py-1 text-[10px] font-black"
                 data-v3-unit-indicator="project-chip"
               >
@@ -2080,6 +2090,10 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
     'Set paints out before starting.'
   )
   const [scheduleNotify, setScheduleNotify] = useState(false)
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [startPaintingError, setStartPaintingError] = useState<string | null>(
+    null
+  )
   const monthDays = useMemo(() => getMonthDays(monthCursor), [monthCursor])
   const loggedByDate = useMemo(
     () => groupSessionsByDate(loggedSessions),
@@ -2131,11 +2145,13 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
       setScheduleNotes('Set paints out before starting.')
       setScheduleNotify(false)
     }
+    setScheduleError(null)
     setIsScheduleOpen(true)
   }
 
   function handleScheduleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const previousScheduledSessions = scheduledSessions
     const nextSession = {
       id: selectedScheduledSession?.id ?? `local-${selectedDateKey}`,
       dateKey: selectedDateKey,
@@ -2146,16 +2162,8 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
       notify: scheduleNotify,
     }
 
+    setScheduleError(null)
     setScheduledSessions((current) => {
-      const nextSession = {
-        id: selectedScheduledSession?.id ?? `local-${selectedDateKey}`,
-        dateKey: selectedDateKey,
-        time: scheduleTime,
-        duration: scheduleDuration,
-        focus: scheduleFocus.trim() || 'Focused painting session',
-        notes: scheduleNotes.trim(),
-        notify: scheduleNotify,
-      }
       const withoutSelectedDay = current.filter(
         (session) => session.dateKey !== selectedDateKey
       )
@@ -2165,24 +2173,43 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
     setIsScheduleOpen(false)
 
     startTransition(async () => {
-      const formData = new FormData()
-      formData.set('unitId', unit.id)
-      formData.set(
-        'scheduledStartAt',
-        `${selectedDateKey}T${nextSession.time || '19:30'}:00`
-      )
-      formData.set('focus', nextSession.focus)
-      formData.set('notify', nextSession.notify ? 'true' : 'false')
-      await scheduleUnitSession(formData)
-      router.refresh()
+      try {
+        const formData = new FormData()
+        formData.set('unitId', unit.id)
+        formData.set(
+          'scheduledStartAt',
+          `${selectedDateKey}T${nextSession.time || '19:30'}:00`
+        )
+        formData.set('focus', nextSession.focus)
+        formData.set('notify', nextSession.notify ? 'true' : 'false')
+        await scheduleUnitSession(formData)
+        router.refresh()
+      } catch (error) {
+        setScheduledSessions(previousScheduledSessions)
+        setScheduleError(
+          error instanceof Error
+            ? error.message
+            : 'Could not schedule this session.'
+        )
+        setIsScheduleOpen(true)
+      }
     })
   }
 
   function handleStartPainting() {
+    setStartPaintingError(null)
     startTransition(async () => {
-      await startUnitSession(unit.id)
-      router.push(`/units/${unit.id}?preview=1&tab=paint&session=started`)
-      router.refresh()
+      try {
+        await startUnitSession(unit.id)
+        router.push(`/units/${unit.id}?preview=1&tab=paint&session=started`)
+        router.refresh()
+      } catch (error) {
+        setStartPaintingError(
+          error instanceof Error
+            ? error.message
+            : 'Could not start a painting session.'
+        )
+      }
     })
   }
 
@@ -2237,6 +2264,12 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
             Schedule
           </button>
         </div>
+
+        {startPaintingError ? (
+          <p className="mt-3 rounded-[10px] border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">
+            {startPaintingError}
+          </p>
+        ) : null}
       </section>
 
       <section className="overflow-hidden rounded-[14px] border border-white/[0.06] bg-[#111821]">
@@ -2499,7 +2532,10 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
               <button
                 type="button"
                 aria-label="Close schedule session"
-                onClick={() => setIsScheduleOpen(false)}
+                onClick={() => {
+                  setIsScheduleOpen(false)
+                  setScheduleError(null)
+                }}
                 className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06] text-lg font-black text-white/48 transition hover:text-white"
               >
                 x
@@ -2567,6 +2603,12 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
                 />
                 Notify me before this session
               </label>
+
+              {scheduleError ? (
+                <p className="rounded-[10px] border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">
+                  {scheduleError}
+                </p>
+              ) : null}
 
               <button
                 type="submit"

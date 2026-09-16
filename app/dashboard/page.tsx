@@ -190,28 +190,30 @@ export default async function DashboardPage({
       { WorkbenchShell },
       { DashboardActiveUnitsScreen },
       { default: styles },
-      featureGuides,
     ] = await perf.measure('v3 dashboard shell', () =>
       Promise.all([
         import('@/src/components/v3'),
         import('./dashboard-active-units-screen'),
         import('./dashboard-og.module.css'),
-        getDashboardFeatureGuides(),
       ])
+    )
+    const featureGuides = dashboardFeatureGuideOrder.map(
+      (uid) => dashboardFeatureGuideFallbacks[uid]
     )
 
     const activeTab =
       resolvedSearchParams?.tab === 'profile' ? 'profile' : 'painting-table'
-    const previewProfilePanel = (
-      <div className={styles.profileStack}>
-        <Suspense fallback={<StatsSkeleton />}>
-          <DashboardAchievements userId={user.id} />
-        </Suspense>
-        <Suspense fallback={<StatsSkeleton />}>
-          <DashboardMetadataGrid userId={user.id} />
-        </Suspense>
-      </div>
-    )
+    const previewProfilePanel =
+      activeTab === 'profile' ? (
+        <div className={styles.profileStack}>
+          <Suspense fallback={<StatsSkeleton />}>
+            <DashboardAchievements userId={user.id} />
+          </Suspense>
+          <Suspense fallback={<StatsSkeleton />}>
+            <DashboardMetadataGrid userId={user.id} />
+          </Suspense>
+        </div>
+      ) : null
 
     perf.total()
     return (
@@ -307,35 +309,4 @@ export default async function DashboardPage({
       </div>
     </main>
   )
-}
-
-async function getDashboardFeatureGuides(): Promise<DashboardFeatureGuide[]> {
-  const fallbackGuides = dashboardFeatureGuideOrder.map(
-    (uid) => dashboardFeatureGuideFallbacks[uid]
-  )
-
-  try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('feature_guide')
-      .select(
-        'uid, feature_name, location_reference, component_reference, explanation, place_in_page, coach_mark_area, popup_placement, display_order'
-      )
-      .in('uid', [...dashboardFeatureGuideOrder])
-
-    if (error || !data) {
-      return fallbackGuides
-    }
-
-    const guideMap = new Map(
-      data.map((guide) => [guide.uid, guide as DashboardFeatureGuide])
-    )
-
-    return dashboardFeatureGuideOrder.map((uid) => ({
-      ...dashboardFeatureGuideFallbacks[uid],
-      ...guideMap.get(uid),
-    }))
-  } catch {
-    return fallbackGuides
-  }
 }

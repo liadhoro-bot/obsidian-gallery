@@ -739,20 +739,34 @@ async function getProjectDetailData({
   activeTab: ProjectDetailTab
 }) {
   const supabase = await createClient()
-  const baseProjectResult = await supabase
-    .from('projects')
-    .select(`
-      id,
-      name,
-      description,
-      created_at,
-      updated_at,
-      user_id,
-      theme_id
-    `)
-    .eq('id', projectId)
-    .eq('user_id', userId)
-    .single()
+  const [baseProjectResult, projectUnitIdsResult, featuredProjectImageResult] =
+    await Promise.all([
+      supabase
+        .from('projects')
+        .select(`
+          id,
+          name,
+          description,
+          created_at,
+          updated_at,
+          user_id,
+          theme_id
+        `)
+        .eq('id', projectId)
+        .eq('user_id', userId)
+        .single(),
+      getProjectUnitIds(supabase, projectId, userId),
+      supabase
+        .from('image_assets')
+        .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
+        .eq('entity_type', 'project')
+        .eq('entity_id', projectId)
+        .eq('user_id', userId)
+        .order('is_featured', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ])
 
   const project = baseProjectResult.data
   const projectError = baseProjectResult.error
@@ -776,20 +790,6 @@ async function getProjectDetailData({
       defaultTab: 'units' as ProjectDetailTab,
     }
   }
-
-  const [projectUnitIdsResult, featuredProjectImageResult] = await Promise.all([
-    getProjectUnitIds(supabase, projectId, userId),
-    supabase
-      .from('image_assets')
-      .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
-      .eq('entity_type', 'project')
-      .eq('entity_id', projectId)
-      .eq('user_id', userId)
-      .order('is_featured', { ascending: false })
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-  ])
 
   const projectUnitIds = projectUnitIdsResult.ids
   const projectUnitCount = projectUnitIds.length
@@ -1027,16 +1027,15 @@ export default async function ProjectDetailPage({
       ? resolvedSearchParams.tab
       : 'units'
 
-  const data = await getProjectDetailData({
-    projectId: id,
-    userId: user.id,
-    activeTab,
-  })
-  const featureGuides = await getFeatureGuidesForPage(
-    '/projects/[id]',
-    projectDetailFeatureGuides
-  )
-  const canSeeContestNominationCard = await isCurrentUserAdmin(user.id)
+  const [data, featureGuides, canSeeContestNominationCard] = await Promise.all([
+    getProjectDetailData({
+      projectId: id,
+      userId: user.id,
+      activeTab,
+    }),
+    getFeatureGuidesForPage('/projects/[id]', projectDetailFeatureGuides),
+    isCurrentUserAdmin(user.id),
+  ])
 
   return (
     <main className={styles.projectDetailSilver}>

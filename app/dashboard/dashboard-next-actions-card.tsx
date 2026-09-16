@@ -9,6 +9,7 @@ import {
   OgObjectTitle,
   SurfacePanel,
 } from '@/src/components/v3'
+import { capturePostHog } from '../../utils/analytics/client'
 import type { DashboardNextActionsState } from './dashboard-data'
 import {
   dismissDashboardNextActions,
@@ -222,6 +223,13 @@ export default function DashboardNextActionsCard({ state }: Props) {
                 href={action.href}
                 className={styles.actionLink}
                 aria-label={`Go to ${action.label}`}
+                onClick={() => {
+                  void capturePostHog('dashboard_next_action_go_clicked', {
+                    action_id: action.id,
+                    milestone_key: action.milestoneKey,
+                    is_done: isDone,
+                  })
+                }}
               >
                 {isDone ? (
                   <CheckIcon className="h-3.5 w-3.5" />

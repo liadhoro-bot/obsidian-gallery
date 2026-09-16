@@ -25,7 +25,6 @@ export default function ProjectTile({ project }: { project: ProjectTileData }) {
   return (
     <PrefetchLink
       href={`/projects/${project.id}`}
-      viewportPrefetch
       className="tap-card group block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] hover:border-cyan-400/70 hover:bg-white/[0.08]"
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-950">

@@ -80,14 +80,19 @@ export default function GoalScreen({
     }
 
     startTransition(async () => {
-      const result = await saveOnboardingGoalAction(goal, experience)
+      try {
+        const result = await saveOnboardingGoalAction(goal, experience)
 
-      if (!result.ok) {
-        setError(result.error ?? 'Could not save your answer.')
-        return
+        if (!result.ok) {
+          setError(result.error ?? 'Could not save your answer.')
+          return
+        }
+
+        onContinue(goal)
+      } catch (caughtError) {
+        console.error('Error saving onboarding goal:', caughtError)
+        setError('Could not save your answer.')
       }
-
-      onContinue(goal)
     })
   }
 

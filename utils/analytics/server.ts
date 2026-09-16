@@ -38,7 +38,4 @@ export async function captureServerEvent({
     event,
     properties,
   })
-
-  await client.shutdown()
-  posthogClient = null
 }

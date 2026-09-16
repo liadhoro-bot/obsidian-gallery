@@ -19,8 +19,15 @@ export function getPostHogClient() {
       loadedPosthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '', {
         api_host:
           process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com',
+        advanced_disable_feature_flags_on_first_load: true,
+        autocapture: false,
+        capture_performance: false,
         capture_pageview: true,
-        capture_pageleave: true,
+        capture_pageleave: false,
+        disable_session_recording: true,
+        disable_surveys: true,
+        disable_surveys_automatic_display: true,
+        rageclick: false,
       })
     }
 

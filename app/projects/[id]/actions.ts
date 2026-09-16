@@ -82,6 +82,15 @@ export async function setFeaturedUnit(formData: FormData) {
     .eq('id', unitId)
     .eq('user_id', user.id)
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'project_featured_unit_set',
+    properties: {
+      project_id: projectId,
+      unit_id: unitId,
+    },
+  })
+
   revalidatePath(`/projects/${projectId}`)
 }
 export async function deleteProject(formData: FormData) {
@@ -218,6 +227,15 @@ export async function deleteProject(formData: FormData) {
     .eq('id', projectId)
     .eq('user_id', user.id)
 
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'project_deleted',
+    properties: {
+      project_id: projectId,
+      unit_count: unitIds.length,
+    },
+  })
+
   revalidatePath('/projects')
 
   redirect('/projects')
@@ -246,6 +264,15 @@ export async function unassignProjectTheme(formData: FormData) {
   if (error) {
     throw error
   }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'project_theme_unassigned',
+    properties: {
+      project_id: projectId,
+      theme_id: themeId || null,
+    },
+  })
 
   revalidatePath(`/projects/${projectId}`)
   revalidatePath('/projects')
@@ -331,6 +358,18 @@ export async function setProjectPaletteSlot(
     userId: user.id,
     actionKey: 'create_project_palette',
     subjectProjectId: projectId,
+  })
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'palette_slot_set',
+    properties: {
+      source_type: 'project',
+      project_id: projectId,
+      theme_id: themeId,
+      slot_index: slotIndex,
+      paint_source: paintSource,
+    },
   })
 
   revalidatePath(`/projects/${projectId}`)

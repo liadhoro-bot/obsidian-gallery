@@ -43,6 +43,7 @@ export default function DashboardUnitInProgress({
     <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5">
       <Link
         href={unitHref}
+        prefetch={false}
         className="absolute inset-0 z-20"
         aria-label={`Open ${unit.name}`}
       >
@@ -59,6 +60,7 @@ export default function DashboardUnitInProgress({
               className="object-cover"
               sizes="(max-width: 480px) calc(100vw - 2rem), (max-width: 768px) 420px, 480px"
               priority
+              fetchPriority="high"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#081018] via-[#081018]/60 to-[#081018]/15" />
           </>

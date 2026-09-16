@@ -847,12 +847,16 @@
 }
 
 .showingLabel {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
   color: color-mix(in srgb, var(--og-ink-950) 82%, var(--og-walnut-700));
   font-family: var(--og-font-ui);
-  font-size: 0.78rem;
+  font-size: var(--og-type-label);
   font-weight: 800;
-  letter-spacing: var(--og-tracking-label);
+  letter-spacing: 0.04em;
   line-height: 1;
+  padding-inline: 3px;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   white-space: nowrap;
@@ -864,9 +868,9 @@
   display: inline-flex;
   flex: 0 1 auto;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  max-width: 182px;
+  max-width: 196px;
   margin-inline: 0;
   border-style: solid;
   border-width: var(--og-border-width);
@@ -877,7 +881,7 @@
   background-position: center;
   background-repeat: no-repeat, repeat, no-repeat;
   background-size: 100% 100%, 180px auto, 100% 100%;
-  padding: 5px;
+  padding: 5px 6px;
   vertical-align: middle;
   box-shadow: var(--og-shadow-control-built);
 }
@@ -887,16 +891,25 @@
   min-height: 30px;
   flex: 1 1 auto;
   justify-content: space-between;
+  gap: 5px;
   border: 0;
   background: transparent;
   color: var(--og-text-primary);
   font-size: var(--og-type-label);
   font-weight: 800;
+  letter-spacing: 0.04em;
   line-height: 1;
+  padding-inline: 3px 1px;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   box-shadow: none;
   backdrop-filter: none;
-  text-transform: capitalize;
+  text-transform: uppercase;
+}
+
+.statusMenuWrap .statusTrigger[data-variant="primary"] svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
 }
 
 .statusMenu {

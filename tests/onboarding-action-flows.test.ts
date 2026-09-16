@@ -91,26 +91,35 @@ test('onboarding flow migrations seed every defined action', () => {
 })
 
 test('onboarding action route resolver maps semantic targets to real app routes', () => {
+  // Destinations only use tab/edit params the target page actually reads —
+  // no `#component` hash, since no page scrolls to one.
   assert.equal(
     resolveOnboardingActionDestination(
       { refPage: 'unit_detail', refComponent: 'progress_stage' },
       { subjectUnitId: 'unit-1' }
     ),
-    '/units/unit-1?tab=progress#progress_stage'
+    '/units/unit-1?tab=progress'
+  )
+  assert.equal(
+    resolveOnboardingActionDestination(
+      { refPage: 'unit_builder', refComponent: 'unit_name' },
+      { subjectUnitId: 'unit-1' }
+    ),
+    '/units/unit-1?edit=header'
   )
   assert.equal(
     resolveOnboardingActionDestination(
       { refPage: 'vault', refComponent: 'paint_collection' },
       {}
     ),
-    '/vault?tab=collection#paint_collection'
+    '/vault?tab=collection'
   )
   assert.equal(
     resolveOnboardingActionDestination(
       { refPage: 'guide_builder', refComponent: 'card_paints' },
       { subjectGuideId: 'guide-1' }
     ),
-    '/recipes/guide-1?tab=edit#card_paints'
+    '/recipes/guide-1?tab=edit'
   )
   assert.equal(
     resolveOnboardingActionDestination(

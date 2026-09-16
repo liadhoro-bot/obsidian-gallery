@@ -1754,7 +1754,7 @@ const handleRemoveStagePhoto = (imageId: string) => {
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
-          guides={featureGuides}
+          tourName="unit_detail"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             showGuideAt(

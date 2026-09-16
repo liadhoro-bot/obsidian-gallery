@@ -13,7 +13,6 @@ import { TopBarSkeleton } from '../../dashboard/dashboard-skeletons'
 import { hasV3PreviewSession } from '../../../lib/v3-preview-server'
 import { getSupabaseImageUrl } from '../../../utils/images/supabase-image'
 import UnitV3Preview, { type UnitV3LiveUnit } from './unit-v3-preview'
-import { getFeatureGuidesForPage } from '../../components/feature-guide-data'
 import {
   unitDetailFeatureGuides,
   unitPreviewFeatureGuides,
@@ -368,7 +367,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         .eq('user_id', userId)
         .gt('duration_seconds', 0)
         .order('started_at', { ascending: false })
-        .limit(500),
+        .limit(50),
       supabase
         .from('unit_scheduled_sessions')
         .select('id, scheduled_start_at, focus, notify, status')
@@ -376,7 +375,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         .eq('user_id', userId)
         .eq('status', 'scheduled')
         .order('scheduled_start_at', { ascending: true })
-        .limit(250),
+        .limit(20),
       supabase
         .from('projects')
         .select('id, name')
@@ -664,7 +663,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         subtitle: guide.subtitle,
         image: guide.image,
         cards: guide.cards,
-        paints: 0,
+        paints: guide.palette.length,
         recipeId: guide.deckId ?? '',
       })),
       ...guidesPayload.decks.map((deck) => ({
@@ -677,7 +676,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
         paints: deck.paints,
         recipeId: deck.id,
       })),
-    ].filter((choice) => choice.recipeId),
+    ],
   } satisfies UnitV3LiveUnit
 }
 
@@ -1109,8 +1108,7 @@ function UnitContestCardSkeleton() {
 export default async function UnitDetailPage({ params, searchParams }: PageProps) {
   const perf = createPerfTimer('/units/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
-  const isPreview =
-    (await hasV3PreviewSession(resolvedSearchParams.preview))
+  const isPreview = await hasV3PreviewSession(resolvedSearchParams.preview)
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
@@ -1141,16 +1139,11 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
       notFound()
     }
 
-    const featureGuides = await getFeatureGuidesForPage(
-      '/units/[id]',
-      unitPreviewFeatureGuides
-    )
-
     perf.total()
     return (
       <UnitV3Preview
         id={id}
-        featureGuides={featureGuides}
+        featureGuides={unitPreviewFeatureGuides}
         initialTab={previewTab}
         initialEditTarget={initialEditTarget}
         liveUnit={liveUnit}
@@ -1324,10 +1317,6 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   perf.mark('main Supabase query')
 
   const { data: featuredImage } = await featuredImagePromise
-  const featureGuides = await getFeatureGuidesForPage(
-    '/units/[id]',
-    unitDetailFeatureGuides
-  )
   perf.mark('image/gallery queries')
   perf.total()
   return (
@@ -1357,7 +1346,7 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
               unit={unit}
               initialTab={initialTab}
               autoStartSession={autoStartSession}
-              featureGuides={featureGuides}
+              featureGuides={unitDetailFeatureGuides}
               showSessionStartedNotice={showSessionStartedNotice}
             />
           </Suspense>
