@@ -642,9 +642,10 @@
 .prizeBlock {
   display: grid;
   min-height: 122px;
-  place-items: center;
-  align-content: center;
-  gap: 5px;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  padding: 16px 12px;
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 38%, var(--og-ink-950));
   border-radius: var(--og-radius-m);
   background-color: color-mix(in srgb, var(--og-walnut-950) 88%, var(--og-brass-900));
@@ -694,6 +695,17 @@
 
 .prizeGridSingle strong {
   font-size: 1.6rem;
+}
+
+.prizeBlock strong.prizeAmountMedium {
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+.prizeBlock strong.prizeAmountLong {
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .sponsorRow {

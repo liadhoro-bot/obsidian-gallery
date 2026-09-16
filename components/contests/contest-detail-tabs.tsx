@@ -254,7 +254,7 @@ export default function ContestDetailTabs({
               <DateChip label="Winners" value={formatDate(contest.results_published_at || contest.results_target_at || contest.voting_close_at)} />
             </div>
             <Link href={`/contests/${contest.slug}/details`} className={styles.detailLinkRow}>
-              <span>Read full contest details</span>
+              <span>Read contest terms and conditions</span>
               <span aria-hidden="true">→</span>
             </Link>
           </article>
@@ -504,6 +504,13 @@ function PrizeBlock({
   medalSrc: string
   title: string
 }) {
+  const amountSizeClass =
+    amount.length > 32
+      ? styles.prizeAmountLong
+      : amount.length > 14
+        ? styles.prizeAmountMedium
+        : ''
+
   return (
     <div className={styles.prizeBlock}>
       <span className={styles.medal}>
@@ -516,7 +523,7 @@ function PrizeBlock({
         />
       </span>
       <span>{title}</span>
-      <strong>{amount}</strong>
+      <strong className={amountSizeClass}>{amount}</strong>
     </div>
   )
 }
