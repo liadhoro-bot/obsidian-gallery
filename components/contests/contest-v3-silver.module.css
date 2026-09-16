@@ -439,6 +439,48 @@
   line-height: 1.45;
 }
 
+.termsGlanceList {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.termsGlanceList div {
+  display: grid;
+  gap: 2px;
+}
+
+.termsGlanceList dt {
+  color: color-mix(in srgb, var(--og-status-warning) 82%, var(--og-ink-800));
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.termsGlanceList dd {
+  color: var(--og-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.termsHeading {
+  margin-top: 4px;
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.termsClause {
+  margin-top: 10px;
+  color: var(--og-text-secondary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 .pillRow {
   display: flex;
   flex-wrap: wrap;

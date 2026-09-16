@@ -142,6 +142,9 @@ export default function ContestDetailTabs({
   const hasReachedNominationLimit =
     activeUserNominations.length >= contest.max_nominations_per_user
   const isGuideAutoNominate = nomineeType === 'guide'
+  const creationPeriodEnd = isGuideAutoNominate
+    ? contest.voting_close_at
+    : contest.submissions_close_at
   const guideCreationHref = '/guides'
   const canOpenNominateModal =
     !isGuideAutoNominate &&
@@ -246,7 +249,7 @@ export default function ContestDetailTabs({
               </p>
             ) : null}
             <div className={styles.dateStrip}>
-              <DateChip label={nomineeCopy.periodLabel} value={formatDateRange(contest.submissions_open_at, contest.submissions_close_at)} />
+              <DateChip label={nomineeCopy.periodLabel} value={formatDateRange(contest.submissions_open_at, creationPeriodEnd)} />
               <DateChip label="Voting" value={formatDateRange(contest.voting_open_at, contest.voting_close_at)} />
               <DateChip label="Winners" value={formatDate(contest.results_published_at || contest.results_target_at || contest.voting_close_at)} />
             </div>
@@ -654,11 +657,13 @@ function NomineeThumbStrip({
 
 function Timeline({ contest, nomineeCopy }: { contest: Contest; nomineeCopy: NomineeCopy }) {
   const phase = getContestPhase(contest)
+  const creationPeriodEnd =
+    getNomineeType(contest) === 'guide' ? contest.voting_close_at : contest.submissions_close_at
   const items = [
     {
       key: 'create',
       title: nomineeCopy.periodLabel,
-      date: formatDateRange(contest.submissions_open_at, contest.submissions_close_at),
+      date: formatDateRange(contest.submissions_open_at, creationPeriodEnd),
       state:
         phase === 'submissions_open'
           ? 'current'
