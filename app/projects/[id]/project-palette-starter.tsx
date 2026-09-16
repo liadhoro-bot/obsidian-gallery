@@ -1,24 +1,15 @@
 'use client'
 
 import Image from 'next/image'
-import type { KeyboardEvent, MouseEvent } from 'react'
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useState, useTransition } from 'react'
+import PaintPickerDialog, {
+  type PaintPickerPaint,
+} from '../../../components/paints/paint-picker-dialog'
 import { setProjectPaletteSlot } from './actions'
 import { setUnitPaletteSlot } from '../../units/[id]/actions'
 import styles from './project-detail-silver.module.css'
 
-type PaintOption = {
-  id: string
-  source: 'catalog' | 'custom'
-  name: string
-  brand: string | null
-  line: string | null
-  sku?: string | null
-  swatch_image_url: string | null
-  hex: string | null
-  is_owned?: boolean | null
-  is_wishlist?: boolean | null
-}
+type PaintOption = PaintPickerPaint
 
 type Props = {
   projectId?: string
@@ -34,67 +25,12 @@ export default function ProjectPaletteStarter({
   initialPaint = null,
 }: Props) {
   const [activeSlot, setActiveSlot] = useState<number | null>(null)
-  const [query, setQuery] = useState('')
-  const [paints, setPaints] = useState<PaintOption[]>([])
   const [selectedPaints, setSelectedPaints] = useState<Record<number, PaintOption>>({})
   const [error, setError] = useState('')
-  const [isSearching, setIsSearching] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [pendingOwnershipKeys, setPendingOwnershipKeys] = useState<Set<string>>(
-    new Set()
-  )
-
-  useEffect(() => {
-    if (activeSlot === null) return
-
-    const controller = new AbortController()
-
-    async function loadPaints() {
-      setIsSearching(true)
-
-      try {
-        const params = new URLSearchParams()
-        params.set('limit', '80')
-
-        if (query.trim()) {
-          params.set('q', query.trim())
-        }
-
-        const response = await fetch(
-          `/api/theme-paint-search?${params.toString()}`,
-          { signal: controller.signal }
-        )
-
-        const result = await response.json()
-        setPaints(result.paints || [])
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error(error)
-          setPaints([])
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsSearching(false)
-        }
-      }
-    }
-
-    const timeout = window.setTimeout(loadPaints, 250)
-
-    return () => {
-      controller.abort()
-      window.clearTimeout(timeout)
-    }
-  }, [activeSlot, query])
-
-  const filteredPaints = useMemo(() => {
-    return [...paints].sort((a, b) => a.name.localeCompare(b.name))
-  }, [paints])
 
   function closePicker() {
-    setActiveSlot(null)
-    setQuery('')
-  }
+    setActiveSlot(null)  }
 
   function choosePaint(paint: PaintOption) {
     if (activeSlot === null) return
@@ -124,75 +60,6 @@ export default function ProjectPaletteStarter({
     })
   }
 
-  async function toggleOwnership(
-    event: MouseEvent<HTMLButtonElement>,
-    paint: PaintOption,
-    kind: 'owned' | 'wishlist'
-  ) {
-    event.stopPropagation()
-    event.preventDefault()
-
-    const ownershipKey = `${paint.source}-${paint.id}-${kind}`
-
-    if (paint.source !== 'catalog' || pendingOwnershipKeys.has(ownershipKey)) {
-      return
-    }
-
-    const field = kind === 'owned' ? 'is_owned' : 'is_wishlist'
-    const previousValue = Boolean(paint[field])
-
-    setPendingOwnershipKeys((current) => new Set(current).add(ownershipKey))
-    setPaints((current) =>
-      current.map((item) =>
-        item.source === paint.source && item.id === paint.id
-          ? { ...item, [field]: !previousValue }
-          : item
-      )
-    )
-
-    try {
-      const response = await fetch('/api/vault/ownership', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paintId: paint.id,
-          action: kind,
-          currentValue: previousValue,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Ownership update failed')
-      }
-    } catch (toggleError) {
-      console.error(toggleError)
-      setPaints((current) =>
-        current.map((item) =>
-          item.source === paint.source && item.id === paint.id
-            ? { ...item, [field]: previousValue }
-            : item
-        )
-      )
-      setError('Could not update ownership.')
-    } finally {
-      setPendingOwnershipKeys((current) => {
-        const next = new Set(current)
-        next.delete(ownershipKey)
-        return next
-      })
-    }
-  }
-
-  function choosePaintFromKeyboard(
-    event: KeyboardEvent<HTMLDivElement>,
-    paint: PaintOption
-  ) {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-
-    event.preventDefault()
-    choosePaint(paint)
-  }
-
   return (
     <>
       <div className={slotIndex === undefined ? 'grid grid-cols-5 gap-2' : ''}>
@@ -205,17 +72,17 @@ export default function ProjectPaletteStarter({
               <button
                 key={index}
                 type="button"
+                disabled={isPending}
+                aria-label={`Choose palette color ${index + 1}`}
                 onClick={() => {
-                  setActiveSlot(index)
-                  setQuery('')
-                }}
+                  setActiveSlot(index)                }}
                 className={`${styles.secondaryAction} flex aspect-square w-full min-w-0 items-center justify-center text-lg font-semibold transition active:scale-95`}
               >
                 {selectedPaint ? (
                   selectedPaint.swatch_image_url ? (
                     <Image
                       src={selectedPaint.swatch_image_url}
-                      alt={selectedPaint.name}
+                      alt={selectedPaint.name || 'Paint swatch'}
                       width={96}
                       height={96}
                       sizes="64px"
@@ -237,121 +104,19 @@ export default function ProjectPaletteStarter({
       </div>
       {error ? <p className="mt-2 text-xs text-red-300">{error}</p> : null}
 
-      {activeSlot !== null ? (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/70 px-4 pb-4 sm:items-center">
-          <div className={`${styles.dialogPanel} mx-auto max-h-[80vh] w-full max-w-md overflow-hidden p-4`}>
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">
-                Choose Color {activeSlot + 1}
-              </h3>
-
-              <button
-                type="button"
-                onClick={closePicker}
-                className="text-sm font-bold text-[color:var(--og-brass-500)]"
-              >
-                Close
-              </button>
-            </div>
-
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name, brand, line, or SKU..."
-              className={`${styles.textInput} mb-2 px-4 py-3 text-sm`}
-            />
-
-            <p className="mb-3 text-xs text-[color:var(--og-text-secondary)]">
-              {isSearching
-                ? 'Searching paints...'
-                : `Showing ${filteredPaints.length} matching paints`}
-            </p>
-
-            <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
-              {filteredPaints.map((paint) => {
-                const isOwnedBusy = pendingOwnershipKeys.has(
-                  `${paint.source}-${paint.id}-owned`
-                )
-                const isWishlistBusy = pendingOwnershipKeys.has(
-                  `${paint.source}-${paint.id}-wishlist`
-                )
-
-                return (
-                  <div
-                    key={`${paint.source}-${paint.id}`}
-                    role="button"
-                    tabIndex={isPending ? -1 : 0}
-                    aria-disabled={isPending}
-                    onClick={() => !isPending && choosePaint(paint)}
-                    onKeyDown={(event) => !isPending && choosePaintFromKeyboard(event, paint)}
-                    className={`${styles.paintPickerRow} flex w-full cursor-pointer items-center gap-3 p-2 text-left transition aria-disabled:cursor-not-allowed aria-disabled:opacity-70`}
-                  >
-                    <div className={`${styles.paintPickerSwatch} h-10 w-10 shrink-0 overflow-hidden`}>
-                      {paint.swatch_image_url ? (
-                        <Image
-                          src={paint.swatch_image_url}
-                          alt={paint.name}
-                          width={40}
-                          height={40}
-                          sizes="40px"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : paint.hex ? (
-                        <div
-                          className="h-full w-full"
-                          style={{ backgroundColor: paint.hex }}
-                        />
-                      ) : null}
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[color:var(--og-text-primary)]">
-                        {paint.name}
-                      </p>
-                      <p className="truncate text-xs text-[color:var(--og-text-secondary)]">
-                        {[paint.brand, paint.line, paint.sku]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <button
-                          type="button"
-                          disabled={paint.source !== 'catalog' || isOwnedBusy}
-                          onClick={(event) => toggleOwnership(event, paint, 'owned')}
-                          className={`${
-                            paint.is_owned
-                              ? styles.paintOwnershipPillActive
-                              : styles.paintOwnershipPill
-                          } disabled:cursor-default`}
-                        >
-                          Owned
-                        </button>
-                        <button
-                          type="button"
-                          disabled={paint.source !== 'catalog' || isWishlistBusy}
-                          onClick={(event) => toggleOwnership(event, paint, 'wishlist')}
-                          className={`${
-                            paint.is_wishlist
-                              ? styles.paintWishlistPillActive
-                              : styles.paintOwnershipPill
-                          } disabled:cursor-default`}
-                        >
-                          Wishlist
-                        </button>
-                      </div>
-                    </div>
-
-                    {isPending ? (
-                      <span className="ml-auto h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent text-white/70" />
-                    ) : null}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <PaintPickerDialog
+        open={activeSlot !== null}
+        onOpenChange={(open) => {
+          if (!open) closePicker()
+        }}
+        title={activeSlot === null ? 'Choose Paint' : `Choose Color ${activeSlot + 1}`}
+        selectedPaint={
+          activeSlot === null ? null : selectedPaints[activeSlot] ?? initialPaint
+        }
+        onSelectPaint={choosePaint}
+        source={unitId ? 'unit_palette_picker' : 'project_palette_picker'}
+        disabled={isPending}
+      />
     </>
   )
 }

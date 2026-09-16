@@ -1,9 +1,12 @@
 'use client'
 
 import Image from 'next/image'
+import { createPortal } from 'react-dom'
 import type { KeyboardEvent, MouseEvent } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { capturePostHog } from '../../utils/analytics/client'
+import { lockBodyScroll } from '../../utils/body-scroll-lock'
+import styles from './paint-picker-dialog.module.css'
 
 export type PaintPickerPaint = {
   id: string
@@ -20,81 +23,9 @@ export type PaintPickerPaint = {
   is_wishlist?: boolean
 }
 
+const EMPTY_PAINTS: PaintPickerPaint[] = []
+
 type OwnershipFilter = 'all' | 'owned' | 'wishlist' | 'unowned'
-
-const COLOR_GROUP_OPTIONS = [
-  'Blacks & Greys',
-  'Whites',
-  'Browns',
-  'Reds',
-  'Oranges',
-  'Yellows',
-  'Greens',
-  'Blues',
-  'Purples',
-  'Flesh Tones',
-  'Metallics',
-  'Auxiliary',
-]
-
-function getPaintColorGroup(paint: PaintPickerPaint) {
-  const text = [
-    paint.name,
-    paint.brand,
-    paint.line,
-    paint.sku,
-    paint.paint_type,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-
-  if (/metal|steel|silver|gold|brass|bronze|copper|iron|gunmetal/.test(text)) {
-    return 'Metallics'
-  }
-
-  if (/skin|flesh|fair|tan|khaki|bone|ivory/.test(text)) {
-    return 'Flesh Tones'
-  }
-
-  if (/black|grey|gray|charcoal|slate|ash|smoke/.test(text)) {
-    return 'Blacks & Greys'
-  }
-
-  if (/white|cream|offwhite|off-white|pale sand/.test(text)) {
-    return 'Whites'
-  }
-
-  if (/brown|umber|sienna|leather|wood|earth|sepia|chestnut/.test(text)) {
-    return 'Browns'
-  }
-
-  if (/red|scarlet|crimson|burgundy|magenta|pink|rose/.test(text)) {
-    return 'Reds'
-  }
-
-  if (/orange|amber|ochre|rust/.test(text)) {
-    return 'Oranges'
-  }
-
-  if (/yellow|sun|lemon|dorn|yriel/.test(text)) {
-    return 'Yellows'
-  }
-
-  if (/green|olive|emerald|moot|caliban|warpstone/.test(text)) {
-    return 'Greens'
-  }
-
-  if (/blue|cyan|turquoise|teal|navy|azure|sotek/.test(text)) {
-    return 'Blues'
-  }
-
-  if (/purple|violet|lavender|lilac|plum/.test(text)) {
-    return 'Purples'
-  }
-
-  return 'Auxiliary'
-}
 
 type PaintPickerDialogProps = {
   open: boolean
@@ -135,7 +66,6 @@ function filterInitialPaints(
   query: string,
   brand: string,
   line: string,
-  colorGroup: string,
   ownership: OwnershipFilter
 ) {
   const q = query.trim().toLowerCase()
@@ -156,8 +86,6 @@ function filterInitialPaints(
       const matchesSearch = !q || haystack.includes(q)
       const matchesBrand = !brand || paint.brand === brand
       const matchesLine = !line || paint.line === line
-      const matchesColorGroup =
-        !colorGroup || getPaintColorGroup(paint) === colorGroup
       const matchesOwnership =
         ownership === 'all' ||
         (ownership === 'owned' && paint.is_owned) ||
@@ -168,7 +96,6 @@ function filterInitialPaints(
         matchesSearch &&
         matchesBrand &&
         matchesLine &&
-        matchesColorGroup &&
         matchesOwnership
       )
     })
@@ -189,14 +116,15 @@ export default function PaintPickerDialog({
   selectedPaint,
   onSelectPaint,
   source = 'paint_picker',
-  initialPaints = [],
+  initialPaints = EMPTY_PAINTS,
   disabled = false,
   mode = 'select',
 }: PaintPickerDialogProps) {
   const [query, setQuery] = useState('')
   const [brand, setBrand] = useState('')
   const [line, setLine] = useState('')
-  const [colorGroup, setColorGroup] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersId = useId()
   const [ownership, setOwnership] = useState<OwnershipFilter>('all')
   const [paints, setPaints] = useState<PaintPickerPaint[]>(
     initialPaints.map(normalizePaint)
@@ -240,22 +168,21 @@ export default function PaintPickerDialog({
       query,
       brand,
       line,
-      colorGroup,
       ownership
     )
-  }, [brand, colorGroup, error, initialPaints, line, ownership, paints, query])
+  }, [brand, error, initialPaints, line, ownership, paints, query])
 
   const activeBrands = brands.length > 0 ? brands : fallbackBrands
   const visibleResultLines = useMemo(
     () =>
       Array.from(
         new Set(
-          filterInitialPaints(paints, query, brand, '', colorGroup, ownership)
+          filterInitialPaints(paints, query, brand, '', ownership)
             .map((paint) => paint.line)
             .filter((value): value is string => Boolean(value))
         )
       ),
-    [brand, colorGroup, ownership, paints, query]
+    [brand, ownership, paints, query]
   )
   const activeLines = useMemo(
     () =>
@@ -282,12 +209,11 @@ export default function PaintPickerDialog({
         source,
         brand: brand || null,
         line: line || null,
-        color_group: colorGroup || null,
         ownership_filter: ownership,
         ...properties,
       })
     },
-    [brand, colorGroup, line, ownership, source]
+    [brand, line, ownership, source]
   )
 
   useEffect(() => {
@@ -314,7 +240,6 @@ export default function PaintPickerDialog({
         if (query.trim()) params.set('q', query.trim())
         if (brand) params.set('brand', brand)
         if (line) params.set('line', line)
-        if (colorGroup) params.set('colorGroup', colorGroup)
 
         const response = await fetch(`/api/theme-paint-search?${params}`, {
           signal: controller.signal,
@@ -325,6 +250,7 @@ export default function PaintPickerDialog({
         }
 
         const result = await response.json()
+        if (controller.signal.aborted) return
         const resultPaints = Array.isArray(result.paints) ? result.paints : []
         setPaints(resultPaints.map(normalizePaint))
         setBrands(Array.isArray(result.filters?.brands) ? result.filters.brands : [])
@@ -340,7 +266,6 @@ export default function PaintPickerDialog({
             query,
             brand,
             line,
-            colorGroup,
             ownership
           )
         )
@@ -357,14 +282,14 @@ export default function PaintPickerDialog({
       controller.abort()
       window.clearTimeout(timeout)
     }
-  }, [brand, colorGroup, initialPaints, line, open, ownership, query])
+  }, [brand, initialPaints, line, open, ownership, query])
 
   function closeDialog() {
     onOpenChange(false)
   }
 
   function updateFilter(
-    key: 'query' | 'brand' | 'line' | 'colorGroup' | 'ownership',
+    key: 'query' | 'brand' | 'line' | 'ownership',
     value: string
   ) {
     if (key === 'query') setQuery(value)
@@ -373,7 +298,6 @@ export default function PaintPickerDialog({
       setLine('')
     }
     if (key === 'line') setLine(value)
-    if (key === 'colorGroup') setColorGroup(value)
     if (key === 'ownership') setOwnership(value as OwnershipFilter)
 
     capture('paint_picker_filter_changed', {
@@ -382,9 +306,10 @@ export default function PaintPickerDialog({
     })
   }
 
-  async function toggleOwned(
+  async function toggleOwnership(
     event: MouseEvent<HTMLButtonElement>,
-    paint: PaintPickerPaint
+    paint: PaintPickerPaint,
+    kind: 'owned' | 'wishlist'
   ) {
     event.stopPropagation()
     event.preventDefault()
@@ -393,12 +318,14 @@ export default function PaintPickerDialog({
 
     const previousOwned = Boolean(paint.is_owned)
     const previousWishlist = Boolean(paint.is_wishlist)
+    const field = kind === 'owned' ? 'is_owned' : 'is_wishlist'
+    const previousValue = kind === 'owned' ? previousOwned : previousWishlist
 
     setPendingOwnedIds((current) => new Set(current).add(paint.id))
     setPaints((current) =>
       current.map((item) =>
         item.source === 'catalog' && item.id === paint.id
-          ? { ...item, is_owned: !previousOwned, is_wishlist: previousWishlist }
+          ? { ...item, [field]: !previousValue }
           : item
       )
     )
@@ -409,8 +336,8 @@ export default function PaintPickerDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paintId: paint.id,
-          action: 'owned',
-          currentValue: previousOwned,
+          action: kind,
+          currentValue: previousValue,
         }),
       })
 
@@ -418,11 +345,11 @@ export default function PaintPickerDialog({
         throw new Error('Ownership update failed')
       }
 
-      capture('paint_picker_owned_toggled', {
+      capture(`paint_picker_${kind}_toggled`, {
         paint_id: paint.id,
         paint_source: paint.source,
         paint_name: paint.name,
-        is_owned: !previousOwned,
+        [field]: !previousValue,
       })
     } catch (toggleError) {
       console.error(toggleError)
@@ -472,220 +399,154 @@ export default function PaintPickerDialog({
     selectPaint(paint)
   }
 
-  if (!open) return null
+  useEffect(() => {
+    if (!open) return
+    return lockBodyScroll()
+  }, [open])
 
-  return (
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        onOpenChange(false)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open, onOpenChange])
+
+  if (!open || typeof document === 'undefined') return null
+
+  const activeFilterCount = Number(Boolean(brand)) + Number(Boolean(line)) + Number(ownership !== 'all')
+
+  return createPortal(
     <div
-      className="mobile-sheet-overlay paint-picker-overlay fixed inset-0 z-50 flex justify-center bg-black/75 backdrop-blur-sm"
+      className={styles.overlay}
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      onClick={closeDialog}
+      onClick={(event) => {
+        event.stopPropagation()
+        closeDialog()
+      }}
     >
-      <div
-        className="mobile-sheet paint-picker-sheet max-w-lg rounded-3xl border border-white/10 bg-[#07111b] shadow-[0_0_42px_rgba(34,211,238,0.18)]"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="border-b border-white/10 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-black text-white">{title}</h3>
-
-            <button
-              type="button"
-              onClick={closeDialog}
-              className="tap-press mobile-close-button flex items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg font-bold text-white/60 hover:border-cyan-300/40 hover:text-white"
-              aria-label="Close paint picker"
-            >
-              x
+      <section className={styles.sheet} onClick={(event) => event.stopPropagation()}>
+        <header className={styles.header}>
+          <div className={styles.titleRow}>
+            <h3 className={styles.title}>{title}</h3>
+            <button type="button" onClick={closeDialog} className={styles.close} aria-label="Close paint picker">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
             </button>
           </div>
-
-          <input
-            value={query}
-            onChange={(event) => updateFilter('query', event.target.value)}
-            placeholder="Search by name, brand, line, or SKU"
-            className="mt-4 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-cyan-400/60 focus:ring-2 focus:ring-cyan-400/10"
-            autoFocus
-          />
-
-          <div
-            className={[
-              'mt-3 grid grid-cols-1 gap-2',
-              isCollectionMode ? 'sm:grid-cols-3' : 'sm:grid-cols-4',
-            ].join(' ')}
-          >
-            <select
-              value={brand}
-              onChange={(event) => updateFilter('brand', event.target.value)}
-              className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
+          <div className={styles.searchRow}>
+            <input
+              value={query}
+              onChange={(event) => updateFilter('query', event.target.value)}
+              placeholder="Search paints…"
+              aria-label="Search paints"
+              className={styles.search}
+            />
+            <button
+              type="button"
+              className={styles.filterButton}
+              aria-expanded={filtersOpen}
+              aria-controls={filtersId}
+              data-active={activeFilterCount > 0}
+              onClick={() => setFiltersOpen((current) => !current)}
             >
-              <option value="" className="bg-slate-950 text-white">
-                Brand
-              </option>
-              {activeBrands.map((brandOption) => (
-                <option
-                  key={brandOption}
-                  value={brandOption}
-                  className="bg-slate-950 text-white"
-                >
-                  {brandOption}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={line}
-              onChange={(event) => updateFilter('line', event.target.value)}
-              className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
-            >
-              <option value="" className="bg-slate-950 text-white">
-                Line
-              </option>
-              {activeLines.map((lineOption) => (
-                <option
-                  key={lineOption}
-                  value={lineOption}
-                  className="bg-slate-950 text-white"
-                >
-                  {lineOption}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={colorGroup}
-              onChange={(event) =>
-                updateFilter('colorGroup', event.target.value)
-              }
-              className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
-            >
-              <option value="" className="bg-slate-950 text-white">
-                Color group
-              </option>
-              {COLOR_GROUP_OPTIONS.map((option) => (
-                <option
-                  key={option}
-                  value={option}
-                  className="bg-slate-950 text-white"
-                >
-                  {option}
-                </option>
-              ))}
-            </select>
-
-            {!isCollectionMode ? (
-              <select
-                value={ownership}
-                onChange={(event) =>
-                  updateFilter('ownership', event.target.value)
-                }
-                className="min-w-0 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-3 text-sm text-white outline-none focus:border-cyan-400/60"
-              >
-                <option value="all" className="bg-slate-950 text-white">
-                  All
-                </option>
-                <option value="owned" className="bg-slate-950 text-white">
-                  Owned
-                </option>
-                <option value="wishlist" className="bg-slate-950 text-white">
-                  Wishlist
-                </option>
-                <option value="unowned" className="bg-slate-950 text-white">
-                  Unowned
-                </option>
-              </select>
-            ) : null}
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                <path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="2" /><circle cx="15" cy="17" r="2" />
+              </svg>
+              Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}
+            </button>
           </div>
-
-          <p className="mt-3 text-xs text-white/40">
-            {loading
-              ? 'Searching paints...'
-              : `Showing ${visiblePaints.length} matching paints`}
-          </p>
-        </div>
-
-        <div className="mobile-scroll min-h-0 flex-1 overflow-y-auto p-3">
-          {error ? (
-            <div className="mb-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100/80">
-              {error}
+          {filtersOpen ? (
+            <div id={filtersId} className={styles.filterRow}>
+              <label className={styles.filterLabel}>Brand
+                <select aria-label="Brand" value={brand} onChange={(event) => updateFilter('brand', event.target.value)} className={styles.select}>
+                  <option value="">All brands</option>
+                  {activeBrands.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </label>
+              <label className={styles.filterLabel}>Line
+                <select aria-label="Line" value={line} onChange={(event) => updateFilter('line', event.target.value)} className={styles.select}>
+                  <option value="">All lines</option>
+                  {activeLines.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </label>
+              <label className={styles.filterLabel}>Ownership
+                <select aria-label="Ownership" value={ownership} onChange={(event) => updateFilter('ownership', event.target.value)} className={styles.select}>
+                  <option value="all">All paints</option>
+                  <option value="owned">Owned</option>
+                  <option value="wishlist">Wishlist</option>
+                  <option value="unowned">Unowned</option>
+                </select>
+              </label>
             </div>
           ) : null}
-
+          <p className={styles.resultCount} aria-live="polite">
+            {loading ? 'Searching paints…' : `Showing ${visiblePaints.length} matching paints`}
+          </p>
+        </header>
+        <div className={`mobile-scroll ${styles.results}`}>
+          {error ? <p role="alert" className={styles.error}>{error}</p> : null}
           {loading && visiblePaints.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/45">
-              Loading paints...
-            </div>
+            <p className={styles.empty}>Loading paints…</p>
           ) : visiblePaints.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-white/45">
-              No paints found.
-            </div>
+            <p className={styles.empty}>No paints found.</p>
           ) : (
-            <div className="space-y-2">
+            <div className={styles.paintList}>
               {visiblePaints.map((paint) => {
                 const paintKey = getPaintKey(paint)
                 const isSelected = selectedKey === paintKey || selectedPaintId === paint.id
                 const isBusy = pendingOwnedIds.has(paint.id)
                 const owned = Boolean(paint.is_owned)
-
                 return (
                   <div
                     key={paintKey}
                     role={isCollectionMode ? undefined : 'button'}
                     tabIndex={disabled || isCollectionMode ? -1 : 0}
                     aria-disabled={disabled}
+                    data-selected={isSelected}
                     onClick={() => selectPaint(paint)}
                     onKeyDown={(event) => selectPaintFromKeyboard(event, paint)}
-                    className={[
-                      'tap-card flex min-h-16 w-full items-center gap-3 rounded-2xl border p-3 text-left outline-none focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-300/15 aria-disabled:cursor-not-allowed aria-disabled:opacity-60',
-                      isCollectionMode ? 'cursor-default' : 'cursor-pointer',
-                      isSelected
-                        ? 'border-cyan-300/60 bg-cyan-300/[0.12] shadow-[0_0_18px_rgba(34,211,238,0.12)]'
-                        : 'border-white/10 bg-white/[0.035] hover:border-cyan-400/40 hover:bg-cyan-400/[0.08]',
-                    ].join(' ')}
+                    className={styles.paintRow}
                   >
-                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+                    <div className={styles.swatch}>
                       {paint.swatch_image_url ? (
-                        <Image
-                          src={paint.swatch_image_url}
-                          alt={paint.name || 'Paint swatch'}
-                          fill
-                          sizes="48px"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="h-full w-full"
-                          style={{ backgroundColor: getPaintHex(paint) }}
-                        />
-                      )}
+                        <Image src={paint.swatch_image_url} alt={paint.name || 'Paint swatch'} fill sizes="44px" className="object-cover" />
+                      ) : <div className="h-full w-full" style={{backgroundColor: getPaintHex(paint)}} />}
                     </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black text-white">
-                        {paint.name || 'Unnamed paint'}
-                      </p>
-                      <p className="mt-1 truncate text-xs text-white/45">
-                        {[paint.brand, paint.line, paint.sku]
-                          .filter(Boolean)
-                          .join(' / ') ||
-                          (paint.source === 'custom'
-                            ? 'Custom paint'
-                            : 'Catalog paint')}
+                    <div className={styles.paintInfo}>
+                      <p className={styles.paintName}>{paint.name || 'Unnamed paint'}</p>
+                      <p className={styles.paintMeta}>
+                        {[paint.brand, paint.line, paint.sku].filter(Boolean).join(' · ') || (paint.source === 'custom' ? 'Custom paint' : 'Catalog paint')}
                       </p>
                     </div>
-
                     <button
                       type="button"
                       disabled={paint.source !== 'catalog' || isBusy}
-                      onClick={(event) => toggleOwned(event, paint)}
-                      className={[
-                        'tap-press tap-target shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wide disabled:cursor-default disabled:opacity-70',
-                        owned
-                          ? 'border-cyan-400/40 bg-cyan-400/15 text-cyan-200 shadow-[0_0_12px_rgba(34,211,238,0.18)]'
-                          : 'border-white/10 bg-white/5 text-white/45 hover:border-cyan-400/30 hover:text-cyan-200',
-                      ].join(' ')}
+                      onClick={(event) => toggleOwnership(event, paint, 'owned')}
+                      className={styles.ownership}
+                      data-owned={owned}
                     >
                       {isBusy ? 'Saving' : owned ? 'Owned' : 'Add owned'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={paint.source !== 'catalog' || isBusy}
+                      onClick={(event) => toggleOwnership(event, paint, 'wishlist')}
+                      className={styles.ownership}
+                      data-owned={Boolean(paint.is_wishlist)}
+                      aria-label={paint.is_wishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+                      aria-pressed={Boolean(paint.is_wishlist)}
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill={paint.is_wishlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                        <path d="m12 3 2.8 5.7 6.3.9-4.6 4.5 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9Z" />
+                      </svg>
                     </button>
                   </div>
                 )
@@ -693,7 +554,8 @@ export default function PaintPickerDialog({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </section>
+    </div>,
+    document.body
   )
 }
