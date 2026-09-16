@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-v3-full-workbench-2026-08-30'
+const CACHE_VERSION = 'obsidian-gallery-v3-launch-fixes-2026-09-16'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'
@@ -106,10 +106,14 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Next chunks, CSS, icons, and other same-origin public assets are versioned
-  // or safe to refresh on service worker updates, so cache-first is appropriate.
+  // Only fingerprinted Next build assets are immutable. Public URLs can change
+  // without sw.js changing, so always refresh those from the network first.
   if (isStaticAsset(url)) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE))
+    event.respondWith(
+      url.pathname.startsWith('/_next/static/')
+        ? cacheFirst(request, STATIC_CACHE)
+        : networkFirstAsset(request, STATIC_CACHE)
+    )
   }
 })
 
@@ -180,7 +184,8 @@ function isSafePublicImage(url, request) {
 }
 
 async function cacheFirst(request, cacheName) {
-  const cachedResponse = await caches.match(request)
+  const cache = await caches.open(cacheName)
+  const cachedResponse = await cache.match(request)
 
   if (cachedResponse) {
     return cachedResponse
@@ -189,23 +194,38 @@ async function cacheFirst(request, cacheName) {
   const networkResponse = await fetch(request)
 
   if (networkResponse.ok) {
-    const cache = await caches.open(cacheName)
-    cache.put(request, networkResponse.clone())
+    await cache.put(request, networkResponse.clone()).catch(() => {})
   }
 
   return networkResponse
+}
+
+async function networkFirstAsset(request, cacheName) {
+  const cache = await caches.open(cacheName)
+  try {
+    const response = await fetch(request)
+    if (response.ok) await cache.put(request, response.clone()).catch(() => {})
+    return response
+  } catch (error) {
+    const cachedResponse = await cache.match(request)
+    if (cachedResponse) return cachedResponse
+    throw error
+  }
 }
 
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName)
   const cachedResponse = await cache.match(request)
 
-  const networkResponsePromise = fetch(request).then((networkResponse) => {
+  const networkResponsePromise = fetch(request).then(async (networkResponse) => {
     if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone())
+      await cache.put(request, networkResponse.clone()).catch(() => {})
     }
 
     return networkResponse
+  }).catch((error) => {
+    if (cachedResponse) return cachedResponse
+    throw error
   })
 
   return cachedResponse || networkResponsePromise

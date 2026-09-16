@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { WheelEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { lockBodyScroll } from '../../../utils/body-scroll-lock'
 import type {
   Recipe,
   RecipeImage,
@@ -373,12 +374,7 @@ export default function RecipeGuideDialog({
   useEffect(() => {
     if (!isOpen) return
 
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
+    return lockBodyScroll()
   }, [isOpen])
 
   useEffect(() => {

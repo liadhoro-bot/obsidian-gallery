@@ -13,6 +13,9 @@ export function isV3DeploymentHost(host: string | null | undefined) {
   }
 
   return (
+    // Existing bookmarks and installed PWAs still launch this production alias.
+    // Keep them on the same UI as the v3 domain without relying on a cookie.
+    hostname === 'obsidian-gallery-rust.vercel.app' ||
     hostname === 'obsidian-gallery-v3.vercel.app' ||
     (hostname.startsWith('obsidian-gallery-v3-') &&
       hostname.endsWith('.vercel.app'))

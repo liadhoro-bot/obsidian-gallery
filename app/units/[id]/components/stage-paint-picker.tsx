@@ -23,8 +23,10 @@ export default function StagePaintPicker({
 }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
 
   const handleSelectPaint = (paint: PaintPickerPaint) => {
+    setError(null)
     setIsOpen(false)
 
     startTransition(async () => {
@@ -42,7 +44,7 @@ export default function StagePaintPicker({
         }
       } catch (error) {
         setIsOpen(true)
-        throw error
+        setError(error instanceof Error ? error.message : 'Could not add paint. Please try again.')
       }
     })
   }
@@ -69,6 +71,7 @@ export default function StagePaintPicker({
         source="unit_stage_picker"
         disabled={isPending}
       />
+      {error ? <p role="alert" className="mt-2 text-sm text-red-300">{error}</p> : null}
     </div>
   )
 }
