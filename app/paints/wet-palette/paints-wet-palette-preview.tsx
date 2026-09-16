@@ -1311,7 +1311,6 @@ export default function PaintsWetPalettePreview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
-          tourName="paints_wet_palette"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>

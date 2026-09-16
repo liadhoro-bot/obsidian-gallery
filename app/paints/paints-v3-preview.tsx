@@ -1674,7 +1674,6 @@ export default function PaintsV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
-          tourName="paints_list"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>
