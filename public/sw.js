@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-v3-full-workbench-2026-08-30'
+const CACHE_VERSION = 'obsidian-gallery-v3-full-workbench-2026-09-16'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'
@@ -26,10 +26,15 @@ const PRECACHE_URLS = [
   '/splash/apple-splash-2048x2732.png',
   '/bookmark.svg',
   '/icons/nav/dashboard.svg',
+  '/icons/nav/dashboard-active.svg',
   '/icons/nav/projects.svg',
-  '/icons/nav/recipes.svg',
-  '/icons/nav/themes.svg',
+  '/icons/nav/projects-active.svg',
   '/icons/nav/vault.svg',
+  '/icons/nav/vault-active.svg',
+  '/icons/nav/recipes.svg',
+  '/icons/nav/recipes-active.svg',
+  '/icons/nav/community.svg',
+  '/icons/nav/community-active.svg',
 ]
 
 const STATIC_EXTENSIONS = [
