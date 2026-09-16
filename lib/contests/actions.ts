@@ -565,115 +565,134 @@ async function copyNominationImage({
   return service.storage.from('obsidian-images').getPublicUrl(destinationPath).data.publicUrl
 }
 
-export async function submitNominationAction(formData: FormData) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export type SubmitNominationState = { error: string | null }
 
-  if (!user) throw new Error('Not authenticated')
+export async function submitNominationAction(
+  _prevState: SubmitNominationState,
+  formData: FormData
+): Promise<SubmitNominationState> {
+  let redirectSlug: string
 
-  const contestId = getString(formData, 'contestId')
-  const sourceType = getString(formData, 'sourceType') as ContestNomineeType
-  const sourceId = getString(formData, 'sourceId')
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  const { data: contest } = await supabase
-    .from('contests')
-    .select('*, allowed_nominee_types:contest_allowed_nominee_types(nominee_type)')
-    .eq('id', contestId)
-    .single()
+    if (!user) throw new Error('Not authenticated')
 
-  if (!contest) throw new Error('Contest not found.')
-  if (getContestPhase(contest) !== 'submissions_open') {
-    throw new Error('Submission period is closed.')
-  }
+    const contestId = getString(formData, 'contestId')
+    const sourceType = getString(formData, 'sourceType') as ContestNomineeType
+    const sourceId = getString(formData, 'sourceId')
 
-  const allowedTypes = new Set(
-    ((contest.allowed_nominee_types ?? []) as { nominee_type: string }[]).map(
-      (row) => row.nominee_type
+    if (!sourceType || !sourceId) {
+      throw new Error('Choose one to nominate first.')
+    }
+
+    const { data: contest } = await supabase
+      .from('contests')
+      .select('*, allowed_nominee_types:contest_allowed_nominee_types(nominee_type)')
+      .eq('id', contestId)
+      .single()
+
+    if (!contest) throw new Error('Contest not found.')
+    if (getContestPhase(contest) !== 'submissions_open') {
+      throw new Error('Nominations are closed for this contest.')
+    }
+
+    const allowedTypes = new Set(
+      ((contest.allowed_nominee_types ?? []) as { nominee_type: string }[]).map(
+        (row) => row.nominee_type
+      )
     )
-  )
-  if (!allowedTypes.has(sourceType)) {
-    throw new Error('This contest does not accept that source type.')
-  }
+    if (!allowedTypes.has(sourceType)) {
+      throw new Error('This contest does not accept that source type.')
+    }
 
-  if (!(await canNominateInContest(user.id, contest))) {
-    throw new Error('This contest only accepts nominations from invited participants.')
-  }
+    if (!(await canNominateInContest(user.id, contest))) {
+      throw new Error('This contest only accepts nominations from invited participants.')
+    }
 
-  const countResult = await supabase
-    .from('contest_nominations')
-    .select('id', { count: 'exact', head: true })
-    .eq('contest_id', contestId)
-    .eq('owner_user_id', user.id)
-    .in('status', ['pending', 'approved'])
+    const countResult = await supabase
+      .from('contest_nominations')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contestId)
+      .eq('owner_user_id', user.id)
+      .in('status', ['pending', 'approved'])
 
-  if ((countResult.count ?? 0) >= contest.max_nominations_per_user) {
-    throw new Error('You have reached the nomination limit for this contest.')
-  }
+    if ((countResult.count ?? 0) >= contest.max_nominations_per_user) {
+      throw new Error('You have reached the nomination limit for this contest.')
+    }
 
-  const snapshot = await getSourceSnapshot(sourceType, sourceId, user.id)
-  const nominationId = crypto.randomUUID()
-  const copiedImageUrl = await copyNominationImage({
-    contestId,
-    nominationId,
-    image: snapshot.image,
-  })
+    const snapshot = await getSourceSnapshot(sourceType, sourceId, user.id)
+    const nominationId = crypto.randomUUID()
+    const copiedImageUrl = await copyNominationImage({
+      contestId,
+      nominationId,
+      image: snapshot.image,
+    })
 
-  const insertPayload = {
-    id: nominationId,
-    contest_id: contestId,
-    submitted_by_user_id: user.id,
-    owner_user_id: user.id,
-    source_type: sourceType,
-    source_project_id: sourceType === 'project' ? sourceId : null,
-    source_unit_id: sourceType === 'unit' ? sourceId : null,
-    source_guide_id: sourceType === 'guide' ? sourceId : null,
-    snapshot_title: snapshot.title,
-    snapshot_description: snapshot.description,
-    snapshot_image_url: copiedImageUrl,
-    snapshot_owner_display_name: snapshot.ownerDisplayName,
-    snapshot_metadata: { original_image_url: snapshot.image.image_url },
-    status: contest.requires_nomination_approval ? 'pending' : 'approved',
-  }
-
-  const { error } = await supabase.from('contest_nominations').insert(insertPayload)
-  if (error) {
-    await createServiceRoleClient()
-      .storage
-      .from('obsidian-images')
-      .remove([`contests/${contestId}/nominations/${nominationId}/cover.webp`])
-    throw new Error(error.message)
-  }
-
-  await supabase.from('contest_audit_events').insert({
-    contest_id: contestId,
-    actor_user_id: user.id,
-    action: 'contest_nomination_submitted',
-    target_type: 'contest_nomination',
-    target_id: nominationId,
-    metadata: { source_type: sourceType },
-  })
-
-  await captureServerEvent({
-    distinctId: user.id,
-    event: 'contest_nomination_submitted',
-    properties: {
+    const insertPayload = {
+      id: nominationId,
       contest_id: contestId,
-      nominee_source_type: sourceType,
-      effective_phase: 'submissions_open',
-    },
-  })
+      submitted_by_user_id: user.id,
+      owner_user_id: user.id,
+      source_type: sourceType,
+      source_project_id: sourceType === 'project' ? sourceId : null,
+      source_unit_id: sourceType === 'unit' ? sourceId : null,
+      source_guide_id: sourceType === 'guide' ? sourceId : null,
+      snapshot_title: snapshot.title,
+      snapshot_description: snapshot.description,
+      snapshot_image_url: copiedImageUrl,
+      snapshot_owner_display_name: snapshot.ownerDisplayName,
+      snapshot_metadata: { original_image_url: snapshot.image.image_url },
+      status: contest.requires_nomination_approval ? 'pending' : 'approved',
+    }
 
-  await safeEvaluateAchievements(user.id, {
-    triggers: ['contest_participations_total'],
-    sourceType: 'contest_nomination_submitted',
-    sourceId: nominationId,
-  })
+    const { error } = await supabase.from('contest_nominations').insert(insertPayload)
+    if (error) {
+      await createServiceRoleClient()
+        .storage
+        .from('obsidian-images')
+        .remove([`contests/${contestId}/nominations/${nominationId}/cover.webp`])
+      throw new Error(error.message)
+    }
 
-  contestRevalidate(contest.slug)
-  revalidatePath(`/${sourceType === 'guide' ? 'recipes' : `${sourceType}s`}/${sourceId}`)
-  redirect(`/contests/${contest.slug}`)
+    await supabase.from('contest_audit_events').insert({
+      contest_id: contestId,
+      actor_user_id: user.id,
+      action: 'contest_nomination_submitted',
+      target_type: 'contest_nomination',
+      target_id: nominationId,
+      metadata: { source_type: sourceType },
+    })
+
+    await captureServerEvent({
+      distinctId: user.id,
+      event: 'contest_nomination_submitted',
+      properties: {
+        contest_id: contestId,
+        nominee_source_type: sourceType,
+        effective_phase: 'submissions_open',
+      },
+    })
+
+    await safeEvaluateAchievements(user.id, {
+      triggers: ['contest_participations_total'],
+      sourceType: 'contest_nomination_submitted',
+      sourceId: nominationId,
+    })
+
+    contestRevalidate(contest.slug)
+    revalidatePath(`/${sourceType === 'guide' ? 'recipes' : `${sourceType}s`}/${sourceId}`)
+    redirectSlug = contest.slug
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : 'Could not submit nomination.',
+    }
+  }
+
+  redirect(`/contests/${redirectSlug}`)
 }
 
 export async function withdrawNominationAction(formData: FormData) {

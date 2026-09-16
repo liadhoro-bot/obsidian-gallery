@@ -1,6 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
-import { submitNominationAction } from '../../../../lib/contests/actions'
 import { getContestPhase } from '../../../../lib/contests/phases'
 import {
   DEMO_CONTEST_ID,
@@ -76,7 +75,6 @@ export default async function ContestSubmitPage({
             sources={sources}
             selectedSourceType={query.sourceType}
             selectedSourceId={query.sourceId}
-            action={submitNominationAction}
             isDemoContest={isDemoContest}
           />
         </div>
