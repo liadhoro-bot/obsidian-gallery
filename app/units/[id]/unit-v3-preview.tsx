@@ -664,7 +664,6 @@ export default function UnitV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex ?? 0}
           guide={activeGuide}
-          tourName="unit_detail_preview"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             showGuideAt(

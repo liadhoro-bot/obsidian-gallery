@@ -352,7 +352,6 @@ export default function ThemesV3Preview({
             )
           }
           totalGuides={featureGuides.length}
-          tourName="themes_list"
         />
       ) : null}
     </main>

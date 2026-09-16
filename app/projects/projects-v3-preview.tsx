@@ -499,7 +499,6 @@ export default function ProjectsV3Preview({
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}
           totalGuides={featureGuides.length}
-          tourName="projects_list"
         />
       ) : null}
     </main>

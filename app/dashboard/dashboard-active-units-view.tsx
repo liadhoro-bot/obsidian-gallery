@@ -668,7 +668,6 @@ export default function DashboardActiveUnitsView({
           onNext={showNextGuide}
           onPrevious={showPreviousGuide}
           totalGuides={featureGuides.length}
-          tourName="dashboard_active_units"
         />
       ) : null}
     </div>
