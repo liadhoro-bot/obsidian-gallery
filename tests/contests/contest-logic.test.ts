@@ -46,6 +46,7 @@ const baseContest = {
   prize_first_place: null,
   prize_second_place: null,
   how_it_works: null,
+  terms_content: null,
 } satisfies Contest
 
 test('contest lifecycle phases honor persistent status overrides and schedule boundaries', () => {

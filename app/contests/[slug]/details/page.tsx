@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DEMO_CONTEST_ID, getContestBySlug } from '../../../../lib/contests/queries'
 import { canViewContest } from '../../../../lib/contests/permissions'
-import { getNomineeCopy } from '../../../../lib/contests/nominee-copy'
+import { getNomineeCopy, getNomineeType } from '../../../../lib/contests/nominee-copy'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 import styles from '../../../../components/contests/contest-v3-silver.module.css'
 
@@ -32,6 +32,8 @@ export default async function ContestFullDetailsPage({
   }
 
   const nomineeCopy = getNomineeCopy(contest)
+  const creationPeriodEnd =
+    getNomineeType(contest) === 'guide' ? contest.voting_close_at : contest.submissions_close_at
 
   return (
     <main className={styles.contestSilver}>
@@ -80,7 +82,7 @@ export default async function ContestFullDetailsPage({
             <dl className={styles.rulesList}>
               <div>
                 <dt>{nomineeCopy.periodLabel}</dt>
-                <dd>{formatDate(contest.submissions_open_at)} - {formatDate(contest.submissions_close_at)}</dd>
+                <dd>{formatDate(contest.submissions_open_at)} - {formatDate(creationPeriodEnd)}</dd>
               </div>
               <div>
                 <dt>Community Voting</dt>
@@ -93,12 +95,46 @@ export default async function ContestFullDetailsPage({
             </dl>
           </section>
 
-          <section>
-            <p className={styles.eyebrow}>Additional Rules</p>
-            <p className={styles.bodyText}>
-              {contest.rules_markdown || 'Complete contest rules will be posted here before voting opens.'}
-            </p>
-          </section>
+          {contest.terms_content ? (
+            <>
+              <section>
+                <p className={styles.eyebrow}>Official Rules</p>
+                <p className={styles.mutedText}>{contest.terms_content.effectiveLine}</p>
+                <p className={styles.bodyText}>{contest.terms_content.intro}</p>
+              </section>
+
+              <section>
+                <p className={styles.eyebrow}>Contest At A Glance</p>
+                <dl className={styles.termsGlanceList}>
+                  {contest.terms_content.summaryTable.rows.map(([label, value]) => (
+                    <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className={styles.termsClause}>{contest.terms_content.summaryNote}</p>
+              </section>
+
+              {contest.terms_content.sections.map((section) => (
+                <section key={section.heading}>
+                  <h2 className={styles.termsHeading}>{section.heading}</h2>
+                  {section.clauses.map((clause, index) => (
+                    <p key={index} className={styles.termsClause}>
+                      {clause}
+                    </p>
+                  ))}
+                </section>
+              ))}
+            </>
+          ) : (
+            <section>
+              <p className={styles.eyebrow}>Additional Rules</p>
+              <p className={styles.bodyText}>
+                {contest.rules_markdown || 'Complete contest rules will be posted here before voting opens.'}
+              </p>
+            </section>
+          )}
         </article>
       </div>
     </main>

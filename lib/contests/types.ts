@@ -65,7 +65,16 @@ export type Contest = {
   prize_first_place: string | null
   prize_second_place: string | null
   how_it_works: ContestHowItWorksStep[] | null
+  terms_content: ContestTermsContent | null
   allowed_nominee_types?: { nominee_type: ContestNomineeType }[]
+}
+
+export type ContestTermsContent = {
+  effectiveLine: string
+  intro: string
+  summaryTable: { headers: [string, string]; rows: [string, string][] }
+  summaryNote: string
+  sections: { heading: string; clauses: string[] }[]
 }
 
 export type ContestHowItWorksStep = {

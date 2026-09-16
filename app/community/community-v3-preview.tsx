@@ -43,11 +43,11 @@ const newsItems = [
 
 const openChallenges = [
   {
-    title: 'Top Hobby Guides',
-    text: 'Huge prizes for winning guide creators.',
-    meta: 'Opening soon',
-    href: '/contests/best-painting-guide',
-    mark: '★',
+    title: 'Path to Glory: Coolest Army',
+    text: 'A campaign-only ranked vote for invited Path to Glory army projects.',
+    meta: 'Limited seats',
+    href: '/contests/path-to-glory-coolest-army',
+    mark: '12',
   },
   {
     title: 'Remote Campaign Roll',
@@ -217,11 +217,10 @@ function ContestsTab() {
     <section className="grid gap-4">
       <HeroCard
         eyebrow="Featured Contest"
-        title="Path to Glory: Coolest Army"
-        text="Nominate your army and vote for the coolest force in the Path to Glory campaign."
-        action="Open contest"
-        href="/contests/path-to-glory-coolest-army"
-        image="https://ckzrvjisesooqcmmtvwl.supabase.co/storage/v1/object/public/obsidian-images/contests/8a19c894-1ff2-4cc5-b95d-8abf88045fac/header-1783350653896-2429dd08-b539-4390-9a72-6fa61a86cf9a.png"
+        title="Founders Contest: Top Hobby Guides"
+        text="Publish your best hobby guides and climb the creator leaderboard for huge prizes."
+        href="/contests/best-painting-guide"
+        image="/onboarding/welcome-hero.jpeg"
       />
 
       <SectionCard title="Open Challenges">
@@ -370,23 +369,22 @@ function V3LaunchHero() {
 }
 
 function HeroCard({
-  action,
   eyebrow,
   href,
   image,
   text,
   title,
 }: {
-  action: string
   eyebrow: string
-  href?: string
+  href: string
   image: string
   text: string
   title: string
 }) {
   return (
-    <article
-      className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
+    <Link
+      href={href}
+      className="block overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821] transition hover:border-cyan-300/40"
       data-v3-community-indicator="hero-card"
       data-feature-guide-target="community.hero"
     >
@@ -409,25 +407,9 @@ function HeroCard({
           <p className="mt-2 max-w-[16rem] text-sm font-semibold leading-5 text-white/62">
             {text}
           </p>
-          {href ? (
-            <Link
-              href={href}
-              className="mt-4 h-10 w-fit rounded-[8px] bg-cyan-300 px-4 text-xs font-black text-black"
-              data-v3-community-indicator="hero-action"
-            >
-              {action}
-            </Link>
-          ) : (
-            <button
-              type="button"
-              className="mt-4 h-10 w-fit rounded-[8px] bg-cyan-300 px-4 text-xs font-black text-black"
-            >
-              {action}
-            </button>
-          )}
         </div>
       </div>
-    </article>
+    </Link>
   )
 }
 

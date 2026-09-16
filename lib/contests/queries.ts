@@ -91,6 +91,7 @@ function getDemoContest(): Contest {
       { title: 'Inspire', body: 'Your entries become part of your showcase.' },
       { title: 'Earn the vote', body: 'Each member votes for their 1st and 2nd favorites (2 and 1 points).' },
     ],
+    terms_content: null,
     allowed_nominee_types: [
       { nominee_type: 'project' },
       { nominee_type: 'unit' },
