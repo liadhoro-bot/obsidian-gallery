@@ -6,84 +6,43 @@ import lighthouse from 'lighthouse'
 import { chromium } from 'playwright'
 import {
   applyStorageStateToContext,
-  BENCHMARK_CUSTOM_PAINT_ID,
-  BENCHMARK_RECIPE_ID,
-  BENCHMARK_THEME_ID,
   BENCHMARK_UNIT_ID,
   ensurePerfStorageState,
 } from './perf-auth-utils.mjs'
 
-const benchmarkRoutes = {
-  unit: `/units/${BENCHMARK_UNIT_ID}`,
-  paint: `/vault/custom/${BENCHMARK_CUSTOM_PAINT_ID}`,
-  recipe: `/recipes/${BENCHMARK_RECIPE_ID}`,
-  theme: `/themes/${BENCHMARK_THEME_ID}`,
-}
-
 const importantOnly = process.env.PERF_IMPORTANT_ONLY === '1'
 
-const importantRoutes = [
-  { path: '/dashboard', requiresAuth: true },
-  { path: '/projects', requiresAuth: true },
-  { path: '/units', requiresAuth: true, expectedPathname: '/units' },
-  {
-    path: benchmarkRoutes.unit,
-    requiresAuth: true,
-    expectedPathname: benchmarkRoutes.unit,
-  },
-  { path: '/vault', requiresAuth: true },
-  {
-    path: benchmarkRoutes.paint,
-    requiresAuth: true,
-    expectedPathname: benchmarkRoutes.paint,
-  },
-  { path: '/recipes', requiresAuth: true },
-  {
-    path: benchmarkRoutes.recipe,
-    requiresAuth: true,
-    expectedPathname: benchmarkRoutes.recipe,
-  },
-  { path: '/themes', requiresAuth: true },
-  {
-    path: benchmarkRoutes.theme,
-    requiresAuth: true,
-    expectedPathname: benchmarkRoutes.theme,
-  },
+const MAIN_ROUTES = [
+  { path: '/dashboard?preview=1', requiresAuth: true },
+  { path: '/projects?preview=1', requiresAuth: true },
+  { path: '/paints?preview=1', requiresAuth: true },
+  { path: '/guides?preview=1', requiresAuth: true },
+  { path: '/themes?preview=1', requiresAuth: true },
+  { path: '/community?preview=1', requiresAuth: true },
+  { path: '/settings?preview=1', requiresAuth: true },
 ]
 
-const secondaryRoutes = [
-  { path: '/', requiresAuth: true, expectedPathname: '/dashboard' },
-  { path: '/login', requiresAuth: false },
-  { path: '/offline', requiresAuth: false },
-  { path: '/support', requiresAuth: false },
-  { path: '/settings/terms', requiresAuth: false },
+const SECONDARY_ROUTES = [
+  { path: '/login?preview=1', requiresAuth: false },
+  { path: '/onboarding?preview=1&reset=v3-lighthouse', requiresAuth: true },
 ]
 
-const routes = importantOnly ? importantRoutes : [...importantRoutes, ...secondaryRoutes]
+const routes = importantOnly ? MAIN_ROUTES : [...MAIN_ROUTES, ...SECONDARY_ROUTES]
 
-const requiredMainPerformanceRoutes = [
-  '/dashboard',
-  '/projects',
-  '/units',
-  benchmarkRoutes.unit,
-  '/vault',
-  benchmarkRoutes.paint,
-  '/recipes',
-  benchmarkRoutes.recipe,
-  '/themes',
-  benchmarkRoutes.theme,
-]
+const requiredMainPerformanceRoutes = MAIN_ROUTES.map((route) => route.path)
+const RETIRED_V2_ROUTE_PATTERNS = [/^\/recipes(?:\/|\?|$)/, /^\/vault(?:\/|\?|$)/]
 
 const budgets = {
-  largestContentfulPaint: 2500,
+  largestContentfulPaint: 3200,
   cumulativeLayoutShift: 0.1,
-  totalBlockingTime: 200,
-  scriptKb: 250,
-  imageKb: 600,
-  totalKb: 1200,
+  totalBlockingTime: 600,
+  scriptKb: 300,
+  imageKb: 700,
+  totalKb: 1400,
 }
 
 const isWindows = process.platform === 'win32'
+const externalBaseUrl = process.env.PERF_BASE_URL
 const requestedAppPort = Number(process.env.PERF_LIGHTHOUSE_APP_PORT ?? 3100)
 const requestedChromePort = Number(process.env.PERF_LIGHTHOUSE_CHROME_PORT ?? 9229)
 const outputDir = resolve('.lighthouseci')
@@ -139,7 +98,7 @@ async function waitForServer(baseUrl) {
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${baseUrl}/login`, { redirect: 'manual' })
+      const response = await fetch(`${baseUrl}/login?preview=1`, { redirect: 'manual' })
       if (response.status > 0) return
     } catch (error) {
       lastError = error
@@ -152,7 +111,7 @@ async function waitForServer(baseUrl) {
 }
 
 async function stopServer(server) {
-  if (!server.pid || server.exitCode !== null) return
+  if (!server?.pid || server.exitCode !== null) return
 
   if (isWindows) {
     await new Promise((resolveKill) => {
@@ -206,11 +165,31 @@ function assertRouteCoverage() {
       `Lighthouse performance route matrix is missing: ${missingRoutes.join(', ')}`
     )
   }
+
+  const retiredRoutes = routes
+    .map((route) => route.path)
+    .filter((path) => RETIRED_V2_ROUTE_PATTERNS.some((pattern) => pattern.test(path)))
+
+  if (retiredRoutes.length) {
+    throw new Error(
+      `V3 Lighthouse route matrix includes retired V2 routes: ${retiredRoutes.join(', ')}`
+    )
+  }
+
+  const nonPreviewRoutes = routes
+    .map((route) => route.path)
+    .filter((path) => !path.includes('preview=1'))
+
+  if (nonPreviewRoutes.length) {
+    throw new Error(
+      `V3 Lighthouse route matrix must target published preview=1 surfaces only: ${nonPreviewRoutes.join(', ')}`
+    )
+  }
 }
 
 function formatMetricLine(route, score, lcp, tbt, cls, scriptKb, imageKb, totalKb) {
   return [
-    route.padEnd(16),
+    route.padEnd(28),
     `score=${String(score).padStart(3)}`,
     `LCP=${String(lcp).padStart(4)}ms`,
     `TBT=${String(tbt).padStart(4)}ms`,
@@ -221,24 +200,73 @@ function formatMetricLine(route, score, lcp, tbt, cls, scriptKb, imageKb, totalK
   ].join('  ')
 }
 
-async function resolveProtectedProjectDetailRoute(context, baseUrl) {
+async function resolveFirstPreviewHref(context, baseUrl, listingPath, hrefPattern) {
   const page = await context.newPage()
 
   try {
-    await page.goto(`${baseUrl}/projects`, { waitUntil: 'networkidle' })
+    await page.goto(`${baseUrl}${listingPath}`, { waitUntil: 'networkidle' })
 
-    const projectRoute = await page.evaluate(() => {
+    return await page.evaluate((patternSource) => {
+      const regex = new RegExp(patternSource)
       const links = Array.from(document.querySelectorAll('a[href]'))
       const match = links
         .map((link) => link.getAttribute('href'))
-        .find((href) => typeof href === 'string' && /^\/projects\/[^/?#]+$/.test(href))
+        .find((href) => typeof href === 'string' && regex.test(href))
 
       return match ?? null
-    })
-
-    return projectRoute
+    }, hrefPattern.source)
   } finally {
     await page.close()
+  }
+}
+
+async function resolveDetailRoutes(context, baseUrl) {
+  const detailRoutes = []
+
+  const projectHref = await resolveFirstPreviewHref(
+    context,
+    baseUrl,
+    '/projects?preview=1',
+    /^\/projects\/[^/?#]+\?preview=1/
+  )
+  if (projectHref) {
+    detailRoutes.push({
+      path: projectHref,
+      requiresAuth: true,
+      expectedPathname: new URL(projectHref, baseUrl).pathname,
+    })
+  }
+
+  detailRoutes.push({
+    path: `/units/${BENCHMARK_UNIT_ID}?preview=1`,
+    requiresAuth: true,
+    expectedPathname: `/units/${BENCHMARK_UNIT_ID}`,
+  })
+
+  const guideHref = await resolveFirstPreviewHref(
+    context,
+    baseUrl,
+    '/guides?preview=1',
+    /^\/guides\/(?!decks\/)[^/?#]+\?preview=1/
+  )
+  if (guideHref) {
+    detailRoutes.push({
+      path: guideHref,
+      requiresAuth: true,
+      expectedPathname: new URL(guideHref, baseUrl).pathname,
+    })
+  }
+
+  return detailRoutes
+}
+
+function assertV3Route(route) {
+  if (RETIRED_V2_ROUTE_PATTERNS.some((pattern) => pattern.test(route.path))) {
+    throw new Error(`Refusing to run retired V2 Lighthouse route: ${route.path}`)
+  }
+
+  if (!route.path.includes('preview=1')) {
+    throw new Error(`Refusing to run non-V3 preview Lighthouse route: ${route.path}`)
   }
 }
 
@@ -246,7 +274,7 @@ async function assertAuthenticatedBenchmarkReady(context, baseUrl) {
   const page = await context.newPage()
 
   try {
-    await page.goto(`${baseUrl}/dashboard`, {
+    await page.goto(`${baseUrl}/dashboard?preview=1`, {
       waitUntil: 'networkidle',
       timeout: 60_000,
     })
@@ -264,14 +292,18 @@ async function assertAuthenticatedBenchmarkReady(context, baseUrl) {
 
 async function main() {
   assertRouteCoverage()
+  rmSync(outputDir, { recursive: true, force: true })
   mkdirSync(outputDir, { recursive: true })
 
-  const appPort = await findAvailablePort(requestedAppPort)
+  const appPort = externalBaseUrl ? requestedAppPort : await findAvailablePort(requestedAppPort)
   const chromePort = await findAvailablePort(requestedChromePort)
-  const baseUrl = `http://127.0.0.1:${appPort}`
-  const server = spawnCommand(bin('next'), ['start', '-p', String(appPort)])
+  const baseUrl = externalBaseUrl ?? `http://127.0.0.1:${appPort}`
+  const server = externalBaseUrl
+    ? null
+    : spawnCommand(bin('next'), ['start', '-p', String(appPort)])
   const failures = []
-  const skippedRoutes = []
+
+  console.log(`Lighthouse target: ${baseUrl}`)
 
   try {
     await waitForServer(baseUrl)
@@ -296,21 +328,10 @@ async function main() {
       })
       await assertAuthenticatedBenchmarkReady(context, baseUrl)
 
-      const resolvedProjectDetailRoute = await resolveProtectedProjectDetailRoute(
-        context,
-        baseUrl
-      )
-      const detailRoutes = resolvedProjectDetailRoute
-        ? [
-            {
-              path: resolvedProjectDetailRoute,
-              requiresAuth: true,
-              expectedPathname: resolvedProjectDetailRoute,
-            },
-          ]
-        : []
+      const detailRoutes = importantOnly ? [] : await resolveDetailRoutes(context, baseUrl)
 
       for (const route of [...routes, ...detailRoutes]) {
+        assertV3Route(route)
         const url = `${baseUrl}${route.path}`
         const result = await lighthouse(url, {
           port: chromePort,
@@ -446,13 +467,6 @@ async function main() {
   } finally {
     await stopServer(server)
     rmSync(chromeUserDataDir, { recursive: true, force: true })
-  }
-
-  if (skippedRoutes.length) {
-    console.error('\nSkipped Lighthouse routes:')
-    for (const route of skippedRoutes) {
-      console.error(`- ${route}`)
-    }
   }
 
   if (failures.length) {

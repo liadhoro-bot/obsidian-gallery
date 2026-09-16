@@ -3,8 +3,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
-import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './paints-v3-silver.module.css'
@@ -18,6 +18,7 @@ type PaintRecord = {
   line: string
   finish: string
   size: string
+  msrp?: string
   color: string
   swatchImageUrl?: string | null
   owned: boolean
@@ -31,6 +32,12 @@ type PaintOwnershipAction = 'owned' | 'wishlist'
 type PaintOwnershipState = Pick<PaintRecord, 'owned' | 'wish'>
 type PaintSortMode = 'name-asc' | 'name-desc' | 'brand-asc' | 'line-asc'
 type PaintViewMode = 'grid' | 'card'
+type PaintSwatchUrlMap = Record<string, string | null>
+
+const deferredSwatchDelayMs = 9000
+const FeatureGuideTour = dynamic(() => import('../components/feature-guide-tour'), {
+  ssr: false,
+})
 
 const fallbackPaints: PaintRecord[] = [
   {
@@ -495,6 +502,26 @@ function applyPaintStateOverrides(
   }))
 }
 
+function applyPaintSwatchUrls(
+  paints: PaintRecord[],
+  swatchUrls: PaintSwatchUrlMap
+) {
+  if (Object.keys(swatchUrls).length === 0) {
+    return paints
+  }
+
+  return paints.map((paint) => {
+    if (paint.swatchImageUrl || !(paint.id in swatchUrls)) {
+      return paint
+    }
+
+    return {
+      ...paint,
+      swatchImageUrl: swatchUrls[paint.id],
+    }
+  })
+}
+
 function uniqueSortedPaintValues(
   paints: PaintRecord[],
   getValue: (paint: PaintRecord) => string
@@ -538,6 +565,23 @@ function getBrandCode(brand: string) {
 type PaintsV3PreviewProps = {
   featureGuides?: FeatureGuideEntry[]
   initialPayload?: PaintsV3Payload
+}
+
+type DeferredPaintLibraryPayload = Pick<
+  PaintsV3Payload,
+  'counts' | 'filters' | 'libraryPaints'
+>
+
+function PaintShowingCount({ count }: { count: number }) {
+  return (
+    <div
+      aria-label={`Showing ${count} paint${count === 1 ? '' : 's'}`}
+      data-v3-paints-indicator="showing-count"
+    >
+      <span>Showing</span>
+      <strong>{count}</strong>
+    </div>
+  )
 }
 
 export default function PaintsV3Preview({
@@ -594,13 +638,19 @@ export default function PaintsV3Preview({
   const [pendingPaintActions, setPendingPaintActions] = useState<
     Record<string, PaintOwnershipAction>
   >({})
+  const [deferredLibraryPayload, setDeferredLibraryPayload] =
+    useState<DeferredPaintLibraryPayload | null>(null)
+  const [paintSwatchUrls, setPaintSwatchUrls] = useState<PaintSwatchUrlMap>({})
   const libraryBasePaints = useMemo(
-    () => initialPayload?.libraryPaints ?? fallbackPaints,
-    [initialPayload]
+    () =>
+      deferredLibraryPayload?.libraryPaints ??
+      initialPayload?.libraryPaints ??
+      fallbackPaints,
+    [deferredLibraryPayload, initialPayload]
   )
   const basePaints = useMemo(() => {
     const payloadPaints = initialPayload
-      ? [...initialPayload.ownedPaints, ...initialPayload.libraryPaints]
+      ? [...initialPayload.ownedPaints, ...libraryBasePaints]
       : fallbackPaints
     const seenPaintIds = new Set<string>()
 
@@ -609,14 +659,33 @@ export default function PaintsV3Preview({
       seenPaintIds.add(paint.id)
       return true
     })
-  }, [initialPayload])
+  }, [initialPayload, libraryBasePaints])
+  const basePaintIdsWithoutSwatches = useMemo(
+    () =>
+      basePaints
+        .filter((paint) => !paint.swatchImageUrl)
+        .map((paint) => paint.id),
+    [basePaints]
+  )
+  const basePaintsWithSwatches = useMemo(
+    () => applyPaintSwatchUrls(basePaints, paintSwatchUrls),
+    [basePaints, paintSwatchUrls]
+  )
+  const libraryPaintsWithSwatches = useMemo(
+    () => applyPaintSwatchUrls(libraryBasePaints, paintSwatchUrls),
+    [libraryBasePaints, paintSwatchUrls]
+  )
   const allPaints = useMemo(
-    () => applyPaintStateOverrides(basePaints, paintStateOverrides),
-    [basePaints, paintStateOverrides]
+    () => applyPaintStateOverrides(basePaintsWithSwatches, paintStateOverrides),
+    [basePaintsWithSwatches, paintStateOverrides]
   )
   const libraryPaints = useMemo(
-    () => applyPaintStateOverrides(libraryBasePaints, paintStateOverrides),
-    [libraryBasePaints, paintStateOverrides]
+    () =>
+      applyPaintStateOverrides(
+        libraryPaintsWithSwatches,
+        paintStateOverrides
+      ),
+    [libraryPaintsWithSwatches, paintStateOverrides]
   )
   const activeFilterPaints = useMemo(
     () =>
@@ -638,12 +707,137 @@ export default function PaintsV3Preview({
     return uniqueSortedPaintValues(lineSourcePaints, (paint) => paint.line)
   }, [activeFilterPaints, brandFilter])
   const [selectedPaintId, setSelectedPaintId] = useState<string | null>(null)
+  const [showRealSwatches, setShowRealSwatches] = useState(false)
   const [mixName, setMixName] = useState('')
   const [mixBase, setMixBase] = useState(allPaints[0]?.name ?? '')
 
   useEffect(() => {
     performance.mark('v3-paints-hydrated')
   }, [])
+
+  useEffect(() => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    let idleHandle: number | null = null
+    const timer = window.setTimeout(() => {
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(
+          () => setShowRealSwatches(true),
+          { timeout: 1600 }
+        )
+        return
+      }
+
+      setShowRealSwatches(true)
+    }, deferredSwatchDelayMs)
+
+    return () => {
+      window.clearTimeout(timer)
+      if (idleHandle !== null) {
+        idleWindow.cancelIdleCallback?.(idleHandle)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!initialPayload || deferredLibraryPayload) {
+      return
+    }
+
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions
+      ) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    const controller = new AbortController()
+    let idleHandle: number | null = null
+    const timer = window.setTimeout(() => {
+      const loadDeferredPaintLibrary = async () => {
+        try {
+          const response = await fetch('/api/paints/v3-library', {
+            signal: controller.signal,
+          })
+
+          if (!response.ok) {
+            return
+          }
+
+          const result =
+            (await response.json()) as DeferredPaintLibraryPayload
+
+          setDeferredLibraryPayload(result)
+        } catch (error) {
+          if ((error as Error).name !== 'AbortError') {
+            setDeferredLibraryPayload(null)
+          }
+        }
+      }
+
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(
+          () => void loadDeferredPaintLibrary(),
+          { timeout: 1800 }
+        )
+        return
+      }
+
+      void loadDeferredPaintLibrary()
+    }, activeTab === 'library' ? 0 : 5000)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+      if (idleHandle !== null) {
+        idleWindow.cancelIdleCallback?.(idleHandle)
+      }
+    }
+  }, [activeTab, deferredLibraryPayload, initialPayload])
+
+  useEffect(() => {
+    if (!showRealSwatches || basePaintIdsWithoutSwatches.length === 0) {
+      return
+    }
+
+    const controller = new AbortController()
+
+    async function loadPaintSwatches() {
+      try {
+        const response = await fetch('/api/paints/v3-swatches', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ paintIds: basePaintIdsWithoutSwatches }),
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const result = (await response.json()) as {
+          swatches?: PaintSwatchUrlMap
+        }
+
+        setPaintSwatchUrls(result.swatches ?? {})
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          setPaintSwatchUrls({})
+        }
+      }
+    }
+
+    loadPaintSwatches()
+
+    return () => controller.abort()
+  }, [basePaintIdsWithoutSwatches, showRealSwatches])
 
   useEffect(() => {
     if (brandFilter !== 'all' && !brandOptions.includes(brandFilter)) {
@@ -1215,35 +1409,39 @@ export default function PaintsV3Preview({
                 </div>
               </div>
 
-              <button
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={isExportOpen}
-                onClick={() => {
-                  setActiveGuideIndex(null)
-                  setIsFilterOpen(false)
-                  setIsSortOpen(false)
-                  setIsExportOpen(true)
-                }}
-                className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/48 transition hover:border-cyan-300/45 hover:text-cyan-300"
-                data-feature-guide-target="paints.export"
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-2">
+                <PaintShowingCount count={filteredPaints.length} />
+
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  aria-expanded={isExportOpen}
+                  onClick={() => {
+                    setActiveGuideIndex(null)
+                    setIsFilterOpen(false)
+                    setIsSortOpen(false)
+                    setIsExportOpen(true)
+                  }}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-white/10 bg-[#111821] px-3 text-[11px] font-black text-white/48 transition hover:border-cyan-300/45 hover:text-cyan-300"
+                  data-feature-guide-target="paints.export"
                 >
-                  <path d="M12 3v12" />
-                  <path d="m7 10 5 5 5-5" />
-                  <path d="M5 21h14" />
-                </svg>
-                Export
-              </button>
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 3v12" />
+                    <path d="m7 10 5 5 5-5" />
+                    <path d="M5 21h14" />
+                  </svg>
+                  Export
+                </button>
+              </div>
             </div>,
               document.body
             )
@@ -1268,6 +1466,7 @@ export default function PaintsV3Preview({
                     key={paint.id}
                     paint={paint}
                     isSelected={paint.id === selectedPaintId}
+                    showRealSwatch={showRealSwatches}
                     onSelect={() => setSelectedPaintId(paint.id)}
                   />
                 ) : (
@@ -1275,6 +1474,7 @@ export default function PaintsV3Preview({
                     key={paint.id}
                     paint={paint}
                     isSelected={paint.id === selectedPaintId}
+                    showRealSwatch={showRealSwatches}
                     onSelect={() => setSelectedPaintId(paint.id)}
                   />
                 )
@@ -1325,6 +1525,7 @@ export default function PaintsV3Preview({
         <PaintInfoPanel
           paint={selectedPaint}
           pendingAction={pendingPaintActions[selectedPaint.id]}
+          showRealSwatch={showRealSwatches}
           onToggleOwned={() => togglePaintOwnershipState(selectedPaint, 'owned')}
           onToggleWishlist={() =>
             togglePaintOwnershipState(selectedPaint, 'wishlist')
@@ -1473,7 +1674,7 @@ export default function PaintsV3Preview({
         <FeatureGuideTour
           activeIndex={activeGuideIndex}
           guide={activeGuide}
-          guides={featureGuides}
+          tourName="paints_list"
           onClose={() => setActiveGuideIndex(null)}
           onNext={() =>
             setActiveGuideIndex((current) =>
@@ -1553,10 +1754,12 @@ function PaintSwatch({
   isSelected,
   onSelect,
   paint,
+  showRealSwatch,
 }: {
   isSelected: boolean
   onSelect: () => void
   paint: PaintRecord
+  showRealSwatch: boolean
 }) {
   return (
     <button
@@ -1575,7 +1778,7 @@ function PaintSwatch({
         className="absolute inset-x-0 top-0 h-[39%] overflow-hidden"
         style={{ backgroundColor: paint.color }}
       >
-        {paint.swatchImageUrl ? (
+        {showRealSwatch && paint.swatchImageUrl ? (
           <Image
             src={paint.swatchImageUrl}
             alt=""
@@ -1626,10 +1829,12 @@ function PaintCard({
   isSelected,
   onSelect,
   paint,
+  showRealSwatch,
 }: {
   isSelected: boolean
   onSelect: () => void
   paint: PaintRecord
+  showRealSwatch: boolean
 }) {
   return (
     <button
@@ -1648,7 +1853,7 @@ function PaintCard({
         className="relative h-12 w-12 overflow-hidden rounded-[8px] border border-white/10"
         style={{ backgroundColor: paint.color }}
       >
-        {paint.swatchImageUrl ? (
+        {showRealSwatch && paint.swatchImageUrl ? (
           <Image
             src={paint.swatchImageUrl}
             alt=""
@@ -1697,11 +1902,11 @@ function PaintInfoEmptyPanel() {
             Select a paint
           </p>
 
-          <div className="mt-3 grid grid-cols-4 gap-2 text-[9px] font-black text-white/34">
+          <div className="mt-3 grid grid-cols-4 gap-3 text-[11px] text-white/34">
             <InfoPair label="Brand" value="-" />
             <InfoPair label="Line" value="-" />
-            <InfoPair label="Finish" value="-" />
             <InfoPair label="Size" value="-" />
+            <InfoPair label="MSRP" value="-" />
           </div>
 
           <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-white/46">
@@ -1718,11 +1923,13 @@ function PaintInfoPanel({
   onToggleWishlist,
   paint,
   pendingAction,
+  showRealSwatch,
 }: {
   onToggleOwned: () => void
   onToggleWishlist: () => void
   paint: PaintRecord
   pendingAction?: PaintOwnershipAction
+  showRealSwatch: boolean
 }) {
   const isCustomPaint = isCustomPaintId(paint.id)
   const isOwnedPending = pendingAction === 'owned'
@@ -1739,7 +1946,7 @@ function PaintInfoPanel({
           className="relative overflow-hidden"
           style={{ backgroundColor: paint.color }}
         >
-          {paint.swatchImageUrl ? (
+          {showRealSwatch && paint.swatchImageUrl ? (
             <Image
               src={paint.swatchImageUrl}
               alt=""
@@ -1752,12 +1959,9 @@ function PaintInfoPanel({
         <div className="min-w-0 p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-black uppercase text-white">
+              <h2 className="line-clamp-2 text-base font-black uppercase leading-[1.05] text-white">
                 {paint.name}
               </h2>
-              <p className="mt-1 text-[10px] font-bold text-white/36">
-                {paint.line}
-              </p>
             </div>
             <div
               className="grid shrink-0 grid-cols-2 gap-2"
@@ -1796,23 +2000,16 @@ function PaintInfoPanel({
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-2 text-[9px] font-black text-white/34">
+          <div className="mt-3 grid grid-cols-4 gap-3 text-[11px] text-white/34">
             <InfoPair label="Brand" value={paint.brand} />
             <InfoPair label="Line" value={paint.line} />
-            <InfoPair label="Finish" value={paint.finish} />
             <InfoPair label="Size" value={paint.size} />
+            <InfoPair label="MSRP" value={paint.msrp ?? '-'} />
           </div>
 
           <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-white/46">
             {paint.notes}
           </p>
-
-          <button
-            className="mt-2 h-8 w-full rounded-[8px] border border-white/10 bg-black/20 text-[10px] font-black text-white/52 transition hover:border-cyan-300/45 hover:text-cyan-300"
-            data-v3-paints-indicator="paint-details-button"
-          >
-            View Details -&gt;
-          </button>
         </div>
       </div>
     </aside>
@@ -1822,8 +2019,8 @@ function PaintInfoPanel({
 function InfoPair({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="uppercase tracking-[0.12em]">{label}</p>
-      <p className="mt-1 truncate text-white/62">{value}</p>
+      <p className="font-black uppercase tracking-[0.12em]">{label}</p>
+      <p className="mt-1 line-clamp-2 text-[12px] font-semibold leading-[1.15] text-white/62">{value}</p>
     </div>
   )
 }

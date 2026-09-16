@@ -32,7 +32,10 @@ export default async function PaintsPage({ searchParams }: PaintsPageProps) {
 
   const [payload, featureGuides] = await perf.measure('v3 paints data', () =>
     Promise.all([
-      getPaintsV3Payload(user.id),
+      getPaintsV3Payload(user.id, {
+        includeSwatchImages: false,
+        libraryLimit: 120,
+      }),
       getFeatureGuidesForPage('/paints', paintsFeatureGuides),
     ])
   )

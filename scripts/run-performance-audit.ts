@@ -6,7 +6,7 @@ const importantOnly = process.argv.includes('--important')
 const steps = [
   ['build', ['run', 'build']],
   ['lighthouse', ['run', 'perf:lighthouse']],
-  ['flows', ['run', 'perf:flows']],
+  ['test', ['run', 'perf:test']],
 ] as const
 
 function runStep(name: string, args: readonly string[]) {
