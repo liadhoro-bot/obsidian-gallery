@@ -750,7 +750,7 @@ export default function GuidesV3Preview({
     initialPayload?.libraryGuides.length
       ? initialPayload.libraryGuides
       : publicGuideFiles
-  const [activeTab, setActiveTab] = useState<GuideTab>('guides')
+  const [activeTab, setActiveTab] = useState<GuideTab>('library')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks, setDecks] = useState<Deck[]>(seedDecks)
   const [query, setQuery] = useState('')
@@ -3201,7 +3201,13 @@ function Tabs({
       role="tablist"
       aria-label="Guide sections"
     >
-      {(['guides', 'decks', 'library'] as const).map((tab) => (
+      {(
+        [
+          { tab: 'library', label: 'Discover' },
+          { tab: 'guides', label: 'Guides' },
+          { tab: 'decks', label: 'Decks' },
+        ] as const
+      ).map(({ tab, label }) => (
         <button
           key={tab}
           type="button"
@@ -3210,13 +3216,13 @@ function Tabs({
           data-feature-guide-target={`guides.tabs.${tab}`}
           onClick={() => onTabChange(tab)}
           className={[
-            'h-9 rounded-[6px] text-xs font-black capitalize transition',
+            'h-9 rounded-[6px] text-xs font-black transition',
             activeTab === tab
               ? 'bg-[#101822] text-cyan-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.06)]'
               : 'text-white/38 hover:text-white/70',
           ].join(' ')}
         >
-          {tab}
+          {label}
         </button>
       ))}
     </div>
