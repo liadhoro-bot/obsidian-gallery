@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-v3-full-workbench-2026-09-16-lazy-tabs'
+const CACHE_VERSION = 'obsidian-gallery-v3-full-workbench-2026-09-16-material-webp'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'

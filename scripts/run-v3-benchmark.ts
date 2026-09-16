@@ -120,8 +120,8 @@ const MAIN_PAGE_TARGETS: NavigationTarget[] = [
     surface: 'paints',
   },
   {
-    detail: 'guides',
-    label: 'Guides / Guides',
+    detail: 'library',
+    label: 'Guides / Library',
     route: '/guides?preview=1',
     surface: 'guides',
   },

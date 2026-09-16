@@ -63,12 +63,12 @@
      Do not add a fixed-aspect "shell"/frame/plaque raster here: it will get stretched via
      background-size:100% 100% into arbitrarily-proportioned live boxes. Draw frames in CSS
      from the shadow/radius/border tokens below instead. See docs/design/golden-implementation.md. */
-  --og-asset-walnut: url('/og-v3/materials/walnut-seamless.png');
-  --og-asset-parchment-fiber: url('/og-v3/materials/parchment-fiber.png');
-  --og-asset-ebonized: url('/og-v3/materials/ebonized-control.png');
+  --og-asset-walnut: url('/og-v3/materials/walnut-seamless.webp');
+  --og-asset-parchment-fiber: url('/og-v3/materials/parchment-fiber.webp');
+  --og-asset-ebonized: url('/og-v3/materials/ebonized-control.webp');
   --og-asset-rivet: url('/og-v3/hardware/brass-rivet.png');
-  --og-asset-brass-worn: url('/og-v3/materials/brass-worn.png?v=directional2');
-  --og-asset-leather-grain: url('/og-v3/materials/leather-grain.png');
+  --og-asset-brass-worn: url('/og-v3/materials/brass-worn.webp');
+  --og-asset-leather-grain: url('/og-v3/materials/leather-grain.webp');
 
   /* Material composites - CALIBRATED from approved V3 raster references */
   --og-material-walnut-board: linear-gradient(90deg, color-mix(in srgb, var(--og-walnut-950) 40%, transparent), transparent 18%, transparent 82%, color-mix(in srgb, var(--og-walnut-950) 42%, transparent)), linear-gradient(180deg, color-mix(in srgb, var(--og-walnut-700) 10%, transparent) 0, color-mix(in srgb, var(--og-walnut-950) 22%, transparent) 100dvh), var(--og-asset-walnut), linear-gradient(180deg, var(--og-walnut-800) 0, var(--og-walnut-950) 100dvh);
