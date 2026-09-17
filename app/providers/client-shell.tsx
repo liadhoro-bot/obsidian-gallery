@@ -31,13 +31,17 @@ export default function ClientShell({
     !pathname.startsWith('/offline') &&
     !pathname.startsWith('/support') &&
     !pathname.startsWith('/settings/terms') &&
-    !pathname.startsWith('/guides/decks')
+    !pathname.startsWith('/guides/decks') &&
+    !pathname.startsWith('/subscribe') &&
+    !pathname.startsWith('/payment-success')
   const showInstallPrompt =
     !pathname.startsWith('/auth') &&
     !pathname.startsWith('/login') &&
     !pathname.startsWith('/onboarding') &&
     !pathname.startsWith('/offline') &&
-    !pathname.startsWith('/settings/terms')
+    !pathname.startsWith('/settings/terms') &&
+    !pathname.startsWith('/subscribe') &&
+    !pathname.startsWith('/payment-success')
 
   return (
     <>
