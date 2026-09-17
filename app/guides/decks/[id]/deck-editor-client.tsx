@@ -152,7 +152,11 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
       title: deck.title,
       template: 'cover',
       body: deck.description,
-      image: deck.image,
+      // Seed from the untransformed source image, not the list/grid
+      // thumbnail rendition - otherwise saving without touching the cover
+      // silently downgrades the deck's stored image to that small
+      // thumbnail (see GuidesV3DeckDetail.fullImage).
+      image: deck.fullImage ?? deck.image,
       paints: [],
       videoUrl: null,
     },
@@ -167,7 +171,9 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
         step.paints.length
       ),
       body: step.instructions,
-      image: step.image,
+      // Same reasoning as the cover image above - use the untransformed
+      // source (GuidesV3DeckStep.rawImage), not the thumbnail.
+      image: step.rawImage ?? step.image,
       paints: step.paints.map((paint) => ({
         id: paint.id,
         brand: paint.brand,
@@ -186,12 +192,12 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
 
 function initialGallery(deck: GuidesV3DeckDetail): EditorImage[] {
   const images = [
-    { id: `${deck.id}:cover`, url: deck.image, alt: deck.title },
+    { id: `${deck.id}:cover`, url: deck.fullImage ?? deck.image, alt: deck.title },
     ...deck.steps
-      .filter((step) => Boolean(step.image))
+      .filter((step) => Boolean(step.rawImage ?? step.image))
       .map((step) => ({
         id: `${step.id}:image`,
-        url: step.image as string,
+        url: (step.rawImage ?? step.image) as string,
         alt: step.title,
       })),
   ]
@@ -472,8 +478,8 @@ export default function DeckEditorClient({
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const heroImage = useMemo(
-    () => gallery.find((image) => image.id === heroImageId)?.url ?? deck.image,
-    [deck.image, gallery, heroImageId]
+    () => gallery.find((image) => image.id === heroImageId)?.url ?? deck.fullImage ?? deck.image,
+    [deck.fullImage, deck.image, gallery, heroImageId]
   )
   const editingCard = cards.find((card) => card.id === editingCardId) ?? null
   const coverCard = cards.find((card) => card.template === 'cover')

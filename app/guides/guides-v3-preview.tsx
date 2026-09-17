@@ -648,6 +648,7 @@ function toEditorDeckDetail(deck: ForgeDeck): GuidesV3DeckDetail {
     paints: 0,
     usedIn: 0,
     image: heroImage,
+    fullImage: heroImage,
     saved: true,
     isOwner: true,
     accent: '#22d3ee',

@@ -15,6 +15,11 @@ export type GuidesV3DeckStep = {
   template: string | null
   instructions: string
   image: string | null
+  // The untransformed source image (recipe_steps.image_url) - the editor
+  // must seed its editable state from this, not `image` (a thumbnail
+  // rendition meant for list/grid display), or an unrelated save silently
+  // downgrades the step's stored image to that small thumbnail.
+  rawImage: string | null
   videoUrl: string | null
   paints: GuidesV3DeckStepPaint[]
 }
@@ -40,6 +45,10 @@ export type GuidesV3DeckDetail = GuidesV3Deck & {
   ownerLabel: string
   steps: GuidesV3DeckStep[]
   paintList: GuidesV3DeckPaint[]
+  // The untransformed source image (recipes.image_url / image_assets) -
+  // see GuidesV3DeckStep.rawImage for why the editor must use this instead
+  // of `image` (a small thumbnail rendition) when seeding editable state.
+  fullImage: string | null
   // The guide (if any) that currently wraps this deck - null/absent for a
   // deck that has never gone public (no auto-created guide yet). Every
   // guide wraps exactly one deck for now, so this is at most one guide;
@@ -483,6 +492,7 @@ export const getGuidesV3DeckDetail = cache(
         image: !usesCompatVideoUrl && step.image_url
           ? getGuideDeckThumbnail(step.image_url, fallbackImage)
           : null,
+        rawImage: !usesCompatVideoUrl ? step.image_url : null,
         videoUrl,
         paints: paintsByStepId.get(step.id) ?? [],
       }
@@ -496,6 +506,7 @@ export const getGuidesV3DeckDetail = cache(
       paints: paints.length,
       usedIn: 0,
       image: getGuideDeckThumbnail(rawImage, fallbackImage),
+      fullImage: rawImage,
       saved: typedRecipe.user_id === userId,
       isOwner: typedRecipe.user_id === userId,
       accent: accentFor(typedRecipe.id),
