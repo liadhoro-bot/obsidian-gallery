@@ -45,14 +45,19 @@ export default function FirstProjectScreen({
     }
 
     startTransition(async () => {
-      const result = await createFirstProjectUnitAction(formData)
+      try {
+        const result = await createFirstProjectUnitAction(formData)
 
-      if (!result.ok) {
-        setError(result.error)
-        return
+        if (!result.ok) {
+          setError(result.error)
+          return
+        }
+
+        onCreated(result.unitId)
+      } catch (caughtError) {
+        console.error('Error creating first project unit:', caughtError)
+        setError('Could not create your project. Please try again.')
       }
-
-      onCreated(result.unitId)
     })
   }
 

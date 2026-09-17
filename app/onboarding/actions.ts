@@ -407,58 +407,64 @@ export async function createFirstProjectUnitAction(
     const maxSize = 8 * 1024 * 1024
 
     if (isAllowedImage && image.size <= maxSize) {
-      const extension = getSafeImageExtension(image.name || getFileExtension(image))
-      const safeProjectName = slugify(projectName) || 'project'
-      const safeUnitName = slugify(unitName) || 'unit'
+      // The photo is optional context for the unit; a flaky upload (common on
+      // mobile/cellular given the larger payload) must not fail unit creation.
+      try {
+        const extension = getSafeImageExtension(image.name || getFileExtension(image))
+        const safeProjectName = slugify(projectName) || 'project'
+        const safeUnitName = slugify(unitName) || 'unit'
 
-      const storagePath = [
-        user.id,
-        'onboarding',
-        project.id,
-        unit.id,
-        `${Date.now()}-${safeProjectName}-${safeUnitName}.${extension}`,
-      ].join('/')
+        const storagePath = [
+          user.id,
+          'onboarding',
+          project.id,
+          unit.id,
+          `${Date.now()}-${safeProjectName}-${safeUnitName}.${extension}`,
+        ].join('/')
 
-      const { error: uploadError } = await supabase.storage
-        .from(IMAGE_BUCKET)
-        .upload(storagePath, image, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: image.type,
-        })
-
-      if (uploadError) {
-        console.error('Onboarding image upload failed:', uploadError)
-      } else {
-        perf.mark('image upload flow')
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(storagePath)
-
-        const { error: imageAssetError } = await supabase
-          .from('image_assets')
-          .insert({
-            user_id: user.id,
-            entity_type: 'unit',
-            entity_id: unit.id,
-            image_url: publicUrl,
-            storage_path: storagePath,
-            alt_text: unitName,
-            is_featured: true,
-            is_primary: true,
-            sort_order: 0,
-            storage_bucket: IMAGE_BUCKET,
+        const { error: uploadError } = await supabase.storage
+          .from(IMAGE_BUCKET)
+          .upload(storagePath, image, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: image.type,
           })
 
-        if (imageAssetError) {
-          console.error(
-            'Failed to create onboarding image asset:',
-            imageAssetError
-          )
+        if (uploadError) {
+          console.error('Onboarding image upload failed:', uploadError)
         } else {
-          persistedUnitImage = true
+          perf.mark('image upload flow')
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(storagePath)
+
+          const { error: imageAssetError } = await supabase
+            .from('image_assets')
+            .insert({
+              user_id: user.id,
+              entity_type: 'unit',
+              entity_id: unit.id,
+              image_url: publicUrl,
+              storage_path: storagePath,
+              alt_text: unitName,
+              is_featured: true,
+              is_primary: true,
+              sort_order: 0,
+              storage_bucket: IMAGE_BUCKET,
+            })
+
+          if (imageAssetError) {
+            console.error(
+              'Failed to create onboarding image asset:',
+              imageAssetError
+            )
+          } else {
+            persistedUnitImage = true
+          }
+          perf.mark('image/gallery queries')
         }
-        perf.mark('image/gallery queries')
+      } catch (uploadException) {
+        console.error('Onboarding image upload threw:', uploadException)
       }
     }
   }

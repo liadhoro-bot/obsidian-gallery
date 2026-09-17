@@ -42,14 +42,19 @@ export default function GuideCreationScreen({
     }
 
     startTransition(async () => {
-      const result = await createOnboardingGuideAction(formData)
+      try {
+        const result = await createOnboardingGuideAction(formData)
 
-      if (!result.ok) {
-        setError(result.error)
-        return
+        if (!result.ok) {
+          setError(result.error)
+          return
+        }
+
+        onCreated(result.guideId)
+      } catch (caughtError) {
+        console.error('Error creating onboarding guide:', caughtError)
+        setError('Could not create your guide. Please try again.')
       }
-
-      onCreated(result.guideId)
     })
   }
 
