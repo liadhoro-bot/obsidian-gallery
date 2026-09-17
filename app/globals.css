@@ -62,7 +62,10 @@ body {
 @media (display-mode: standalone), (display-mode: fullscreen) {
   html,
   body {
-    overscroll-behavior-y: none;
+    /* `none` on both html and body is a known trigger for iOS WebKit fully
+       disabling scroll in standalone PWAs. `contain` still stops scroll
+       chaining into pull-to-refresh/back-swipe without that failure mode. */
+    overscroll-behavior-y: contain;
   }
 }
 
