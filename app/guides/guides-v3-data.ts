@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
+import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 
 export type GuidesV3GuideFile = {
   id: string
@@ -150,7 +151,19 @@ export function getGuideDeckThumbnail(
   if (value.startsWith('/')) return value
   try {
     const url = new URL(value)
-    return `/api/guides/v3-thumbnail?src=${encodeURIComponent(url.toString())}`
+    // Route straight through Supabase's own image-transform endpoint
+    // (already allow-listed via next.config.ts remotePatterns) rather than
+    // our own /api/guides/v3-thumbnail proxy - next/image invokes a local
+    // route's handler in-process instead of over the network, and that
+    // path was returning a response its own image-type sniffing rejected.
+    return (
+      getSupabaseImageUrl(url.toString(), {
+        width: 112,
+        height: 112,
+        quality: 58,
+        resize: 'cover',
+      }) ?? fallback
+    )
   } catch {
     return safeLocalImage(value, fallback)
   }
