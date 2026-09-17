@@ -55,10 +55,16 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok || !response.body) return fallback(request)
 
-    return new Response(response.body, {
+    // Next's built-in image optimizer rejects sources served without a
+    // Content-Length (INVALID_IMAGE_OPTIMIZE_REQUEST), so the body must be
+    // buffered rather than streamed through.
+    const body = await response.arrayBuffer()
+
+    return new Response(body, {
       headers: {
         'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
         'Content-Type': response.headers.get('Content-Type') ?? 'image/jpeg',
+        'Content-Length': String(body.byteLength),
       },
     })
   } catch {
