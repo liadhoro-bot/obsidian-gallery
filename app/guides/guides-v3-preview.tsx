@@ -1803,7 +1803,7 @@ function GuideDeckSelectRow({
       className="grid w-full grid-cols-[52px_1fr_auto] items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.035]"
     >
       <span className="relative h-12 w-12 overflow-hidden rounded-[8px] bg-black">
-        <Image src={deck.image} alt="" fill sizes="48px" className="object-cover" />
+        <Image unoptimized src={deck.image} alt="" fill sizes="48px" className="object-cover" />
         <span
           className="absolute inset-x-0 bottom-0 h-1"
           style={{ backgroundColor: deck.accent }}
@@ -1866,7 +1866,7 @@ function GuideComposeScreen({
     <section className="grid gap-4">
       <section className="overflow-hidden rounded-[12px] border border-white/10 bg-[#111821]">
         <div className="relative h-40 bg-black">
-          <Image
+          <Image unoptimized
             src={image}
             alt=""
             fill
@@ -1947,7 +1947,7 @@ function GuideComposeScreen({
                     : 'var(--og-border-subtle)',
               }}
             >
-              <Image src={deck.image} alt="" fill sizes="25vw" className="object-cover" />
+              <Image unoptimized src={deck.image} alt="" fill sizes="25vw" className="object-cover" />
             </button>
           ))}
         </div>
@@ -1972,7 +1972,7 @@ function GuideComposeScreen({
                 {String(index + 1).padStart(2, '0')}
               </span>
               <span className="relative h-12 w-12 overflow-hidden rounded-[8px] bg-black">
-                <Image src={deck.image} alt="" fill sizes="48px" className="object-cover" />
+                <Image unoptimized src={deck.image} alt="" fill sizes="48px" className="object-cover" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-black text-[color:var(--og-text-primary)]">
@@ -2080,7 +2080,7 @@ function ChoiceCard({
       className="grid grid-cols-[72px_1fr_auto] items-center gap-3 rounded-[10px] border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-cyan-300/45"
     >
       <span className="relative h-16 overflow-hidden rounded-[8px] bg-black">
-        <Image src={image} alt="" fill sizes="72px" className="object-cover" />
+        <Image unoptimized src={image} alt="" fill sizes="72px" className="object-cover" />
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{title}</span>
@@ -2273,7 +2273,7 @@ function ProjectSourceScreen({
                 <CheckIcon />
               </span>
               <span className="relative h-10 w-10 overflow-hidden rounded-[6px] bg-black">
-                <Image src={unit.image} alt="" fill sizes="40px" className="object-cover" />
+                <Image unoptimized src={unit.image} alt="" fill sizes="40px" className="object-cover" />
               </span>
               <span className="min-w-0">
                 <span className="block text-sm font-black">{unit.title}</span>
@@ -2318,7 +2318,7 @@ function PhotoSourceScreen({
                 selected ? 'border-cyan-300' : 'border-white/10',
               ].join(' ')}
             >
-              <Image src={photo} alt="" fill sizes="33vw" className="object-cover" />
+              <Image unoptimized src={photo} alt="" fill sizes="33vw" className="object-cover" />
               <span className="absolute bottom-2 left-1/2 grid h-6 w-6 -translate-x-1/2 place-items-center rounded-full bg-black/70 text-xs font-black">
                 {index + 1}
               </span>
@@ -2611,7 +2611,7 @@ function DeckEditorHero({
     >
       <div className="relative h-56 bg-black">
         {heroImage ? (
-          <Image
+          <Image unoptimized
             src={heroImage.url}
             alt=""
             fill
@@ -2786,7 +2786,7 @@ function DeckGalleryPanel({
               className="overflow-hidden rounded-[8px] border border-white/10 bg-black"
             >
               <div className="relative h-24">
-                <Image
+                <Image unoptimized
                   src={image.url}
                   alt=""
                   fill
@@ -2957,7 +2957,7 @@ function DeckPreview({ deck }: { deck: ForgeDeck }) {
             className="overflow-hidden rounded-[10px] border border-white/10 bg-white/[0.035]"
           >
             <div className="relative h-36 bg-black">
-              <Image
+              <Image unoptimized
                 src={card.image}
                 alt=""
                 fill
@@ -3005,7 +3005,7 @@ function DeckEditorScreen({
       <section className="rounded-[10px] border border-white/10 bg-[#111821] p-4">
         <div className="grid grid-cols-[64px_1fr] gap-3">
           <span className="relative h-16 overflow-hidden rounded-[8px] bg-black">
-            <Image
+            <Image unoptimized
               src="/onboarding/pains/pile-of-shame.jpeg"
               alt=""
               fill
@@ -3089,7 +3089,7 @@ function AddCardSheet({
               className="grid grid-cols-[64px_1fr] gap-3 rounded-[10px] border border-white/10 bg-white/[0.04] p-3 text-left"
             >
               <span className="relative h-16 overflow-hidden rounded-[8px] bg-black">
-                <Image
+                <Image unoptimized
                   src="/onboarding/pains/paint-management.jpeg"
                   alt=""
                   fill
@@ -3659,7 +3659,7 @@ function GuideGridTile({
     <>
       <span data-v3-guides-indicator="guide-grid-image">
         <span>
-          <Image src={image} alt="" fill sizes="33vw" className="object-cover" />
+          <Image unoptimized src={image} alt="" fill sizes="33vw" className="object-cover" />
         </span>
       </span>
       <span data-v3-guides-indicator="guide-grid-name">{title}</span>
@@ -3707,7 +3707,7 @@ function GuideFileCard({
     <>
       <div className="grid grid-cols-[110px_1fr] gap-3 p-3">
         <div className="relative min-h-[116px] overflow-hidden rounded-[8px] bg-black">
-          <Image
+          <Image unoptimized
             src={guide.image}
             alt=""
             fill
@@ -3763,7 +3763,7 @@ function CompactGuideCard({ guide }: { guide: GuideFile }) {
       className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.035]"
     >
       <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[8px] bg-black">
-        <Image src={guide.image} alt="" fill sizes="56px" className="object-cover" />
+        <Image unoptimized src={guide.image} alt="" fill sizes="56px" className="object-cover" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-black text-white">
@@ -3800,7 +3800,7 @@ function DeckRow({
   const primaryContent = (
     <>
       <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-black">
-        <Image src={deck.image} alt="" fill sizes="48px" className="object-cover" />
+        <Image unoptimized src={deck.image} alt="" fill sizes="48px" className="object-cover" />
         <span
           className="absolute inset-x-0 bottom-0 h-1"
           style={{ backgroundColor: deck.accent }}
@@ -3946,7 +3946,7 @@ function SelectableMediaRow({
       ].join(' ')}
     >
       <span className="relative h-16 overflow-hidden rounded-[8px] bg-black">
-        <Image src={image} alt="" fill sizes="64px" className="object-cover" />
+        <Image unoptimized src={image} alt="" fill sizes="64px" className="object-cover" />
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-black text-white">
