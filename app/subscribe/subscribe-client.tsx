@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import styles from './subscribe-silver.module.css'
 
 // Must match the string posted from app/payment-success/page.tsx.
 const PAYMENT_SUCCESS_MESSAGE = 'obsidian-gallery:grow-payment-success'
@@ -8,6 +9,47 @@ const POLL_INTERVAL_MS = 3000
 const POLL_TIMEOUT_MS = 120000
 
 type Status = 'idle' | 'creating' | 'waiting' | 'error'
+
+function MailIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M4 6.5l8 6.5 8-6.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function PersonIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="8" r="3.4" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M5 19.5c1.2-3.4 4-5 7-5s5.8 1.6 7 5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function PhoneIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 4.5h3l1.4 4-2 1.6a11 11 0 0 0 5.5 5.5l1.6-2 4 1.4v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 6.7 2 2 0 0 1 6 4.5Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function LockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 export default function SubscribeClient({
   email,
@@ -127,61 +169,81 @@ export default function SubscribeClient({
   }
 
   return (
-    <div className="mt-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div>
+      <form onSubmit={handleSubmit} className={styles.formLight}>
         <div>
-          <label className="mb-2 block text-sm text-neutral-300">Email</label>
-          <input
-            type="email"
-            value={email}
-            disabled
-            className="min-h-11 w-full rounded-xl border border-neutral-700 bg-neutral-800 px-3 py-2 text-neutral-400"
-          />
+          <label className={styles.fieldLabel}>Email</label>
+          <div className={styles.inputWrap}>
+            <span className={styles.inputIcon}>
+              <MailIcon />
+            </span>
+            <input
+              type="email"
+              value={email}
+              disabled
+              className={styles.inputLight}
+            />
+          </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-neutral-300">Full name</label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            required
-            minLength={3}
-            autoComplete="name"
-            className="min-h-11 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-            placeholder="First Last"
-          />
+          <label className={styles.fieldLabel}>Full name</label>
+          <div className={styles.inputWrap}>
+            <span className={styles.inputIcon}>
+              <PersonIcon />
+            </span>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+              required
+              minLength={3}
+              autoComplete="name"
+              className={styles.inputLight}
+              placeholder="First Last"
+            />
+          </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm text-neutral-300">Mobile phone</label>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            required
-            pattern="0\d{8,9}"
-            autoComplete="tel"
-            inputMode="numeric"
-            className="min-h-11 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-white"
-            placeholder="0501234567"
-          />
+          <label className={styles.fieldLabel}>Mobile phone</label>
+          <div className={styles.inputWrap}>
+            <span className={styles.inputIcon}>
+              <PhoneIcon />
+            </span>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              required
+              pattern="0\d{8,9}"
+              autoComplete="tel"
+              inputMode="numeric"
+              className={styles.inputLight}
+              placeholder="0501234567"
+            />
+          </div>
         </div>
 
         <button
           type="submit"
           disabled={status === 'creating' || status === 'waiting'}
-          className="tap-press tap-target inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-3 font-medium text-black disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-white/60 disabled:opacity-70"
+          className={`tap-press tap-target ${styles.ctaGold}`}
         >
           {status === 'creating'
             ? 'Opening payment...'
             : status === 'waiting'
               ? 'Waiting for payment...'
-              : 'Pay & unlock the app'}
+              : "Claim my Founder's Pass - ₪15"}
         </button>
       </form>
 
-      {message ? <p className="mt-4 text-sm text-neutral-300">{message}</p> : null}
+      <p className={styles.secureNote}>
+        <LockIcon />
+        Secure checkout on the next screen
+      </p>
+
+      {message ? <p className={styles.statusMessage}>{message}</p> : null}
     </div>
   )
 }
