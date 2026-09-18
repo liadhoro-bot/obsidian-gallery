@@ -81,16 +81,13 @@ export async function createStandaloneUnitAction(
   const modelCount = Number(modelCountValue || '1')
 
   let persistedUnitImage = false
+  const imageValidationError =
+    image instanceof File && image.size > 0
+      ? validateGalleryImageFile(image)
+      : null
 
-  if (image instanceof File && image.size > 0) {
-    const validationError = validateGalleryImageFile(image)
-
-    if (validationError) {
-      return {
-        ok: false,
-        error: validationError,
-      }
-    }
+  if (imageValidationError) {
+    console.error('Skipping invalid unit image:', imageValidationError)
   }
 
   let linkedProjectIds: string[] = []
@@ -199,51 +196,54 @@ export async function createStandaloneUnitAction(
     },
   })
 
-  if (image instanceof File && image.size > 0) {
-    const fileExt = getSafeImageExtension(image.name)
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
-    const filePath = `units/${unit.id}/${fileName}`
+  if (image instanceof File && image.size > 0 && !imageValidationError) {
+    // The photo is optional context for the unit; a flaky upload must not
+    // fail unit creation now that the project/unit rows already exist.
+    try {
+      const fileExt = getSafeImageExtension(image.name)
+      const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+      const filePath = `units/${unit.id}/${fileName}`
 
-    const { error: uploadError } = await supabase.storage
-      .from('obsidian-images')
-      .upload(filePath, image, {
-        contentType: image.type,
-        upsert: false,
-      })
+      const { error: uploadError } = await supabase.storage
+        .from('obsidian-images')
+        .upload(filePath, image, {
+          contentType: image.type,
+          upsert: false,
+        })
 
-    if (uploadError) {
-      return {
-        ok: false,
-        error: uploadError.message,
+      if (uploadError) {
+        console.error('Unit image upload failed:', uploadError)
+      } else {
+        const { data } = supabase.storage
+          .from('obsidian-images')
+          .getPublicUrl(filePath)
+
+        const { error: imageError } = await supabase
+          .from('image_assets')
+          .insert({
+            user_id: user.id,
+            entity_type: 'unit',
+            entity_id: unit.id,
+            image_url: data.publicUrl,
+            alt_text: unitName,
+            is_featured: true,
+            is_primary: true,
+            sort_order: 0,
+            storage_bucket: 'obsidian-images',
+            storage_path: filePath,
+          })
+
+        if (imageError) {
+          await supabase.storage.from('obsidian-images').remove([filePath])
+          console.error('Failed to create unit image asset:', imageError)
+        } else {
+          persistedUnitImage = true
+        }
       }
+      perf.mark('image upload flow')
+    } catch (uploadException) {
+      console.error('Unit image upload threw:', uploadException)
     }
-
-    const { data } = supabase.storage
-      .from('obsidian-images')
-      .getPublicUrl(filePath)
-
-    const { error: imageError } = await supabase.from('image_assets').insert({
-      user_id: user.id,
-      entity_type: 'unit',
-      entity_id: unit.id,
-      image_url: data.publicUrl,
-      alt_text: unitName,
-      is_featured: true,
-      is_primary: true,
-      sort_order: 0,
-      storage_bucket: 'obsidian-images',
-      storage_path: filePath,
-    })
-
-    if (imageError) {
-      await supabase.storage.from('obsidian-images').remove([filePath])
-      return {
-        ok: false,
-        error: imageError.message,
-      }
-    }
-    persistedUnitImage = true
-    perf.mark('image upload flow')
   }
 
   await completeOnboardingActions({

@@ -74,45 +74,51 @@ export async function addProject(formData: FormData) {
     const validationError = validateGalleryImageFile(imageFile)
 
     if (validationError) {
-      throw new Error(validationError)
-    }
+      console.error('Skipping invalid project image:', validationError)
+    } else {
+      // The photo is optional context for the project; a flaky upload must
+      // not fail project creation now that the project row already exists.
+      try {
+        const fileExt = getSafeImageExtension(imageFile.name)
+        const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+        const filePath = `projects/${newProject.id}/${fileName}`
 
-    const fileExt = getSafeImageExtension(imageFile.name)
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
-    const filePath = `projects/${newProject.id}/${fileName}`
+        const { error: uploadError } = await supabase.storage
+          .from('obsidian-images')
+          .upload(filePath, imageFile, {
+            contentType: imageFile.type,
+            upsert: false,
+          })
 
-    const { error: uploadError } = await supabase.storage
-      .from('obsidian-images')
-      .upload(filePath, imageFile, {
-        contentType: imageFile.type,
-        upsert: false,
-      })
+        if (uploadError) {
+          console.error('Project image upload failed:', uploadError)
+        } else {
+          const { data } = supabase.storage
+            .from('obsidian-images')
+            .getPublicUrl(filePath)
 
-    if (uploadError) {
-      throw new Error(uploadError.message)
-    }
+          const { error: imageError } = await supabase
+            .from('image_assets')
+            .insert({
+              user_id: user.id,
+              entity_type: 'project',
+              entity_id: newProject.id,
+              image_url: data.publicUrl,
+              alt_text: name,
+              is_featured: true,
+              is_primary: true,
+              storage_bucket: 'obsidian-images',
+              storage_path: filePath,
+            })
 
-    const { data } = supabase.storage
-      .from('obsidian-images')
-      .getPublicUrl(filePath)
-
-    const publicUrl = data.publicUrl
-
-    const { error: imageError } = await supabase.from('image_assets').insert({
-      user_id: user.id,
-      entity_type: 'project',
-      entity_id: newProject.id,
-      image_url: publicUrl,
-      alt_text: name,
-      is_featured: true,
-      is_primary: true,
-      storage_bucket: 'obsidian-images',
-      storage_path: filePath,
-    })
-
-    if (imageError) {
-      await supabase.storage.from('obsidian-images').remove([filePath])
-      throw new Error(imageError.message)
+          if (imageError) {
+            await supabase.storage.from('obsidian-images').remove([filePath])
+            console.error('Failed to create project image asset:', imageError)
+          }
+        }
+      } catch (uploadException) {
+        console.error('Project image upload threw:', uploadException)
+      }
     }
   }
 
@@ -164,15 +170,13 @@ export async function createProjectsPageProjectAction(
     }
   }
 
-  if (imageFile instanceof File && imageFile.size > 0) {
-    const validationError = validateGalleryImageFile(imageFile)
+  const imageValidationError =
+    imageFile instanceof File && imageFile.size > 0
+      ? validateGalleryImageFile(imageFile)
+      : null
 
-    if (validationError) {
-      return {
-        ok: false,
-        error: validationError,
-      }
-    }
+  if (imageValidationError) {
+    console.error('Skipping invalid project image:', imageValidationError)
   }
 
   const { data: newProject, error } = await supabase
@@ -192,45 +196,53 @@ export async function createProjectsPageProjectAction(
     }
   }
 
-  if (imageFile instanceof File && imageFile.size > 0) {
-    const fileExt = getSafeImageExtension(imageFile.name)
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
-    const filePath = `projects/${newProject.id}/${fileName}`
+  let persistedProjectImage = false
 
-    const { error: uploadError } = await supabase.storage
-      .from(IMAGE_BUCKET)
-      .upload(filePath, imageFile, {
-        contentType: imageFile.type,
-        upsert: false,
-      })
+  if (imageFile instanceof File && imageFile.size > 0 && !imageValidationError) {
+    // The photo is optional context for the project; a flaky upload must not
+    // fail project creation now that the project row already exists.
+    try {
+      const fileExt = getSafeImageExtension(imageFile.name)
+      const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+      const filePath = `projects/${newProject.id}/${fileName}`
 
-    if (uploadError) {
-      return {
-        ok: false,
-        error: uploadError.message,
+      const { error: uploadError } = await supabase.storage
+        .from(IMAGE_BUCKET)
+        .upload(filePath, imageFile, {
+          contentType: imageFile.type,
+          upsert: false,
+        })
+
+      if (uploadError) {
+        console.error('Project image upload failed:', uploadError)
+      } else {
+        const { data } = supabase.storage
+          .from(IMAGE_BUCKET)
+          .getPublicUrl(filePath)
+
+        const { error: imageError } = await supabase
+          .from('image_assets')
+          .insert({
+            user_id: user.id,
+            entity_type: 'project',
+            entity_id: newProject.id,
+            image_url: data.publicUrl,
+            alt_text: name,
+            is_featured: true,
+            is_primary: true,
+            storage_bucket: IMAGE_BUCKET,
+            storage_path: filePath,
+          })
+
+        if (imageError) {
+          await supabase.storage.from(IMAGE_BUCKET).remove([filePath])
+          console.error('Failed to create project image asset:', imageError)
+        } else {
+          persistedProjectImage = true
+        }
       }
-    }
-
-    const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(filePath)
-
-    const { error: imageError } = await supabase.from('image_assets').insert({
-      user_id: user.id,
-      entity_type: 'project',
-      entity_id: newProject.id,
-      image_url: data.publicUrl,
-      alt_text: name,
-      is_featured: true,
-      is_primary: true,
-      storage_bucket: IMAGE_BUCKET,
-      storage_path: filePath,
-    })
-
-    if (imageError) {
-      await supabase.storage.from(IMAGE_BUCKET).remove([filePath])
-      return {
-        ok: false,
-        error: imageError.message,
-      }
+    } catch (uploadException) {
+      console.error('Project image upload threw:', uploadException)
     }
   }
 
@@ -245,7 +257,7 @@ export async function createProjectsPageProjectAction(
     event: 'project_created',
     properties: {
       project_id: newProject.id,
-      has_image: imageFile instanceof File && imageFile.size > 0,
+      has_image: persistedProjectImage,
       source: 'projects_page',
     },
   })
@@ -299,15 +311,13 @@ export async function createProjectsPageUnitAction(
     }
   }
 
-  if (imageFile instanceof File && imageFile.size > 0) {
-    const validationError = validateGalleryImageFile(imageFile)
+  const imageValidationError =
+    imageFile instanceof File && imageFile.size > 0
+      ? validateGalleryImageFile(imageFile)
+      : null
 
-    if (validationError) {
-      return {
-        ok: false,
-        error: validationError,
-      }
-    }
+  if (imageValidationError) {
+    console.error('Skipping invalid unit image:', imageValidationError)
   }
 
   if (linkedProjectId) {
@@ -391,46 +401,54 @@ export async function createProjectsPageUnitAction(
     }
   }
 
-  if (imageFile instanceof File && imageFile.size > 0) {
-    const fileExt = getSafeImageExtension(imageFile.name)
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
-    const filePath = `units/${unit.id}/${fileName}`
+  let persistedUnitImage = false
 
-    const { error: uploadError } = await supabase.storage
-      .from(IMAGE_BUCKET)
-      .upload(filePath, imageFile, {
-        contentType: imageFile.type,
-        upsert: false,
-      })
+  if (imageFile instanceof File && imageFile.size > 0 && !imageValidationError) {
+    // The photo is optional context for the unit; a flaky upload must not
+    // fail unit creation now that the project/unit rows already exist.
+    try {
+      const fileExt = getSafeImageExtension(imageFile.name)
+      const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+      const filePath = `units/${unit.id}/${fileName}`
 
-    if (uploadError) {
-      return {
-        ok: false,
-        error: uploadError.message,
+      const { error: uploadError } = await supabase.storage
+        .from(IMAGE_BUCKET)
+        .upload(filePath, imageFile, {
+          contentType: imageFile.type,
+          upsert: false,
+        })
+
+      if (uploadError) {
+        console.error('Unit image upload failed:', uploadError)
+      } else {
+        const { data } = supabase.storage
+          .from(IMAGE_BUCKET)
+          .getPublicUrl(filePath)
+
+        const { error: imageError } = await supabase
+          .from('image_assets')
+          .insert({
+            user_id: user.id,
+            entity_type: 'unit',
+            entity_id: unit.id,
+            image_url: data.publicUrl,
+            alt_text: name,
+            is_featured: true,
+            is_primary: true,
+            sort_order: 0,
+            storage_bucket: IMAGE_BUCKET,
+            storage_path: filePath,
+          })
+
+        if (imageError) {
+          await supabase.storage.from(IMAGE_BUCKET).remove([filePath])
+          console.error('Failed to create unit image asset:', imageError)
+        } else {
+          persistedUnitImage = true
+        }
       }
-    }
-
-    const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(filePath)
-
-    const { error: imageError } = await supabase.from('image_assets').insert({
-      user_id: user.id,
-      entity_type: 'unit',
-      entity_id: unit.id,
-      image_url: data.publicUrl,
-      alt_text: name,
-      is_featured: true,
-      is_primary: true,
-      sort_order: 0,
-      storage_bucket: IMAGE_BUCKET,
-      storage_path: filePath,
-    })
-
-    if (imageError) {
-      await supabase.storage.from(IMAGE_BUCKET).remove([filePath])
-      return {
-        ok: false,
-        error: imageError.message,
-      }
+    } catch (uploadException) {
+      console.error('Unit image upload threw:', uploadException)
     }
   }
 
@@ -456,7 +474,7 @@ export async function createProjectsPageUnitAction(
       unit_id: unit.id,
       project_id: linkedProjectId,
       created_new_project: Boolean(createdProjectId),
-      has_image: imageFile instanceof File && imageFile.size > 0,
+      has_image: persistedUnitImage,
       source: 'projects_page',
     },
   })
