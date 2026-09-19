@@ -121,6 +121,10 @@
   bottom: 0;
   padding: 28px 20px 20px;
   color: var(--og-paper-50);
+  /* Grows upward with a long wrapped title - must not eat clicks meant
+     for the Back/Save buttons in .heroTop above it (see deck editor
+     "save button unusable after editing the title" bug). */
+  pointer-events: none;
 }
 
 .eyebrow,
