@@ -15,6 +15,7 @@ import {
   deleteUnitImage,
   deleteUnit,
   scheduleUnitSession,
+  updateUnitScheduledSession,
   setFeaturedUnitImage,
   startUnitSession,
   toggleStepDone,
@@ -23,7 +24,11 @@ import {
   updateUnitStatus,
   uploadUnitGalleryImages,
 } from './actions'
-import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import {
+  MAX_GALLERY_IMAGE_BYTES,
+  getOversizedImageMessage,
+  type GalleryUploadResult,
+} from '../../../utils/images/gallery-upload'
 import ProjectPaletteStarter from '../../projects/[id]/project-palette-starter'
 import styles from './unit-v3-silver.module.css'
 
@@ -290,6 +295,8 @@ type ScheduledPaintSession = {
   focus: string
   notes: string
   notify: boolean
+  reminderHoursBefore?: number
+  reminderChannel?: 'push' | 'email'
 }
 
 const fallbackPaintSessions: UnitPaintSession[] = [
@@ -1310,10 +1317,23 @@ function UnitV3GalleryCard({
     event: ChangeEvent<HTMLInputElement>,
     source: 'gallery_picker' | 'camera'
   ) {
-    setUploadError(null)
     setActionError(null)
     setUploadSource(source)
-    setSelectedFiles(Array.from(event.target.files ?? []))
+
+    const files = Array.from(event.target.files ?? [])
+    const oversizedFile = files.find(
+      (file) => file.size > MAX_GALLERY_IMAGE_BYTES
+    )
+
+    if (oversizedFile) {
+      setUploadError(getOversizedImageMessage())
+      setSelectedFiles([])
+      event.target.value = ''
+      return
+    }
+
+    setUploadError(null)
+    setSelectedFiles(files)
   }
 
   function removePendingFile(indexToRemove: number) {
@@ -2066,10 +2086,6 @@ function dateFromDateKey(dateKey: string) {
   return new Date(Number(year), Number(month) - 1, Number(day))
 }
 
-function addDays(date: Date, days: number) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
-}
-
 function addMonths(date: Date, months: number) {
   return new Date(date.getFullYear(), date.getMonth() + months, 1)
 }
@@ -2138,6 +2154,48 @@ function getInitialPaintDateKey() {
   return getLocalDateKey(new Date())
 }
 
+function getSessionSuggestions(unit: PreviewUnit) {
+  const steps = unit.progressSteps?.slice().sort((a, b) => a.step_order - b.step_order)
+  const nextStep = steps?.find((step) => step.status !== 'done')
+  const suggestions: Record<string, { focus: string; notes: string }> = {
+    assembled: {
+      focus: 'Prepare the bits and parts for assembly',
+      notes: 'Check the assembly instructions, clean mold lines, and dry-fit the parts before gluing.',
+    },
+    primed: {
+      focus: 'Prime the assembled miniature',
+      notes: 'Check for gaps and dust, choose a primer, and allow the coat to dry before painting.',
+    },
+    initial_paints: {
+      focus: 'Block in the main colors',
+      notes: 'Set out the base colors and apply thin coats to the main areas of the miniature.',
+    },
+    fine_details: {
+      focus: 'Paint the fine details and highlights',
+      notes: 'Work through shadows, highlights, lenses, and markings, then clean up stray brush marks.',
+    },
+    base_rim: {
+      focus: 'Finish the base and rim',
+      notes: 'Finish the base texture, add the final details, and tidy the rim color.',
+    },
+    done: {
+      focus: 'Review the miniature and take finished photos',
+      notes: 'Check for final touch-ups, photograph the finished miniature, and update the project notes.',
+    },
+  }
+
+  if (nextStep) {
+    return suggestions[nextStep.step_key] ?? {
+      focus: `Work on ${nextStep.step_label}`,
+      notes: `Prepare the tools and materials for ${nextStep.step_label.toLowerCase()}.`,
+    }
+  }
+
+  return steps?.length || unit.rawStatus === 'complete'
+    ? suggestions.done
+    : suggestions.assembled
+}
+
 function PaintTab({ unit }: { unit: PreviewUnit }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -2154,13 +2212,11 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
   const [isScheduleOpen, setIsScheduleOpen] = useState(false)
   const [scheduleTime, setScheduleTime] = useState('19:30')
   const [scheduleDuration, setScheduleDuration] = useState('60')
-  const [scheduleFocus, setScheduleFocus] = useState(
-    'Prime and first controlled basecoat'
-  )
-  const [scheduleNotes, setScheduleNotes] = useState(
-    'Set paints out before starting.'
-  )
+  const [scheduleFocus, setScheduleFocus] = useState(() => getSessionSuggestions(unit).focus)
+  const [scheduleNotes, setScheduleNotes] = useState(() => getSessionSuggestions(unit).notes)
   const [scheduleNotify, setScheduleNotify] = useState(false)
+  const [reminderHoursBefore, setReminderHoursBefore] = useState(1)
+  const [reminderChannel, setReminderChannel] = useState<'push' | 'email'>('email')
   const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [startPaintingError, setStartPaintingError] = useState<string | null>(
     null
@@ -2178,12 +2234,10 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
   const selectedScheduledSessions = scheduledByDate.get(selectedDateKey) ?? []
   const selectedScheduledSession = selectedScheduledSessions[0]
   const todayKey = getLocalDateKey(new Date())
-  const isFutureSelection =
-    selectedDateKey > todayKey && selectedLoggedSessions.length === 0
-  const nextSchedulableDay =
-    selectedDateKey > todayKey
-      ? selectedDateKey
-      : getLocalDateKey(addDays(new Date(), 1))
+  const isSchedulableSelection =
+    selectedDateKey >= todayKey && selectedLoggedSessions.length === 0
+  const defaultScheduleDateKey =
+    selectedDateKey > todayKey ? selectedDateKey : todayKey
   const lastPaintedDateKey = unit.lastPainted ?? loggedSessions[0]?.dateKey
   const lastPaintedLabel = lastPaintedDateKey
     ? `Last ${formatDateLabel(lastPaintedDateKey)}`
@@ -2197,7 +2251,7 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
     setSelectedDateKey(dateKey)
   }
 
-  function openScheduleForm(dateKey = nextSchedulableDay) {
+  function openScheduleForm(dateKey = defaultScheduleDateKey) {
     const scheduledSession = scheduledSessions.find(
       (session) => session.dateKey === dateKey
     )
@@ -2209,12 +2263,17 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
       setScheduleFocus(scheduledSession.focus)
       setScheduleNotes(scheduledSession.notes)
       setScheduleNotify(scheduledSession.notify)
+      setReminderHoursBefore(scheduledSession.reminderHoursBefore ?? 1)
+      setReminderChannel(scheduledSession.reminderChannel ?? 'email')
     } else {
+      const suggestions = getSessionSuggestions(unit)
       setScheduleTime('19:30')
       setScheduleDuration('60')
-      setScheduleFocus('Prime and first controlled basecoat')
-      setScheduleNotes('Set paints out before starting.')
+      setScheduleFocus(suggestions.focus)
+      setScheduleNotes(suggestions.notes)
       setScheduleNotify(false)
+      setReminderHoursBefore(1)
+      setReminderChannel('email')
     }
     setScheduleError(null)
     setIsScheduleOpen(true)
@@ -2231,6 +2290,8 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
       focus: scheduleFocus.trim() || 'Focused painting session',
       notes: scheduleNotes.trim(),
       notify: scheduleNotify,
+      reminderHoursBefore,
+      reminderChannel,
     }
 
     setScheduleError(null)
@@ -2249,11 +2310,24 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
         formData.set('unitId', unit.id)
         formData.set(
           'scheduledStartAt',
-          `${selectedDateKey}T${nextSession.time || '19:30'}:00`
+          new Date(`${selectedDateKey}T${nextSession.time || '19:30'}:00`).toISOString()
         )
         formData.set('focus', nextSession.focus)
         formData.set('notify', nextSession.notify ? 'true' : 'false')
-        await scheduleUnitSession(formData)
+        if (nextSession.notify) {
+          formData.set('reminderHoursBefore', String(nextSession.reminderHoursBefore))
+          formData.set('reminderChannel', nextSession.reminderChannel)
+        }
+        const existingId = selectedScheduledSession?.id
+        const savedSession = existingId && !existingId.startsWith('local-')
+          ? await (async () => {
+              formData.set('scheduledSessionId', existingId)
+              return updateUnitScheduledSession(formData)
+            })()
+          : await scheduleUnitSession(formData)
+        setScheduledSessions((current) => current.map((session) =>
+          session.dateKey === nextSession.dateKey ? { ...session, id: savedSession.id } : session
+        ))
         router.refresh()
       } catch (error) {
         setScheduledSessions(previousScheduledSessions)
@@ -2412,7 +2486,7 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
             const isSelected = selectedDateKey === day.dateKey
             const isToday = todayKey === day.dateKey
             const isBrassDay = hasLogged || hasScheduled || isToday
-            const isFuture = day.dateKey > todayKey
+            const isSchedulable = day.dateKey >= todayKey
 
             return (
               <button
@@ -2424,7 +2498,7 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
                     ? `${formatDateLabel(day.dateKey)}, ${loggedCount} painting session logged`
                     : hasScheduled
                       ? `Painting session scheduled on ${formatScheduleTitle(day.dateKey)}`
-                    : isFuture
+                    : isSchedulable
                       ? `Schedule painting session on ${formatScheduleTitle(day.dateKey)}`
                       : formatScheduleTitle(day.dateKey)
                 }
@@ -2436,7 +2510,7 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
                   isSelected
                     ? 'border border-[color:color-mix(in_srgb,var(--og-paper-50)_72%,var(--og-brass-500))] bg-[color:var(--og-brass-500)] text-[color:var(--og-ink-950)] shadow-[var(--og-shadow-brass-plate),0_0_0_3px_color-mix(in_srgb,var(--og-brass-500)_22%,transparent),0_0_22px_color-mix(in_srgb,var(--og-brass-500)_32%,transparent)]'
                     : 'border border-transparent',
-                  isFuture && !hasLogged
+                  isSchedulable && !hasLogged
                     ? 'hover:border-[color:color-mix(in_srgb,var(--og-brass-500)_42%,transparent)]'
                     : '',
                 ].join(' ')}
@@ -2533,7 +2607,9 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
             </div>
             <p className="mt-2 text-xs font-black text-white/36">
               {selectedScheduledSession.duration}m planned
-              {selectedScheduledSession.notify ? ' - notify enabled' : ''}
+              {selectedScheduledSession.notify
+                ? ` - ${selectedScheduledSession.reminderChannel === 'push' ? 'Notification' : 'Email'} reminder ${selectedScheduledSession.reminderHoursBefore ?? 1}h before`
+                : ''}
             </p>
             <p className="mt-3 text-sm font-black leading-5 text-white/72">
               {selectedScheduledSession.focus}
@@ -2546,10 +2622,10 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
           </div>
         ) : null}
 
-        {isFutureSelection && !selectedScheduledSession ? (
+        {isSchedulableSelection && !selectedScheduledSession ? (
           <div className="border-t border-white/[0.06] px-4 py-4">
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">
-              Future Session
+              {selectedDateKey === todayKey ? 'Today’s Session' : 'Future Session'}
             </p>
             <h3 className="mt-3 text-lg font-black text-white">
               Schedule {formatScheduleTitle(selectedDateKey)}
@@ -2586,7 +2662,7 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="schedule-session-title"
-            className="w-full max-w-md rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -2670,10 +2746,45 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
                   type="checkbox"
                   checked={scheduleNotify}
                   onChange={(event) => setScheduleNotify(event.target.checked)}
+                  aria-controls="session-reminder-options"
+                  aria-expanded={scheduleNotify}
                   className="h-4 w-4 accent-[var(--og-brass-500)]"
                 />
                 Notify me before this session
               </label>
+
+              {scheduleNotify ? (
+                <fieldset id="session-reminder-options" className="grid gap-3 rounded-[10px] border border-white/10 bg-black/24 p-4">
+                  <legend className="px-1 text-xs font-bold text-white/62">Reminder preferences</legend>
+                  <label className="grid gap-2 text-sm font-semibold text-white/72">
+                    Remind me
+                    <select
+                      value={reminderHoursBefore}
+                      onChange={(event) => setReminderHoursBefore(Number(event.target.value))}
+                      className="h-11 rounded-[8px] border border-white/10 bg-[#10161d] px-3 text-white"
+                    >
+                      {[1, 2, 3, 6, 12, 24].map((hours) => (
+                        <option key={hours} value={hours}>{hours} {hours === 1 ? 'hour' : 'hours'} before</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex flex-wrap gap-4">
+                    {(['push', 'email'] as const).map((channel) => (
+                      <label key={channel} className="flex min-h-11 items-center gap-2 text-sm font-semibold text-white/72">
+                        <input type="radio" name="reminder-channel" value={channel}
+                          checked={reminderChannel === channel}
+                          onChange={() => setReminderChannel(channel)}
+                          className="h-4 w-4 accent-[var(--og-brass-500)]" />
+                        {channel === 'push' ? 'Phone notification' : 'Email'}
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs leading-5 text-white/45">
+                    Reminder delivery is not available yet. These choices save your preference.
+                    {reminderChannel === 'push' ? ' Phone notifications will also need permission on your device.' : ''}
+                  </p>
+                </fieldset>
+              ) : null}
 
               {scheduleError ? (
                 <p className="rounded-[10px] border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">

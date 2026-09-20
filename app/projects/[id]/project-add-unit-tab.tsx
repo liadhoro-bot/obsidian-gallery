@@ -3,6 +3,10 @@
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import SubmitButton from '../../components/SubmitButton'
+import {
+  MAX_GALLERY_IMAGE_BYTES,
+  getOversizedImageMessage,
+} from '../../../utils/images/gallery-upload'
 import styles from './project-detail-silver.module.css'
 
 type Props = {
@@ -19,6 +23,7 @@ export default function ProjectAddUnitTab({
   const [name, setName] = useState('')
   const [notes, setNotes] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
 
   const previewName = useMemo(
     () => name.trim() || 'Skeleton Warriors',
@@ -32,6 +37,14 @@ export default function ProjectAddUnitTab({
   function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
 
+    if (file && file.size > MAX_GALLERY_IMAGE_BYTES) {
+      setImageError(getOversizedImageMessage())
+      setImagePreview(null)
+      event.target.value = ''
+      return
+    }
+
+    setImageError(null)
     setImagePreview(file ? URL.createObjectURL(file) : null)
   }
 
@@ -107,6 +120,11 @@ export default function ProjectAddUnitTab({
               className="sr-only"
             />
           </label>
+          {imageError ? (
+            <p className="mt-2 text-sm font-semibold text-red-400">
+              {imageError}
+            </p>
+          ) : null}
         </div>
 
         <div className={styles.formField}>

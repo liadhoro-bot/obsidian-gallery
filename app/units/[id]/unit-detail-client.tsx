@@ -32,6 +32,10 @@ import {
   uploadUnitGalleryImages,
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
+import {
+  MAX_GALLERY_IMAGE_BYTES,
+  getOversizedImageMessage,
+} from '../../../utils/images/gallery-upload'
 import LazyUnitSessionTracker from './components/lazy-unit-session-tracker'
 const DeleteConfirmationCard = dynamic(
   () => import('../../components/delete-confirmation-card')
@@ -1112,38 +1116,49 @@ const handleRemoveStagePhoto = (imageId: string) => {
         formData.append('image', selectedGalleryFiles[index]!)
       )
 
-      const result = await uploadUnitGalleryImages(formData)
-      const uploadedImages = result?.uploadedImages ?? []
+      try {
+        const result = await uploadUnitGalleryImages(formData)
+        const uploadedImages = result?.uploadedImages ?? []
 
-      setLocalImages((current) => {
-        const withoutOptimistic = current.filter(
-          (image) => !optimisticImages.some((optimistic) => optimistic.id === image.id)
-        )
+        setLocalImages((current) => {
+          const withoutOptimistic = current.filter(
+            (image) => !optimisticImages.some((optimistic) => optimistic.id === image.id)
+          )
 
-        if (uploadedImages.length === 0) {
-          return withoutOptimistic
+          if (uploadedImages.length === 0) {
+            return withoutOptimistic
+          }
+
+          return [
+            ...uploadedImages,
+            ...withoutOptimistic.map((image) =>
+              uploadedImages.some((uploaded) => uploaded.is_featured)
+                ? { ...image, is_featured: false }
+                : image
+            ),
+          ]
+        })
+
+        if (result?.failed.length) {
+          setGalleryUploadError(
+            `Could not upload ${result.failed
+              .map((failure) => `${failure.fileName}: ${failure.reason}`)
+              .join('; ')}`
+          )
         }
-
-        return [
-          ...uploadedImages,
-          ...withoutOptimistic.map((image) =>
-            uploadedImages.some((uploaded) => uploaded.is_featured)
-              ? { ...image, is_featured: false }
-              : image
-          ),
-        ]
-      })
-      optimisticImages.forEach((image) => URL.revokeObjectURL(image.image_url))
-
-      if (result?.failed.length) {
-        setGalleryUploadError(
-          `Could not upload ${result.failed
-            .map((failure) => `${failure.fileName}: ${failure.reason}`)
-            .join('; ')}`
+      } catch (error) {
+        setLocalImages((current) =>
+          current.filter(
+            (image) => !optimisticImages.some((optimistic) => optimistic.id === image.id)
+          )
         )
+        setGalleryUploadError(
+          error instanceof Error ? error.message : 'Could not upload images.'
+        )
+      } finally {
+        optimisticImages.forEach((image) => URL.revokeObjectURL(image.image_url))
+        queueBackgroundRefresh()
       }
-
-      queueBackgroundRefresh()
     })
   }
 
@@ -1202,9 +1217,22 @@ const handleRemoveStagePhoto = (imageId: string) => {
     event: ChangeEvent<HTMLInputElement>,
     source: 'gallery_picker' | 'camera'
   ) => {
-    setGalleryUploadError(null)
     setGalleryUploadSource(source)
-    setSelectedGalleryFiles(Array.from(event.target.files ?? []))
+
+    const files = Array.from(event.target.files ?? [])
+    const oversizedFile = files.find(
+      (file) => file.size > MAX_GALLERY_IMAGE_BYTES
+    )
+
+    if (oversizedFile) {
+      setGalleryUploadError(getOversizedImageMessage())
+      setSelectedGalleryFiles([])
+      event.target.value = ''
+      return
+    }
+
+    setGalleryUploadError(null)
+    setSelectedGalleryFiles(files)
   }
 
   const handleStageFileChange = async (

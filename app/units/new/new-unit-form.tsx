@@ -4,6 +4,10 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState, useTransition } from 'react'
 import { createStandaloneUnitAction } from './actions'
+import {
+  MAX_GALLERY_IMAGE_BYTES,
+  getOversizedImageMessage,
+} from '../../../utils/images/gallery-upload'
 
 type ProjectOption = {
   id: string
@@ -59,6 +63,14 @@ export default function NewUnitForm({ projects }: NewUnitFormProps) {
   function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
 
+    if (file && file.size > MAX_GALLERY_IMAGE_BYTES) {
+      setError(getOversizedImageMessage())
+      setImagePreview(null)
+      event.target.value = ''
+      return
+    }
+
+    setError(null)
     setImagePreview(file ? URL.createObjectURL(file) : null)
   }
 

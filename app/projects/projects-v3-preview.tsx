@@ -17,6 +17,10 @@ import type {
   ProjectsV3Project,
   ProjectsV3Unit,
 } from './projects-v3-data'
+import {
+  MAX_GALLERY_IMAGE_BYTES,
+  getOversizedImageMessage,
+} from '../../utils/images/gallery-upload'
 
 type ProjectsTab = 'projects' | 'units'
 type ProjectsSort = 'name-asc' | 'name-desc' | 'deadline' | 'recent' | 'status'
@@ -333,20 +337,26 @@ export default function ProjectsV3Preview({
     setCreateError(null)
 
     startSaving(async () => {
-      const result = await createProjectsPageProjectAction(formData)
+      try {
+        const result = await createProjectsPageProjectAction(formData)
 
-      if (!result.ok) {
-        setCreateError(result.error)
-        return
+        if (!result.ok) {
+          setCreateError(result.error)
+          return
+        }
+
+        setProjectName('')
+        setProjectDescription('')
+        setProjectImagePreview(null)
+        setUnitProjectId(result.projectId)
+        setIsCreateOpen(false)
+        router.push(`/projects/${result.projectId}`)
+        router.refresh()
+      } catch (error) {
+        setCreateError(
+          error instanceof Error ? error.message : 'Could not create the project.'
+        )
       }
-
-      setProjectName('')
-      setProjectDescription('')
-      setProjectImagePreview(null)
-      setUnitProjectId(result.projectId)
-      setIsCreateOpen(false)
-      router.push(`/projects/${result.projectId}`)
-      router.refresh()
     })
   }
 
@@ -361,21 +371,27 @@ export default function ProjectsV3Preview({
     setCreateError(null)
 
     startSaving(async () => {
-      const result = await createProjectsPageUnitAction(formData)
+      try {
+        const result = await createProjectsPageUnitAction(formData)
 
-      if (!result.ok) {
-        setCreateError(result.error)
-        return
+        if (!result.ok) {
+          setCreateError(result.error)
+          return
+        }
+
+        setUnitName('')
+        setUnitNewProjectName('')
+        setUnitDeadline('')
+        setUnitImagePreview(null)
+        setActiveTab('units')
+        setIsCreateOpen(false)
+        router.push(`/units/${result.unitId}`)
+        router.refresh()
+      } catch (error) {
+        setCreateError(
+          error instanceof Error ? error.message : 'Could not create the unit.'
+        )
       }
-
-      setUnitName('')
-      setUnitNewProjectName('')
-      setUnitDeadline('')
-      setUnitImagePreview(null)
-      setActiveTab('units')
-      setIsCreateOpen(false)
-      router.push(`/units/${result.unitId}`)
-      router.refresh()
     })
   }
 
@@ -464,6 +480,7 @@ export default function ProjectsV3Preview({
             onClose={() => setIsCreateOpen(false)}
             onDescriptionChange={setProjectDescription}
             onImagePreviewChange={setProjectImagePreview}
+            onImageError={setCreateError}
             onNameChange={setProjectName}
             onSubmit={createProject}
             error={createError}
@@ -479,6 +496,7 @@ export default function ProjectsV3Preview({
             onClose={() => setIsCreateOpen(false)}
             onDeadlineChange={setUnitDeadline}
             onImagePreviewChange={setUnitImagePreview}
+            onImageError={setCreateError}
             onNameChange={setUnitName}
             onNewProjectNameChange={setUnitNewProjectName}
             onProjectChange={setUnitProjectId}
@@ -1223,6 +1241,7 @@ function CreateProjectSheet({
   onClose,
   onDescriptionChange,
   onImagePreviewChange,
+  onImageError,
   onNameChange,
   onSubmit,
   previewName,
@@ -1238,6 +1257,7 @@ function CreateProjectSheet({
   onClose: () => void
   onDescriptionChange: (description: string) => void
   onImagePreviewChange: (preview: string | null) => void
+  onImageError: (message: string | null) => void
   onNameChange: (name: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   previewName: string
@@ -1266,6 +1286,7 @@ function CreateProjectSheet({
           name="image"
           preview={imagePreview}
           onPreviewChange={onImagePreviewChange}
+          onError={onImageError}
         />
         <PreviewCard
           image={imagePreview ?? '/onboarding/pains/paint-management.jpeg'}
@@ -1287,6 +1308,7 @@ function CreateUnitSheet({
   onClose,
   onDeadlineChange,
   onImagePreviewChange,
+  onImageError,
   onNameChange,
   onNewProjectNameChange,
   onProjectChange,
@@ -1308,6 +1330,7 @@ function CreateUnitSheet({
   onClose: () => void
   onDeadlineChange: (date: string) => void
   onImagePreviewChange: (preview: string | null) => void
+  onImageError: (message: string | null) => void
   onNameChange: (name: string) => void
   onNewProjectNameChange: (name: string) => void
   onProjectChange: (projectId: string) => void
@@ -1365,6 +1388,7 @@ function CreateUnitSheet({
           name="image"
           preview={imagePreview}
           onPreviewChange={onImagePreviewChange}
+          onError={onImageError}
         />
         <PreviewCard
           image={imagePreview ?? '/onboarding/pains/paint-management.jpeg'}
@@ -1480,15 +1504,26 @@ function ImageField({
   label,
   name,
   onPreviewChange,
+  onError,
   preview,
 }: {
   label: string
   name: string
   onPreviewChange: (preview: string | null) => void
+  onError: (message: string | null) => void
   preview: string | null
 }) {
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
+
+    if (file && file.size > MAX_GALLERY_IMAGE_BYTES) {
+      onError(getOversizedImageMessage())
+      onPreviewChange(null)
+      event.target.value = ''
+      return
+    }
+
+    onError(null)
     onPreviewChange(file ? URL.createObjectURL(file) : null)
   }
 

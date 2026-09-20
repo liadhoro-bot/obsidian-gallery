@@ -305,48 +305,54 @@ async function addUnit(formData: FormData) {
     const validationError = validateGalleryImageFile(imageFile)
 
     if (validationError) {
-      throw new Error(validationError)
+      console.error('Skipping invalid unit image:', validationError)
+    } else {
+      // The photo is optional context for the unit; a flaky upload must not
+      // fail unit creation now that the unit row already exists.
+      try {
+        const fileExt = getSafeImageExtension(imageFile.name)
+        const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
+        const filePath = `units/${insertedUnit.id}/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('obsidian-images')
+          .upload(filePath, imageFile, {
+            contentType: imageFile.type,
+            upsert: false,
+          })
+
+        if (uploadError) {
+          console.error('Unit image upload failed:', uploadError)
+        } else {
+          const { data } = supabase.storage
+            .from('obsidian-images')
+            .getPublicUrl(filePath)
+
+          const { error: imageError } = await supabase
+            .from('image_assets')
+            .insert({
+              user_id: user.id,
+              entity_type: 'unit',
+              entity_id: insertedUnit.id,
+              image_url: data.publicUrl,
+              alt_text: name,
+              is_featured: true,
+              is_primary: true,
+              storage_bucket: 'obsidian-images',
+              storage_path: filePath,
+            })
+
+          if (imageError) {
+            await supabase.storage.from('obsidian-images').remove([filePath])
+            console.error('Failed to create unit image asset:', imageError)
+          } else {
+            persistedUnitImage = true
+          }
+        }
+      } catch (uploadException) {
+        console.error('Unit image upload threw:', uploadException)
+      }
     }
-
-    const fileExt = getSafeImageExtension(imageFile.name)
-    const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
-    const filePath = `units/${insertedUnit.id}/${fileName}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('obsidian-images')
-      .upload(filePath, imageFile, {
-        contentType: imageFile.type,
-        upsert: false,
-      })
-
-    if (uploadError) {
-      throw new Error(uploadError.message)
-    }
-
-    const { data } = supabase.storage
-      .from('obsidian-images')
-      .getPublicUrl(filePath)
-
-    const publicUrl = data.publicUrl
-
-    const { error: imageError } = await supabase.from('image_assets').insert({
-      user_id: user.id,
-      entity_type: 'unit',
-      entity_id: insertedUnit.id,
-      image_url: publicUrl,
-      alt_text: name,
-      is_featured: true,
-      is_primary: true,
-      storage_bucket: 'obsidian-images',
-      storage_path: filePath,
-    })
-
-    if (imageError) {
-      await supabase.storage.from('obsidian-images').remove([filePath])
-      throw new Error(imageError.message)
-    }
-
-    persistedUnitImage = true
   }
 
   await completeOnboardingActions({
