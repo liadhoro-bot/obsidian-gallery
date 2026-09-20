@@ -14,7 +14,7 @@ export default function manifest(): ObsidianManifest {
     start_url: '/dashboard?source=pwa',
     scope: '/',
     display: 'standalone',
-    display_override: ['fullscreen', 'standalone'],
+    display_override: ['standalone'],
     orientation: 'portrait',
     background_color: '#071015',
     theme_color: '#071015',
