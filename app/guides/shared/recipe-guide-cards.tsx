@@ -381,6 +381,7 @@ export function RecipeGuideImageStepCard({
             src={imageUrl}
             alt={step.title}
             fill
+            priority={showBrandMark}
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
             unoptimized={isInlinePreviewImageUrl(imageUrl)}
@@ -420,6 +421,7 @@ export function RecipeGuideSmallImageStepCard({
               src={imageUrl}
               alt={step.title}
               fill
+              priority={showBrandMark}
               sizes="(max-width: 768px) 92vw, 420px"
               className="object-cover"
               unoptimized={isInlinePreviewImageUrl(imageUrl)}
@@ -448,8 +450,10 @@ export function RecipeGuideSmallImageStepCard({
 
 function ThemePaintReferenceRow({
   paint,
+  showBrandMark = false,
 }: {
   paint: RecipeGuidePaint
+  showBrandMark?: boolean
 }) {
   const color = paint?.hex_approx || '#8b8b8b'
   const swatchUrl = isUsableImageUrl(paint?.swatch_image_url)
@@ -466,7 +470,14 @@ function ThemePaintReferenceRow({
         aria-label={`${name} swatch`}
       >
         {swatchUrl ? (
-          <Image src={swatchUrl} alt="" fill sizes="72px" className="object-cover" />
+          <Image
+            src={swatchUrl}
+            alt=""
+            fill
+            priority={showBrandMark}
+            sizes="72px"
+            className="object-cover"
+          />
         ) : null}
       </span>
       <span className="recipe-guide-theme-paint-copy">
@@ -519,6 +530,7 @@ export function RecipeGuideThemeStepCard({
             src={imageUrl}
             alt={step.title}
             fill
+            priority={showBrandMark}
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
             unoptimized={isInlinePreviewImageUrl(imageUrl)}
@@ -540,6 +552,7 @@ export function RecipeGuideThemeStepCard({
               <ThemePaintReferenceRow
                 key={`${paint?.id || 'paint'}-${index}`}
                 paint={paint}
+                showBrandMark={showBrandMark}
               />
             ))}
           </ul>
@@ -600,7 +613,13 @@ function PaintOwnershipPill({ paint }: { paint: RecipeGuidePaint }) {
   )
 }
 
-function PaintListSwatch({ paint }: { paint: RecipeGuidePaint }) {
+function PaintListSwatch({
+  paint,
+  showBrandMark = false,
+}: {
+  paint: RecipeGuidePaint
+  showBrandMark?: boolean
+}) {
   const color = paint?.hex_approx || '#8b8b8b'
   const swatchUrl = isUsableImageUrl(paint?.swatch_image_url)
     ? paint.swatch_image_url
@@ -612,7 +631,14 @@ function PaintListSwatch({ paint }: { paint: RecipeGuidePaint }) {
       style={{ backgroundColor: color }}
     >
       {swatchUrl ? (
-        <Image src={swatchUrl} alt="" fill sizes="48px" className="object-cover" />
+        <Image
+          src={swatchUrl}
+          alt=""
+          fill
+          priority={showBrandMark}
+          sizes="48px"
+          className="object-cover"
+        />
       ) : null}
     </span>
   )
@@ -652,7 +678,7 @@ export function RecipeGuidePaintsCard({
                   key={`${paint?.id || 'paint'}-${index}`}
                   className="recipe-guide-paint-list-row"
                 >
-                  <PaintListSwatch paint={paint} />
+                  <PaintListSwatch paint={paint} showBrandMark={showBrandMark} />
                   <span className="recipe-guide-paint-list-copy">
                     <strong className="font-serif">{paint?.name || 'Unnamed paint'}</strong>
                     <small>

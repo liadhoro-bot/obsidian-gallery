@@ -21,6 +21,7 @@ import {
 import DeckCardViewer, { type DeckCardEntry } from './deck-card-viewer'
 import DeckEditPageClient from './deck-edit-page-client'
 import DeckHeroActions from './deck-hero-actions'
+import DeckShareMenu, { type ShareCardEntry } from '../../shared/deck-share-menu'
 
 type DeckDetailPageProps = {
   params: Promise<{ id: string }>
@@ -179,6 +180,68 @@ export default async function DeckDetailPage({
   const paintCount = deck.paintList.length
   const recipeSteps = deck.steps.map(toRecipeStep)
 
+  const renderStepCard = (step: GuidesV3DeckStep, showBrandMark: boolean) => {
+    const recipeStep = toRecipeStep(step)
+    const paints = toRecipePaints(step)
+
+    return step.template === 'video' ? (
+      <RecipeGuideVideoCard
+        title={step.title}
+        description={step.instructions}
+        youtubeUrl={step.videoUrl}
+        showBrandMark={showBrandMark}
+      />
+    ) : isThemeTemplateStep(step, recipeStep.image_url) ? (
+      <RecipeGuideThemeStepCard
+        step={recipeStep}
+        stepsLength={recipeSteps.length}
+        paints={paints}
+        fallbackImageUrl={deck.image}
+        showBrandMark={showBrandMark}
+      />
+    ) : step.template === 'small-image' && isUsableImageUrl(recipeStep.image_url) ? (
+      <RecipeGuideSmallImageStepCard
+        step={recipeStep}
+        stepsLength={recipeSteps.length}
+        paints={paints}
+        showBrandMark={showBrandMark}
+      />
+    ) : isUsableImageUrl(recipeStep.image_url) ? (
+      <RecipeGuideImageStepCard
+        step={recipeStep}
+        stepsLength={recipeSteps.length}
+        paints={paints}
+        showBrandMark={showBrandMark}
+      />
+    ) : (
+      <RecipeGuideDescriptiveStepCard
+        step={recipeStep}
+        stepsLength={recipeSteps.length}
+        paints={paints}
+        showBrandMark={showBrandMark}
+      />
+    )
+  }
+
+  const shareCards: ShareCardEntry[] = [
+    {
+      key: 'cover',
+      node: (
+        <RecipeGuideCoverCard
+          recipe={recipe}
+          featuredImage={featuredImage}
+          cardCount={deck.steps.length + 1}
+          paintCount={paintCount}
+          showBrandMark
+        />
+      ),
+    },
+    ...deck.steps.map((step) => ({
+      key: step.id,
+      node: renderStepCard(step, true),
+    })),
+  ]
+
   const cards: DeckCardEntry[] = [
     {
       key: 'cover',
@@ -191,58 +254,28 @@ export default async function DeckDetailPage({
             cardCount={deck.steps.length + 1}
             paintCount={paintCount}
           />
-          <DeckHeroActions
-            recipeId={deck.id}
-            likeCount={deck.likeCount ?? 0}
-            saveCount={deck.saveCount ?? 0}
-            viewerHasLiked={deck.viewerHasLiked ?? false}
-            viewerHasSaved={deck.viewerHasSaved ?? false}
-            className="absolute right-3 top-3 z-30"
-          />
+          <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+            <DeckHeroActions
+              recipeId={deck.id}
+              likeCount={deck.likeCount ?? 0}
+              saveCount={deck.saveCount ?? 0}
+              viewerHasLiked={deck.viewerHasLiked ?? false}
+              viewerHasSaved={deck.viewerHasSaved ?? false}
+            />
+            <DeckShareMenu
+              cards={shareCards}
+              fileBaseName={deck.title}
+              sharePath={`/guides/decks/${deck.id}`}
+            />
+          </div>
         </div>
       ),
     },
-    ...deck.steps.map((step) => {
-      const recipeStep = toRecipeStep(step)
-      const paints = toRecipePaints(step)
-
-      return {
-        key: step.id,
-        featureGuideTarget: 'guides.deck.steps',
-        node: step.template === 'video' ? (
-          <RecipeGuideVideoCard
-            title={step.title}
-            description={step.instructions}
-            youtubeUrl={step.videoUrl}
-          />
-        ) : isThemeTemplateStep(step, recipeStep.image_url) ? (
-          <RecipeGuideThemeStepCard
-            step={recipeStep}
-            stepsLength={recipeSteps.length}
-            paints={paints}
-            fallbackImageUrl={deck.image}
-          />
-        ) : step.template === 'small-image' && isUsableImageUrl(recipeStep.image_url) ? (
-          <RecipeGuideSmallImageStepCard
-            step={recipeStep}
-            stepsLength={recipeSteps.length}
-            paints={paints}
-          />
-        ) : isUsableImageUrl(recipeStep.image_url) ? (
-          <RecipeGuideImageStepCard
-            step={recipeStep}
-            stepsLength={recipeSteps.length}
-            paints={paints}
-          />
-        ) : (
-          <RecipeGuideDescriptiveStepCard
-            step={recipeStep}
-            stepsLength={recipeSteps.length}
-            paints={paints}
-          />
-        ),
-      }
-    }),
+    ...deck.steps.map((step) => ({
+      key: step.id,
+      featureGuideTarget: 'guides.deck.steps',
+      node: renderStepCard(step, false),
+    })),
   ]
 
   return (
