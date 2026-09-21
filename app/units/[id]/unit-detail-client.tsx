@@ -32,10 +32,7 @@ import {
   uploadUnitGalleryImages,
 } from './actions'
 import { createClient } from '../../../utils/supabase/client'
-import {
-  MAX_GALLERY_IMAGE_BYTES,
-  getOversizedImageMessage,
-} from '../../../utils/images/gallery-upload'
+import { resolveOversizedGalleryImages } from '../../../utils/images/resolve-gallery-image-selection'
 import LazyUnitSessionTracker from './components/lazy-unit-session-tracker'
 const DeleteConfirmationCard = dynamic(
   () => import('../../components/delete-confirmation-card')
@@ -1217,22 +1214,29 @@ const handleRemoveStagePhoto = (imageId: string) => {
     event: ChangeEvent<HTMLInputElement>,
     source: 'gallery_picker' | 'camera'
   ) => {
+    const input = event.target
+    const files = Array.from(input.files ?? [])
+
     setGalleryUploadSource(source)
 
-    const files = Array.from(event.target.files ?? [])
-    const oversizedFile = files.find(
-      (file) => file.size > MAX_GALLERY_IMAGE_BYTES
-    )
-
-    if (oversizedFile) {
-      setGalleryUploadError(getOversizedImageMessage())
+    if (files.length === 0) {
+      setGalleryUploadError(null)
       setSelectedGalleryFiles([])
-      event.target.value = ''
+      return
+    }
+
+    const { files: resolvedFiles, error } =
+      await resolveOversizedGalleryImages(files)
+    input.value = ''
+
+    if (error) {
+      setGalleryUploadError(error)
+      setSelectedGalleryFiles([])
       return
     }
 
     setGalleryUploadError(null)
-    setSelectedGalleryFiles(files)
+    setSelectedGalleryFiles(resolvedFiles)
   }
 
   const handleStageFileChange = async (

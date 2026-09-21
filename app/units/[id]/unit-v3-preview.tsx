@@ -24,11 +24,8 @@ import {
   updateUnitStatus,
   uploadUnitGalleryImages,
 } from './actions'
-import {
-  MAX_GALLERY_IMAGE_BYTES,
-  getOversizedImageMessage,
-  type GalleryUploadResult,
-} from '../../../utils/images/gallery-upload'
+import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import { resolveOversizedGalleryImages } from '../../../utils/images/resolve-gallery-image-selection'
 import ProjectPaletteStarter from '../../projects/[id]/project-palette-starter'
 import styles from './unit-v3-silver.module.css'
 
@@ -1313,27 +1310,34 @@ function UnitV3GalleryCard({
     )
   }
 
-  function handleFileSelection(
+  async function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
     source: 'gallery_picker' | 'camera'
   ) {
+    const input = event.target
+    const files = Array.from(input.files ?? [])
+
     setActionError(null)
     setUploadSource(source)
 
-    const files = Array.from(event.target.files ?? [])
-    const oversizedFile = files.find(
-      (file) => file.size > MAX_GALLERY_IMAGE_BYTES
-    )
-
-    if (oversizedFile) {
-      setUploadError(getOversizedImageMessage())
+    if (files.length === 0) {
+      setUploadError(null)
       setSelectedFiles([])
-      event.target.value = ''
+      return
+    }
+
+    const { files: resolvedFiles, error } =
+      await resolveOversizedGalleryImages(files)
+    input.value = ''
+
+    if (error) {
+      setUploadError(error)
+      setSelectedFiles([])
       return
     }
 
     setUploadError(null)
-    setSelectedFiles(files)
+    setSelectedFiles(resolvedFiles)
   }
 
   function removePendingFile(indexToRemove: number) {
