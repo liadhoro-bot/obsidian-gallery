@@ -517,6 +517,7 @@ function PrizeBlock({
         <Image
           src={medalSrc}
           alt=""
+          unoptimized
           fill
           sizes="72px"
           className="object-contain"

@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { cache } from 'react'
 import { createAuthenticatedServerClient } from '../../utils/supabase/authenticated-server-client'
+import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import {
   createClient,
   getSessionAccessToken,
@@ -835,14 +836,19 @@ export async function getPublicGuideCreatorLeaderboard(
   }
 
   const ownerIds = Array.from(countByOwner.keys())
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, username')
-    .in('id', ownerIds)
-
   const nameByOwner = new Map<string, string>()
-  for (const profile of (profiles ?? []) as { id: string; username: string | null }[]) {
-    if (profile.username) nameByOwner.set(profile.id, profile.username)
+  if (!hideIdentity) {
+    // Profiles are private under RLS. Read only public usernames for the
+    // creators whose public guides were visible to this viewer above.
+    const { data: profiles, error: profilesError } = await createServiceRoleClient()
+      .from('profiles')
+      .select('id, username')
+      .in('id', ownerIds)
+
+    if (profilesError) throw new Error(profilesError.message)
+    for (const profile of (profiles ?? []) as { id: string; username: string | null }[]) {
+      if (profile.username) nameByOwner.set(profile.id, profile.username)
+    }
   }
 
   return ownerIds
