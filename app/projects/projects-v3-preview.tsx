@@ -17,10 +17,7 @@ import type {
   ProjectsV3Project,
   ProjectsV3Unit,
 } from './projects-v3-data'
-import {
-  MAX_GALLERY_IMAGE_BYTES,
-  getOversizedImageMessage,
-} from '../../utils/images/gallery-upload'
+import { resolveImageInputSelection } from '../../utils/images/resolve-gallery-image-selection'
 
 type ProjectsTab = 'projects' | 'units'
 type ProjectsSort = 'name-asc' | 'name-desc' | 'deadline' | 'recent' | 'status'
@@ -1513,17 +1510,10 @@ function ImageField({
   onError: (message: string | null) => void
   preview: string | null
 }) {
-  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
+  async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const { file, error } = await resolveImageInputSelection(event.target)
 
-    if (file && file.size > MAX_GALLERY_IMAGE_BYTES) {
-      onError(getOversizedImageMessage())
-      onPreviewChange(null)
-      event.target.value = ''
-      return
-    }
-
-    onError(null)
+    onError(error)
     onPreviewChange(file ? URL.createObjectURL(file) : null)
   }
 

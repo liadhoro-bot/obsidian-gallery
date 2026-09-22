@@ -3,10 +3,7 @@
 import Image from 'next/image'
 import { useState, useTransition } from 'react'
 import { createFirstProjectUnitAction } from '../../actions'
-import {
-  MAX_GALLERY_IMAGE_BYTES,
-  getOversizedImageMessage,
-} from '../../../../utils/images/gallery-upload'
+import { resolveImageInputSelection } from '../../../../utils/images/resolve-gallery-image-selection'
 import styles from '../../../auth-flow-silver.module.css'
 
 type FirstProjectScreenProps = {
@@ -28,17 +25,12 @@ export default function FirstProjectScreen({
 
   const canSubmit = (unitName.trim().length > 1 || useDemo) && !isPending
 
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const { file, error: resolveError } = await resolveImageInputSelection(
+      event.target
+    )
 
-    if (file && file.size > MAX_GALLERY_IMAGE_BYTES) {
-      setError(getOversizedImageMessage())
-      setImagePreview(null)
-      event.target.value = ''
-      return
-    }
-
-    setError(null)
+    setError(resolveError)
     setImagePreview(file ? URL.createObjectURL(file) : null)
   }
 

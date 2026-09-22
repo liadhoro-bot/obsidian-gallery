@@ -3,10 +3,7 @@
 import Image from 'next/image'
 import { useMemo, useState } from 'react'
 import SubmitButton from '../components/SubmitButton'
-import {
-  MAX_GALLERY_IMAGE_BYTES,
-  getOversizedImageMessage,
-} from '../../utils/images/gallery-upload'
+import { resolveImageInputSelection } from '../../utils/images/resolve-gallery-image-selection'
 
 type ProjectCreateFormProps = {
   addProjectAction: (formData: FormData) => Promise<void>
@@ -31,17 +28,12 @@ export default function ProjectCreateForm({
     [description]
   )
 
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const { file, error: resolveError } = await resolveImageInputSelection(
+      event.target
+    )
 
-    if (file && file.size > MAX_GALLERY_IMAGE_BYTES) {
-      setImageError(getOversizedImageMessage())
-      setImagePreview(null)
-      event.target.value = ''
-      return
-    }
-
-    setImageError(null)
+    setImageError(resolveError)
     setImagePreview(file ? URL.createObjectURL(file) : null)
   }
 
