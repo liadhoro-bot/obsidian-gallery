@@ -12,11 +12,19 @@ export type GuidesV3GuideFile = {
   level: string
   ownedPercent: number
   palette: string[]
-  // The single deck (recipe) this guide currently wraps. Every guide wraps
-  // exactly one deck for now (multi-deck guides are a later phase), so this
-  // is always populated for a real `guides` row. Optional/additive so any
-  // pre-existing consumer that only reads the original fields is unaffected.
+  // The "primary" deck this guide's social state (like/save) is keyed to -
+  // for a single-deck guide this is its only member; for a multi-deck guide
+  // this is just its first member (likes/saves stay recipe-scoped, not
+  // guide-scoped, so a multi-deck guide's heart/bookmark act on this one).
+  // Optional so any pre-existing consumer that only reads the original
+  // fields is unaffected.
   deckId?: string
+  // Every member deck's id, in guide_decks.position order. Used to resolve
+  // the guide's full deck list (e.g. for the guide detail page and editor).
+  deckIds: string[]
+  // True iff the viewer is the guide's creator (guides.user_id === viewer).
+  // The only thing that should ever gate editing a guide.
+  isOwner: boolean
   likeCount: number
   saveCount: number
   viewerHasLiked: boolean
@@ -77,6 +85,8 @@ type GuideRow = {
   id: string
   user_id: string
   title: string | null
+  description: string | null
+  image_url: string | null
   is_auto: boolean | null
   created_at: string | null
   guide_decks?: GuideDeckJoinRow[] | null
@@ -105,14 +115,16 @@ const accents = [
   '#5943a7',
 ]
 
-// Shared select shape for a guide plus its member decks (recipes). Every
-// guide wraps exactly one deck today, but this embeds the full membership so
-// visibility can be asserted in application code (see isGuidePublic below)
-// rather than trusted purely to RLS.
+// Shared select shape for a guide plus all of its member decks (recipes),
+// so visibility can be asserted in application code (see isGuidePublic
+// below) rather than trusted purely to RLS, and so multi-deck guides can be
+// fully assembled without a second round trip.
 const guideWithDecksSelect = `
   id,
   user_id,
   title,
+  description,
+  image_url,
   is_auto,
   created_at,
   guide_decks (
@@ -206,14 +218,6 @@ function memberRecipesOf(guide: GuideRow): RecipeRow[] {
 
 function isGuidePublic(guide: GuideRow) {
   return memberRecipesOf(guide).some((recipe) => recipe.is_public === true)
-}
-
-// Every guide today wraps exactly one deck (multi-deck guides are a later
-// phase), so "the" wrapped recipe is just the guide's single member -
-// preferring a public member if one exists.
-function primaryRecipeOf(guide: GuideRow): RecipeRow | null {
-  const members = memberRecipesOf(guide)
-  return members.find((recipe) => recipe.is_public === true) ?? members[0] ?? null
 }
 
 async function loadRecipeImages(
@@ -406,33 +410,50 @@ function toDeck({
   }
 }
 
-// Builds a real Guide File from a `guides` row plus the recipe/deck it
-// wraps. `guides.title` is populated at creation time (see the
-// `add_guides` migration - both the backfill and the `ensure_guide_for_
-// public_recipe` trigger set `title` to the recipe's name), so the
-// deck-name fallback below is defensive rather than the common path.
+// Builds a real Guide File from a `guides` row plus all of its member
+// decks. `guides.title` is populated at creation time for every guide (the
+// auto-guide backfill/trigger set it to the recipe's name; the Forge "guide"
+// flow lets the user set their own), so the deck-name fallback below is
+// defensive rather than the common path. A guide can wrap one deck (the
+// common auto-guide case) or several (a user-composed guide) - `memberDecks`
+// carries all of them, in guide_decks.position order, and every aggregate
+// below (cards, decks, palette) is computed across the full set. Likes/saves
+// stay keyed to a single recipe (the first member), since that's the only
+// thing recipe_likes/saved_recipes can reference today.
 function toGuideFile(
   guide: GuideRow,
-  recipe: RecipeRow,
-  deck: GuidesV3Deck,
+  memberDecks: GuidesV3Deck[],
+  primaryRecipe: RecipeRow,
   socialByRecipeId: Map<
     string,
     { likeCount: number; saveCount: number; viewerHasLiked: boolean; viewerHasSaved: boolean }
-  >
+  >,
+  userId: string
 ): GuidesV3GuideFile {
-  const social = socialByRecipeId.get(deck.id)
+  const primaryDeck = memberDecks[0]
+  const social = socialByRecipeId.get(primaryDeck.id)
+  const totalCards = memberDecks.reduce((sum, deck) => sum + deck.cards, 0)
+  const customDescription = guide.description?.trim()
 
   return {
     id: guide.id,
-    title: cleanText(guide.title, `${deck.title} Guide`),
-    subtitle: formatSubtitle(recipe, 'Public guide assembled around this deck.'),
-    image: deck.image,
-    decks: 1,
-    cards: deck.cards,
-    level: deck.cards > 5 ? 'Intermediate' : 'Beginner',
+    title: cleanText(guide.title, `${primaryDeck.title} Guide`),
+    subtitle: customDescription
+      ? customDescription
+      : formatSubtitle(primaryRecipe, 'Public guide assembled around this deck.'),
+    image: guide.image_url
+      ? getGuideDeckThumbnail(guide.image_url, fallbackImage)
+      : primaryDeck.image,
+    decks: memberDecks.length,
+    cards: totalCards,
+    level: totalCards > 5 ? 'Intermediate' : 'Beginner',
     ownedPercent: 0,
-    palette: [deck.accent, '#111417', '#d8bd83', '#17b9c2'],
-    deckId: deck.id,
+    palette: memberDecks.length
+      ? memberDecks.slice(0, 5).map((deck) => deck.accent)
+      : ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37'],
+    deckId: primaryDeck.id,
+    deckIds: memberDecks.map((deck) => deck.id),
+    isOwner: guide.user_id === userId,
     likeCount: social?.likeCount ?? 0,
     saveCount: social?.saveCount ?? 0,
     viewerHasLiked: social?.viewerHasLiked ?? false,
@@ -523,6 +544,8 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
             id,
             user_id,
             title,
+            description,
+            image_url,
             is_auto,
             created_at,
             guide_decks!inner (
@@ -569,24 +592,24 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
   }
   const deckRecipes = Array.from(deckRecipeMap.values()).slice(0, deckLimit)
 
-  const publicRecipeByGuideId = new Map<string, RecipeRow>()
+  const publicRecipesByGuideId = new Map<string, RecipeRow[]>()
   for (const guide of publicGuides) {
-    const recipe = primaryRecipeOf(guide)
-    if (recipe) publicRecipeByGuideId.set(guide.id, recipe)
+    const recipes = memberRecipesOf(guide)
+    if (recipes.length) publicRecipesByGuideId.set(guide.id, recipes)
   }
 
-  const myGuideRecipeByGuideId = new Map<string, RecipeRow>()
+  const myGuideRecipesByGuideId = new Map<string, RecipeRow[]>()
   for (const guide of myGuides) {
-    const recipe = primaryRecipeOf(guide)
-    if (recipe) myGuideRecipeByGuideId.set(guide.id, recipe)
+    const recipes = memberRecipesOf(guide)
+    if (recipes.length) myGuideRecipesByGuideId.set(guide.id, recipes)
   }
 
   const allRecipesForStats = Array.from(
     new Map(
       [
         ...deckRecipes,
-        ...Array.from(publicRecipeByGuideId.values()),
-        ...Array.from(myGuideRecipeByGuideId.values()),
+        ...Array.from(publicRecipesByGuideId.values()).flat(),
+        ...Array.from(myGuideRecipesByGuideId.values()).flat(),
       ].map((recipe) => [recipe.id, recipe])
     ).values()
   )
@@ -608,7 +631,12 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
     })
   )
 
-  const libraryDecks = Array.from(publicRecipeByGuideId.values()).map((recipe) =>
+  const libraryRecipeById = new Map(
+    Array.from(publicRecipesByGuideId.values())
+      .flat()
+      .map((recipe) => [recipe.id, recipe])
+  )
+  const libraryDecks = Array.from(libraryRecipeById.values()).map((recipe) =>
     toDeck({
       imageByRecipeId,
       recipe,
@@ -621,24 +649,32 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
 
   const libraryGuides = publicGuides
     .map((guide) => {
-      const recipe = publicRecipeByGuideId.get(guide.id)
-      const deck = recipe ? libraryDeckById.get(recipe.id) : undefined
-      return recipe && deck ? toGuideFile(guide, recipe, deck, socialByRecipeId) : null
+      const recipes = publicRecipesByGuideId.get(guide.id)
+      if (!recipes?.length) return null
+      const memberDecks = recipes
+        .map((recipe) => libraryDeckById.get(recipe.id))
+        .filter((deck): deck is GuidesV3Deck => Boolean(deck))
+      if (!memberDecks.length) return null
+      const primaryRecipe = recipes.find((recipe) => recipe.is_public) ?? recipes[0]
+      return toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId)
     })
     .filter((guide): guide is GuidesV3GuideFile => Boolean(guide))
 
   const guideFiles = myGuides
     .map((guide) => {
-      const recipe = myGuideRecipeByGuideId.get(guide.id)
-      if (!recipe) return null
-      const deck = toDeck({
-        imageByRecipeId,
-        recipe,
-        saved: true,
-        statsByRecipeId,
-        userId,
-      })
-      return toGuideFile(guide, recipe, deck, socialByRecipeId)
+      const recipes = myGuideRecipesByGuideId.get(guide.id)
+      if (!recipes?.length) return null
+      const memberDecks = recipes.map((recipe) =>
+        toDeck({
+          imageByRecipeId,
+          recipe,
+          saved: true,
+          statsByRecipeId,
+          userId,
+        })
+      )
+      const primaryRecipe = recipes.find((recipe) => recipe.is_public) ?? recipes[0]
+      return toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId)
     })
     .filter((guide): guide is GuidesV3GuideFile => Boolean(guide))
 
@@ -652,3 +688,53 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
     ),
   } satisfies GuidesV3Payload
 })
+
+// Load the creator's entire public collection, independently of Discover's
+// global limit. Keep the same thumbnail, guide mapping and social state.
+export async function getCreatorPublicGuides(creatorId: string, viewerId: string) {
+  const supabase = await createClient()
+  const result: GuidesV3GuideFile[] = []
+  const pageSize = 100
+
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from('guides')
+      .select(guideWithDecksSelect)
+      .eq('user_id', creatorId)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1)
+    if (error) throw new Error(error.message)
+
+    const rows = (data ?? []) as GuideRow[]
+    const publicGuides = rows.filter(isGuidePublic)
+    const recipesByGuideId = new Map<string, RecipeRow[]>()
+    for (const guide of publicGuides) {
+      const recipes = memberRecipesOf(guide)
+      if (recipes.length) recipesByGuideId.set(guide.id, recipes)
+    }
+    const recipes = Array.from(
+      new Map(Array.from(recipesByGuideId.values()).flat().map((recipe) => [recipe.id, recipe])).values()
+    )
+    const recipeIds = recipes.map((recipe) => recipe.id)
+    const [statsByRecipeId, imageByRecipeId, socialByRecipeId] = await Promise.all([
+      loadRecipeStats(supabase, recipeIds),
+      loadRecipeImages(supabase, recipes),
+      loadRecipeSocialCounts(supabase, recipeIds, viewerId),
+    ])
+    for (const guide of publicGuides) {
+      const memberRecipes = recipesByGuideId.get(guide.id)
+      if (!memberRecipes?.length) continue
+      const memberDecks = memberRecipes.map((recipe) =>
+        toDeck({
+          recipe, imageByRecipeId, statsByRecipeId,
+          userId: viewerId,
+          saved: socialByRecipeId.get(recipe.id)?.viewerHasSaved ?? false,
+        })
+      )
+      const primaryRecipe = memberRecipes.find((recipe) => recipe.is_public) ?? memberRecipes[0]
+      result.push(toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, viewerId))
+    }
+    if (rows.length < pageSize) return result
+  }
+}

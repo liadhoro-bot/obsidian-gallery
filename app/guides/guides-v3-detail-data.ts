@@ -483,20 +483,17 @@ export const getGuidesV3GuideDetail = cache(
     if (!guide) return null
 
     // `guide.id` is now the real `guides.id` (not the old synthetic
-    // `public-guide-<recipeId>` string), and every guide wraps exactly one
-    // deck for now - resolve it via the `deckId` populated by
-    // toGuideFile() in guides-v3-data.ts, deduping in case the same deck
-    // shows up in both `decks` and `libraryDecks` (e.g. the viewer owns a
-    // deck that's also public).
-    const decksList = guide.deckId
-      ? Array.from(
-          new Map(
-            [...payload.decks, ...payload.libraryDecks]
-              .filter((deck) => deck.id === guide.deckId)
-              .map((deck) => [deck.id, deck])
-          ).values()
-        )
-      : []
+    // `public-guide-<recipeId>` string). A guide can wrap one or several
+    // decks - `deckIds` (populated by toGuideFile() in guides-v3-data.ts)
+    // carries the full membership in guide_decks.position order, which we
+    // preserve here. Dedupe in case the same deck shows up in both `decks`
+    // and `libraryDecks` (e.g. the viewer owns a deck that's also public).
+    const deckById = new Map(
+      [...payload.decks, ...payload.libraryDecks].map((deck) => [deck.id, deck])
+    )
+    const decksList = (guide.deckIds ?? [])
+      .map((deckId) => deckById.get(deckId))
+      .filter((deck): deck is GuidesV3Deck => Boolean(deck))
 
     return {
       ...guide,

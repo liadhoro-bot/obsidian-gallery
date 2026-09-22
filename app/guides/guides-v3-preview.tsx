@@ -9,7 +9,7 @@ import { findVisibleFeatureGuideIndex } from '../components/feature-guide-naviga
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './guides-v3-silver.module.css'
 import { capturePostHog } from '../../utils/analytics/client'
-import { createDeckFromForge } from './actions'
+import { createDeckFromForge, createGuideFromDecks, updateGuideFromDecks } from './actions'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type {
   GuidesV3Deck,
@@ -21,7 +21,7 @@ import DeckEditorClient, {
   type DeckEditorInitialCard,
   type DeckEditorSavePayload,
 } from './decks/[id]/deck-editor-client'
-import GuideSocialActions from './shared/guide-social-actions'
+import { CompactGuideCard, LibrarySection } from './shared/discover-guide-list'
 
 type GuideTab = 'guides' | 'decks' | 'library'
 type ForgeMode = 'guide' | 'deck'
@@ -110,6 +110,8 @@ const initialGuideFiles: GuideFile[] = [
     level: 'Beginner',
     ownedPercent: 78,
     palette: ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
+    deckIds: [],
+    isOwner: false,
     likeCount: 12,
     saveCount: 8,
     viewerHasLiked: false,
@@ -126,6 +128,8 @@ const initialGuideFiles: GuideFile[] = [
     level: 'Beginner',
     ownedPercent: 63,
     palette: ['#1e4f92', '#9aafbd', '#d29631', '#171815', '#efe3c5'],
+    deckIds: [],
+    isOwner: false,
     likeCount: 9,
     saveCount: 5,
     viewerHasLiked: false,
@@ -142,6 +146,8 @@ const initialGuideFiles: GuideFile[] = [
     level: 'Intermediate',
     ownedPercent: 68,
     palette: ['#4eb282', '#17b9c2', '#d8bd83', '#5943a7', '#111417'],
+    deckIds: [],
+    isOwner: false,
     likeCount: 6,
     saveCount: 3,
     viewerHasLiked: false,
@@ -452,6 +458,8 @@ const publicGuideFiles: GuideFile[] = [
     level: 'Intermediate',
     ownedPercent: 42,
     palette: ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
+    deckIds: [],
+    isOwner: false,
     likeCount: 21,
     saveCount: 14,
     viewerHasLiked: false,
@@ -468,6 +476,8 @@ const publicGuideFiles: GuideFile[] = [
     level: 'Beginner',
     ownedPercent: 55,
     palette: ['#1e4f92', '#9aafbd', '#d29631', '#171815', '#efe3c5'],
+    deckIds: [],
+    isOwner: false,
     likeCount: 17,
     saveCount: 11,
     viewerHasLiked: false,
@@ -741,7 +751,7 @@ export default function GuidesV3Preview({
   featureGuides = [],
   initialPayload,
 }: GuidesV3PreviewProps) {
-  const seedGuideFiles =
+  const seedGuideFiles: GuideFile[] =
     initialPayload?.guideFiles.length
       ? initialPayload.guideFiles
       : initialGuideFiles
@@ -797,6 +807,10 @@ export default function GuidesV3Preview({
   const [guideName, setGuideName] = useState('')
   const [guideDescription, setGuideDescription] = useState('')
   const [guideImage, setGuideImage] = useState('/onboarding/pains/tough-choices.jpeg')
+  // The persisted guide currently being edited, if any - null means
+  // saveForgeToHome's guide branch will create a new guide instead of
+  // updating one that already exists in the database.
+  const [editingGuideId, setEditingGuideId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSavingForge, startSaveTransition] = useTransition()
   const isSavingForgeRef = useRef(false)
@@ -896,6 +910,7 @@ export default function GuidesV3Preview({
       setGuideName('')
       setGuideDescription('')
       setGuideImage('/onboarding/pains/tough-choices.jpeg')
+      setEditingGuideId(null)
       setForgeScreen('guide-decks')
       return
     }
@@ -913,6 +928,7 @@ export default function GuidesV3Preview({
     setIsEditingDeckDetails(false)
     setSaveError(null)
     setBuildTab('details')
+    setEditingGuideId(null)
   }
 
   function chooseSource(nextSource: Exclude<SourceKind, 'scratch'>) {
@@ -1058,43 +1074,76 @@ export default function GuidesV3Preview({
       })
       return
     } else {
-      const guideDeckTotal = selectedGuideDecks.length
-      const cardTotal = selectedGuideDecks.reduce((sum, deck) => sum + deck.cards, 0)
-      const guideName_ = guideName.trim() || 'New Guide'
-      const guideDescription_ =
-        guideDescription.trim() ||
-        'A custom guide assembled from decks in your collection.'
+      saveGuideForgePayload()
+    }
+  }
 
-      setGuideFiles((current) => [
-        {
-          id: `forge-guide-${Date.now()}`,
+  function saveGuideForgePayload() {
+    if (isSavingForge || isSavingForgeRef.current) return
+    if (!selectedGuideDecks.length) {
+      setSaveError('Choose at least one deck for this guide.')
+      return
+    }
+
+    const guideDeckTotal = selectedGuideDecks.length
+    const cardTotal = selectedGuideDecks.reduce((sum, deck) => sum + deck.cards, 0)
+    const guideName_ = guideName.trim() || 'New Guide'
+    const guideDescription_ =
+      guideDescription.trim() ||
+      'A custom guide assembled from decks in your collection.'
+    const guideDeckIds = selectedGuideDecks.map((deck) => deck.id)
+
+    isSavingForgeRef.current = true
+    setSaveError(null)
+    startSaveTransition(async () => {
+      try {
+        const input = {
+          title: guideName_,
+          description: guideDescription_,
+          image: guideImage,
+          deckIds: guideDeckIds,
+        }
+        const savedGuide = editingGuideId
+          ? await updateGuideFromDecks(editingGuideId, input)
+          : await createGuideFromDecks(input)
+
+        const savedGuideFile: GuideFile = {
+          id: savedGuide.id,
           title: guideName_,
           subtitle: guideDescription_,
           image: guideImage,
           decks: guideDeckTotal,
           cards: cardTotal,
-          level: 'Draft',
-          ownedPercent: 72,
+          level: cardTotal > 5 ? 'Intermediate' : 'Beginner',
+          ownedPercent: 0,
           palette: selectedGuideDecks.length
             ? selectedGuideDecks.slice(0, 5).map((deck) => deck.accent)
             : ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
+          deckId: guideDeckIds[0],
+          deckIds: guideDeckIds,
+          isOwner: true,
           likeCount: 0,
           saveCount: 0,
           viewerHasLiked: false,
           viewerHasSaved: false,
           createdAt: new Date().toISOString(),
-          draft: {
-            deckIds: selectedGuideDecks.map((deck) => deck.id),
-            name: guideName_,
-            description: guideDescription_,
-            image: guideImage,
-          },
-        },
-        ...current,
-      ])
-      setActiveTab('guides')
-    }
-    closeForge()
+        }
+
+        setGuideFiles((current) => [
+          savedGuideFile,
+          ...current.filter((guide) => guide.id !== savedGuideFile.id && !guide.draft),
+        ])
+        setActiveTab('guides')
+        setEditingGuideId(null)
+        closeForge()
+      } catch (error) {
+        setSaveError(
+          error instanceof Error ? error.message : 'Could not save guide.'
+        )
+      } finally {
+        isSavingForgeRef.current = false
+      }
+    })
   }
 
   function saveDeckEditorPayload(payload: DeckEditorSavePayload) {
@@ -1157,8 +1206,27 @@ export default function GuidesV3Preview({
     setGuideName(guide.draft.name)
     setGuideDescription(guide.draft.description)
     setGuideImage(guide.draft.image)
+    setEditingGuideId(null)
     setSaveError(null)
     setForgeScreen('guide-compose')
+  }
+
+  // Editor entry point for a real, persisted guide (as opposed to a local,
+  // unsaved draft - see editDraftGuide above). Opens the same deck-picker +
+  // compose flow used for creation, pre-filled with the guide's current
+  // membership, so decks can be added/removed/reordered before saving via
+  // updateGuideFromDecks.
+  function editPersistedGuide(guide: GuideFile) {
+    if (guide.draft || !guide.isOwner) return
+    setForgeMode('guide')
+    setSelectedGuideDeckIds(new Set(guide.deckIds))
+    setGuideDeckSearch('')
+    setGuideName(guide.title)
+    setGuideDescription(guide.subtitle)
+    setGuideImage(guide.image)
+    setEditingGuideId(guide.id)
+    setSaveError(null)
+    setForgeScreen('guide-decks')
   }
 
   function addCardToDeck(cardType: CardTemplate) {
@@ -1283,14 +1351,20 @@ export default function GuidesV3Preview({
   }
 
   function continueToGuideCompose() {
-    const firstDeck = selectedGuideDecks[0]
-    setGuideName(firstDeck ? `${firstDeck.title} Guide` : 'New Guide')
-    setGuideDescription(
-      firstDeck
-        ? `A custom guide built from ${selectedGuideDecks.length} saved decks.`
-        : ''
-    )
-    setGuideImage(firstDeck?.image ?? '/onboarding/pains/tough-choices.jpeg')
+    // Only auto-fill name/description/image the first time through (i.e.
+    // when starting a brand-new guide) - otherwise returning to this screen
+    // to add/remove a deck from an already-named guide (new or persisted)
+    // would silently clobber the user's own title and description.
+    if (!guideName.trim()) {
+      const firstDeck = selectedGuideDecks[0]
+      setGuideName(firstDeck ? `${firstDeck.title} Guide` : 'New Guide')
+      setGuideDescription(
+        firstDeck
+          ? `A custom guide built from ${selectedGuideDecks.length} saved decks.`
+          : ''
+      )
+      setGuideImage(firstDeck?.image ?? '/onboarding/pains/tough-choices.jpeg')
+    }
     setForgeScreen('guide-compose')
   }
 
@@ -1328,13 +1402,16 @@ export default function GuidesV3Preview({
           <GuideComposeScreen
             description={guideDescription}
             image={guideImage}
+            isSaving={isSavingForge}
             name={guideName}
             selectedDecks={selectedGuideDecks}
             onDescriptionChange={setGuideDescription}
             onImageChange={setGuideImage}
+            onManageDecks={() => setForgeScreen('guide-decks')}
             onMoveDeck={moveGuideDeck}
             onNameChange={setGuideName}
             onSave={saveForgeToHome}
+            saveError={saveError}
           />
         ) : null}
         {forgeScreen === 'source' ? (
@@ -1505,6 +1582,7 @@ export default function GuidesV3Preview({
           <GuidesTab
             guideFiles={sortedGuideFiles}
             onOpenDraft={editDraftGuide}
+            onEditGuide={editPersistedGuide}
             query={guidesQuery}
             onQueryChange={setGuidesQuery}
             sortMode={guidesSortMode}
@@ -1843,22 +1921,28 @@ function GuideDeckSelectRow({
 function GuideComposeScreen({
   description,
   image,
+  isSaving,
   name,
   onDescriptionChange,
   onImageChange,
+  onManageDecks,
   onMoveDeck,
   onNameChange,
   onSave,
+  saveError,
   selectedDecks,
 }: {
   description: string
   image: string
+  isSaving: boolean
   name: string
   onDescriptionChange: (description: string) => void
   onImageChange: (image: string) => void
+  onManageDecks: () => void
   onMoveDeck: (deckId: string, direction: -1 | 1) => void
   onNameChange: (name: string) => void
   onSave: () => void
+  saveError: string | null
   selectedDecks: Deck[]
 }) {
   const cardTotal = selectedDecks.reduce((sum, deck) => sum + deck.cards, 0)
@@ -1959,9 +2043,13 @@ function GuideComposeScreen({
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">
             Deck Order
           </h3>
-          <span className="text-[10px] font-black text-[color:var(--og-brass-700)]">
-            Top to bottom
-          </span>
+          <button
+            type="button"
+            onClick={onManageDecks}
+            className="text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--og-brass-700)] underline-offset-2 hover:underline"
+          >
+            Add / Remove Decks
+          </button>
         </div>
         <div className="divide-y divide-white/[0.06]">
           {selectedDecks.map((deck, index) => (
@@ -2006,7 +2094,12 @@ function GuideComposeScreen({
         </div>
       </section>
 
-      <PrimaryButton onClick={onSave}>Save Guide Draft</PrimaryButton>
+      <PrimaryButton onClick={onSave} disabled={isSaving}>
+        {isSaving ? 'Saving...' : 'Save Guide'}
+      </PrimaryButton>
+      {saveError ? (
+        <p className="text-center text-xs font-bold text-red-300">{saveError}</p>
+      ) : null}
     </section>
   )
 }
@@ -3233,6 +3326,7 @@ function Tabs({
 function GuidesTab({
   guideFiles,
   onOpenDraft,
+  onEditGuide,
   query,
   onQueryChange,
   sortMode,
@@ -3242,6 +3336,7 @@ function GuidesTab({
 }: {
   guideFiles: GuideFile[]
   onOpenDraft: (guide: GuideFile) => void
+  onEditGuide: (guide: GuideFile) => void
   query: string
   onQueryChange: (query: string) => void
   sortMode: GuideSortMode
@@ -3285,7 +3380,12 @@ function GuidesTab({
             data-feature-guide-target="guides.tabs.guides"
           >
             {guideFiles.map((guide) => (
-              <GuideFileCard key={guide.id} guide={guide} onOpenDraft={onOpenDraft} />
+              <GuideFileCard
+                key={guide.id}
+                guide={guide}
+                onOpenDraft={onOpenDraft}
+                onEditGuide={onEditGuide}
+              />
             ))}
           </div>
         )
@@ -3697,12 +3797,14 @@ function EmptyPanel({ text, title }: { text: string; title: string }) {
 function GuideFileCard({
   guide,
   onOpenDraft,
+  onEditGuide,
 }: {
   guide: GuideFile
   onOpenDraft: (guide: GuideFile) => void
+  onEditGuide: (guide: GuideFile) => void
 }) {
   const className =
-    'block w-full text-left overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45'
+    'block min-w-0 flex-1 text-left overflow-hidden rounded-[8px] transition'
 
   const content = (
     <>
@@ -3729,63 +3831,47 @@ function GuideFileCard({
     </>
   )
 
-  if (guide.draft) {
-    return (
-      <button
-        type="button"
-        onClick={() => onOpenDraft(guide)}
-        data-v3-guides-indicator="guide-card"
-        data-feature-guide-target="guides.tabs.guides"
-        className={className}
-      >
-        {content}
-      </button>
-    )
-  }
-
-  return (
-    <Link
-      href={`/guides/${guide.id}?preview=1`}
-      data-v3-guides-indicator="guide-card"
-      data-feature-guide-target="guides.tabs.guides"
-      className={className}
-    >
+  const primary = guide.draft ? (
+    <button type="button" onClick={() => onOpenDraft(guide)} className={className}>
+      {content}
+    </button>
+  ) : (
+    <Link href={`/guides/${guide.id}?preview=1`} className={className}>
       {content}
     </Link>
   )
-}
 
-function CompactGuideCard({ guide }: { guide: GuideFile }) {
   return (
-    <Link
-      href={`/guides/${guide.id}?preview=1`}
-      data-v3-guides-indicator="compact-guide-card"
-      data-feature-guide-target="guides.tabs.library"
-      className="flex items-center gap-3 px-4 py-3 transition hover:bg-white/[0.035]"
+    <div
+      className="flex items-center gap-2 overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] pr-2 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45"
+      data-v3-guides-indicator="guide-card"
+      data-feature-guide-target="guides.tabs.guides"
     >
-      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[8px] bg-black">
-        <Image unoptimized src={guide.image} alt="" fill sizes="56px" className="object-cover" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-black text-white">
-          {guide.title}
-        </span>
-        <span className="mt-1 block truncate text-[10px] font-semibold text-white/38">
-          {guide.subtitle}
-        </span>
-      </span>
-      {guide.deckId ? (
-        <GuideSocialActions
-          recipeId={guide.deckId}
-          likeCount={guide.likeCount}
-          saveCount={guide.saveCount}
-          viewerHasLiked={guide.viewerHasLiked}
-          viewerHasSaved={guide.viewerHasSaved}
-          size="sm"
-          stopClickPropagation
-        />
+      {primary}
+      {guide.draft ? (
+        <button
+          type="button"
+          aria-label={`Edit ${guide.title}`}
+          data-v3-guides-indicator="guide-edit-link"
+          data-feature-guide-target="guides.guide_save"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg font-black text-white/70 transition hover:border-cyan-300/45 hover:text-white"
+          onClick={() => onOpenDraft(guide)}
+        >
+          <EditIcon />
+        </button>
+      ) : guide.isOwner ? (
+        <button
+          type="button"
+          aria-label={`Edit ${guide.title}`}
+          data-v3-guides-indicator="guide-edit-link"
+          data-feature-guide-target="guides.guide_save"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg font-black text-white/70 transition hover:border-cyan-300/45 hover:text-white"
+          onClick={() => onEditGuide(guide)}
+        >
+          <EditIcon />
+        </button>
       ) : null}
-    </Link>
+    </div>
   )
 }
 
@@ -3888,38 +3974,6 @@ function ForgeDeckRow({ deck }: { deck: ForgeDeck }) {
         {deck.required ? 'Required' : 'Optional'}
       </span>
     </div>
-  )
-}
-
-function LibrarySection({
-  action,
-  children,
-  title,
-}: {
-  action?: string
-  children: ReactNode
-  title: string
-}) {
-  return (
-    <section
-      className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
-      data-v3-guides-indicator="library-section"
-    >
-      <div className="flex items-center justify-between px-4 py-3">
-        <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-          {title}
-        </h2>
-        {action ? (
-          <button
-            type="button"
-            className="text-[10px] font-black text-cyan-300 transition hover:text-cyan-200"
-          >
-            {action}
-          </button>
-        ) : null}
-      </div>
-      <div className="divide-y divide-white/[0.06]">{children}</div>
-    </section>
   )
 }
 

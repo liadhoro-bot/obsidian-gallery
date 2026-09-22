@@ -628,3 +628,162 @@ export async function toggleDeckPaintOwnership(formData: FormData) {
 
   revalidatePath(`/guides/decks/${deckId}`)
 }
+
+export type CreateGuideInput = {
+  title: string
+  description: string
+  image: string | null
+  deckIds: string[]
+}
+
+export type SavedGuideResult = {
+  id: string
+}
+
+async function verifyOwnedDeckIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  deckIds: string[]
+) {
+  const { data: ownedRecipes, error } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('user_id', userId)
+    .in('id', deckIds)
+
+  if (error) throw new Error(error.message)
+
+  if (!ownedRecipes || ownedRecipes.length !== deckIds.length) {
+    throw new Error('You can only add your own decks to a guide.')
+  }
+}
+
+export async function createGuideFromDecks(
+  input: CreateGuideInput
+): Promise<SavedGuideResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+
+  const deckIds = Array.from(new Set(input.deckIds.filter(Boolean)))
+  if (deckIds.length === 0) {
+    throw new Error('Choose at least one deck for this guide.')
+  }
+
+  await verifyOwnedDeckIds(supabase, user.id, deckIds)
+
+  const title = cleanText(input.title, 'New Guide')
+  const description = cleanText(
+    input.description,
+    'A custom guide assembled from decks in your collection.'
+  )
+  const image = safePersistedImage(input.image)
+
+  const { data: guide, error: guideError } = await supabase
+    .from('guides')
+    .insert({
+      user_id: user.id,
+      title,
+      description,
+      image_url: image,
+      is_auto: false,
+    })
+    .select('id')
+    .single()
+
+  if (guideError || !guide) {
+    throw new Error(guideError?.message || 'Could not create guide')
+  }
+
+  const { error: guideDecksError } = await supabase.from('guide_decks').insert(
+    deckIds.map((recipeId, index) => ({
+      guide_id: guide.id,
+      recipe_id: recipeId,
+      user_id: user.id,
+      position: index,
+    }))
+  )
+
+  if (guideDecksError) throw new Error(guideDecksError.message)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'guide_created',
+    properties: { guide_id: guide.id, deck_count: deckIds.length },
+  })
+
+  revalidatePath('/guides')
+
+  return { id: guide.id }
+}
+
+export async function updateGuideFromDecks(
+  guideId: string,
+  input: CreateGuideInput
+): Promise<SavedGuideResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+  if (!guideId) throw new Error('Missing guide id')
+
+  const deckIds = Array.from(new Set(input.deckIds.filter(Boolean)))
+  if (deckIds.length === 0) {
+    throw new Error('Choose at least one deck for this guide.')
+  }
+
+  await verifyOwnedDeckIds(supabase, user.id, deckIds)
+
+  const title = cleanText(input.title, 'New Guide')
+  const description = cleanText(
+    input.description,
+    'A custom guide assembled from decks in your collection.'
+  )
+  const image = safePersistedImage(input.image)
+
+  const { data: guide, error: guideError } = await supabase
+    .from('guides')
+    .update({ title, description, image_url: image })
+    .eq('id', guideId)
+    .eq('user_id', user.id)
+    .select('id')
+    .single()
+
+  if (guideError || !guide) {
+    throw new Error(guideError?.message || 'Could not save guide')
+  }
+
+  const { error: deleteError } = await supabase
+    .from('guide_decks')
+    .delete()
+    .eq('guide_id', guideId)
+
+  if (deleteError) throw new Error(deleteError.message)
+
+  const { error: guideDecksError } = await supabase.from('guide_decks').insert(
+    deckIds.map((recipeId, index) => ({
+      guide_id: guideId,
+      recipe_id: recipeId,
+      user_id: user.id,
+      position: index,
+    }))
+  )
+
+  if (guideDecksError) throw new Error(guideDecksError.message)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'guide_updated',
+    properties: { guide_id: guideId, deck_count: deckIds.length },
+  })
+
+  revalidatePath('/guides')
+  revalidatePath(`/guides/${guideId}`)
+
+  return { id: guideId }
+}
