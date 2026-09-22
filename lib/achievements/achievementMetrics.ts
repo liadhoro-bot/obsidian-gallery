@@ -137,18 +137,18 @@ export async function calculateAchievementMetrics(
   const unsupportedTriggers = new Set<string>()
 
   const [
-    unitsCreated,
     unitsCompleted,
     sessionsResult,
     progressPhotos,
     ownedPaints,
     customPaints,
-    guidesCreated,
     guidesPublished,
     contestParticipations,
     contestVotes,
+    unitIdsResult,
+    recipeIdsResult,
+    nominationIdsResult,
   ] = await Promise.all([
-    safeCount(supabase, 'units', (query) => query.eq('user_id', userId)),
     safeCount(supabase, 'units', (query) =>
       query.eq('user_id', userId).eq('status', 'complete')
     ),
@@ -163,7 +163,6 @@ export async function calculateAchievementMetrics(
       query.eq('user_id', userId).eq('is_owned', true)
     ),
     safeCount(supabase, 'paints', (query) => query.eq('user_id', userId)),
-    safeCount(supabase, 'recipes', (query) => query.eq('user_id', userId)),
     safeCount(supabase, 'recipes', (query) =>
       query.eq('user_id', userId).eq('is_public', true)
     ),
@@ -173,7 +172,16 @@ export async function calculateAchievementMetrics(
     safeCount(supabase, 'contest_ballots', (query) =>
       query.eq('voter_user_id', userId).eq('status', 'submitted')
     ),
+    supabase.from('units').select('id', { count: 'exact' }).eq('user_id', userId),
+    supabase.from('recipes').select('id', { count: 'exact' }).eq('user_id', userId),
+    supabase.from('contest_nominations').select('id')
+      .eq('owner_user_id', userId).eq('status', 'approved'),
   ])
+
+  // Exact totals share the ID requests. Do not derive counts from row length:
+  // PostgREST can cap returned rows even when the total collection is larger.
+  const unitsCreated = unitIdsResult.error ? null : unitIdsResult.count ?? 0
+  const guidesCreated = recipeIdsResult.error ? null : recipeIdsResult.count ?? 0
 
   const sessions = sessionsResult.error
     ? []
@@ -182,29 +190,16 @@ export async function calculateAchievementMetrics(
     console.error('[achievements] Could not load unit_sessions', sessionsResult.error)
   }
 
-  const unitIdsResult = await supabase
-    .from('units')
-    .select('id')
-    .eq('user_id', userId)
   const unitIds =
     unitIdsResult.error || !unitIdsResult.data
       ? []
       : unitIdsResult.data.map((unit: { id: string }) => unit.id)
 
-  const recipeIdsResult = await supabase
-    .from('recipes')
-    .select('id')
-    .eq('user_id', userId)
   const recipeIds =
     recipeIdsResult.error || !recipeIdsResult.data
       ? []
       : recipeIdsResult.data.map((recipe: { id: string }) => recipe.id)
 
-  const nominationIdsResult = await supabase
-    .from('contest_nominations')
-    .select('id')
-    .eq('owner_user_id', userId)
-    .eq('status', 'approved')
   const nominationIds =
     nominationIdsResult.error || !nominationIdsResult.data
       ? []

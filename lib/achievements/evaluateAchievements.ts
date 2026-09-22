@@ -178,14 +178,28 @@ export async function evaluateAchievements(
   options: AchievementEvaluationOptions = {}
 ) {
   const service = createServiceRoleClient()
-  const { data: definitionsData, error: definitionsError } = await service
-    .from('achievements')
-    .select(
-      'achievement_id, code, name, description, curator_text, tier, trigger_key, threshold, rule_config, is_hidden, is_active, sort_order, seal_key, seal_image_path'
+  // Independent reads; all must succeed before any award is attempted.
+  const [
+    { data: definitionsData, error: definitionsError },
+    { data: earnedData, error: earnedError },
+    metricSnapshot,
+  ] = await Promise.all([
+    service
+      .from('achievements')
+      .select(
+        'achievement_id, code, name, description, curator_text, tier, trigger_key, threshold, rule_config, is_hidden, is_active, sort_order, seal_key, seal_image_path'
     )
-    .eq('is_active', true)
-    .order('tier')
-    .order('sort_order', { ascending: true })
+      .eq('is_active', true)
+      .order('tier')
+      .order('sort_order', { ascending: true }),
+    service
+      .from('user_achievements')
+      .select(
+        'user_achievement_id, user_id, achievement_id, earned_at, source_type, source_id, award_metadata, seen_at, created_at'
+    )
+      .eq('user_id', userId),
+    calculateAchievementMetrics(service, userId),
+  ])
 
   if (definitionsError) {
     throw definitionsError
@@ -200,13 +214,6 @@ export async function evaluateAchievements(
     })
   )
 
-  const { data: earnedData, error: earnedError } = await service
-    .from('user_achievements')
-    .select(
-      'user_achievement_id, user_id, achievement_id, earned_at, source_type, source_id, award_metadata, seen_at, created_at'
-    )
-    .eq('user_id', userId)
-
   if (earnedError) {
     throw earnedError
   }
@@ -215,7 +222,6 @@ export async function evaluateAchievements(
   const earnedByAchievementId = new Map(
     earnedRows.map((row) => [row.achievement_id, row])
   )
-  const metricSnapshot = await calculateAchievementMetrics(service, userId)
   const triggerFilter = options.triggers?.length
     ? new Set(options.triggers)
     : null

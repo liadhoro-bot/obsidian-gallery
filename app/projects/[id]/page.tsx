@@ -1,3 +1,4 @@
+import { getProjectUnits } from './project-units-data'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -29,66 +30,6 @@ function firstRelation<T>(value: T | T[] | null | undefined) {
 
 type ProjectSupabaseClient = Awaited<ReturnType<typeof createClient>>
 
-function uniqueStrings(values: Array<string | null | undefined>) {
-  return Array.from(new Set(values.filter((value): value is string => Boolean(value))))
-}
-
-async function getProjectUnitIds(
-  supabase: ProjectSupabaseClient,
-  projectId: string,
-  userId: string
-) {
-  const [directUnitsResult, linkedUnitsResult] = await Promise.all([
-    supabase
-      .from('units')
-      .select('id')
-      .eq('project_id', projectId)
-      .eq('user_id', userId),
-    supabase
-      .from('unit_projects')
-      .select('unit_id')
-      .eq('project_id', projectId)
-      .eq('user_id', userId),
-  ])
-
-  const lookupError = directUnitsResult.error || linkedUnitsResult.error
-  if (lookupError) {
-    return {
-      ids: [],
-      error: lookupError,
-    }
-  }
-
-  const candidateUnitIds = uniqueStrings([
-    ...((directUnitsResult.data ?? []) as Array<{ id: string | null }>).map(
-      (unit) => unit.id
-    ),
-    ...((linkedUnitsResult.data ?? []) as Array<{ unit_id: string | null }>).map(
-      (link) => link.unit_id
-    ),
-  ])
-
-  if (candidateUnitIds.length === 0) {
-    return {
-      ids: [],
-      error: null,
-    }
-  }
-
-  const { data, error } = await supabase
-    .from('units')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .in('id', candidateUnitIds)
-
-  return {
-    ids: ((data ?? []) as Array<{ id: string | null }>).map((unit) => unit.id).filter(
-      (unitId): unitId is string => Boolean(unitId)
-    ),
-    error,
-  }
-}
 
 async function getOwnedProject(
   supabase: ProjectSupabaseClient,
@@ -735,17 +676,48 @@ async function deleteProjectImage(formData: FormData) {
   revalidatePath(`/projects/${projectId}`)
 }
 
-async function getProjectDetailData({
-  projectId,
-  userId,
-  activeTab,
-}: {
+async function getProjectDetailData(args: {
   projectId: string
   userId: string
   activeTab: ProjectDetailTab
 }) {
   const supabase = await createClient()
-  const [baseProjectResult, projectUnitIdsResult, featuredProjectImageResult] =
+  const { projectId, userId } = args
+  // The image is independent of the unit/progress chain. Await both only when
+  // assembling the final result, preserving the original rendered content.
+  const [data, featuredProjectImageResult] = await Promise.all([
+    getProjectDetailBody({ ...args, supabase }),
+    supabase
+        .from('image_assets')
+        .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
+        .eq('entity_type', 'project')
+        .eq('entity_id', projectId)
+        .eq('user_id', userId)
+        .order('is_featured', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+  ])
+  return {
+    ...data,
+    featuredProjectImage: data.project
+      ? (featuredProjectImageResult.data as ProjectImage | null) ?? null
+      : null,
+  }
+}
+
+async function getProjectDetailBody({
+  supabase,
+  projectId,
+  userId,
+  activeTab,
+}: {
+  supabase: ProjectSupabaseClient
+  projectId: string
+  userId: string
+  activeTab: ProjectDetailTab
+}) {
+  const [baseProjectResult, projectUnitIdsResult] =
     await Promise.all([
       supabase
         .from('projects')
@@ -761,17 +733,8 @@ async function getProjectDetailData({
         .eq('id', projectId)
         .eq('user_id', userId)
         .single(),
-      getProjectUnitIds(supabase, projectId, userId),
-      supabase
-        .from('image_assets')
-        .select('id, entity_id, image_url, alt_text, is_featured, created_at, storage_bucket, storage_path')
-        .eq('entity_type', 'project')
-        .eq('entity_id', projectId)
-        .eq('user_id', userId)
-        .order('is_featured', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle(),
+      getProjectUnits(supabase, projectId, userId, activeTab),
+
     ])
 
   const project = baseProjectResult.data
@@ -872,7 +835,7 @@ async function getProjectDetailData({
       project: normalizedProject,
       projectTheme,
       projectError,
-      featuredProjectImage: (featuredProjectImageResult.data as ProjectImage | null) ?? null,
+      featuredProjectImage: null,
       projectImages: (projectImagesResult.data ?? []) as ProjectImage[],
       projectUnitCount,
       projectTotalSessionSeconds: (projectSessionsResult.data ?? []).reduce(
@@ -891,19 +854,9 @@ async function getProjectDetailData({
   }
 
   if (activeTab === 'units') {
-    const unitsResult = projectUnitIdsResult.error
-      ? { data: [], error: projectUnitIdsResult.error }
-      : projectUnitIds.length > 0
-        ? await supabase
-            .from('units')
-            .select('id, name, notes, created_at, updated_at, project_id, status, is_active')
-            .eq('user_id', userId)
-            .eq('is_active', true)
-            .in('id', projectUnitIds)
-            .order('created_at', { ascending: false })
-        : { data: [], error: null }
+    const unitsResult = { data: projectUnitIdsResult.units, error: projectUnitIdsResult.error }
+    const units = unitsResult.data
 
-    const units = unitsResult.data ?? []
     const unitIds = units
       .map((unit) => unit.id)
       .filter((unitId): unitId is string => Boolean(unitId) && unitId !== 'undefined')
@@ -967,7 +920,7 @@ async function getProjectDetailData({
       project: { ...project, theme: null } as ProjectRow,
       projectTheme: null,
       projectError,
-      featuredProjectImage: (featuredProjectImageResult.data as ProjectImage | null) ?? null,
+      featuredProjectImage: null,
       projectImages: [],
       projectUnitCount,
       projectTotalSessionSeconds: 0,
@@ -987,7 +940,7 @@ async function getProjectDetailData({
     project: { ...project, theme: null } as ProjectRow,
     projectTheme: null,
     projectError,
-    featuredProjectImage: (featuredProjectImageResult.data as ProjectImage | null) ?? null,
+    featuredProjectImage: null,
     projectImages: [],
     projectUnitCount,
     projectTotalSessionSeconds: 0,

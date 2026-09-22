@@ -137,13 +137,10 @@ export default async function DeckDetailPage({
     )
   }
 
-  const deck = await perf.measure('v3 deck detail data', () =>
-    getGuidesV3DeckDetail(id, user.id)
-  )
-  const featureGuides = await getFeatureGuidesForPage(
-    '/guides/decks/[id]',
-    deckDetailFeatureGuides
-  )
+  const [deck, featureGuides] = await Promise.all([
+    perf.measure('v3 deck detail data', () => getGuidesV3DeckDetail(id, user.id)),
+    getFeatureGuidesForPage('/guides/decks/[id]', deckDetailFeatureGuides),
+  ])
   perf.total()
 
   if (!deck) notFound()

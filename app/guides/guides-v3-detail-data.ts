@@ -1,3 +1,4 @@
+import { loadRecipeSteps } from './load-recipe-steps'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { getRecipeSocialState } from '../components/social/data'
@@ -136,21 +137,6 @@ type StepPaintRow = {
 
 const fallbackImage = '/onboarding/pains/tough-choices.jpeg'
 
-type SupabaseErrorLike = {
-  code?: string
-  message?: string
-}
-
-function isMissingColumn(error: SupabaseErrorLike | null | undefined, column: string) {
-  const message = error?.message ?? ''
-
-  return (
-    error?.code === '42703' ||
-    (message.includes(column) &&
-      (message.includes('does not exist') || message.includes('schema cache')))
-  )
-}
-
 function firstValue<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
@@ -285,56 +271,13 @@ export const getGuidesV3DeckDetail = cache(
     if (!recipe) return null
 
     const typedRecipe = recipe as RecipeRow
-    const rawImagePromise = loadRecipeImage(supabase, typedRecipe)
-    // Which guide(s) currently wrap this deck - at most one today, since
-    // multi-deck guides are a later phase. RLS on `guide_decks` already
-    // covers visibility (same own-or-public-recipe rule already applied to
-    // the `recipe` fetch above).
-    const guideLinksPromise = supabase
-      .from('guide_decks')
-      .select('guide_id, guides (id, title)')
-      .eq('recipe_id', deckId)
-    const socialStatePromise = getRecipeSocialState(supabase, deckId, userId)
-    let { data: steps, error: stepsError } = await supabase
-      .from('recipe_steps')
-      .select('id, step_number, title, card_template, instructions, image_url, youtube_url')
-      .eq('recipe_id', deckId)
-      .order('step_number', { ascending: true })
-
-    if (isMissingColumn(stepsError, 'youtube_url')) {
-      const fallbackResult = await supabase
-        .from('recipe_steps')
-        .select('id, step_number, title, card_template, instructions, image_url')
-        .eq('recipe_id', deckId)
-        .order('step_number', { ascending: true })
-
-      steps =
-        fallbackResult.data?.map((step) => ({
-          ...step,
-          youtube_url: null,
-        })) ?? null
-      stepsError = fallbackResult.error
-    }
-
-    if (isMissingColumn(stepsError, 'card_template')) {
-      const fallbackResult = await supabase
-        .from('recipe_steps')
-        .select('id, step_number, title, instructions, image_url')
-        .eq('recipe_id', deckId)
-        .order('step_number', { ascending: true })
-
-      steps =
-        fallbackResult.data?.map((step) => ({
-          ...step,
-          card_template: null,
-          youtube_url: null,
-        })) ?? null
-      stepsError = fallbackResult.error
-    }
-
-    const rawImage = await rawImagePromise
-    const { data: guideLinks, error: guideLinksError } = await guideLinksPromise
-    const socialState = await socialStatePromise
+    const [rawImage, { data: guideLinks, error: guideLinksError }, socialState, { data: steps, error: stepsError }] = await Promise.all([
+      loadRecipeImage(supabase, typedRecipe),
+      // RLS preserves visibility; Promise.all starts this lazy query builder now.
+      supabase.from('guide_decks').select('guide_id, guides (id, title)').eq('recipe_id', deckId),
+      getRecipeSocialState(supabase, deckId, userId),
+      loadRecipeSteps(supabase, deckId),
+    ])
 
     if (guideLinksError) throw new Error(guideLinksError.message)
     if (stepsError) throw new Error(stepsError.message)

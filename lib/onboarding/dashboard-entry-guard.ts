@@ -159,8 +159,10 @@ export async function getDashboardOnboardingRequirement(
         .maybeSingle(),
       readSupabase
         .from('units')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId),
+        // The guard only needs existence; avoid counting a user's collection.
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1),
     ])
 
   const profile = profileResult.data as ProfileTermsRow | null
@@ -180,6 +182,6 @@ export async function getDashboardOnboardingRequirement(
     profile,
     termsAcceptance,
     flow,
-    unitCount: unitResult.count,
+    unitCount: unitResult.data?.length ?? null,
   })
 }
