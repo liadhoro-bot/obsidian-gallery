@@ -63,8 +63,8 @@ function toRecipe(deck: GuidesV3DeckDetail): Recipe {
   }
 }
 
-function toFeaturedImage(deck: GuidesV3DeckDetail, useOriginal = false): RecipeImage | null {
-  const image = useOriginal ? deck.fullImage || deck.image : deck.image
+function toFeaturedImage(deck: GuidesV3DeckDetail): RecipeImage | null {
+  const image = deck.fullImage || deck.image
   if (!isUsableImageUrl(image)) return null
 
   return {
@@ -75,13 +75,13 @@ function toFeaturedImage(deck: GuidesV3DeckDetail, useOriginal = false): RecipeI
   }
 }
 
-function toRecipeStep(step: GuidesV3DeckStep, useOriginal = false): RecipeStep {
+function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
   return {
     id: step.id,
     step_number: step.number,
     title: step.title,
     instructions: step.instructions,
-    image_url: useOriginal ? step.rawImage || step.image : step.image,
+    image_url: step.rawImage || step.image,
   }
 }
 
@@ -174,13 +174,16 @@ export default async function DeckDetailPage({
   }
 
   const recipe = toRecipe(deck)
+  // Both the live swipeable viewer and the shared/exported cards (PDF,
+  // images) should always show each step's own full-resolution photo, never
+  // the small 112x112 thumbnail used for list/card previews elsewhere -
+  // showBrandMark only toggles the "made with Obsidian Gallery" watermark.
   const featuredImage = toFeaturedImage(deck)
   const paintCount = deck.paintList.length
   const recipeSteps = deck.steps.map((step) => toRecipeStep(step))
 
   const renderStepCard = (step: GuidesV3DeckStep, showBrandMark: boolean) => {
-    // Only full-size viewer cards use originals; previews and exports keep their existing sources.
-    const recipeStep = toRecipeStep(step, !showBrandMark)
+    const recipeStep = toRecipeStep(step)
     const paints = toRecipePaints(step)
 
     return step.template === 'video' ? (
@@ -195,7 +198,7 @@ export default async function DeckDetailPage({
         step={recipeStep}
         stepsLength={recipeSteps.length}
         paints={paints}
-        fallbackImageUrl={showBrandMark ? deck.image : deck.fullImage || deck.image}
+        fallbackImageUrl={deck.fullImage || deck.image}
         showBrandMark={showBrandMark}
       />
     ) : step.template === 'small-image' && isUsableImageUrl(recipeStep.image_url) ? (
@@ -249,7 +252,7 @@ export default async function DeckDetailPage({
         <div className="relative h-full">
           <RecipeGuideCoverCard
             recipe={recipe}
-            featuredImage={toFeaturedImage(deck, true)}
+            featuredImage={featuredImage}
             cardCount={deck.steps.length + 1}
             paintCount={paintCount}
           />

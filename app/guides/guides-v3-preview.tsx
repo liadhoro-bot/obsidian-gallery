@@ -3803,8 +3803,7 @@ function GuideFileCard({
   onOpenDraft: (guide: GuideFile) => void
   onEditGuide: (guide: GuideFile) => void
 }) {
-  const className =
-    'block min-w-0 flex-1 text-left overflow-hidden rounded-[8px] transition'
+  const className = 'block w-full text-left overflow-hidden rounded-[8px] transition'
 
   const content = (
     <>
@@ -3843,7 +3842,7 @@ function GuideFileCard({
 
   return (
     <div
-      className="flex items-center gap-2 overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] pr-2 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45"
+      className="relative overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:border-cyan-300/45"
       data-v3-guides-indicator="guide-card"
       data-feature-guide-target="guides.tabs.guides"
     >
@@ -3854,7 +3853,7 @@ function GuideFileCard({
           aria-label={`Edit ${guide.title}`}
           data-v3-guides-indicator="guide-edit-link"
           data-feature-guide-target="guides.guide_save"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg font-black text-white/70 transition hover:border-cyan-300/45 hover:text-white"
+          className="absolute right-2 top-2 z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full border text-sm font-black"
           onClick={() => onOpenDraft(guide)}
         >
           <EditIcon />
@@ -3865,7 +3864,7 @@ function GuideFileCard({
           aria-label={`Edit ${guide.title}`}
           data-v3-guides-indicator="guide-edit-link"
           data-feature-guide-target="guides.guide_save"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg font-black text-white/70 transition hover:border-cyan-300/45 hover:text-white"
+          className="absolute right-2 top-2 z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full border text-sm font-black"
           onClick={() => onEditGuide(guide)}
         >
           <EditIcon />

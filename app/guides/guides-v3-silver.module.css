@@ -615,6 +615,20 @@
   outline: none;
 }
 
+.guidesSilver [data-v3-guides-indicator="guide-card"] > button[data-v3-guides-indicator="guide-edit-link"] {
+  border-color: color-mix(in srgb, var(--og-brass-500) 62%, var(--og-walnut-700));
+  background-color: color-mix(in srgb, var(--og-brass-500) 18%, var(--og-paper-50));
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-brass-plate);
+}
+
+.guidesSilver [data-v3-guides-indicator="guide-card"] > button[data-v3-guides-indicator="guide-edit-link"]:hover,
+.guidesSilver [data-v3-guides-indicator="guide-card"] > button[data-v3-guides-indicator="guide-edit-link"]:focus-visible {
+  border-color: color-mix(in srgb, var(--og-brass-500) 90%, var(--og-paper-50));
+  outline: none;
+}
+
 .guidesSilver [data-v3-guides-indicator="deck-row"],
 .guidesSilver [data-v3-guides-indicator="compact-guide-card"],
 .guidesSilver [data-v3-guides-indicator="forge-deck-row"] {

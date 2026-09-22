@@ -181,9 +181,17 @@ export default function DeckShareMenu({
       const files = await captureCardFiles()
 
       if (canShareFiles(files)) {
-        await navigator.share({ title: fileBaseName, files })
-        setNotice('Share sheet opened.')
-        return
+        try {
+          await navigator.share({ title: fileBaseName, files })
+          setNotice('Share sheet opened.')
+          return
+        } catch (err) {
+          // AbortError means the person closed the native share sheet
+          // themselves - respect that instead of dropping a zip on them.
+          if (err instanceof Error && err.name === 'AbortError') return
+          // Anything else (most commonly a permissions-policy rejection in
+          // an embedded/webview context) falls through to the zip download.
+        }
       }
 
       const { default: JSZip } = await import('jszip')
@@ -215,7 +223,13 @@ export default function DeckShareMenu({
         }
 
         const dataUrl = await blobToDataUrl(files[index])
-        doc.addImage(dataUrl, 'PNG', 0, 0, EXPORT_CARD_WIDTH, EXPORT_CARD_HEIGHT)
+        // jsPDF caches added images by a hash of half their raw bytes, keyed
+        // off an auto-generated alias when none is given. Every exported
+        // card shares the same border/frame template and differs mainly in
+        // the embedded photo, so that hash collides across cards and jsPDF
+        // silently reuses an earlier image. Passing an explicit unique
+        // alias per card bypasses that cache entirely.
+        doc.addImage(dataUrl, 'PNG', 0, 0, EXPORT_CARD_WIDTH, EXPORT_CARD_HEIGHT, `card-${index}`)
       }
 
       doc.save(`${sanitizeFilePart(fileBaseName)}-cards.pdf`)
@@ -244,7 +258,7 @@ export default function DeckShareMenu({
               role="dialog"
               aria-modal="true"
               aria-label="Share this guide"
-              className="fixed inset-0 z-[1000] grid place-items-center bg-black/60 p-4"
+              className="fixed inset-0 z-[1000] grid place-items-center bg-black/65 p-4 backdrop-blur-sm"
               onClick={(event) => {
                 if (event.target === event.currentTarget) closeMenu()
               }}
@@ -252,16 +266,41 @@ export default function DeckShareMenu({
               onTouchStart={(event) => event.stopPropagation()}
               onWheel={(event) => event.stopPropagation()}
             >
-              <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-[#0b1016] p-4 text-white shadow-2xl shadow-black/60">
+              <div
+                className="w-full max-w-xs rounded-[18px] p-4"
+                style={{
+                  border: '1px solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle))',
+                  backgroundColor: 'var(--og-surface-primary)',
+                  backgroundImage: 'var(--og-material-parchment-panel)',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat, repeat, no-repeat',
+                  backgroundSize: '100% 100%, 260px auto, 100% 100%',
+                  color: 'var(--og-text-primary)',
+                  boxShadow: 'var(--og-shadow-large)',
+                }}
+              >
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">
+                  <p
+                    className="text-xs font-black uppercase tracking-[0.24em]"
+                    style={{ color: 'color-mix(in srgb, var(--og-status-warning) 82%, var(--og-ink-800))' }}
+                  >
                     Share Guide
                   </p>
                   <button
                     type="button"
                     onClick={closeMenu}
                     aria-label="Close share menu"
-                    className="h-7 w-7 rounded-full border border-white/10 text-sm font-black text-white/70 transition hover:bg-white/10 hover:text-white"
+                    className="grid h-8 w-8 place-items-center rounded-full text-sm font-black transition"
+                    style={{
+                      border: '1px solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950))',
+                      backgroundColor: 'var(--og-walnut-950)',
+                      backgroundImage: 'var(--og-material-ebonized-control)',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat, repeat, no-repeat',
+                      backgroundSize: '100% 100%, 180px auto, 100% 100%',
+                      color: 'var(--og-brass-500)',
+                      boxShadow: 'var(--og-shadow-control-built)',
+                    }}
                   >
                     x
                   </button>
@@ -272,7 +311,17 @@ export default function DeckShareMenu({
                     type="button"
                     onClick={handleCopyLink}
                     disabled={isBusy}
-                    className="min-h-11 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left text-sm font-black text-white/85 transition disabled:opacity-55"
+                    className="min-h-11 rounded-[8px] px-4 py-3 text-left text-sm font-black transition disabled:opacity-55"
+                    style={{
+                      border: '1px solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950))',
+                      backgroundColor: 'var(--og-walnut-950)',
+                      backgroundImage: 'var(--og-material-ebonized-control)',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat, repeat, no-repeat',
+                      backgroundSize: '100% 100%, 180px auto, 100% 100%',
+                      color: 'var(--og-paper-100)',
+                      boxShadow: 'var(--og-shadow-control-built)',
+                    }}
                   >
                     Copy Link
                   </button>
@@ -280,7 +329,17 @@ export default function DeckShareMenu({
                     type="button"
                     onClick={handleSavePdf}
                     disabled={isBusy}
-                    className="min-h-11 rounded-xl bg-cyan-300 px-4 py-3 text-left text-sm font-black text-black transition disabled:opacity-55"
+                    className="min-h-11 rounded-[8px] px-4 py-3 text-left text-sm font-black transition disabled:opacity-55"
+                    style={{
+                      border: '1px solid color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700))',
+                      backgroundColor: 'var(--og-brass-500)',
+                      backgroundImage: 'var(--og-material-brass)',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat, repeat, no-repeat',
+                      backgroundSize: '100% 100%, 180px auto, 100% 100%',
+                      color: 'var(--og-ink-950)',
+                      boxShadow: 'var(--og-shadow-control-built)',
+                    }}
                   >
                     Save as PDF
                   </button>
@@ -288,19 +347,40 @@ export default function DeckShareMenu({
                     type="button"
                     onClick={handleSaveImages}
                     disabled={isBusy}
-                    className="min-h-11 rounded-xl border border-[#d8a84f]/45 bg-[#d8a84f]/12 px-4 py-3 text-left text-sm font-black text-[#f1d28a] transition disabled:opacity-55"
+                    className="min-h-11 rounded-[8px] px-4 py-3 text-left text-sm font-black transition disabled:opacity-55"
+                    style={{
+                      border: '1px solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950))',
+                      backgroundColor: 'var(--og-walnut-950)',
+                      backgroundImage: 'var(--og-material-ebonized-control)',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat, repeat, no-repeat',
+                      backgroundSize: '100% 100%, 180px auto, 100% 100%',
+                      color: 'var(--og-brass-500)',
+                      boxShadow: 'var(--og-shadow-control-built)',
+                    }}
                   >
                     Save Images
                   </button>
                 </div>
 
                 {isBusy ? (
-                  <p className="mt-3 text-xs font-bold text-cyan-100/75">Preparing cards...</p>
+                  <p className="mt-3 text-xs font-bold" style={{ color: 'var(--og-text-secondary)' }}>
+                    Preparing cards...
+                  </p>
                 ) : null}
                 {notice ? (
-                  <p className="mt-3 text-xs font-bold text-cyan-100/75">{notice}</p>
+                  <p className="mt-3 text-xs font-bold" style={{ color: 'var(--og-text-secondary)' }}>
+                    {notice}
+                  </p>
                 ) : null}
-                {error ? <p className="mt-3 text-xs font-bold text-red-200">{error}</p> : null}
+                {error ? (
+                  <p
+                    className="mt-3 text-xs font-bold"
+                    style={{ color: 'color-mix(in srgb, var(--og-status-danger) 78%, var(--og-ink-950))' }}
+                  >
+                    {error}
+                  </p>
+                ) : null}
               </div>
             </div>,
             document.body
