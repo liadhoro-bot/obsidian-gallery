@@ -63,24 +63,25 @@ function toRecipe(deck: GuidesV3DeckDetail): Recipe {
   }
 }
 
-function toFeaturedImage(deck: GuidesV3DeckDetail): RecipeImage | null {
-  if (!isUsableImageUrl(deck.image)) return null
+function toFeaturedImage(deck: GuidesV3DeckDetail, useOriginal = false): RecipeImage | null {
+  const image = useOriginal ? deck.fullImage || deck.image : deck.image
+  if (!isUsableImageUrl(image)) return null
 
   return {
     id: `${deck.id}-cover`,
-    image_url: deck.image,
+    image_url: image,
     is_featured: true,
     alt_text: deck.title,
   }
 }
 
-function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
+function toRecipeStep(step: GuidesV3DeckStep, useOriginal = false): RecipeStep {
   return {
     id: step.id,
     step_number: step.number,
     title: step.title,
     instructions: step.instructions,
-    image_url: step.image,
+    image_url: useOriginal ? step.rawImage || step.image : step.image,
   }
 }
 
@@ -175,10 +176,11 @@ export default async function DeckDetailPage({
   const recipe = toRecipe(deck)
   const featuredImage = toFeaturedImage(deck)
   const paintCount = deck.paintList.length
-  const recipeSteps = deck.steps.map(toRecipeStep)
+  const recipeSteps = deck.steps.map((step) => toRecipeStep(step))
 
   const renderStepCard = (step: GuidesV3DeckStep, showBrandMark: boolean) => {
-    const recipeStep = toRecipeStep(step)
+    // Only full-size viewer cards use originals; previews and exports keep their existing sources.
+    const recipeStep = toRecipeStep(step, !showBrandMark)
     const paints = toRecipePaints(step)
 
     return step.template === 'video' ? (
@@ -193,7 +195,7 @@ export default async function DeckDetailPage({
         step={recipeStep}
         stepsLength={recipeSteps.length}
         paints={paints}
-        fallbackImageUrl={deck.image}
+        fallbackImageUrl={showBrandMark ? deck.image : deck.fullImage || deck.image}
         showBrandMark={showBrandMark}
       />
     ) : step.template === 'small-image' && isUsableImageUrl(recipeStep.image_url) ? (
@@ -247,7 +249,7 @@ export default async function DeckDetailPage({
         <div className="relative h-full">
           <RecipeGuideCoverCard
             recipe={recipe}
-            featuredImage={featuredImage}
+            featuredImage={toFeaturedImage(deck, true)}
             cardCount={deck.steps.length + 1}
             paintCount={paintCount}
           />

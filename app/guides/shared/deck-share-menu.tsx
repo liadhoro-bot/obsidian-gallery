@@ -248,6 +248,9 @@ export default function DeckShareMenu({
               onClick={(event) => {
                 if (event.target === event.currentTarget) closeMenu()
               }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onTouchStart={(event) => event.stopPropagation()}
+              onWheel={(event) => event.stopPropagation()}
             >
               <div className="w-full max-w-xs rounded-2xl border border-white/10 bg-[#0b1016] p-4 text-white shadow-2xl shadow-black/60">
                 <div className="mb-3 flex items-center justify-between gap-3">
