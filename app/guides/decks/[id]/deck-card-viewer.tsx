@@ -160,13 +160,14 @@ export default function DeckCardViewer({
           className={styles.trackInner}
           style={{ transform: `translateX(-${activeIndex * 100}%)` }}
         >
-          {cards.map((card) => (
+          {cards.map((card, index) => (
             <div
               key={card.key}
               className={styles.slide}
               data-feature-guide-target={card.featureGuideTarget}
             >
-              {card.node}
+              {/* Keep neighboring cards ready without loading images for the entire deck. */}
+              {Math.abs(index - activeIndex) <= 1 ? card.node : null}
             </div>
           ))}
         </div>
