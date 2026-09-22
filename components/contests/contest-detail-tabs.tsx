@@ -86,6 +86,7 @@ export default function ContestDetailTabs({
   ballot,
   contest,
   guideCreatorLeaderboard = [],
+  initialTab = 'details',
   hideIdentity,
   isEligibleParticipant = true,
   nominations,
@@ -95,6 +96,7 @@ export default function ContestDetailTabs({
   ballot: ContestBallot | null
   contest: Contest
   guideCreatorLeaderboard?: GuideCreatorLeaderboardEntry[]
+  initialTab?: ContestDetailTab
   hideIdentity?: boolean
   isEligibleParticipant?: boolean
   nominations: ContestNomination[]
@@ -102,7 +104,7 @@ export default function ContestDetailTabs({
   results: unknown[]
   userNominations: ContestNomination[]
 }) {
-  const [activeTab, setActiveTab] = useState<ContestDetailTab>('details')
+  const [activeTab, setActiveTab] = useState<ContestDetailTab>(initialTab)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<EntrySort>('newest')
   const [isNominateModalOpen, setIsNominateModalOpen] = useState(false)
@@ -571,7 +573,7 @@ function EntryTile({
 }) {
   const href =
     nomineeType === 'guide'
-      ? `/contests/${contestSlug}/vote?creator=${encodeURIComponent(nomination.owner_user_id)}`
+      ? `/contests/${contestSlug}/creators/${encodeURIComponent(nomination.owner_user_id)}`
       : `/contests/${contestSlug}/entries/${nomination.id}`
   const ownerName = entryOwnerName(nomination, hideIdentity)
 
@@ -608,7 +610,7 @@ function CreatorLeaderboardTile({
 }) {
   return (
     <Link
-      href={`/contests/${contestSlug}/vote?creator=${encodeURIComponent(entry.ownerId)}`}
+      href={`/contests/${contestSlug}/creators/${encodeURIComponent(entry.ownerId)}`}
       className={`${styles.nomineeTile} block`}
     >
       <div className={styles.nomineeTileImage}>

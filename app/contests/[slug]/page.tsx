@@ -25,10 +25,13 @@ import styles from '../../../components/contests/contest-v3-silver.module.css'
 
 export default async function ContestDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { slug } = await params
+  const { tab } = await searchParams
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
   const contest = await getContestBySlug(slug)
@@ -88,6 +91,7 @@ export default async function ContestDetailPage({
         />
 
         <ContestDetailTabs
+          initialTab={tab === 'entries' ? 'entries' : 'details'}
           ballot={ballot}
           isEligibleParticipant={isEligibleParticipant}
           contest={contest}
