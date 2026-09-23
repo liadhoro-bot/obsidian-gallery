@@ -7,28 +7,38 @@ import { getFeatureGuidesForPage } from '../../components/feature-guide-data'
 import { guideDetailFeatureGuides } from '../../components/feature-guide-presets'
 import { createPerfTimer } from '../../../utils/perf/server'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
-import { getGuidesV3GuideDetail } from '../guides-v3-detail-data'
+import { getGuidesV3Payload } from '../guides-v3-data'
+import { getGuidesV3DeckDetail, getGuidesV3GuideDetail } from '../guides-v3-detail-data'
 import GuideSocialActions from '../shared/guide-social-actions'
+import GuideEditPageClient from './guide-edit-page-client'
 import styles from '../guide-detail-silver.module.css'
 
 type GuideDetailPageProps = {
   params: Promise<{ id: string }>
+  searchParams?: Promise<{ edit?: string }>
 }
 
 export default async function GuideDetailPage({
   params,
+  searchParams,
 }: GuideDetailPageProps) {
   const perf = createPerfTimer('/guides/[id]')
-  const { id } = await params
+  const [{ id }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve({} as { edit?: string }),
+  ])
+  const isEditing = resolvedSearchParams.edit === '1'
 
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   if (!user) {
-    redirect(
-      `/login?next=${encodeURIComponent(`/guides/${id}?preview=1`)}&preview=1`
-    )
+    const nextPath = isEditing
+      ? `/guides/${id}?preview=1&edit=1`
+      : `/guides/${id}?preview=1`
+
+    redirect(`/login?next=${encodeURIComponent(nextPath)}&preview=1`)
   }
 
   const guide = await perf.measure('v3 guide detail data', () =>
@@ -41,6 +51,44 @@ export default async function GuideDetailPage({
   perf.total()
 
   if (!guide) notFound()
+
+  if (isEditing && !guide.isOwner) {
+    // Only the creator may edit a guide. A viewer who merely saved/bookmarked
+    // it gets bounced to the read-only view instead of the editor.
+    redirect(`/guides/${id}?preview=1`)
+  }
+
+  if (isEditing) {
+    const deckIds = guide.deckIds ?? []
+    const [payload, deckDetails] = await Promise.all([
+      getGuidesV3Payload(user.id),
+      Promise.all(deckIds.map((deckId) => getGuidesV3DeckDetail(deckId, user.id))),
+    ])
+
+    const memberDeckIds = new Set(deckIds)
+    const availableDecks = payload.decks.filter(
+      (deck) => deck.isOwner && !memberDeckIds.has(deck.id)
+    )
+    const resolvedDeckDetails = deckDetails.filter(
+      (deck): deck is NonNullable<typeof deck> => Boolean(deck)
+    )
+    const primaryDeckDetail = resolvedDeckDetails.find((deck) => deck.id === deckIds[0])
+    const initialCoverImage = primaryDeckDetail?.fullImage || primaryDeckDetail?.image || guide.image
+
+    return (
+      <main>
+        <V3PerfIndicator surface="guide-editor" detail="main" />
+        <GuideEditPageClient
+          guide={guide}
+          memberDecks={guide.decksList}
+          availableDecks={availableDecks}
+          deckDetails={resolvedDeckDetails}
+          initialCoverImage={initialCoverImage}
+          featureGuides={featureGuides}
+        />
+      </main>
+    )
+  }
 
   return (
     <main className={styles.root}>

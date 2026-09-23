@@ -634,6 +634,12 @@ export type CreateGuideInput = {
   description: string
   image: string | null
   deckIds: string[]
+  // A guide's own visibility is derived from its member decks' `is_public`
+  // (see isGuidePublic in guides-v3-data.ts) - there is no separate
+  // guides.status column. Setting status to 'Public' here publishes every
+  // member deck in the same save; 'Draft'/'Private' leave decks untouched
+  // rather than surprising the owner by un-publishing them.
+  status?: string
 }
 
 export type SavedGuideResult = {
@@ -709,6 +715,16 @@ export async function createGuideFromDecks(
 
   if (guideDecksError) throw new Error(guideDecksError.message)
 
+  if (input.status === 'Public') {
+    const { error: publishError } = await supabase
+      .from('recipes')
+      .update({ is_public: true })
+      .in('id', deckIds)
+      .eq('user_id', user.id)
+
+    if (publishError) throw new Error(publishError.message)
+  }
+
   await captureServerEvent({
     distinctId: user.id,
     event: 'guide_created',
@@ -776,6 +792,16 @@ export async function updateGuideFromDecks(
 
   if (guideDecksError) throw new Error(guideDecksError.message)
 
+  if (input.status === 'Public') {
+    const { error: publishError } = await supabase
+      .from('recipes')
+      .update({ is_public: true })
+      .in('id', deckIds)
+      .eq('user_id', user.id)
+
+    if (publishError) throw new Error(publishError.message)
+  }
+
   await captureServerEvent({
     distinctId: user.id,
     event: 'guide_updated',
@@ -784,6 +810,9 @@ export async function updateGuideFromDecks(
 
   revalidatePath('/guides')
   revalidatePath(`/guides/${guideId}`)
+  for (const deckId of deckIds) {
+    revalidatePath(`/guides/decks/${deckId}`)
+  }
 
   return { id: guideId }
 }

@@ -9,7 +9,7 @@ import { findVisibleFeatureGuideIndex } from '../components/feature-guide-naviga
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './guides-v3-silver.module.css'
 import { capturePostHog } from '../../utils/analytics/client'
-import { createDeckFromForge, createGuideFromDecks, updateGuideFromDecks } from './actions'
+import { createDeckFromForge, createGuideFromDecks } from './actions'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type {
   GuidesV3Deck,
@@ -807,10 +807,6 @@ export default function GuidesV3Preview({
   const [guideName, setGuideName] = useState('')
   const [guideDescription, setGuideDescription] = useState('')
   const [guideImage, setGuideImage] = useState('/onboarding/pains/tough-choices.jpeg')
-  // The persisted guide currently being edited, if any - null means
-  // saveForgeToHome's guide branch will create a new guide instead of
-  // updating one that already exists in the database.
-  const [editingGuideId, setEditingGuideId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSavingForge, startSaveTransition] = useTransition()
   const isSavingForgeRef = useRef(false)
@@ -910,7 +906,6 @@ export default function GuidesV3Preview({
       setGuideName('')
       setGuideDescription('')
       setGuideImage('/onboarding/pains/tough-choices.jpeg')
-      setEditingGuideId(null)
       setForgeScreen('guide-decks')
       return
     }
@@ -928,7 +923,6 @@ export default function GuidesV3Preview({
     setIsEditingDeckDetails(false)
     setSaveError(null)
     setBuildTab('details')
-    setEditingGuideId(null)
   }
 
   function chooseSource(nextSource: Exclude<SourceKind, 'scratch'>) {
@@ -1097,15 +1091,12 @@ export default function GuidesV3Preview({
     setSaveError(null)
     startSaveTransition(async () => {
       try {
-        const input = {
+        const savedGuide = await createGuideFromDecks({
           title: guideName_,
           description: guideDescription_,
           image: guideImage,
           deckIds: guideDeckIds,
-        }
-        const savedGuide = editingGuideId
-          ? await updateGuideFromDecks(editingGuideId, input)
-          : await createGuideFromDecks(input)
+        })
 
         const savedGuideFile: GuideFile = {
           id: savedGuide.id,
@@ -1134,7 +1125,6 @@ export default function GuidesV3Preview({
           ...current.filter((guide) => guide.id !== savedGuideFile.id && !guide.draft),
         ])
         setActiveTab('guides')
-        setEditingGuideId(null)
         closeForge()
       } catch (error) {
         setSaveError(
@@ -1206,27 +1196,8 @@ export default function GuidesV3Preview({
     setGuideName(guide.draft.name)
     setGuideDescription(guide.draft.description)
     setGuideImage(guide.draft.image)
-    setEditingGuideId(null)
     setSaveError(null)
     setForgeScreen('guide-compose')
-  }
-
-  // Editor entry point for a real, persisted guide (as opposed to a local,
-  // unsaved draft - see editDraftGuide above). Opens the same deck-picker +
-  // compose flow used for creation, pre-filled with the guide's current
-  // membership, so decks can be added/removed/reordered before saving via
-  // updateGuideFromDecks.
-  function editPersistedGuide(guide: GuideFile) {
-    if (guide.draft || !guide.isOwner) return
-    setForgeMode('guide')
-    setSelectedGuideDeckIds(new Set(guide.deckIds))
-    setGuideDeckSearch('')
-    setGuideName(guide.title)
-    setGuideDescription(guide.subtitle)
-    setGuideImage(guide.image)
-    setEditingGuideId(guide.id)
-    setSaveError(null)
-    setForgeScreen('guide-decks')
   }
 
   function addCardToDeck(cardType: CardTemplate) {
@@ -1582,7 +1553,6 @@ export default function GuidesV3Preview({
           <GuidesTab
             guideFiles={sortedGuideFiles}
             onOpenDraft={editDraftGuide}
-            onEditGuide={editPersistedGuide}
             query={guidesQuery}
             onQueryChange={setGuidesQuery}
             sortMode={guidesSortMode}
@@ -3326,7 +3296,6 @@ function Tabs({
 function GuidesTab({
   guideFiles,
   onOpenDraft,
-  onEditGuide,
   query,
   onQueryChange,
   sortMode,
@@ -3336,7 +3305,6 @@ function GuidesTab({
 }: {
   guideFiles: GuideFile[]
   onOpenDraft: (guide: GuideFile) => void
-  onEditGuide: (guide: GuideFile) => void
   query: string
   onQueryChange: (query: string) => void
   sortMode: GuideSortMode
@@ -3384,7 +3352,6 @@ function GuidesTab({
                 key={guide.id}
                 guide={guide}
                 onOpenDraft={onOpenDraft}
-                onEditGuide={onEditGuide}
               />
             ))}
           </div>
@@ -3797,11 +3764,9 @@ function EmptyPanel({ text, title }: { text: string; title: string }) {
 function GuideFileCard({
   guide,
   onOpenDraft,
-  onEditGuide,
 }: {
   guide: GuideFile
   onOpenDraft: (guide: GuideFile) => void
-  onEditGuide: (guide: GuideFile) => void
 }) {
   const className = 'block w-full text-left overflow-hidden rounded-[8px] transition'
 
@@ -3859,16 +3824,15 @@ function GuideFileCard({
           <EditIcon />
         </button>
       ) : guide.isOwner ? (
-        <button
-          type="button"
+        <Link
+          href={`/guides/${guide.id}?preview=1&edit=1`}
           aria-label={`Edit ${guide.title}`}
           data-v3-guides-indicator="guide-edit-link"
           data-feature-guide-target="guides.guide_save"
           className="absolute right-2 top-2 z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full border text-sm font-black"
-          onClick={() => onEditGuide(guide)}
         >
           <EditIcon />
-        </button>
+        </Link>
       ) : null}
     </div>
   )

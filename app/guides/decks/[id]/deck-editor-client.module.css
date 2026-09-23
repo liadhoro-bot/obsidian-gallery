@@ -429,6 +429,19 @@
   color: var(--og-text-primary);
 }
 
+/* Guide editor's deck rows pair an Edit link with a Remove button in the
+   same trailing grid cell that a card row gives its single Edit button. */
+.cardRowActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardRowActions .dangerButton {
+  min-width: 0;
+  padding: 0 10px;
+}
+
 .addCardButton,
 .emptyPaintButton {
   display: inline-flex;
