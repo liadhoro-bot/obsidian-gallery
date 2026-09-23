@@ -5,7 +5,7 @@ import { getContestPhase } from '../../../../../lib/contests/phases'
 import {
   getContestBySlug,
   getContestNominationById,
-  getEntityGalleryImages,
+  getContestNominationGallery,
   withLiveNomineeData,
 } from '../../../../../lib/contests/queries'
 import { canViewContest } from '../../../../../lib/contests/permissions'
@@ -37,12 +37,7 @@ export default async function ContestEntryDetailPage({
   const hideIdentity =
     contest.hide_nominee_identity_during_voting && getContestPhase(contest) === 'voting_open'
 
-  const galleryImages =
-    nomination.source_type === 'project' && nomination.source_project_id
-      ? await getEntityGalleryImages('project', nomination.source_project_id)
-      : nomination.source_type === 'unit' && nomination.source_unit_id
-        ? await getEntityGalleryImages('unit', nomination.source_unit_id)
-        : []
+  const galleryImages = await getContestNominationGallery(contest.id, nomination.id)
 
   return (
     <main className={styles.contestSilver}>

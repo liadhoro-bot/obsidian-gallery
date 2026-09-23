@@ -5,7 +5,10 @@ import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import {
   createClient,
   getSessionAccessToken,
+  getSessionUser,
 } from '../../utils/supabase/server'
+import { canViewContest } from './permissions'
+import { loadNominationGallery } from './nomination-gallery'
 import type {
   Contest,
   ContestBallot,
@@ -870,26 +873,13 @@ export async function getPublicGuideCreatorLeaderboard(
     .sort((first, second) => second.guideCount - first.guideCount)
 }
 
-export async function getEntityGalleryImages(
-  entityType: 'project' | 'unit' | 'recipe',
-  entityId: string
-) {
+export async function getContestNominationGallery(contestId: string, nominationId: string) {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('image_assets')
-    .select('id, image_url, alt_text, is_featured, created_at')
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .order('is_featured', { ascending: false })
-    .order('created_at', { ascending: true })
-
-  if (error) throw new Error(error.message)
-
-  return (data ?? []) as Array<{
-    id: string
-    image_url: string
-    alt_text: string | null
-    is_featured: boolean
-    created_at: string
-  }>
+  const user = await getSessionUser(supabase)
+  return loadNominationGallery(contestId, nominationId, {
+    viewer: supabase,
+    viewerId: user?.id ?? null,
+    canViewContest: () => canViewContest(user?.id, contestId),
+    createService: createServiceRoleClient,
+  })
 }
