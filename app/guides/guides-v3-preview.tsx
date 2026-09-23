@@ -3555,7 +3555,7 @@ function LibraryTab({
           type="button"
           onClick={onLoadMore}
           data-v3-guides-indicator="library-load-more"
-          className="rounded-[8px] border border-white/10 bg-[#111821] py-3 text-xs font-black text-cyan-300 transition hover:border-cyan-300/45"
+          className="rounded-[8px] py-3 text-xs font-black transition"
         >
           Load More
         </button>

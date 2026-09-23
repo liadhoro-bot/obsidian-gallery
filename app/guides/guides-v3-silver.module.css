@@ -663,7 +663,8 @@
 .guidesSilver [data-v3-guides-indicator="card-move-button"],
 .guidesSilver [data-v3-guides-indicator="card-drag-handle"],
 .guidesSilver [data-v3-guides-indicator="create-choice-sheet"] button,
-.guidesSilver [data-v3-guides-indicator="add-card-sheet"] button {
+.guidesSilver [data-v3-guides-indicator="add-card-sheet"] button,
+.guidesSilver [data-v3-guides-indicator="library-load-more"] {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
   border-radius: var(--og-radius-s);
   background-color: var(--og-walnut-950);
@@ -676,13 +677,21 @@
 }
 
 .guidesSilver [data-v3-guides-indicator="card-move-button"],
-.guidesSilver [data-v3-guides-indicator="card-drag-handle"] {
+.guidesSilver [data-v3-guides-indicator="card-drag-handle"],
+.guidesSilver [data-v3-guides-indicator="library-load-more"] {
   border-color: color-mix(in srgb, var(--og-brass-700) 58%, var(--og-ink-950));
   color: var(--og-brass-500);
 }
 
 .guidesSilver [data-v3-guides-indicator="hero-icon-action"] {
   color: var(--og-brass-500);
+}
+
+.guidesSilver [data-v3-guides-indicator="library-load-more"]:hover,
+.guidesSilver [data-v3-guides-indicator="library-load-more"]:focus-visible {
+  border-color: color-mix(in srgb, var(--og-brass-500) 72%, var(--og-paper-50));
+  color: var(--og-brass-300, var(--og-brass-500));
+  outline: none;
 }
 
 .guidesSilver [data-v3-guides-indicator="hero-counter"] {
