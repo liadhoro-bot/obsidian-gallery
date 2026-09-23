@@ -10,6 +10,7 @@ import {
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
+  RecipeGuidePaintsCard,
   RecipeGuideSmallImageStepCard,
   RecipeGuideThemeStepCard,
   RecipeGuideVideoCard,
@@ -514,6 +515,12 @@ function DeckPreviewGroup({ deck }: { deck: GuidesV3DeckDetail }) {
                 title={step.title}
                 description={step.instructions}
                 youtubeUrl={step.videoUrl}
+              />
+            ) : step.template === 'paints' ? (
+              <RecipeGuidePaintsCard
+                title={step.title}
+                description={step.instructions}
+                paints={paints}
               />
             ) : isThemeTemplateStep(step, recipeStep.image_url) ? (
               <RecipeGuideThemeStepCard

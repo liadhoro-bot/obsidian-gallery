@@ -4,6 +4,7 @@ import {
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
+  RecipeGuidePaintsCard,
   RecipeGuideSmallImageStepCard,
   RecipeGuideThemeStepCard,
   RecipeGuideVideoCard,
@@ -191,6 +192,13 @@ export default async function DeckDetailPage({
         title={step.title}
         description={step.instructions}
         youtubeUrl={step.videoUrl}
+        showBrandMark={showBrandMark}
+      />
+    ) : step.template === 'paints' ? (
+      <RecipeGuidePaintsCard
+        title={step.title}
+        description={step.instructions}
+        paints={paints}
         showBrandMark={showBrandMark}
       />
     ) : isThemeTemplateStep(step, recipeStep.image_url) ? (
