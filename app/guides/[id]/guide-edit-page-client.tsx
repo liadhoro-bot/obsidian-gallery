@@ -36,6 +36,7 @@ export default function GuideEditPageClient({
           description: payload.description,
           image: payload.image,
           status: payload.status,
+          difficulty: payload.difficulty,
           deckIds: payload.deckIds,
         })
 

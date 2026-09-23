@@ -111,6 +111,7 @@ const initialGuideFiles: GuideFile[] = [
     ownedPercent: 78,
     palette: ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
     deckIds: [],
+    difficulty: null,
     isOwner: false,
     likeCount: 12,
     saveCount: 8,
@@ -129,6 +130,7 @@ const initialGuideFiles: GuideFile[] = [
     ownedPercent: 63,
     palette: ['#1e4f92', '#9aafbd', '#d29631', '#171815', '#efe3c5'],
     deckIds: [],
+    difficulty: null,
     isOwner: false,
     likeCount: 9,
     saveCount: 5,
@@ -147,6 +149,7 @@ const initialGuideFiles: GuideFile[] = [
     ownedPercent: 68,
     palette: ['#4eb282', '#17b9c2', '#d8bd83', '#5943a7', '#111417'],
     deckIds: [],
+    difficulty: null,
     isOwner: false,
     likeCount: 6,
     saveCount: 3,
@@ -165,6 +168,7 @@ const initialDecks: Deck[] = [
     paints: 5,
     usedIn: 3,
     image: '/onboarding/pains/pile-of-shame.jpeg',
+    difficulty: null,
     saved: true,
     isOwner: true,
     accent: '#d8bd83',
@@ -178,6 +182,7 @@ const initialDecks: Deck[] = [
     paints: 4,
     usedIn: 2,
     image: '/onboarding/first-project-bg.jpeg',
+    difficulty: null,
     saved: true,
     isOwner: true,
     accent: '#d29631',
@@ -191,6 +196,7 @@ const initialDecks: Deck[] = [
     paints: 6,
     usedIn: 4,
     image: '/onboarding/pains/tough-choices.jpeg',
+    difficulty: null,
     saved: true,
     isOwner: true,
     accent: '#17b9c2',
@@ -204,6 +210,7 @@ const initialDecks: Deck[] = [
     paints: 5,
     usedIn: 3,
     image: '/onboarding/pains/paint-management.jpeg',
+    difficulty: null,
     saved: true,
     isOwner: true,
     accent: '#17b9c2',
@@ -217,6 +224,7 @@ const initialDecks: Deck[] = [
     paints: 7,
     usedIn: 5,
     image: '/onboarding/pains/scheme-loss.jpeg',
+    difficulty: null,
     saved: true,
     isOwner: true,
     accent: '#d29631',
@@ -459,6 +467,7 @@ const publicGuideFiles: GuideFile[] = [
     ownedPercent: 42,
     palette: ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#111417'],
     deckIds: [],
+    difficulty: null,
     isOwner: false,
     likeCount: 21,
     saveCount: 14,
@@ -477,6 +486,7 @@ const publicGuideFiles: GuideFile[] = [
     ownedPercent: 55,
     palette: ['#1e4f92', '#9aafbd', '#d29631', '#171815', '#efe3c5'],
     deckIds: [],
+    difficulty: null,
     isOwner: false,
     likeCount: 17,
     saveCount: 11,
@@ -659,6 +669,7 @@ function toEditorDeckDetail(deck: ForgeDeck): GuidesV3DeckDetail {
     usedIn: 0,
     image: heroImage,
     fullImage: heroImage,
+    difficulty: deck.difficulty,
     saved: true,
     isOwner: true,
     accent: '#22d3ee',
@@ -1086,6 +1097,8 @@ export default function GuidesV3Preview({
       guideDescription.trim() ||
       'A custom guide assembled from decks in your collection.'
     const guideDeckIds = selectedGuideDecks.map((deck) => deck.id)
+    const inferredDifficulty =
+      cardTotal >= 12 ? 'Advanced' : cardTotal >= 6 ? 'Intermediate' : 'Beginner'
 
     isSavingForgeRef.current = true
     setSaveError(null)
@@ -1096,6 +1109,7 @@ export default function GuidesV3Preview({
           description: guideDescription_,
           image: guideImage,
           deckIds: guideDeckIds,
+          difficulty: inferredDifficulty,
         })
 
         const savedGuideFile: GuideFile = {
@@ -1105,6 +1119,7 @@ export default function GuidesV3Preview({
           image: guideImage,
           decks: guideDeckTotal,
           cards: cardTotal,
+          difficulty: inferredDifficulty,
           level: cardTotal > 5 ? 'Intermediate' : 'Beginner',
           ownedPercent: 0,
           palette: selectedGuideDecks.length
@@ -1147,6 +1162,7 @@ export default function GuidesV3Preview({
           title: payload.title,
           description: payload.description,
           status: payload.status,
+          difficulty: payload.difficulty,
           image: payload.heroImage,
           cards: payload.cards.map((card) => ({
             title: card.title,

@@ -1,3 +1,4 @@
+import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { loadRecipeSteps } from './load-recipe-steps'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
@@ -77,6 +78,7 @@ type RecipeRow = {
   description: string | null
   image_url: string | null
   is_public: boolean | null
+  difficulty: string | null
   user_id: string | null
   created_at: string | null
 }
@@ -260,12 +262,16 @@ export const getGuidesV3DeckDetail = cache(
   async (deckId: string, userId: string) => {
     const supabase = await createClient()
 
-    const { data: recipe, error: recipeError } = await supabase
-      .from('recipes')
-      .select('id, name, description, image_url, is_public, user_id, created_at')
-      .eq('id', deckId)
-      .or(`user_id.eq.${userId},is_public.eq.true`)
-      .maybeSingle()
+    const { data: recipe, error: recipeError } = await selectDifficultyCompatible(
+      'id, name, description, image_url, is_public, difficulty, user_id, created_at',
+      selection => supabase
+        .from('recipes')
+        .select(selection)
+        .eq('id', deckId)
+        .or(`user_id.eq.${userId},is_public.eq.true`)
+        .maybeSingle()
+        .returns<RecipeRow | null>()
+    )
 
     if (recipeError) throw new Error(recipeError.message)
     if (!recipe) return null
@@ -450,6 +456,7 @@ export const getGuidesV3DeckDetail = cache(
       usedIn: 0,
       image: getGuideDeckThumbnail(rawImage, fallbackImage),
       fullImage: rawImage,
+      difficulty: typedRecipe.difficulty ?? null,
       saved: typedRecipe.user_id === userId,
       isOwner: typedRecipe.user_id === userId,
       accent: accentFor(typedRecipe.id),

@@ -1,3 +1,4 @@
+import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
@@ -22,6 +23,9 @@ export type GuidesV3GuideFile = {
   // Every member deck's id, in guide_decks.position order. Used to resolve
   // the guide's full deck list (e.g. for the guide detail page and editor).
   deckIds: string[]
+  // The owner's chosen difficulty, persisted on guides.difficulty - see
+  // GuidesV3Deck.difficulty for why this can be null.
+  difficulty: string | null
   // True iff the viewer is the guide's creator (guides.user_id === viewer).
   // The only thing that should ever gate editing a guide.
   isOwner: boolean
@@ -40,6 +44,11 @@ export type GuidesV3Deck = {
   paints: number
   usedIn: number
   image: string
+  // The owner's chosen difficulty, persisted on recipes.difficulty. Null
+  // for a deck whose creator never set one (or one created before this
+  // field existed) - the editor falls back to an inferred value in that
+  // case rather than showing a blank select.
+  difficulty: string | null
   // Whether the viewer bookmarked or otherwise has this deck in their own
   // collection - NOT the same as ownership. A saved (bookmarked) deck can
   // belong to someone else entirely; see `isOwner` for the actual
@@ -66,6 +75,7 @@ type RecipeRow = {
   description: string | null
   image_url: string | null
   is_public: boolean | null
+  difficulty: string | null
   created_at: string | null
   user_id: string | null
 }
@@ -87,6 +97,7 @@ type GuideRow = {
   title: string | null
   description: string | null
   image_url: string | null
+  difficulty: string | null
   is_auto: boolean | null
   created_at: string | null
   guide_decks?: GuideDeckJoinRow[] | null
@@ -125,6 +136,7 @@ const guideWithDecksSelect = `
   title,
   description,
   image_url,
+  difficulty,
   is_auto,
   created_at,
   guide_decks (
@@ -136,6 +148,7 @@ const guideWithDecksSelect = `
       description,
       image_url,
       is_public,
+      difficulty,
       created_at,
       user_id
     )
@@ -403,6 +416,7 @@ function toDeck({
       recipe.image_url || imageByRecipeId.get(recipe.id),
       fallbackImage
     ),
+    difficulty: recipe.difficulty ?? null,
     saved,
     isOwner: recipe.user_id === userId,
     accent: accentFor(recipe.id),
@@ -453,6 +467,7 @@ function toGuideFile(
       : ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37'],
     deckId: primaryDeck.id,
     deckIds: memberDecks.map((deck) => deck.id),
+    difficulty: guide.difficulty ?? null,
     isOwner: guide.user_id === userId,
     likeCount: social?.likeCount ?? 0,
     saveCount: social?.saveCount ?? 0,
@@ -467,16 +482,13 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
 
   const [myRecipesResult, savedRowsResult, publicGuidesResult, myGuidesResult] =
     await Promise.all([
-      supabase
+      selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, created_at, user_id', selection => supabase
         .from('recipes')
-        .select('id, name, description, image_url, is_public, created_at, user_id')
+        .select(selection)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(deckLimit),
-      supabase
-        .from('saved_recipes')
-        .select(
-          `
+        .limit(deckLimit).returns<RecipeRow[]>()),
+      selectDifficultyCompatible(`
           recipe_id,
           recipes (
             id,
@@ -484,30 +496,32 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
             description,
             image_url,
             is_public,
+            difficulty,
             created_at,
             user_id
           )
-        `
-        )
+        `, selection => supabase
+        .from('saved_recipes')
+        .select(selection)
         .eq('user_id', userId)
-        .limit(deckLimit),
+        .limit(deckLimit).returns<SavedRecipeRow[]>()),
       // Public library: RLS on `guides` already restricts selects to "own
       // or has a public member deck", so this is effectively "every guide
       // with at least one public deck, plus my own (possibly private)
       // guides" - the isGuidePublic() filter below removes the latter.
-      supabase
+      selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
         .from('guides')
-        .select(guideWithDecksSelect)
+        .select(selection)
         .order('created_at', { ascending: false })
-        .limit(publicDeckLimit),
+        .limit(publicDeckLimit).returns<GuideRow[]>()),
       // My Guides: guides I own (draft/private/public alike, per RLS's
       // "own" clause).
-      supabase
+      selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
         .from('guides')
-        .select(guideWithDecksSelect)
+        .select(selection)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(deckLimit),
+        .limit(deckLimit).returns<GuideRow[]>()),
     ])
 
   if (myRecipesResult.error) throw new Error(myRecipesResult.error.message)
@@ -537,15 +551,13 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
   const savedRecipeIdList = Array.from(savedRecipeIds)
   const savedGuidesResult =
     savedRecipeIdList.length > 0
-      ? await supabase
-          .from('guides')
-          .select(
-            `
+      ? await selectDifficultyCompatible(`
             id,
             user_id,
             title,
             description,
             image_url,
+            difficulty,
             is_auto,
             created_at,
             guide_decks!inner (
@@ -557,14 +569,16 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
                 description,
                 image_url,
                 is_public,
+                difficulty,
                 created_at,
                 user_id
               )
             )
-          `
-          )
+          `, selection => supabase
+          .from('guides')
+          .select(selection)
           .in('guide_decks.recipe_id', savedRecipeIdList)
-          .order('created_at', { ascending: false })
+          .order('created_at', { ascending: false }).returns<GuideRow[]>())
       : { data: [] as GuideRow[], error: null }
 
   if (savedGuidesResult.error) throw new Error(savedGuidesResult.error.message)

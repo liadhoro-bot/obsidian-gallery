@@ -26,6 +26,7 @@ export type CreateDeckInput = {
   title: string
   description: string
   status: string
+  difficulty?: string
   image: string | null
   inventoryRequired?: string | null
   expertTips?: string | null
@@ -40,6 +41,7 @@ export type CreatedDeckResult = {
   paints: number
   usedIn: number
   image: string
+  difficulty: string | null
   saved: boolean
   isOwner: boolean
   accent: string
@@ -336,6 +338,7 @@ export async function createDeckFromForge(
   )
   const coverImage = safePersistedImage(input.image ?? coverCard?.image)
   const isPublic = input.status === 'Public'
+  const difficulty = input.difficulty || null
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
@@ -345,6 +348,7 @@ export async function createDeckFromForge(
       description,
       image_url: coverImage,
       is_public: isPublic,
+      difficulty,
     })
     .select('id, name, image_url, created_at')
     .single()
@@ -438,6 +442,7 @@ export async function createDeckFromForge(
     )).size,
     usedIn: 0,
     image: getGuideDeckThumbnail(recipe.image_url, '/onboarding/pains/tough-choices.jpeg'),
+    difficulty,
     saved: true,
     isOwner: true,
     accent: accentFor(recipe.id),
@@ -464,6 +469,7 @@ export async function updateDeckFromForge(
   )
   const coverImage = safePersistedImage(input.image ?? coverCard?.image)
   const isPublic = input.status === 'Public'
+  const difficulty = input.difficulty || null
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
@@ -472,6 +478,7 @@ export async function updateDeckFromForge(
       description,
       image_url: coverImage,
       is_public: isPublic,
+      difficulty,
       inventory_required: input.inventoryRequired?.trim() || null,
       expert_tips: input.expertTips?.trim() || null,
     })
@@ -596,11 +603,139 @@ export async function updateDeckFromForge(
     )).size,
     usedIn: 0,
     image: getGuideDeckThumbnail(recipe.image_url, '/onboarding/pains/tough-choices.jpeg'),
+    difficulty,
     saved: true,
     isOwner: true,
     accent: accentFor(recipe.id),
     createdAt: recipe.created_at ?? '',
   }
+}
+
+export async function deleteDeck(deckId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+  if (!deckId) throw new Error('Missing deck id')
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('id', deckId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (recipeError) throw new Error(recipeError.message)
+  if (!recipe) throw new Error('Deck not found')
+
+  const [{ data: steps, error: stepsError }, { data: guideLinks, error: guideLinksError }] =
+    await Promise.all([
+      supabase
+        .from('recipe_steps')
+        .select('id')
+        .eq('recipe_id', deckId)
+        .eq('user_id', user.id),
+      supabase
+        .from('guide_decks')
+        .select('guide_id')
+        .eq('recipe_id', deckId)
+        .eq('user_id', user.id),
+    ])
+
+  if (stepsError) throw new Error(stepsError.message)
+  if (guideLinksError) throw new Error(guideLinksError.message)
+
+  const stepIds = steps?.map((step) => step.id) ?? []
+
+  if (stepIds.length > 0) {
+    const { error: stepPaintsError } = await supabase
+      .from('recipe_step_paints')
+      .delete()
+      .in('recipe_step_id', stepIds)
+      .eq('user_id', user.id)
+
+    if (stepPaintsError) throw new Error(stepPaintsError.message)
+  }
+
+  const { error: stageRecipesError } = await supabase
+    .from('unit_stage_recipes')
+    .delete()
+    .eq('recipe_id', deckId)
+
+  if (stageRecipesError) throw new Error(stageRecipesError.message)
+
+  const { error: savedRecipesError } = await supabase
+    .from('saved_recipes')
+    .delete()
+    .eq('recipe_id', deckId)
+
+  if (savedRecipesError) throw new Error(savedRecipesError.message)
+
+  const { error: imageAssetsError } = await supabase
+    .from('image_assets')
+    .delete()
+    .eq('entity_type', 'recipe')
+    .eq('entity_id', deckId)
+    .eq('user_id', user.id)
+
+  if (imageAssetsError) throw new Error(imageAssetsError.message)
+
+  const { error: recipeStepsError } = await supabase
+    .from('recipe_steps')
+    .delete()
+    .eq('recipe_id', deckId)
+    .eq('user_id', user.id)
+
+  if (recipeStepsError) throw new Error(recipeStepsError.message)
+
+  // guide_decks rows cascade with the recipe.
+  const { error: deleteRecipeError } = await supabase
+    .from('recipes')
+    .delete()
+    .eq('id', deckId)
+    .eq('user_id', user.id)
+
+  if (deleteRecipeError) throw new Error(deleteRecipeError.message)
+
+  // Guides that only contained this deck would otherwise linger empty.
+  const guideIds = Array.from(new Set(guideLinks?.map((link) => link.guide_id) ?? []))
+
+  if (guideIds.length > 0) {
+    const { data: remainingLinks, error: remainingLinksError } = await supabase
+      .from('guide_decks')
+      .select('guide_id')
+      .in('guide_id', guideIds)
+
+    if (remainingLinksError) throw new Error(remainingLinksError.message)
+
+    const stillUsed = new Set(remainingLinks?.map((link) => link.guide_id) ?? [])
+    const emptyGuideIds = guideIds.filter((guideId) => !stillUsed.has(guideId))
+
+    if (emptyGuideIds.length > 0) {
+      const { error: deleteGuidesError } = await supabase
+        .from('guides')
+        .delete()
+        .in('id', emptyGuideIds)
+        .eq('user_id', user.id)
+
+      if (deleteGuidesError) throw new Error(deleteGuidesError.message)
+    }
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'deck_deleted',
+    properties: {
+      deck_id: deckId,
+      card_count: stepIds.length,
+    },
+  })
+
+  revalidatePath('/guides')
+  revalidatePath('/recipes')
+  revalidatePath('/dashboard')
 }
 
 export async function toggleDeckPaintOwnership(formData: FormData) {
@@ -640,6 +775,7 @@ export type CreateGuideInput = {
   // member deck in the same save; 'Draft'/'Private' leave decks untouched
   // rather than surprising the owner by un-publishing them.
   status?: string
+  difficulty?: string
 }
 
 export type SavedGuideResult = {
@@ -687,6 +823,7 @@ export async function createGuideFromDecks(
     'A custom guide assembled from decks in your collection.'
   )
   const image = safePersistedImage(input.image)
+  const difficulty = input.difficulty || null
 
   const { data: guide, error: guideError } = await supabase
     .from('guides')
@@ -695,6 +832,7 @@ export async function createGuideFromDecks(
       title,
       description,
       image_url: image,
+      difficulty,
       is_auto: false,
     })
     .select('id')
@@ -761,10 +899,11 @@ export async function updateGuideFromDecks(
     'A custom guide assembled from decks in your collection.'
   )
   const image = safePersistedImage(input.image)
+  const difficulty = input.difficulty || null
 
   const { data: guide, error: guideError } = await supabase
     .from('guides')
-    .update({ title, description, image_url: image })
+    .update({ title, description, image_url: image, difficulty })
     .eq('id', guideId)
     .eq('user_id', user.id)
     .select('id')

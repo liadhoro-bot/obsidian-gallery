@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import type { FeatureGuideEntry } from '../../../components/feature-guide-types'
 import type { GuidesV3DeckDetail } from '../../guides-v3-detail-data'
-import { toggleDeckPaintOwnership, updateDeckFromForge } from '../../actions'
+import { deleteDeck, toggleDeckPaintOwnership, updateDeckFromForge } from '../../actions'
 import DeckEditorClient, { type DeckEditorSavePayload } from './deck-editor-client'
 
 export default function DeckEditPageClient({
@@ -30,6 +30,7 @@ export default function DeckEditPageClient({
           title: payload.title,
           description: payload.description,
           status: payload.status,
+          difficulty: payload.difficulty,
           image: payload.heroImage,
           inventoryRequired: payload.inventoryNotes,
           expertTips: payload.expertTips,
@@ -60,6 +61,11 @@ export default function DeckEditPageClient({
     router.refresh()
   }
 
+  async function handleDeleteDeck() {
+    await deleteDeck(deck.id)
+    router.replace('/guides')
+  }
+
   return (
     <DeckEditorClient
       deck={deck}
@@ -68,6 +74,7 @@ export default function DeckEditPageClient({
       initialInventoryNotes={initialInventoryNotes}
       initialExpertTips={initialExpertTips}
       isSaving={isSaving}
+      onDeleteDeck={handleDeleteDeck}
       onSaveDraft={handleSaveDraft}
       onTogglePaintOwnership={handleTogglePaintOwnership}
       saveError={saveError}

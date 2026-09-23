@@ -1175,3 +1175,125 @@
     justify-self: start;
   }
 }
+
+.deletePanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-status-danger) 34%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background: color-mix(in srgb, var(--og-status-danger) 6%, var(--og-surface-primary));
+  padding: 14px;
+}
+
+.deletePanelCopy {
+  min-width: 0;
+}
+
+.deletePanelCopy p:last-child,
+.deleteDialog p {
+  margin: 5px 0 0;
+  color: var(--og-text-muted);
+  font: 600 13px/1.35 var(--og-font-ui);
+}
+
+.deleteEyebrow {
+  margin: 0;
+  color: color-mix(in srgb, var(--og-status-danger) 82%, var(--og-ink-950));
+  font: 800 11px/1 var(--og-font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.deleteDeckButton,
+.deleteCancelButton,
+.deleteConfirmButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  flex: 0 0 auto;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  border-radius: var(--og-radius-round);
+  padding: 0 18px;
+  font: 800 13px/1 var(--og-font-ui);
+  box-shadow: var(--og-shadow-control-built);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.deleteDeckButton {
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  color: color-mix(in srgb, var(--og-status-danger) 58%, var(--og-paper-50));
+}
+
+.deleteDeckButton[data-delete-armed='true'],
+.deleteConfirmButton {
+  border-color: color-mix(in srgb, var(--og-status-danger) 64%, var(--og-brass-700));
+  background: color-mix(in srgb, var(--og-status-danger) 78%, var(--og-ink-950));
+  color: var(--og-paper-50);
+}
+
+.deleteCancelButton {
+  border-color: color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+}
+
+.deleteCancelButton:disabled,
+.deleteConfirmButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.deleteBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--og-ink-950) 64%, transparent);
+  padding: 18px;
+}
+
+.deleteDialog {
+  display: grid;
+  gap: 4px;
+  width: min(420px, 100%);
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-status-danger) 44%, var(--og-brass-700));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 300px auto, 100% 100%;
+  box-shadow: var(--og-shadow-constructed-panel);
+  padding: 18px;
+}
+
+.deleteDialog h2 {
+  margin: 6px 0 0;
+  color: var(--og-text-primary);
+  font: 600 26px/1.05 var(--og-font-display);
+  letter-spacing: 0;
+}
+
+.deleteDialogActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 480px) {
+  .deletePanel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

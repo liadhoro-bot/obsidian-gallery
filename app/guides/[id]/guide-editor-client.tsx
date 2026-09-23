@@ -38,6 +38,7 @@ export type GuideEditorSavePayload = {
   description: string
   image: string | null
   status: GuideStatus
+  difficulty: GuideDifficulty
   deckIds: string[]
 }
 
@@ -152,6 +153,10 @@ export default function GuideEditorClient({
   const [status, setStatus] = useState<GuideStatus>(
     deckDetails.some((deck) => deck.isPublic) ? 'Public' : 'Private'
   )
+  const [difficulty, setDifficulty] = useState<GuideDifficulty>(
+    (guide.difficulty as GuideDifficulty) ||
+      inferDifficulty(memberDecks.reduce((sum, deck) => sum + deck.cards, 0))
+  )
   const [draggingDeckId, setDraggingDeckId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const [isAddDecksOpen, setIsAddDecksOpen] = useState(false)
@@ -171,8 +176,6 @@ export default function GuideEditorClient({
   const selectedDecks = selectedDeckIds
     .map((id) => deckById.get(id))
     .filter((deck): deck is GuidesV3Deck => Boolean(deck))
-  const cardTotal = selectedDecks.reduce((sum, deck) => sum + deck.cards, 0)
-  const difficulty = inferDifficulty(cardTotal)
   const selectedDeckIdSet = new Set(selectedDeckIds)
   const pickableDecks = availableDecks.filter((deck) => !selectedDeckIdSet.has(deck.id))
   const normalizedDeckSearch = deckSearch.trim().toLowerCase()
@@ -213,6 +216,7 @@ export default function GuideEditorClient({
       description,
       image: coverImage,
       status,
+      difficulty,
       deckIds: selectedDeckIds,
     })
   }
@@ -280,7 +284,10 @@ export default function GuideEditorClient({
                 </label>
                 <label className={styles.field}>
                   <span>Difficulty</span>
-                  <select value={difficulty} disabled>
+                  <select
+                    value={difficulty}
+                    onChange={(event) => setDifficulty(event.target.value as GuideDifficulty)}
+                  >
                     {difficultyOptions.map((option) => (
                       <option key={option}>{option}</option>
                     ))}

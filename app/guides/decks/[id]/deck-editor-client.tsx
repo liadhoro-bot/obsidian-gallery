@@ -425,6 +425,7 @@ export default function DeckEditorClient({
   initialExpertTips = '',
   isSaving = false,
   onBack,
+  onDeleteDeck,
   onSaveDraft,
   onTogglePaintOwnership,
   saveError,
@@ -438,6 +439,7 @@ export default function DeckEditorClient({
   initialExpertTips?: string
   isSaving?: boolean
   onBack?: () => void
+  onDeleteDeck?: () => Promise<void>
   onSaveDraft?: (payload: DeckEditorSavePayload) => void
   onTogglePaintOwnership?: (formData: FormData) => void | Promise<void>
   saveError?: string | null
@@ -449,7 +451,7 @@ export default function DeckEditorClient({
   const [inventoryNotes, setInventoryNotes] = useState(initialInventoryNotes)
   const [expertTips, setExpertTips] = useState(initialExpertTips)
   const [difficulty, setDifficulty] = useState<DeckDifficulty>(
-    inferDifficulty(deck.cards)
+    (deck.difficulty as DeckDifficulty) || inferDifficulty(deck.cards)
   )
   const [status, setStatus] = useState<DeckStatus>(deck.isPublic ? 'Public' : 'Private')
   const [cards, setCards] = useState<EditorCard[]>(() =>
@@ -949,6 +951,8 @@ export default function DeckEditorClient({
               }}
               onToggleSelection={toggleImageSelection}
             />
+
+            {onDeleteDeck ? <DeckDeleteFailsafe onDelete={onDeleteDeck} /> : null}
           </div>
         ) : null}
 
@@ -1392,6 +1396,93 @@ function DeckPaletteOwnership({
           )
         })}
       </div>
+    </section>
+  )
+}
+
+type DeckDeleteStage = 'idle' | 'armed' | 'confirming'
+
+function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [stage, setStage] = useState<DeckDeleteStage>('idle')
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  function reset() {
+    if (isDeleting) return
+    setStage('idle')
+    setDeleteError(null)
+  }
+
+  async function confirmDelete() {
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      await onDelete()
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'Could not delete deck.')
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <section className={styles.deletePanel} data-deck-editor="delete-deck">
+      <div className={styles.deletePanelCopy}>
+        <p className={styles.deleteEyebrow}>Danger Zone</p>
+        <p>Removes this deck with its cards, paints, and gallery images.</p>
+      </div>
+      <button
+        type="button"
+        className={styles.deleteDeckButton}
+        data-delete-armed={stage !== 'idle' ? 'true' : 'false'}
+        onClick={() => setStage((current) => (current === 'idle' ? 'armed' : 'confirming'))}
+      >
+        {stage === 'idle' ? 'Delete Deck' : 'Press Again to Delete'}
+      </button>
+
+      {stage === 'confirming' ? (
+        <div
+          className={styles.deleteBackdrop}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="deck-delete-title"
+          aria-describedby="deck-delete-description"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) reset()
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') reset()
+          }}
+        >
+          <section className={styles.deleteDialog}>
+            <p className={styles.deleteEyebrow}>Confirm Deletion</p>
+            <h2 id="deck-delete-title">Delete this deck?</h2>
+            <p id="deck-delete-description">
+              Deleting is permanent. The deck and all of its cards, paints, and gallery
+              images will be removed and cannot be recovered.
+            </p>
+            {deleteError ? <p className={styles.saveError}>{deleteError}</p> : null}
+            <div className={styles.deleteDialogActions}>
+              <button
+                type="button"
+                className={styles.deleteCancelButton}
+                disabled={isDeleting}
+                onClick={reset}
+                autoFocus
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.deleteConfirmButton}
+                disabled={isDeleting}
+                onClick={confirmDelete}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   )
 }
