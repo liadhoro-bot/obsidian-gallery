@@ -481,9 +481,6 @@ function ThemePaintReferenceRow({
         ) : null}
       </span>
       <span className="recipe-guide-theme-paint-copy">
-        <span className="recipe-guide-theme-paint-hex">
-          {paint?.hex_approx || 'Custom Paint'}
-        </span>
         <strong className="recipe-guide-theme-paint-name">
           {name}
         </strong>
