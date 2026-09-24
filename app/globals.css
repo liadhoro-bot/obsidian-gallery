@@ -951,14 +951,16 @@ button:disabled {
   padding: clamp(28px, 7.5cqw, 40px) clamp(24px, 6.5cqw, 35px)
     clamp(24px, 6.5cqw, 35px);
   color: color-mix(in srgb, var(--og-paper-50) 86%, var(--og-brass-500));
-  /* A thin dark outline plus a soft glow keeps every label readable
-     regardless of how light or busy the photo behind it is. */
+  /* A crisp, high-contrast dark outline (not a soft glow) keeps every
+     label readable regardless of how light or busy the photo behind it
+     is - a thin sharp line reads more clearly than a blur at small sizes. */
   --theme-text-outline:
-    -1px -1px 0 rgba(0, 0, 0, 0.85),
-    1px -1px 0 rgba(0, 0, 0, 0.85),
-    -1px 1px 0 rgba(0, 0, 0, 0.85),
-    1px 1px 0 rgba(0, 0, 0, 0.85),
-    0 2px 10px rgba(0, 0, 0, 0.6);
+    -1px -1px 0 rgba(0, 0, 0, 0.95),
+    1px -1px 0 rgba(0, 0, 0, 0.95),
+    -1px 1px 0 rgba(0, 0, 0, 0.95),
+    1px 1px 0 rgba(0, 0, 0, 0.95),
+    0 0 3px rgba(0, 0, 0, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 .recipe-guide-theme-heading {
@@ -996,7 +998,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: clamp(6px, 1.6cqw, 12px);
+  gap: clamp(12px, 3.2cqw, 22px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1034,13 +1036,13 @@ button:disabled {
   justify-content: center;
   min-width: 0;
   gap: clamp(2px, 1cqw, 6px);
-  color: color-mix(in srgb, var(--og-paper-50) 84%, var(--og-brass-500));
+  color: color-mix(in srgb, white 82%, var(--og-paper-50));
   text-shadow: var(--theme-text-outline);
 }
 
 .recipe-guide-theme-paint-name {
   overflow: hidden;
-  color: color-mix(in srgb, var(--og-paper-50) 88%, var(--og-brass-500));
+  color: color-mix(in srgb, white 94%, var(--og-paper-50));
   font-size: clamp(1rem, 4.4cqw, 1.55rem);
   font-weight: 900;
   line-height: 1.08;
@@ -1050,7 +1052,7 @@ button:disabled {
 
 .recipe-guide-theme-paint-source {
   overflow: hidden;
-  color: color-mix(in srgb, var(--og-paper-50) 72%, var(--og-brass-500));
+  color: color-mix(in srgb, white 72%, var(--og-paper-50));
   font-size: clamp(0.8rem, 3.1cqw, 1.08rem);
   font-weight: 700;
   line-height: 1.08;
