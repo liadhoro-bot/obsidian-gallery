@@ -951,6 +951,14 @@ button:disabled {
   padding: clamp(28px, 7.5cqw, 40px) clamp(24px, 6.5cqw, 35px)
     clamp(24px, 6.5cqw, 35px);
   color: color-mix(in srgb, var(--og-paper-50) 86%, var(--og-brass-500));
+  /* A thin dark outline plus a soft glow keeps every label readable
+     regardless of how light or busy the photo behind it is. */
+  --theme-text-outline:
+    -1px -1px 0 rgba(0, 0, 0, 0.85),
+    1px -1px 0 rgba(0, 0, 0, 0.85),
+    -1px 1px 0 rgba(0, 0, 0, 0.85),
+    1px 1px 0 rgba(0, 0, 0, 0.85),
+    0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 .recipe-guide-theme-heading {
@@ -971,9 +979,7 @@ button:disabled {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
-  text-shadow:
-    0 1px 0 rgba(255, 246, 210, 0.18),
-    0 3px 12px rgba(0, 0, 0, 0.64);
+  text-shadow: var(--theme-text-outline);
 }
 
 .recipe-guide-theme-kicker {
@@ -983,6 +989,7 @@ button:disabled {
   font-weight: 900;
   letter-spacing: 0.2em;
   line-height: 1;
+  text-shadow: var(--theme-text-outline);
 }
 
 .recipe-guide-theme-paint-list {
@@ -1028,7 +1035,7 @@ button:disabled {
   min-width: 0;
   gap: clamp(2px, 1cqw, 6px);
   color: color-mix(in srgb, var(--og-paper-50) 84%, var(--og-brass-500));
-  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.72);
+  text-shadow: var(--theme-text-outline);
 }
 
 .recipe-guide-theme-paint-name {
@@ -1064,6 +1071,7 @@ button:disabled {
   letter-spacing: 0.22em;
   line-height: 1.15;
   text-align: center;
+  text-shadow: var(--theme-text-outline);
 }
 
 .recipe-guide-theme-empty {
