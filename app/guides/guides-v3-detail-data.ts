@@ -24,6 +24,10 @@ export type GuidesV3DeckStep = {
   rawImage: string | null
   videoUrl: string | null
   paints: GuidesV3DeckStepPaint[]
+  // CSS object-position percentages (0-100) for this step's own image -
+  // see GuidesV3DeckDetail.coverFocalX for the cover image's equivalent.
+  imageFocalX: number
+  imageFocalY: number
 }
 
 export type GuidesV3DeckPaint = {
@@ -66,6 +70,16 @@ export type GuidesV3DeckDetail = GuidesV3Deck & {
   saveCount?: number
   viewerHasLiked?: boolean
   viewerHasSaved?: boolean
+  // Where the synthesized cover card (built from this deck's own
+  // title/description/image, not a recipe_steps row) belongs among the
+  // full cover+steps sequence - null omits it entirely. Optional/undefined
+  // is treated as 0 (cover first) for the same reason as guideId above.
+  coverPosition?: number | null
+  // CSS object-position percentages (0-100) for the cover/hero image.
+  // Optional/undefined is treated as 50 (centered) for the same reason as
+  // guideId above.
+  coverFocalX?: number
+  coverFocalY?: number
 }
 
 export type GuidesV3GuideDetail = GuidesV3GuideFile & {
@@ -79,6 +93,9 @@ type RecipeRow = {
   image_url: string | null
   is_public: boolean | null
   difficulty: string | null
+  cover_position: number | null
+  cover_focal_x: number | null
+  cover_focal_y: number | null
   user_id: string | null
   created_at: string | null
 }
@@ -99,6 +116,8 @@ type StepRow = {
   instructions: string | null
   image_url: string | null
   youtube_url: string | null
+  image_focal_x: number | null
+  image_focal_y: number | null
 }
 
 type StepPaintRow = {
@@ -263,7 +282,7 @@ export const getGuidesV3DeckDetail = cache(
     const supabase = await createClient()
 
     const { data: recipe, error: recipeError } = await selectDifficultyCompatible(
-      'id, name, description, image_url, is_public, difficulty, user_id, created_at',
+      'id, name, description, image_url, is_public, difficulty, cover_position, cover_focal_x, cover_focal_y, user_id, created_at',
       selection => supabase
         .from('recipes')
         .select(selection)
@@ -444,6 +463,8 @@ export const getGuidesV3DeckDetail = cache(
         rawImage: !usesCompatVideoUrl ? step.image_url : null,
         videoUrl,
         paints: paintsByStepId.get(step.id) ?? [],
+        imageFocalX: step.image_focal_x ?? 50,
+        imageFocalY: step.image_focal_y ?? 50,
       }
     })
 
@@ -451,12 +472,15 @@ export const getGuidesV3DeckDetail = cache(
       id: typedRecipe.id,
       title: clean(typedRecipe.name, 'Untitled Deck'),
       category: categoryFor(typedRecipe),
-      cards: normalizedSteps.length + 1,
+      cards: normalizedSteps.length + (typedRecipe.cover_position === null ? 0 : 1),
       paints: paints.length,
       usedIn: 0,
       image: getGuideDeckThumbnail(rawImage, fallbackImage),
       fullImage: rawImage,
       difficulty: typedRecipe.difficulty ?? null,
+      coverPosition: typedRecipe.cover_position,
+      coverFocalX: typedRecipe.cover_focal_x ?? 50,
+      coverFocalY: typedRecipe.cover_focal_y ?? 50,
       saved: typedRecipe.user_id === userId,
       isOwner: typedRecipe.user_id === userId,
       accent: accentFor(typedRecipe.id),

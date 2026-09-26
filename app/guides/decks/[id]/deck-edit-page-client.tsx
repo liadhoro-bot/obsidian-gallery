@@ -32,6 +32,8 @@ export default function DeckEditPageClient({
           status: payload.status,
           difficulty: payload.difficulty,
           image: payload.heroImage,
+          heroFocalX: payload.heroFocalX,
+          heroFocalY: payload.heroFocalY,
           inventoryRequired: payload.inventoryNotes,
           expertTips: payload.expertTips,
           cards: payload.cards.map((card) => ({
@@ -40,6 +42,8 @@ export default function DeckEditPageClient({
             body: card.body,
             image: card.image,
             videoUrl: card.videoUrl,
+            imageFocalX: card.imageFocalX,
+            imageFocalY: card.imageFocalY,
             paints: card.paints?.map((paint) => ({
               id: paint.id,
               ratio_text: paint.ratio_text ?? null,

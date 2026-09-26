@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useId, useMemo, useState } from 'react'
 import {
   ObsidianShareCardFrame,
@@ -329,6 +329,7 @@ export function RecipeGuideCoverCard({
             priority
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
+            style={{ objectPosition: `${featuredImage?.focal_x ?? 50}% ${featuredImage?.focal_y ?? 50}%` }}
             unoptimized={isInlinePreviewImageUrl(imageUrl)}
           />
         ) : (
@@ -384,6 +385,7 @@ export function RecipeGuideImageStepCard({
             priority={showBrandMark}
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
+            style={{ objectPosition: `${step.image_focal_x ?? 50}% ${step.image_focal_y ?? 50}%` }}
             unoptimized={isInlinePreviewImageUrl(imageUrl)}
           />
         ) : null}
@@ -424,6 +426,7 @@ export function RecipeGuideSmallImageStepCard({
               priority={showBrandMark}
               sizes="(max-width: 768px) 92vw, 420px"
               className="object-cover"
+              style={{ objectPosition: `${step.image_focal_x ?? 50}% ${step.image_focal_y ?? 50}%` }}
               unoptimized={isInlinePreviewImageUrl(imageUrl)}
             />
           ) : null}
@@ -502,19 +505,26 @@ export function RecipeGuideThemeStepCard({
   step,
   paints,
   fallbackImageUrl = null,
+  fallbackFocalX = 50,
+  fallbackFocalY = 50,
   showBrandMark = false,
 }: {
   step: RecipeStep
   stepsLength: number
   paints: RecipeGuidePaint[]
   fallbackImageUrl?: string | null
+  fallbackFocalX?: number
+  fallbackFocalY?: number
   showBrandMark?: boolean
 }) {
-  const imageUrl = isUsableImageUrl(step.image_url)
+  const usesOwnImage = isUsableImageUrl(step.image_url)
+  const imageUrl = usesOwnImage
     ? step.image_url
     : isUsableImageUrl(fallbackImageUrl)
       ? fallbackImageUrl
       : null
+  const focalX = usesOwnImage ? step.image_focal_x ?? 50 : fallbackFocalX
+  const focalY = usesOwnImage ? step.image_focal_y ?? 50 : fallbackFocalY
   const footerText = step.instructions?.trim() || 'A curated palette for stunning results'
   const shownPaints = paints.slice(0, 7)
   const hiddenPaintCount = Math.max(0, paints.length - shownPaints.length)
@@ -530,13 +540,17 @@ export function RecipeGuideThemeStepCard({
             priority={showBrandMark}
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
+            style={{ objectPosition: `${focalX}% ${focalY}%` }}
             unoptimized={isInlinePreviewImageUrl(imageUrl)}
           />
         ) : null}
         <div className="recipe-guide-theme-card-shade absolute inset-0" />
         <section className="recipe-guide-theme-content absolute inset-0">
           <div className="recipe-guide-theme-heading">
-            <h2 className="recipe-guide-theme-title font-serif">
+            <h2
+              className="recipe-guide-theme-title font-serif"
+              style={{ '--title-len': step.title.trim().length || 1 } as CSSProperties}
+            >
               {step.title}
             </h2>
             <p className="recipe-guide-theme-kicker font-serif uppercase">

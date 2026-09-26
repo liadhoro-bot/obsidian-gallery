@@ -950,7 +950,14 @@ button:disabled {
   gap: clamp(8px, 2.4cqw, 13px);
   padding: clamp(28px, 7.5cqw, 40px) clamp(24px, 6.5cqw, 35px)
     clamp(24px, 6.5cqw, 35px);
-  color: color-mix(in srgb, var(--og-paper-50) 86%, var(--og-brass-500));
+  /* Static hex, not color-mix() - some engines (notably Safari/WebKit,
+     including inside the html-to-image export pipeline) silently fail to
+     resolve color-mix() text color here and fall back to black, while the
+     literal-rgba() text-shadow below still renders - the exact "solid
+     black title" bug this was reported as. Values below are the
+     color-mix() results pre-computed by hand so every theme-card text
+     color stays pixel-identical without depending on that resolution. */
+  color: #e2ccaf; /* color-mix(in srgb, var(--og-paper-50) 86%, var(--og-brass-500)) */
   /* A crisp, high-contrast dark outline (not a soft glow) keeps every
      label readable regardless of how light or busy the photo behind it
      is - a thin sharp line reads more clearly than a blur at small sizes. */
@@ -973,8 +980,18 @@ button:disabled {
 .recipe-guide-theme-title {
   overflow: hidden;
   max-width: 100%;
-  color: color-mix(in srgb, var(--og-brass-500) 78%, var(--og-paper-50));
-  font-size: clamp(1.92rem, 8.4cqw, 3.04rem);
+  color: #b08855; /* color-mix(in srgb, var(--og-brass-500) 78%, var(--og-paper-50)) */
+  /* Longer titles shrink to fit one line instead of just getting cut off -
+     driven by --title-len (the title's character count, set inline where
+     this renders) rather than by measuring rendered text width in JS,
+     since this same markup also gets rasterized by the html-to-image
+     export pipeline and a length-based CSS formula resolves identically
+     there with no extra render pass needed. 11 chars ("NECROSPHYNX") is
+     the reference length that still gets the full-size treatment; text-
+     overflow/ellipsis below remains as a fallback for pathological cases
+     this scale still doesn't shrink enough for. */
+  --title-fit: min(1, 11 / max(var(--title-len, 11), 1));
+  font-size: clamp(0.6rem, calc(clamp(1.92rem, 8.4cqw, 3.04rem) * var(--title-fit)), 3.04rem);
   font-weight: 900;
   letter-spacing: 0.055em;
   line-height: 0.9;
@@ -986,7 +1003,7 @@ button:disabled {
 
 .recipe-guide-theme-kicker {
   margin: 0;
-  color: color-mix(in srgb, var(--og-paper-50) 64%, var(--og-brass-500));
+  color: #d1b590; /* color-mix(in srgb, var(--og-paper-50) 64%, var(--og-brass-500)) */
   font-size: clamp(0.66rem, 2.55cqw, 0.88rem);
   font-weight: 900;
   letter-spacing: 0.2em;
@@ -1036,13 +1053,13 @@ button:disabled {
   justify-content: center;
   min-width: 0;
   gap: clamp(2px, 1cqw, 6px);
-  color: color-mix(in srgb, white 82%, var(--og-paper-50));
+  color: #fcf9f4; /* color-mix(in srgb, white 82%, var(--og-paper-50)) */
   text-shadow: var(--theme-text-outline);
 }
 
 .recipe-guide-theme-paint-name {
   overflow: hidden;
-  color: color-mix(in srgb, white 94%, var(--og-paper-50));
+  color: #fefdfb; /* color-mix(in srgb, white 94%, var(--og-paper-50)) */
   font-size: clamp(1rem, 4.4cqw, 1.55rem);
   font-weight: 900;
   line-height: 1.08;
@@ -1052,7 +1069,7 @@ button:disabled {
 
 .recipe-guide-theme-paint-source {
   overflow: hidden;
-  color: color-mix(in srgb, white 72%, var(--og-paper-50));
+  color: #faf5ee; /* color-mix(in srgb, white 72%, var(--og-paper-50)) */
   font-size: clamp(0.8rem, 3.1cqw, 1.08rem);
   font-weight: 700;
   line-height: 1.08;
@@ -1067,7 +1084,7 @@ button:disabled {
   margin: 0;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  color: color-mix(in srgb, var(--og-brass-500) 76%, var(--og-paper-50));
+  color: #b28a58; /* color-mix(in srgb, var(--og-brass-500) 76%, var(--og-paper-50)) */
   font-size: clamp(0.55rem, 2.05cqw, 0.72rem);
   font-weight: 900;
   letter-spacing: 0.22em;
@@ -1079,7 +1096,7 @@ button:disabled {
 .recipe-guide-theme-empty {
   align-self: center;
   padding-inline: clamp(12px, 4cqw, 22px);
-  color: color-mix(in srgb, var(--og-paper-50) 78%, var(--og-brass-500));
+  color: #dcc4a4; /* color-mix(in srgb, var(--og-paper-50) 78%, var(--og-brass-500)) */
   font-size: clamp(0.9rem, 3.4cqw, 1.12rem);
   letter-spacing: 0;
   text-transform: none;

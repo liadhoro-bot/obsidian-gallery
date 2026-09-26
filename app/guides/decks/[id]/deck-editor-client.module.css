@@ -589,6 +589,22 @@
   object-fit: cover;
 }
 
+.repositionToggle {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 800 11px/1 var(--og-font-ui);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
 .cardImageActions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

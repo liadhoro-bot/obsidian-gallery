@@ -20,6 +20,8 @@ export type CreateDeckCardInput = {
     id: string
     ratio_text?: string | null
   }>
+  imageFocalX?: number
+  imageFocalY?: number
 }
 
 export type CreateDeckInput = {
@@ -28,6 +30,8 @@ export type CreateDeckInput = {
   status: string
   difficulty?: string
   image: string | null
+  heroFocalX?: number
+  heroFocalY?: number
   inventoryRequired?: string | null
   expertTips?: string | null
   cards: CreateDeckCardInput[]
@@ -66,6 +70,8 @@ type RecipeStepInsert = {
   instructions: string
   image_url: string | null
   youtube_url: string | null
+  image_focal_x: number
+  image_focal_y: number
 }
 
 function cleanText(value: string | null | undefined, fallback: string) {
@@ -223,6 +229,8 @@ function withoutCardTemplate(steps: RecipeStepInsert[]) {
     instructions: step.instructions,
     image_url: step.image_url,
     youtube_url: step.youtube_url,
+    image_focal_x: step.image_focal_x,
+    image_focal_y: step.image_focal_y,
   }))
 }
 
@@ -238,6 +246,8 @@ function withoutYoutubeUrl(steps: RecipeStepInsert[]) {
       step.card_template === 'video'
         ? step.youtube_url ?? step.image_url
         : step.image_url,
+    image_focal_x: step.image_focal_x,
+    image_focal_y: step.image_focal_y,
   }))
 }
 
@@ -252,6 +262,8 @@ function withoutCardTemplateAndYoutubeUrl(steps: RecipeStepInsert[]) {
       step.card_template === 'video'
         ? step.youtube_url ?? step.image_url
         : step.image_url,
+    image_focal_x: step.image_focal_x,
+    image_focal_y: step.image_focal_y,
   }))
 }
 
@@ -333,10 +345,17 @@ export async function createDeckFromForge(
 
   const title = cleanText(input.title, 'New Deck')
   const description = cleanText(input.description, 'A custom painting deck.')
-  const coverCard = input.cards.find((card) =>
+  const coverIndex = input.cards.findIndex((card) =>
     card.template === 'title' || card.template === 'cover'
   )
+  const coverCard = coverIndex === -1 ? undefined : input.cards[coverIndex]
+  // Where the synthesized cover card belongs in the full cover+steps
+  // sequence, or null to omit it - wherever the 'cover' template card
+  // happens to sit in the editor's card list at save time.
+  const coverPosition = coverIndex === -1 ? null : coverIndex
   const coverImage = safePersistedImage(input.image ?? coverCard?.image)
+  const coverFocalX = input.heroFocalX ?? coverCard?.imageFocalX ?? 50
+  const coverFocalY = input.heroFocalY ?? coverCard?.imageFocalY ?? 50
   const isPublic = input.status === 'Public'
   const difficulty = input.difficulty || null
 
@@ -349,6 +368,9 @@ export async function createDeckFromForge(
       image_url: coverImage,
       is_public: isPublic,
       difficulty,
+      cover_position: coverPosition,
+      cover_focal_x: coverFocalX,
+      cover_focal_y: coverFocalY,
     })
     .select('id, name, image_url, created_at')
     .single()
@@ -373,6 +395,8 @@ export async function createDeckFromForge(
       instructions: encodeDeckCardInstructions(card),
       image_url: safePersistedImage(card.image),
       youtube_url: youtubeUrl,
+      image_focal_x: card.imageFocalX ?? 50,
+      image_focal_y: card.imageFocalY ?? 50,
     }
   })
 
@@ -464,10 +488,14 @@ export async function updateDeckFromForge(
 
   const title = cleanText(input.title, 'New Deck')
   const description = cleanText(input.description, 'A custom painting deck.')
-  const coverCard = input.cards.find((card) =>
+  const coverIndex = input.cards.findIndex((card) =>
     card.template === 'title' || card.template === 'cover'
   )
+  const coverCard = coverIndex === -1 ? undefined : input.cards[coverIndex]
+  const coverPosition = coverIndex === -1 ? null : coverIndex
   const coverImage = safePersistedImage(input.image ?? coverCard?.image)
+  const coverFocalX = input.heroFocalX ?? coverCard?.imageFocalX ?? 50
+  const coverFocalY = input.heroFocalY ?? coverCard?.imageFocalY ?? 50
   const isPublic = input.status === 'Public'
   const difficulty = input.difficulty || null
 
@@ -479,6 +507,9 @@ export async function updateDeckFromForge(
       image_url: coverImage,
       is_public: isPublic,
       difficulty,
+      cover_position: coverPosition,
+      cover_focal_x: coverFocalX,
+      cover_focal_y: coverFocalY,
       inventory_required: input.inventoryRequired?.trim() || null,
       expert_tips: input.expertTips?.trim() || null,
     })
@@ -532,6 +563,8 @@ export async function updateDeckFromForge(
       instructions: encodeDeckCardInstructions(card),
       image_url: safePersistedImage(card.image),
       youtube_url: youtubeUrl,
+      image_focal_x: card.imageFocalX ?? 50,
+      image_focal_y: card.imageFocalY ?? 50,
     }
   })
 

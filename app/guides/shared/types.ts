@@ -3,6 +3,10 @@ export type RecipeImage = {
   image_url: string
   is_featured: boolean | null
   alt_text: string | null
+  // CSS object-position percentages (0-100), so a cropped/cover-fit image
+  // can be repositioned instead of always centering. 50/50 is dead center.
+  focal_x?: number
+  focal_y?: number
 }
 
 export type Paint = {
@@ -42,6 +46,9 @@ export type RecipeStep = {
   title: string
   instructions: string
   image_url: string | null
+  // See RecipeImage.focal_x/focal_y.
+  image_focal_x?: number
+  image_focal_y?: number
 }
 
 export type Recipe = {

@@ -1073,6 +1073,8 @@ export default function GuidesV3Preview({
           editingDeck.gallery.find((image) => image.id === editingDeck.heroImageId)?.url ??
           editingDeck.gallery[0]?.url ??
           null,
+        heroFocalX: 50,
+        heroFocalY: 50,
         inventoryNotes: '',
         expertTips: '',
         cards: toEditorCards(editingDeck),

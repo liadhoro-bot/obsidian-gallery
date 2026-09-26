@@ -21,6 +21,7 @@ import PaintPickerDialog, {
 } from '../../../../components/paints/paint-picker-dialog'
 import { uploadDeckEditorImage } from '../../actions'
 import type { GuidesV3DeckDetail } from '../../guides-v3-detail-data'
+import { ImageFocalPointField } from '../../shared/image-focal-point-field'
 import styles from './deck-editor-client.module.css'
 
 type DeckEditorTab = 'details' | 'cards' | 'preview'
@@ -50,6 +51,8 @@ export type DeckEditorInitialCard = {
   image: string | null
   paints?: DeckEditorSavePaint[]
   videoUrl?: string | null
+  imageFocalX?: number
+  imageFocalY?: number
 }
 
 export type DeckEditorSavePayload = {
@@ -58,6 +61,8 @@ export type DeckEditorSavePayload = {
   difficulty: DeckDifficulty
   status: DeckStatus
   heroImage: string | null
+  heroFocalX: number
+  heroFocalY: number
   cards: DeckEditorInitialCard[]
   inventoryNotes: string
   expertTips: string
@@ -71,6 +76,8 @@ type EditorCard = {
   image: string | null
   paints: PreviewPaint[]
   videoUrl: string | null
+  imageFocalX: number
+  imageFocalY: number
 }
 
 type EditorImage = {
@@ -103,6 +110,15 @@ function paintLimitForTemplate(template: CardTemplate) {
   if (template === 'theme') return themePaintLimit
   if (template === 'paints') return Infinity
   return stepPaintLimit
+}
+
+// Matches each template's real image mount aspect ratio in the live card
+// (see recipe-guide-cards.tsx), so the focal-point preview here shows
+// exactly what will actually crop into view.
+function focalAspectRatioForTemplate(template: CardTemplate) {
+  if (template === 'cover') return 540 / (960 * 0.43)
+  if (template === 'small-image') return 540 / (960 * 0.36)
+  return 540 / 960
 }
 
 function cardTemplateFromSavedStep(
@@ -146,47 +162,64 @@ function cardTemplateFromSavedStep(
 }
 
 function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
-  return [
-    {
-      id: `${deck.id}:title`,
-      title: deck.title,
-      template: 'cover',
-      body: deck.description,
-      // Seed from the untransformed source image, not the list/grid
-      // thumbnail rendition - otherwise saving without touching the cover
-      // silently downgrades the deck's stored image to that small
-      // thumbnail (see GuidesV3DeckDetail.fullImage).
-      image: deck.fullImage ?? deck.image,
-      paints: [],
-      videoUrl: null,
-    },
-    ...deck.steps.map((step) => ({
-      id: step.id,
-      title: step.title,
-      template: cardTemplateFromSavedStep(
-        step.template,
-        step.image,
-        step.videoUrl,
-        step.title,
-        step.paints.length
-      ),
-      body: step.instructions,
-      // Same reasoning as the cover image above - use the untransformed
-      // source (GuidesV3DeckStep.rawImage), not the thumbnail.
-      image: step.rawImage ?? step.image,
-      paints: step.paints.map((paint) => ({
-        id: paint.id,
-        brand: paint.brand,
-        line: paint.line,
-        name: paint.name,
-        hex_approx: paint.color,
-        swatch_image_url: paint.swatchImageUrl,
-        ratio_text: paint.ratioText,
-        is_owned: paint.isOwned,
-        is_wishlist: paint.isWishlist,
-      })),
-      videoUrl: step.videoUrl,
+  const stepCards = deck.steps.map((step) => ({
+    id: step.id,
+    title: step.title,
+    template: cardTemplateFromSavedStep(
+      step.template,
+      step.image,
+      step.videoUrl,
+      step.title,
+      step.paints.length
+    ),
+    body: step.instructions,
+    // Same reasoning as the cover image below - use the untransformed
+    // source (GuidesV3DeckStep.rawImage), not the thumbnail.
+    image: step.rawImage ?? step.image,
+    paints: step.paints.map((paint) => ({
+      id: paint.id,
+      brand: paint.brand,
+      line: paint.line,
+      name: paint.name,
+      hex_approx: paint.color,
+      swatch_image_url: paint.swatchImageUrl,
+      ratio_text: paint.ratioText,
+      is_owned: paint.isOwned,
+      is_wishlist: paint.isWishlist,
     })),
+    videoUrl: step.videoUrl,
+    imageFocalX: step.imageFocalX,
+    imageFocalY: step.imageFocalY,
+  }))
+
+  // Where the synthesized cover card belongs, if at all - undefined
+  // defaults to 0 (cover first) for decks that predate this column, null
+  // omits it. See app/guides/decks/[id]/page.tsx for the matching logic
+  // used when rendering the live viewer.
+  const rawCoverPosition = deck.coverPosition === undefined ? 0 : deck.coverPosition
+  if (rawCoverPosition === null) return stepCards
+
+  const coverPosition = Math.max(0, Math.min(rawCoverPosition, stepCards.length))
+  const coverCard: EditorCard = {
+    id: `${deck.id}:title`,
+    title: deck.title,
+    template: 'cover',
+    body: deck.description,
+    // Seed from the untransformed source image, not the list/grid
+    // thumbnail rendition - otherwise saving without touching the cover
+    // silently downgrades the deck's stored image to that small
+    // thumbnail (see GuidesV3DeckDetail.fullImage).
+    image: deck.fullImage ?? deck.image,
+    paints: [],
+    videoUrl: null,
+    imageFocalX: deck.coverFocalX ?? 50,
+    imageFocalY: deck.coverFocalY ?? 50,
+  }
+
+  return [
+    ...stepCards.slice(0, coverPosition),
+    coverCard,
+    ...stepCards.slice(coverPosition),
   ]
 }
 
@@ -413,6 +446,8 @@ function makeNewCard(
           }))
         : [],
     videoUrl: null,
+    imageFocalX: 50,
+    imageFocalY: 50,
   }
 }
 
@@ -460,6 +495,8 @@ export default function DeckEditorClient({
           ...card,
           paints: card.paints ?? [],
           videoUrl: card.videoUrl ?? null,
+          imageFocalX: card.imageFocalX ?? 50,
+          imageFocalY: card.imageFocalY ?? 50,
         }))
       : initialDeckCards(deck)
   )
@@ -635,9 +672,14 @@ export default function DeckEditorClient({
 
     setImageUploadError(null)
     setPendingImageUploads((count) => count + 1)
+    // A newly picked photo has no established framing yet - start it
+    // centered rather than carrying over whatever the previous image's
+    // focal point happened to be.
     updateCardById(activeCardId, {
       image: url,
       template,
+      imageFocalX: 50,
+      imageFocalY: 50,
     })
     event.target.value = ''
 
@@ -661,16 +703,25 @@ export default function DeckEditorClient({
 
   function deleteEditingCard() {
     if (!editingCardId) return
-    if (editingCard?.template === 'cover') {
-      setEditingCardId(null)
-      return
-    }
+    // A deck must always show at least one card. The cover card is no
+    // longer special-cased here - it can be deleted like any other card,
+    // same as it can now be added, removed, or reordered relative to the
+    // steps (see initialDeckCards/handleSave's cover-position handling).
+    if (cards.length <= 1) return
     setCards((current) => current.filter((card) => card.id !== editingCardId))
     setEditingCardId(null)
   }
 
   function addCard(template: CardTemplate) {
     const nextCard = makeNewCard(template, cards.length + 1, deck.paintList)
+    // A re-added cover card should reflect the deck's current title and
+    // description right away, not generic placeholder text - those fields
+    // (not this card's own text) are what actually gets saved.
+    if (template === 'cover') {
+      nextCard.title = title
+      nextCard.body = description
+      nextCard.image = heroImage
+    }
     setCards((current) => [...current, nextCard])
     setEditingCardId(nextCard.id)
     setIsAddCardOpen(false)
@@ -688,6 +739,8 @@ export default function DeckEditorClient({
       difficulty,
       status,
       heroImage: coverCard?.image ?? heroImage,
+      heroFocalX: coverCard?.imageFocalX ?? 50,
+      heroFocalY: coverCard?.imageFocalY ?? 50,
       inventoryNotes,
       expertTips,
       cards: cards.map((card) => ({
@@ -698,6 +751,8 @@ export default function DeckEditorClient({
         image: card.image,
         paints: card.paints,
         videoUrl: card.videoUrl,
+        imageFocalX: card.imageFocalX,
+        imageFocalY: card.imageFocalY,
       })),
     })
   }
@@ -1055,6 +1110,7 @@ export default function DeckEditorClient({
 
       {editingCard ? (
         <CardEditorSheet
+          canDelete={cards.length > 1}
           card={editingCard}
           deckPaints={deck.paintList}
           onAddPaint={addEditingCardPaint}
@@ -1070,6 +1126,7 @@ export default function DeckEditorClient({
 
       {isAddCardOpen ? (
         <AddCardSheet
+          hasCover={cards.some((card) => card.template === 'cover')}
           onAddCard={addCard}
           onClose={() => setIsAddCardOpen(false)}
         />
@@ -1488,12 +1545,19 @@ function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
 }
 
 function AddCardSheet({
+  hasCover,
   onAddCard,
   onClose,
 }: {
+  hasCover: boolean
   onAddCard: (template: CardTemplate) => void
   onClose: () => void
 }) {
+  // Only one cover card at a time - it's already in the list if hasCover.
+  const availableTemplates = hasCover
+    ? addCardTemplateOptions.filter((template) => template !== 'cover')
+    : addCardTemplateOptions
+
   return (
     <div className={styles.sheetBackdrop} role="dialog" aria-modal="true">
       <section className={styles.sheet}>
@@ -1504,7 +1568,7 @@ function AddCardSheet({
           </button>
         </header>
         <div className={styles.templateGrid}>
-          {addCardTemplateOptions.map((template) => (
+          {availableTemplates.map((template) => (
             <button
               key={template}
               type="button"
@@ -1525,6 +1589,7 @@ function AddCardSheet({
 }
 
 function CardEditorSheet({
+  canDelete,
   card,
   deckPaints,
   onAddPaint,
@@ -1536,6 +1601,7 @@ function CardEditorSheet({
   onDeletePaint,
   onSelectPaint,
 }: {
+  canDelete: boolean
   card: EditorCard
   deckPaints: GuidesV3DeckDetail['paintList']
   onAddPaint: () => void
@@ -1552,6 +1618,8 @@ function CardEditorSheet({
   const isImageCard = card.template === 'image' || card.template === 'small-image'
   const isPaintsList = card.template === 'paints'
   const isVideo = card.template === 'video'
+  const canRepositionImage = isCover || isImageCard || card.template === 'theme'
+  const [isRepositioningImage, setIsRepositioningImage] = useState(false)
   const paintLimit = paintLimitForTemplate(card.template)
   const embedUrl = isVideo ? getYoutubeEmbedUrl(card.videoUrl) : null
   const initialPaints = useMemo(
@@ -1588,6 +1656,15 @@ function CardEditorSheet({
               ) : (
                 <span>No image selected</span>
               )}
+              {card.image && canRepositionImage ? (
+                <button
+                  type="button"
+                  className={styles.repositionToggle}
+                  onClick={() => setIsRepositioningImage((current) => !current)}
+                >
+                  {isRepositioningImage ? 'Done' : 'Reposition'}
+                </button>
+              ) : null}
             </div>
             <div className={styles.cardImageActions}>
               <label>
@@ -1610,6 +1687,16 @@ function CardEditorSheet({
                 Camera
               </label>
             </div>
+            {card.image && canRepositionImage && isRepositioningImage ? (
+              <ImageFocalPointField
+                key={card.image}
+                src={card.image}
+                x={card.imageFocalX}
+                y={card.imageFocalY}
+                aspectRatio={focalAspectRatioForTemplate(card.template)}
+                onChange={(x, y) => onChange({ imageFocalX: x, imageFocalY: y })}
+              />
+            ) : null}
           </section>
         ) : null}
 
@@ -1775,7 +1862,7 @@ function CardEditorSheet({
         ) : null}
 
         <div className={styles.sheetActions}>
-          {!isCover ? (
+          {canDelete ? (
             <button type="button" className={styles.dangerButton} onClick={onDelete}>
               Delete Card
             </button>
@@ -1872,33 +1959,47 @@ function DeckPreview({
     youtube_url: null,
     is_public: status === 'Public',
   }
+  const previewCoverCard = cards.find((card) => card.template === 'cover')
   const featuredImage: RecipeImage | null = isUsableImageUrl(heroImage)
     ? {
         id: `${deck.id}:hero`,
         image_url: heroImage,
         is_featured: true,
         alt_text: title,
+        focal_x: previewCoverCard?.imageFocalX ?? 50,
+        focal_y: previewCoverCard?.imageFocalY ?? 50,
       }
     : null
+  // Render every card in its actual editor order, cover included wherever
+  // it sits (or omitted entirely if the owner removed it) - this must
+  // match what the live viewer will actually show, not force the cover
+  // to always lead.
   const stepCards = cards.filter((card) => card.template !== 'cover')
 
   return (
     <section className={styles.previewStack} aria-label="Deck preview">
-      <div className={styles.previewShareMount}>
-        <RecipeGuideCoverCard
-          recipe={recipe}
-          featuredImage={featuredImage}
-          cardCount={cards.length}
-          paintCount={deck.paintList.length}
-        />
-      </div>
-      {stepCards.map((card, index) => {
+      {cards.map((card) => {
+        if (card.template === 'cover') {
+          return (
+            <div key={card.id} className={styles.previewShareMount}>
+              <RecipeGuideCoverCard
+                recipe={recipe}
+                featuredImage={featuredImage}
+                cardCount={cards.length}
+                paintCount={deck.paintList.length}
+              />
+            </div>
+          )
+        }
+
         const step: RecipeStep = {
           id: card.id,
-          step_number: index + 1,
+          step_number: stepCards.indexOf(card) + 1,
           title: card.title,
           instructions: card.body,
           image_url: card.image,
+          image_focal_x: card.imageFocalX,
+          image_focal_y: card.imageFocalY,
         }
 
         return (
@@ -1921,6 +2022,8 @@ function DeckPreview({
                 stepsLength={stepCards.length}
                 paints={card.paints}
                 fallbackImageUrl={heroImage}
+                fallbackFocalX={previewCoverCard?.imageFocalX ?? 50}
+                fallbackFocalY={previewCoverCard?.imageFocalY ?? 50}
               />
             ) : card.template === 'small-image' && isUsableImageUrl(card.image) ? (
               <RecipeGuideSmallImageStepCard

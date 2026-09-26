@@ -73,6 +73,8 @@ function toFeaturedImage(deck: GuidesV3DeckDetail): RecipeImage | null {
     image_url: image,
     is_featured: true,
     alt_text: deck.title,
+    focal_x: deck.coverFocalX ?? 50,
+    focal_y: deck.coverFocalY ?? 50,
   }
 }
 
@@ -83,6 +85,8 @@ function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
     title: step.title,
     instructions: step.instructions,
     image_url: step.rawImage || step.image,
+    image_focal_x: step.imageFocalX,
+    image_focal_y: step.imageFocalY,
   }
 }
 
@@ -207,6 +211,8 @@ export default async function DeckDetailPage({
         stepsLength={recipeSteps.length}
         paints={paints}
         fallbackImageUrl={deck.fullImage || deck.image}
+        fallbackFocalX={deck.coverFocalX ?? 50}
+        fallbackFocalY={deck.coverFocalY ?? 50}
         showBrandMark={showBrandMark}
       />
     ) : step.template === 'small-image' && isUsableImageUrl(recipeStep.image_url) ? (
@@ -233,37 +239,77 @@ export default async function DeckDetailPage({
     )
   }
 
-  const shareCards: ShareCardEntry[] = [
-    {
-      key: 'cover',
-      node: (
-        <RecipeGuideCoverCard
-          recipe={recipe}
-          featuredImage={featuredImage}
-          cardCount={deck.steps.length + 1}
-          paintCount={paintCount}
-          showBrandMark
-        />
-      ),
-    },
-    ...deck.steps.map((step) => ({
-      key: step.id,
-      node: renderStepCard(step, true),
-    })),
-  ]
+  // Where the synthesized cover card belongs among the full cover+steps
+  // sequence - undefined (a deck predating this column) defaults to 0
+  // (cover first, matching every deck's behavior before this was
+  // configurable); null omits the cover entirely. Clamp defensively in
+  // case a step was deleted after the position was saved.
+  const rawCoverPosition = deck.coverPosition === undefined ? 0 : deck.coverPosition
+  const coverPosition =
+    rawCoverPosition === null
+      ? null
+      : Math.max(0, Math.min(rawCoverPosition, deck.steps.length))
+  const cardCount = deck.steps.length + (coverPosition === null ? 0 : 1)
 
-  const cards: DeckCardEntry[] = [
-    {
-      key: 'cover',
-      featureGuideTarget: 'guides.deck.cover',
+  const stepEntries: DeckCardEntry[] = deck.steps.map((step) => ({
+    key: step.id,
+    featureGuideTarget: 'guides.deck.steps',
+    node: renderStepCard(step, false),
+  }))
+  const shareStepEntries: ShareCardEntry[] = deck.steps.map((step) => ({
+    key: step.id,
+    node: renderStepCard(step, true),
+  }))
+
+  const shareCards: ShareCardEntry[] =
+    coverPosition === null
+      ? shareStepEntries
+      : [
+          ...shareStepEntries.slice(0, coverPosition),
+          {
+            key: 'cover',
+            node: (
+              <RecipeGuideCoverCard
+                recipe={recipe}
+                featuredImage={featuredImage}
+                cardCount={cardCount}
+                paintCount={paintCount}
+                showBrandMark
+              />
+            ),
+          },
+          ...shareStepEntries.slice(coverPosition),
+        ]
+
+  const cards: DeckCardEntry[] =
+    coverPosition === null
+      ? stepEntries
+      : [
+          ...stepEntries.slice(0, coverPosition),
+          {
+            key: 'cover',
+            featureGuideTarget: 'guides.deck.cover',
+            node: (
+              <RecipeGuideCoverCard
+                recipe={recipe}
+                featuredImage={featuredImage}
+                cardCount={cardCount}
+                paintCount={paintCount}
+              />
+            ),
+          },
+          ...stepEntries.slice(coverPosition),
+        ]
+
+  // Like/save/share always live on whichever card ends up first, whether
+  // that's the cover (the common case) or - if the cover was removed or
+  // moved - a step card instead.
+  if (cards.length) {
+    cards[0] = {
+      ...cards[0],
       node: (
         <div className="relative h-full">
-          <RecipeGuideCoverCard
-            recipe={recipe}
-            featuredImage={featuredImage}
-            cardCount={deck.steps.length + 1}
-            paintCount={paintCount}
-          />
+          {cards[0].node}
           <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
             <DeckHeroActions
               recipeId={deck.id}
@@ -280,13 +326,8 @@ export default async function DeckDetailPage({
           </div>
         </div>
       ),
-    },
-    ...deck.steps.map((step) => ({
-      key: step.id,
-      featureGuideTarget: 'guides.deck.steps',
-      node: renderStepCard(step, false),
-    })),
-  ]
+    }
+  }
 
   return (
     <main>
