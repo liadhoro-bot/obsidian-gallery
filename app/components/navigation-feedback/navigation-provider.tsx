@@ -2,7 +2,9 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, useTransition, useOptimistic, type ReactNode } from 'react'
 import { useRouter as useNextRouter } from 'next/navigation'
-import LoadingSurface from './loading-surface'
+import ReturnSurface from './return-surface'
+import DashboardCacheLifecycle from './dashboard-cache-lifecycle'
+import { clearDashboardReturn } from '@/app/dashboard/dashboard-return-store'
 import styles from './navigation-feedback.module.css'
 
 type Router = ReturnType<typeof useNextRouter>
@@ -36,19 +38,27 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
         nextRouter[method](href, options)
       })
     }
-    return { ...nextRouter, push: (href, options) => navigate('push', href, options), replace: (href, options) => navigate('replace', href, options) }
+    return {
+      ...nextRouter,
+      refresh: () => { clearDashboardReturn(); nextRouter.refresh() },
+      push: (href, options) => navigate('push', href, options),
+      replace: (href, options) => navigate('replace', href, options),
+    }
   }, [nextRouter, setDestination])
   const href = destination ?? link?.href ?? null
   const value = useMemo(() => ({ href, router, showLink, clearLink }), [href, router, showLink, clearLink])
   return <NavigationContext.Provider value={value}>
-    {children}
-    {href ? <div className={styles.overlay} data-navigation-overlay>
-      <LoadingSurface href={href} onDashboardTab={tab => {
-        const url = new URL(href, window.location.href)
-        url.searchParams.set('tab', tab)
-        router.replace(`${url.pathname}${url.search}`, { scroll: false })
-      }} />
-    </div> : null}
+    <DashboardCacheLifecycle />
+    <div style={{ display: 'contents' }} onSubmitCapture={clearDashboardReturn}>
+      {children}
+      {href ? <div className={styles.overlay} data-navigation-overlay>
+        <ReturnSurface href={href} onDashboardTab={tab => {
+          const url = new URL(href, window.location.href)
+          url.searchParams.set('tab', tab)
+          router.replace(`${url.pathname}${url.search}`, { scroll: false })
+        }} />
+      </div> : null}
+    </div>
   </NavigationContext.Provider>
 }
 
@@ -59,8 +69,8 @@ export function NavigationContent({ children }: { children: ReactNode }) {
 
 export function useNavigationFeedback() { return useContext(NavigationContext) }
 
-// Refresh, prefetch and history semantics remain owned by Next. Mutations keep
-// their local pending UI; only destination navigation gets a page skeleton.
+// Next still owns routing. Explicit refreshes also discard the return snapshot
+// so mutation callers cannot restore an older dashboard on the next visit.
 export function useRouter(): Router {
   const fallback = useNextRouter()
   return useContext(NavigationContext)?.router ?? fallback

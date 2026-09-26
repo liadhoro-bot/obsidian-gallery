@@ -210,6 +210,7 @@ export async function DashboardActiveUnitsScreen({
 
   return (
     <DashboardActiveUnitsView
+      userId={userId}
       featureGuides={featureGuides}
       initialTab={initialTab}
       model={createDashboardActiveUnitsViewModel({ feed, nextActions })}

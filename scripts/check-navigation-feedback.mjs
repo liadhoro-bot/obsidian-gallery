@@ -20,6 +20,7 @@ try {
   }
   browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({ baseURL, viewport: { width: 430, height: 932 }, serviceWorkers: 'block', storageState: process.env.PERF_STORAGE_STATE ?? '.perf/perf-storage-state-flows.json' })
+  await context.addCookies([{ name: 'obsidian_v3_preview', value: '1', url: baseURL }])
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))

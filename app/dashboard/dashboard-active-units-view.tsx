@@ -28,6 +28,8 @@ import type {
 } from './dashboard-active-units-model'
 import styles from './dashboard-og.module.css'
 import { LoadingPanels } from '../components/navigation-feedback/loading-surface'
+import { WorkbenchShell } from '@/src/components/v3/composition/workbench-shell'
+import { clearDashboardReturn, rememberDashboardReturn } from './dashboard-return-store'
 
 type ActiveTab = 'profile' | 'painting-table'
 
@@ -225,6 +227,7 @@ function NextActionsObject({ nextActions }: { nextActions: NonNullable<Dashboard
     }
 
     const nextDone = !isActionDone(action)
+    clearDashboardReturn()
 
     setCompletionOverrides((current) => {
       const next = new Map(current)
@@ -554,16 +557,24 @@ export default function DashboardActiveUnitsView({
   model,
   profilePanel,
   source = 'live',
+  userId,
+  returnHref,
 }: {
   featureGuides?: DashboardFeatureGuide[]
   initialTab: ActiveTab
   model: DashboardActiveUnitsViewModel
   profilePanel: ReactNode | null
   source?: 'fixture' | 'live'
+  userId?: string
+  returnHref?: string
 }) {
-  const pathname = usePathname()
+  const routePathname = usePathname()
+  const pathname = returnHref ? '/dashboard' : routePathname
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const routeSearchParams = useSearchParams()
+  const searchParams = useMemo(() => returnHref
+    ? new URL(returnHref, 'https://navigation.local').searchParams
+    : routeSearchParams, [returnHref, routeSearchParams])
   const requestedTab = searchParams.get('tab')
   const routeTab =
     requestedTab === 'profile' || requestedTab === 'painting-table'
@@ -576,7 +587,19 @@ export default function DashboardActiveUnitsView({
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   useEffect(() => {
-    if (source !== 'live') {
+    if (!userId || source !== 'live' || returnHref) return
+    // Retain serializable units data only. The already-loaded component supplies
+    // the renderer, so other routes don't download the dashboard's UI bundle.
+    rememberDashboardReturn(userId, href => (
+      <WorkbenchShell contentClassName={styles.dashboardFrame} gutter="none" maxWidth="var(--og-workbench-compact-max-width)">
+        <DashboardActiveUnitsView featureGuides={featureGuides} initialTab="painting-table"
+          model={model} profilePanel={null} returnHref={href} />
+      </WorkbenchShell>
+    ))
+  }, [featureGuides, model, returnHref, source, userId])
+
+  useEffect(() => {
+    if (source !== 'live' || returnHref) {
       return
     }
 
@@ -610,7 +633,7 @@ export default function DashboardActiveUnitsView({
         window.clearTimeout(timeoutId)
       }
     }
-  }, [currentTab, pathname, router, searchParams, source])
+  }, [currentTab, pathname, router, searchParams, source, returnHref])
 
   function showGuideAt(index: number) {
     setActiveGuideIndex(index)
@@ -660,10 +683,10 @@ export default function DashboardActiveUnitsView({
       data-v3-dashboard-feed={source}
       data-v3-dashboard-source={source}
     >
-      <V3PerfIndicator
+      {!returnHref ? <V3PerfIndicator
         surface="dashboard"
         detail={currentTab === 'profile' ? 'my-progress' : 'active-units'}
-      />
+      /> : null}
       <DashboardHeader
         helpExpanded={activeGuide !== null}
         onHelp={startFeatureTour}
