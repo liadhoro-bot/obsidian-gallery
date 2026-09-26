@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import type { ButtonHTMLAttributes } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'

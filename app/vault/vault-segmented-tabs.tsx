@@ -1,7 +1,8 @@
 'use client'
 
 import { startTransition, useEffect, useRef, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { prefetchRoute } from '../components/route-prefetch'
 
 type VaultTab = 'find' | 'collection' | 'custom'

@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode, WheelEvent } from 'react'
 import FeatureGuideLauncher from '../../../components/feature-guide-launcher'

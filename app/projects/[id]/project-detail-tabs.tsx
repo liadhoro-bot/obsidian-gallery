@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { ProjectDetailTab } from './project-detail-client'
 import styles from './project-detail-silver.module.css'
 

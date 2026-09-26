@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { createClient } from '../../../../utils/supabase/server'
 
 type PaintRef = {

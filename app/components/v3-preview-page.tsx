@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import V3PerfIndicator from './v3-perf-indicator'
 
 type PreviewLink = {

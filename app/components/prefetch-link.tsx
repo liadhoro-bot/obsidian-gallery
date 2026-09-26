@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import Link from '@/app/components/navigation-feedback/navigation-link'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import {
   type AnchorHTMLAttributes,
   type ButtonHTMLAttributes,

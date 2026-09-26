@@ -25,6 +25,7 @@ export default function SubmitButton({
   return (
     <button
       type="submit"
+      aria-busy={pending || undefined}
       disabled={disabled || pending}
       onClick={onClick}
       className={[
@@ -33,7 +34,7 @@ export default function SubmitButton({
       ].join(' ')}
     >
       {pending && (
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        <span aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none rounded-full border-2 border-current border-t-transparent" />
       )}
 
       {!pending && leadingIcon ? leadingIcon : null}

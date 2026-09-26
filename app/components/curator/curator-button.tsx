@@ -1,7 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { logCuratorMessageEvent } from '../../curator/actions'
 import type {

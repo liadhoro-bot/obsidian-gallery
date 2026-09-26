@@ -1,5 +1,5 @@
-﻿import Image from 'next/image'
-import Link from 'next/link'
+import Image from 'next/image'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { createPerfTimer } from '../../utils/perf/server'
 import {

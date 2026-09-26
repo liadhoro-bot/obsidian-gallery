@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { redirect } from 'next/navigation'
 import ContestHeader from '../../../../components/contests/contest-header'
 import ContestNomineeGallery from '../../../../components/contests/contest-nominee-gallery'

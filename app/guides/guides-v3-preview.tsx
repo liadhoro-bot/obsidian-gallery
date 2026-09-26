@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { ReactNode, useEffect, useRef, useState, useTransition } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'

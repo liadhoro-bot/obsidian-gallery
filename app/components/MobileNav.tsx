@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useTransition } from 'react'
 import type { CSSProperties } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { prefetchRoute } from './route-prefetch'
 import styles from './mobile-nav.module.css'
+import { useNavigationFeedback } from './navigation-feedback/navigation-provider'
 
 const navItems = [
   {
@@ -41,6 +43,8 @@ const navItems = [
 
 export default function MobileNav() {
   const pathname = usePathname()
+  const feedback = useNavigationFeedback()
+  const activePath = feedback?.href ? new URL(feedback.href, 'https://app.local').pathname : pathname
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const shouldHide =
@@ -106,7 +110,7 @@ export default function MobileNav() {
   }
 
   function navigate(href: string) {
-    if (href === pathname) {
+    if (href === pathname && !feedback?.href) {
       return
     }
 
@@ -121,11 +125,11 @@ export default function MobileNav() {
   }
 
   return (
-    <nav className={styles.nav} aria-label="Primary navigation">
+    <nav className={styles.nav} style={feedback?.href ? { zIndex: 10000 } : undefined} aria-label="Primary navigation">
       <div className={styles.inner}>
         {navItems.map((item) => {
           const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`)
+            activePath === item.href || activePath.startsWith(`${item.href}/`)
 
           return (
             <button
@@ -138,7 +142,7 @@ export default function MobileNav() {
               onClick={() => navigate(item.href)}
               data-active={isActive}
               aria-current={isActive ? 'page' : undefined}
-              disabled={isPending && isActive}
+              disabled={(isPending || Boolean(feedback?.href)) && isActive}
               className={styles.item}
             >
               <span

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useState, useTransition } from 'react'
 import BackButton from '../../components/back-button'
 import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'

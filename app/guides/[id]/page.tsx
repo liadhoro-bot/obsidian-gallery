@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { notFound, redirect } from 'next/navigation'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useTransition } from 'react'
 import { Recipe, RecipeImage } from '../../../guides/shared/types'
 import BackButton from '../../../components/back-button'

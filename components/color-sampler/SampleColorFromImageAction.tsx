@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { createPortal } from 'react-dom'
 import { useState, useTransition } from 'react'
 import { buildVaultColorMatchHref } from './color-match-navigation'

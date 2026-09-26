@@ -9,6 +9,7 @@ import './globals.css'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import ClientShell from './providers/client-shell'
+import { NavigationProvider, NavigationContent } from './components/navigation-feedback/navigation-provider'
 
 const ogDisplayFont = Cormorant_Garamond({
   display: 'swap',
@@ -154,8 +155,10 @@ export default function RootLayout({
       className={`${ogDisplayFont.variable} ${ogUiFont.variable} ${ogMonoFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ClientShell enableProductionTelemetry={enableProductionTelemetry} />
-        {children}
+        <NavigationProvider>
+          <ClientShell enableProductionTelemetry={enableProductionTelemetry} />
+          <NavigationContent>{children}</NavigationContent>
+        </NavigationProvider>
 
         {enableProductionTelemetry ? (
           <>

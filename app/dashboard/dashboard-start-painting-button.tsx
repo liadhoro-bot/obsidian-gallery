@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { prefetchRoute } from '../components/route-prefetch'
 
 export default function DashboardStartPaintingButton({

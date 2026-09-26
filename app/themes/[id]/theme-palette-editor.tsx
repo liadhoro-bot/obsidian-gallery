@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useEffect, useState, useTransition } from 'react'
 import { setThemePaintSlot } from './actions'
 import PaintPickerDialog, {

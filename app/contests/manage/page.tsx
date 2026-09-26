@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import ContestPhaseBadge from '../../../components/contests/contest-phase-badge'

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import type { PointerEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import dynamic from 'next/dynamic'
 import { buildVaultColorMatchHref } from '../../components/color-sampler/color-match-navigation'
 import type { SampledImageColor } from '../../components/color-sampler/types'

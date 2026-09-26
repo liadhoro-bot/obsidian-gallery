@@ -4,8 +4,9 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState, useTransition, useOptimistic } from 'react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import {
   OgButton,
   OgPlaque,
@@ -26,6 +27,7 @@ import type {
   DashboardActiveUnitsViewModel,
 } from './dashboard-active-units-model'
 import styles from './dashboard-og.module.css'
+import { LoadingPanels } from '../components/navigation-feedback/loading-surface'
 
 type ActiveTab = 'profile' | 'painting-table'
 
@@ -567,14 +569,11 @@ export default function DashboardActiveUnitsView({
     requestedTab === 'profile' || requestedTab === 'painting-table'
       ? requestedTab
       : initialTab
-  const [currentTab, setCurrentTab] = useState<ActiveTab>(routeTab)
+  const [currentTab, setCurrentTab] = useOptimistic<ActiveTab>(routeTab)
+  const [, startTabTransition] = useTransition()
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
-
-  useEffect(() => {
-    setCurrentTab(routeTab)
-  }, [routeTab])
 
   useEffect(() => {
     if (source !== 'live') {
@@ -623,13 +622,10 @@ export default function DashboardActiveUnitsView({
     params.set('tab', nextTab)
     const nextUrl = `${pathname}?${params.toString()}`
 
-    router.replace(nextUrl, { scroll: false })
-
-    if (nextTab === 'profile' && !profilePanel) {
-      return
-    }
-
-    setCurrentTab(nextTab)
+    startTabTransition(() => {
+      setCurrentTab(nextTab)
+      router.replace(nextUrl, { scroll: false })
+    })
   }
 
   function startFeatureTour() {
@@ -696,7 +692,7 @@ export default function DashboardActiveUnitsView({
         className={styles.profilePanel}
         data-v3-dashboard-indicator="my-progress"
       >
-        {currentTab === 'profile' ? profilePanel : null}
+        {currentTab === 'profile' ? profilePanel ?? <div role="status" aria-label="Loading My Progress"><LoadingPanels progress /></div> : null}
       </div>
 
       {activeGuide !== null && activeGuideIndex !== null ? (

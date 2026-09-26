@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useMemo, useState, useTransition } from 'react'
 import { createStandaloneUnitAction } from './actions'
 import { resolveImageInputSelection } from '../../../utils/images/resolve-gallery-image-selection'

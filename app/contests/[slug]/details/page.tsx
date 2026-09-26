@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { notFound } from 'next/navigation'
 import { DEMO_CONTEST_ID, getContestBySlug } from '../../../../lib/contests/queries'
 import { canViewContest } from '../../../../lib/contests/permissions'

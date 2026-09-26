@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { getContestCountdownTarget, getContestPhase } from '../../lib/contests/phases'
 import type { Contest } from '../../lib/contests/types'
 import ContestCountdown from './contest-countdown'

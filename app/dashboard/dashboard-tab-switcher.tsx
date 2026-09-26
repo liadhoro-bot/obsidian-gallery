@@ -2,7 +2,8 @@
 
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 
 type ActiveTab = 'profile' | 'painting-table'
 

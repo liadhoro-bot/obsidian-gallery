@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import type { ReactNode } from 'react'
 import type { GuidesV3GuideFile } from '../guides-v3-data'
 import GuideSocialActions from './guide-social-actions'

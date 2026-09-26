@@ -10,7 +10,8 @@ import {
 } from 'react'
 import type { ChangeEvent } from 'react'
 import dynamic from 'next/dynamic'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import {
   publishDashboardMetadataPatch,
   publishDashboardUnitPatch,

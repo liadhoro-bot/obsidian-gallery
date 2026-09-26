@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 
 export default function PendingNavButton({
   href,

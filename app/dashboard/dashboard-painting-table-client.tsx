@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import ProgressWheel from '../components/progress-wheel'
 import DashboardResumeButton from './dashboard-resume-button'
 import DashboardUnitStatusList from './dashboard-unit-status-list'

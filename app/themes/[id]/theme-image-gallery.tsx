@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useState, useTransition } from 'react'
 import { buildVaultColorMatchHref } from '@/components/color-sampler/color-match-navigation'
 import EyedropperIcon from '@/components/color-sampler/EyedropperIcon'

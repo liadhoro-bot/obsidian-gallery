@@ -1,8 +1,12 @@
-﻿import type { ButtonHTMLAttributes, ReactNode } from 'react'
+'use client'
+
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { useFormStatus } from 'react-dom'
 
 import type { OgSize } from '../types'
 import { cx } from '../utils'
 import styles from '../primitives.module.css'
+import feedbackStyles from './button-feedback.module.css'
 
 export type OgButtonVariant =
   | 'primary'
@@ -29,18 +33,21 @@ export function OgButton({
   variant = 'secondary',
   ...props
 }: OgButtonProps) {
+  const form = useFormStatus()
+  const busy = loading || (type === 'submit' && form.pending)
   return (
     <button
       {...props}
-      aria-busy={loading || undefined}
+      aria-busy={busy || undefined}
       className={cx(styles.button, className)}
       data-size={size}
       data-variant={variant}
-      disabled={disabled || loading}
+      disabled={disabled || busy}
       type={type}
     >
-      {icon ? <span className={styles.buttonIcon} aria-hidden="true">{icon}</span> : null}
+      {busy ? <span className={feedbackStyles.spinner} aria-hidden="true" /> : icon ? <span className={styles.buttonIcon} aria-hidden="true">{icon}</span> : null}
       {children}
+      {busy ? <span className="sr-only" role="status">Working…</span> : null}
     </button>
   )
 }

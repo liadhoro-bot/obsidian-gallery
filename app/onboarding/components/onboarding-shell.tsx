@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
 import styles from '../../auth-flow-silver.module.css'
 import { capturePostHog } from '../../../utils/analytics/client'

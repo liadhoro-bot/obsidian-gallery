@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from './navigation-feedback/navigation-provider'
+
 type BackButtonProps = {
   fallbackHref: string
   className?: string
@@ -9,13 +11,14 @@ export default function BackButton({
   fallbackHref,
   className,
 }: BackButtonProps) {
+  const router = useRouter()
   function handleBack() {
     if (window.history.length > 1) {
       window.history.back()
       return
     }
 
-    window.location.assign(fallbackHref)
+    router.push(fallbackHref)
   }
 
   return (

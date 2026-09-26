@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 import ContestCreatorBallot from '../../../../components/contests/contest-creator-ballot'
 import { submitBallotAction } from '../../../../lib/contests/actions'

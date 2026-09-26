@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import ProjectCreateForm from './project-create-form'
 import ProjectLibrary, { ProjectWithImage } from './project-library'
 

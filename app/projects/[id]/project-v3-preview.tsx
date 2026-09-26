@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useState } from 'react'
 import V3PerfIndicator from '../../components/v3-perf-indicator'
 

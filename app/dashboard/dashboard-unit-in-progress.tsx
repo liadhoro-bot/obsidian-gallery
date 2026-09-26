@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import ProgressWheel from '../components/progress-wheel'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import DashboardResumeButton from './dashboard-resume-button'

@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useState } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import { logout } from './settings-actions'
@@ -154,7 +155,7 @@ function TopNav({
 }) {
   return (
     <header className={styles.previewTop}>
-      <a
+      <Link
         href="/dashboard?preview=1"
         aria-label="Back to dashboard"
         className={styles.roundControl}
@@ -164,7 +165,7 @@ function TopNav({
           <span className="h-0.5 w-4 rounded-full bg-current" />
           <span className="h-0.5 w-4 rounded-full bg-current" />
         </span>
-      </a>
+      </Link>
 
       <h1 className={styles.previewTitle}>Settings</h1>
 
@@ -290,7 +291,7 @@ function SettingsLinkRow({
   }
 }) {
   return (
-    <a
+    <Link
       href={row.href}
       className={styles.previewLinkRow}
     >
@@ -302,7 +303,7 @@ function SettingsLinkRow({
         </span>
       </span>
       <span className={styles.chevron}>&gt;</span>
-    </a>
+    </Link>
   )
 }
 

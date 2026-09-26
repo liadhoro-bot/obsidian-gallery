@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useState, useTransition } from 'react'
 import type { FeatureGuideEntry } from '../../../components/feature-guide-types'
 import type { GuidesV3DeckDetail } from '../../guides-v3-detail-data'

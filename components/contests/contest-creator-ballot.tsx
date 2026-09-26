@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useState } from 'react'
 import type { Contest, ContestNomination } from '../../lib/contests/types'
 import { getBallotSummary, getNomineeCopy, getOrdinal } from '../../lib/contests/nominee-copy'

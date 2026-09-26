@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { prefetchRoute } from '../components/route-prefetch'
 import styles from './dashboard-og.module.css'
 

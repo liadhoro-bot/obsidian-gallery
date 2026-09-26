@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import ContestCard from '../../components/contests/contest-card'
 import { getContestDirectory } from '../../lib/contests/queries'

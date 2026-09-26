@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useState } from 'react'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'

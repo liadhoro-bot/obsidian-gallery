@@ -1,8 +1,8 @@
-﻿'use client'
+'use client'
 
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import {
   OgCaption,
   OgIconButton,

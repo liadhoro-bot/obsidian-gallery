@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useOptimistic } from 'react'
 import SubmitButton from '../../../components/SubmitButton'
 import PaintSwatch from './paint-swatch'

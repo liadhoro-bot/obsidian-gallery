@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import { notFound } from 'next/navigation'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import SubmitButton from '../../components/SubmitButton'

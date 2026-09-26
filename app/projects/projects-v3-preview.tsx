@@ -1,8 +1,9 @@
 'use client'
 
 import Image from 'next/image'
+import Link from '@/app/components/navigation-feedback/navigation-link'
 import dynamic from 'next/dynamic'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { FormEvent, useMemo, useState, useTransition } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
@@ -932,7 +933,7 @@ function ProjectFileCard({
     : 0
 
   return (
-    <a
+    <Link
       href={`/projects/${project.id}?preview=1`}
       data-v3-projects-indicator="project-card"
       data-feature-guide-target="projects.card"
@@ -965,7 +966,7 @@ function ProjectFileCard({
           </div>
         </div>
       </div>
-    </a>
+    </Link>
   )
 }
 
@@ -979,7 +980,7 @@ function ProjectGridCard({
   const totalProgress = getAverageProgress(units)
 
   return (
-    <a
+    <Link
       href={`/projects/${project.id}?preview=1`}
       data-v3-projects-indicator="project-grid-card"
       data-feature-guide-target="projects.card"
@@ -1012,7 +1013,7 @@ function ProjectGridCard({
           />
         </div>
       </div>
-    </a>
+    </Link>
   )
 }
 
@@ -1140,7 +1141,7 @@ function UnitCard({
   unit: PreviewUnit
 }) {
   return (
-    <a
+    <Link
       href={`/units/${unit.id}?preview=1`}
       data-v3-projects-indicator="unit-card"
       className="block overflow-hidden rounded-[8px] border border-white/[0.055] bg-[#111821] transition hover:border-cyan-300/35"
@@ -1176,7 +1177,7 @@ function UnitCard({
           <span>{formatShortDate(unit.deadline)}</span>
         </div>
       </div>
-    </a>
+    </Link>
   )
 }
 
@@ -1188,7 +1189,7 @@ function UnitListRow({
   unit: PreviewUnit
 }) {
   return (
-    <a
+    <Link
       href={`/units/${unit.id}?preview=1`}
       data-v3-projects-indicator="unit-row"
       className="grid grid-cols-[58px_1fr_auto] items-center gap-3 px-4 py-3 transition hover:bg-white/[0.035]"
@@ -1207,7 +1208,7 @@ function UnitListRow({
       <span className="grid h-10 w-10 place-items-center rounded-full border border-cyan-300/20 bg-cyan-300/8 text-[10px] font-black text-cyan-300">
         {unit.progress}%
       </span>
-    </a>
+    </Link>
   )
 }
 
