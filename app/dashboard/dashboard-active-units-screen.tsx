@@ -14,8 +14,14 @@ import DashboardMetadataCards, {
 import styles from './dashboard-og.module.css'
 import type { DashboardFeatureGuide } from './feature-guide-types'
 import type { AchievementCollection } from '../../lib/achievements/types'
+import type { DashboardActiveUnitsViewModel } from './dashboard-active-units-model'
 
 type ActiveTab = 'profile' | 'painting-table'
+const emptyActiveUnitsModel: DashboardActiveUnitsViewModel = {
+  nextActions: null,
+  featuredUnit: null,
+  units: [],
+}
 
 const fixtureMetadataItems: DashboardMetadataItem[] = [
   { id: 'painting-time', label: 'Painting Time', value: '42h', accent: 'neutral' },
@@ -200,6 +206,19 @@ export async function DashboardActiveUnitsScreen({
   userId: string
 }) {
   const perf = createPerfTimer('/dashboard:active-units-screen')
+  if (initialTab === 'profile') {
+    perf.total()
+    return (
+      <DashboardActiveUnitsView
+        userId={userId}
+        featureGuides={featureGuides}
+        initialTab={initialTab}
+        model={emptyActiveUnitsModel}
+        profilePanel={profilePanel}
+      />
+    )
+  }
+
   const [feed, nextActions] = await perf.measure('active units view model', () =>
     Promise.all([
       getDashboardPaintingTableFeed(userId),

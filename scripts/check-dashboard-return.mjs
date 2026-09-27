@@ -22,7 +22,16 @@ try {
   await context.addCookies([{ name: 'obsidian_v3_preview', value: '1', url: baseURL }])
   page = await context.newPage()
   const errors = []
+  const failedRequests = []
+  const imageResponses = []
   page.on('pageerror', error => errors.push(error.message))
+  page.on('requestfailed', request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }))
+  page.on('response', response => {
+    const responseUrl = new URL(response.url())
+    if (responseUrl.pathname === '/_next/image' && responseUrl.searchParams.get('url')?.includes('achievement_seals')) {
+      imageResponses.push({ url: response.url(), status: response.status() })
+    }
+  })
   let gate = null
   let heldRequests = 0
   await page.route('**/*', async route => {
@@ -85,8 +94,38 @@ try {
   await page.waitForURL(/\/dashboard\?.*tab=profile/, { timeout: 60000 })
   await page.locator('[data-navigation-overlay]').waitFor({ state: 'hidden', timeout: 60000 })
   await page.locator('[data-v3-dashboard-indicator="achievement-collection"]').waitFor({ state: 'visible', timeout: 60000 })
+  const sealImages = page.locator('[data-v3-dashboard-indicator="achievement-collection"] img[data-size]')
+  if (await sealImages.count()) {
+    await sealImages.first().evaluate(image => image.complete && image.naturalWidth > 0
+      ? true
+      : new Promise((resolve, reject) => {
+          image.addEventListener('load', () => resolve(true), { once: true })
+          image.addEventListener('error', () => reject(new Error(`Seal image failed: ${image.currentSrc}`)), { once: true })
+        }))
+  }
+  const progressText = await page.locator('[data-v3-dashboard-indicator="root"]').innerText()
+  await nav.getByRole('button', { name: 'Projects', exact: true }).click()
+  await page.waitForURL(/\/projects/)
+  await page.locator('[data-navigation-overlay]').waitFor({ state: 'hidden', timeout: 45000 })
+  gate = new Promise(resolve => { release = resolve })
+  const progressStartedAt = Date.now()
+  const backNavigation = page.goBack({ waitUntil: 'commit' })
+  const visibleProgress = page.locator('[data-v3-dashboard-indicator="achievement-collection"]:visible')
+  await visibleProgress.waitFor({ state: 'visible', timeout: 1000 })
+  const progressFeedbackMs = Date.now() - progressStartedAt
+  assert.ok(progressFeedbackMs < 300, `Real Progress appeared after ${progressFeedbackMs} ms`)
+  assert.equal(await page.locator('[data-v3-dashboard-indicator="root"]:visible').innerText(), progressText)
+  await page.waitForTimeout(2000)
+  assert.ok(await visibleProgress.isVisible(), 'real Progress remains visible while the server is held')
+  gate = null
+  release()
+  await backNavigation
+  await page.locator('[data-dashboard-return-content]').waitFor({ state: 'hidden', timeout: 60000 })
+  await page.locator('[data-v3-dashboard-indicator="achievement-collection"]').waitFor({ state: 'visible', timeout: 60000 })
   assert.deepEqual(errors, [])
-  const result = { baseURL, buildId: readFileSync('.next/BUILD_ID', 'utf8').trim(), feedbackMs: Math.round(feedbackMs), heldRequests, heldForMs: 2000, realContentMatches: true, freshRouteReplacesSnapshot: true, returnTabNavigation: true, errors }
+  assert.deepEqual(failedRequests.filter(request => request.url.includes('/_next/image')), [])
+  assert.ok(imageResponses.every(response => (response.status >= 200 && response.status < 300) || response.status === 304), 'optimized seal image responses succeed or reuse validated cache entries')
+  const result = { baseURL, buildId: readFileSync('.next/BUILD_ID', 'utf8').trim(), feedbackMs: Math.round(feedbackMs), progressFeedbackMs, heldRequests, heldForMs: 2000, realContentMatches: true, progressContentMatches: true, freshRouteReplacesSnapshot: true, returnTabNavigation: true, optimizedSealResponses: imageResponses.length, optimizedSealStatuses: [...new Set(imageResponses.map(response => response.status))], errors }
   writeFileSync(`${output}/results.json`, JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result))
 } catch (error) {

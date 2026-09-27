@@ -64,7 +64,7 @@ function SealImage({
       alt=""
       width={size === 'hero' ? 116 : size === 'detail' ? 138 : 82}
       height={size === 'hero' ? 116 : size === 'detail' ? 138 : 82}
-      unoptimized
+      sizes={size === 'hero' ? '116px' : size === 'detail' ? '138px' : '82px'}
       className={styles.achievementSealImage}
       data-size={size}
       priority={size === 'hero'}

@@ -590,13 +590,13 @@ export default function DashboardActiveUnitsView({
     if (!userId || source !== 'live' || returnHref) return
     // Retain serializable units data only. The already-loaded component supplies
     // the renderer, so other routes don't download the dashboard's UI bundle.
-    rememberDashboardReturn(userId, href => (
+    rememberDashboardReturn(userId, initialTab, href => (
       <WorkbenchShell contentClassName={styles.dashboardFrame} gutter="none" maxWidth="var(--og-workbench-compact-max-width)">
-        <DashboardActiveUnitsView featureGuides={featureGuides} initialTab="painting-table"
+        <DashboardActiveUnitsView featureGuides={featureGuides} initialTab={initialTab}
           model={model} profilePanel={null} returnHref={href} />
       </WorkbenchShell>
     ))
-  }, [featureGuides, model, returnHref, source, userId])
+  }, [featureGuides, initialTab, model, profilePanel, returnHref, source, userId])
 
   useEffect(() => {
     if (source !== 'live' || returnHref) {
