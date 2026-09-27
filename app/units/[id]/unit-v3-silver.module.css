@@ -432,6 +432,67 @@
   box-shadow: var(--og-shadow-pressed);
 }
 
+.unitSilver [data-v3-unit-indicator="session-clock"],
+.unitSilver [data-v3-unit-indicator="session-log"],
+.unitSilver [data-v3-unit-indicator="session-editor"] {
+  border: var(--og-border-width) solid var(--og-border-subtle);
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-contact);
+}
+
+.unitSilver [data-v3-unit-indicator="session-clock"] [role="timer"] {
+  color: var(--og-text-primary);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.unitSilver [data-v3-unit-indicator="session-log"] h3,
+.unitSilver [data-v3-unit-indicator="session-editor"] label {
+  color: var(--og-text-primary);
+}
+
+.unitSilver [data-v3-unit-indicator="session-editor"] {
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.unitSilver [data-v3-unit-indicator="session-editor"] input {
+  color-scheme: light;
+}
+
+.unitSilver [data-v3-unit-indicator="session-editor"] input:focus-visible {
+  outline: 2px solid var(--og-brass-700);
+  outline-offset: 2px;
+}
+
+.unitSilver [data-v3-unit-indicator="session-log"] [data-session-control] {
+  border: var(--og-border-width) solid var(--og-brass-700);
+  background-color: var(--og-paper-200);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-contact);
+}
+
+.unitSilver [data-v3-unit-indicator="session-log"] [data-session-control="save"] {
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-brass-plate);
+}
+
+.unitSilver [data-v3-unit-indicator="session-log"] [data-session-control]:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.unitSilver [data-v3-unit-indicator="session-editor"] [role="alert"] {
+  color: #991b1b;
+}
+
 .unitSilver [role="dialog"] select option {
   background-color: var(--og-surface-primary);
   color: var(--og-text-primary);

@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import dynamic from 'next/dynamic'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
@@ -15,6 +15,7 @@ import {
   assignRecipeToStage,
   deleteUnitImage,
   deleteUnit,
+  endUnitSession,
   scheduleUnitSession,
   updateUnitScheduledSession,
   setFeaturedUnitImage,
@@ -23,6 +24,7 @@ import {
   updateUnitDetails,
   updateUnitHeader,
   updateUnitStatus,
+  updateUnitSession,
   uploadUnitGalleryImages,
 } from './actions'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
@@ -40,6 +42,7 @@ const StagePaintPicker = dynamic(() => import('./components/stage-paint-picker')
 
 type UnitV3PreviewProps = {
   id: string
+  autoStartSession?: boolean
   initialTab?: UnitTab
   initialEditTarget?: EditTarget | null
   featureGuides?: FeatureGuideEntry[]
@@ -56,6 +59,7 @@ type PreviewUnit = {
   image: string
   galleryImages?: PreviewGalleryImage[]
   paintSessions?: UnitPaintSession[]
+  activeSession?: { id: string; started_at: string } | null
   scheduledSessions?: ScheduledPaintSession[]
   lastPainted?: string | null
   project: string
@@ -277,6 +281,7 @@ const previewUnits: PreviewUnit[] = [
 ]
 
 type UnitPaintSession = {
+  durationSeconds?: number | null
   id: string
   dateKey: string
   startedAt: string
@@ -399,6 +404,7 @@ type DisplayProgressStage = {
 const weekDayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 export default function UnitV3Preview({
+  autoStartSession = false,
   id,
   initialTab = 'details',
   initialEditTarget = null,
@@ -725,7 +731,7 @@ export default function UnitV3Preview({
                 onLocalUnitChange={setLocalUnit}
               />
             ) : null}
-            {activeTab === 'paint' ? <PaintTab unit={unit} /> : null}
+            {activeTab === 'paint' ? <PaintTab key={unit.id} unit={unit} autoStartSession={autoStartSession} /> : null}
             {activeTab === 'progress' ? (
               <ProgressTab
                 unit={unit}
@@ -2201,10 +2207,94 @@ function getSessionSuggestions(unit: PreviewUnit) {
     : suggestions.assembled
 }
 
-function PaintTab({ unit }: { unit: PreviewUnit }) {
+function PaintSessionLog({ session, unitId, onSaved }: {
+  session: UnitPaintSession
+  unitId: string
+  onSaved: (session: UnitPaintSession) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [saving, startSaving] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const started = new Date(session.startedAt)
+  const localStarted = new Date(started.getTime() - started.getTimezoneOffset() * 60000).toISOString()
+  const durationMatch = session.duration.match(/(\d+)h\s+(\d+)m/)
+  const durationSeconds = session.durationSeconds ?? (durationMatch ? Number(durationMatch[1]) * 3600 + Number(durationMatch[2]) * 60 : 0)
+
+  function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (saving) return
+    const values = new FormData(event.currentTarget)
+    const start = new Date(`${values.get('date')}T${values.get('time')}`)
+    const seconds = Math.round(Number(values.get('minutes')) * 60)
+    const end = new Date(start.getTime() + seconds * 1000)
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || !Number.isFinite(seconds) || seconds <= 0) {
+      setError('Enter a valid date, time, and length greater than zero.')
+      return
+    }
+    const data = new FormData()
+    data.set('unitId', unitId)
+    data.set('sessionId', session.id)
+    data.set('startedAt', start.toISOString())
+    data.set('endedAt', end.toISOString())
+    setError(null)
+    startSaving(async () => {
+      try {
+        const saved = await updateUnitSession(data)
+        onSaved({
+          ...session,
+          startedAt: saved.started_at,
+          dateKey: getLocalDateKey(new Date(saved.started_at)),
+          durationSeconds: saved.duration_seconds,
+          duration: `${Math.floor(saved.duration_seconds / 3600)}h ${String(Math.floor(saved.duration_seconds / 60) % 60).padStart(2, '0')}m`,
+        })
+        setEditing(false)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Could not update session. Please try again.')
+      }
+    })
+  }
+
+  return (
+    <div data-v3-unit-indicator="session-log" className="rounded-[10px] border p-3">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-lg font-black">{session.title}</h3>
+          <p className="mt-1 text-xs text-white/50">{formatDateLabel(session.dateKey)} · {started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {session.duration}</p>
+          {session.notes ? <p className="mt-2 text-xs leading-5 text-white/45">{session.notes}</p> : null}
+        </div>
+        <button type="button" aria-label="Edit session" aria-expanded={editing} onClick={() => { setEditing(!editing); setError(null) }} disabled={saving} data-session-control="edit" className="rounded-full px-3 py-2 text-xs font-bold">Edit</button>
+      </div>
+      {editing ? (
+        <form onSubmit={save} aria-label="Edit painting session" data-v3-unit-indicator="session-editor" className="mt-4 grid gap-3 p-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <label className="grid gap-1 text-xs font-semibold">Date<input name="date" type="date" required defaultValue={localStarted.slice(0, 10)} disabled={saving} className="min-w-0 rounded-lg px-3 py-2" /></label>
+            <label className="grid gap-1 text-xs font-semibold">Start time<input name="time" type="time" step="1" required defaultValue={localStarted.slice(11, 19)} disabled={saving} className="min-w-0 rounded-lg px-3 py-2" /></label>
+            <label className="grid gap-1 text-xs font-semibold">Length (minutes)<input name="minutes" type="number" min="0" step="any" required defaultValue={durationSeconds / 60} disabled={saving} className="min-w-0 rounded-lg px-3 py-2" /></label>
+          </div>
+          {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving} data-session-control="save" className="rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50">{saving ? 'Saving…' : 'Save session'}</button>
+            <button type="button" disabled={saving} onClick={() => setEditing(false)} data-session-control="cancel" className="rounded-lg px-4 py-2 text-sm">Cancel</button>
+          </div>
+        </form>
+      ) : null}
+    </div>
+  )
+}
+
+function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoStartSession?: boolean }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
-  const loggedSessions = unit.paintSessions ?? fallbackPaintSessions
+  const [loggedSessions, setLoggedSessions] = useState(unit.paintSessions ?? fallbackPaintSessions)
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  useEffect(() => setLoggedSessions(unit.paintSessions ?? fallbackPaintSessions), [unit.paintSessions])
+  function handleSessionSaved(saved: UnitPaintSession) {
+    setLoggedSessions(current => current.map(session => session.id === saved.id ? saved : session)
+      .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)))
+    setSelectedDateKey(saved.dateKey)
+    setMonthCursor(getMonthCursorFromDateKey(saved.dateKey))
+    router.refresh()
+  }
   const initialScheduledSessions = unit.scheduledSessions ?? []
   const initialDateKey = getInitialPaintDateKey()
   const [monthCursor, setMonthCursor] = useState(() =>
@@ -2223,6 +2313,23 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
   const [reminderHoursBefore, setReminderHoursBefore] = useState(1)
   const [reminderChannel, setReminderChannel] = useState<'push' | 'email'>('email')
   const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [activeSession, setActiveSession] = useState(unit.activeSession ?? null)
+  const [timerPending, setTimerPending] = useState(false)
+  const timerMutation = useRef(false)
+  const autoStartHandled = useRef(false)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!timerMutation.current) setActiveSession(unit.activeSession ?? null)
+  }, [unit.activeSession])
+  useEffect(() => {
+    if (!activeSession) return
+    const interval = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(interval)
+  }, [activeSession])
+  const elapsed = activeSession
+    ? Math.max(0, Math.floor((now - Date.parse(activeSession.started_at)) / 1000))
+    : 0
+  const runningClock = `${String(Math.floor(elapsed / 3600)).padStart(2, '0')}:${String(Math.floor(elapsed / 60) % 60).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
   const [startPaintingError, setStartPaintingError] = useState<string | null>(
     null
   )
@@ -2346,22 +2453,50 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
     })
   }
 
-  function handleStartPainting() {
+  const handleStartPainting = useCallback(() => {
+    if (timerMutation.current) return
+    timerMutation.current = true
+    setTimerPending(true)
+    const previousSession = activeSession
+    const startedAt = new Date().toISOString()
+    setNow(Date.now())
+    setActiveSession(previousSession ? null : { id: 'optimistic', started_at: startedAt })
     setStartPaintingError(null)
     startTransition(async () => {
       try {
-        await startUnitSession(unit.id)
-        router.push(`/units/${unit.id}?preview=1&tab=paint&session=started`)
-        router.refresh()
+        if (previousSession) {
+          await endUnitSession(unit.id)
+        } else {
+          const saved = await startUnitSession(unit.id, startedAt)
+          setActiveSession(saved)
+        }
+        if (previousSession) router.refresh()
       } catch (error) {
+        setActiveSession(previousSession)
         setStartPaintingError(
           error instanceof Error
             ? error.message
-            : 'Could not start a painting session.'
+            : `Could not ${previousSession ? 'stop' : 'start'} a painting session.`
         )
+      } finally {
+        timerMutation.current = false
+        setTimerPending(false)
       }
     })
-  }
+  }, [activeSession, router, startTransition, unit.id])
+
+  useEffect(() => {
+    if (!autoStartSession || autoStartHandled.current) return
+    autoStartHandled.current = true
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('autostart') === '1') {
+      url.searchParams.delete('autostart')
+      url.searchParams.delete('session')
+      url.searchParams.set('tab', 'paint')
+      window.history.replaceState(null, '', url)
+    }
+    if (!activeSession) handleStartPainting()
+  }, [autoStartSession, activeSession, handleStartPainting])
 
   return (
     <>
@@ -2383,16 +2518,26 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
 
           <button
             type="button"
+            onClick={() => setIsHistoryOpen(current => !current)}
+            aria-expanded={isHistoryOpen}
+            aria-controls="painting-session-history"
             className="mb-1 rounded-full px-2 py-1 text-[10px] font-black text-white/34 transition hover:bg-white/[0.06] hover:text-cyan-300"
           >
-            History -&gt;
+            History {isHistoryOpen ? '▴' : '▾'}
           </button>
         </div>
 
+        {activeSession ? (
+          <div data-v3-unit-indicator="session-clock" className="mt-4 rounded-[10px] border p-3">
+            <p className="text-xs font-bold text-cyan-300">Session Running{timerPending ? ' · Saving…' : ''}</p>
+            <p role="timer" aria-label="Painting session elapsed time" className="mt-1 text-2xl font-black tabular-nums text-white">{runningClock}</p>
+          </div>
+        ) : null}
         <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
           <button
             type="button"
             onClick={handleStartPainting}
+            disabled={timerPending}
             className="tap-press flex h-11 items-center justify-center gap-2 rounded-[10px] bg-[color:var(--og-brass-500)] bg-[image:var(--og-material-brass)] text-sm font-black text-[color:var(--og-ink-950)] shadow-[var(--og-shadow-brass-plate)] transition hover:bg-[color:var(--og-brass-400)]"
           >
             <svg
@@ -2403,7 +2548,7 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
             >
               <path d="M8 5v14l11-7Z" />
             </svg>
-            Start Painting
+            {activeSession ? 'Stop Painting' : timerPending ? 'Saving Session…' : 'Start Painting'}
           </button>
 
           <button
@@ -2421,6 +2566,8 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
           </p>
         ) : null}
       </section>
+
+
 
       <section className="overflow-hidden rounded-[14px] border border-white/[0.06] bg-[#111821]">
         <div className="flex items-center justify-between border-b border-white/[0.05] px-3 py-3">
@@ -2532,64 +2679,6 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
           })}
         </div>
 
-        {selectedLoggedSessions.length ? (
-          <div className="border-t border-white/[0.06] px-4 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/34">
-                {formatDateLabel(selectedDateKey)}
-              </p>
-              <button
-                type="button"
-                onClick={() => openScheduleForm(selectedDateKey)}
-                className="tap-press rounded-[8px] border border-[color:color-mix(in_srgb,var(--og-brass-700)_52%,var(--og-border-subtle))] bg-[color:color-mix(in_srgb,var(--og-brass-500)_14%,transparent)] px-2 py-1 text-[10px] font-black text-[color:var(--og-brass-500)] transition hover:border-[color:var(--og-brass-500)] hover:bg-[color:color-mix(in_srgb,var(--og-brass-500)_22%,transparent)]"
-              >
-                + Add
-              </button>
-            </div>
-            <div className="mt-4 grid gap-4">
-              {selectedLoggedSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-start justify-between gap-4"
-                >
-                  <div>
-                    <h3 className="text-lg font-black text-white">
-                      {session.title}
-                    </h3>
-                    <p className="mt-2 text-xs font-black text-white/36">
-                      {session.duration}
-                    </p>
-                    {session.notes ? (
-                      <p className="mt-3 text-xs font-semibold leading-5 text-white/45">
-                        {session.notes}
-                      </p>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    aria-label="Edit session"
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.06] text-white/36 transition hover:text-cyan-300"
-                  >
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
         {selectedScheduledSession ? (
           <div className="border-t border-white/[0.06] px-4 py-4">
             <div className="flex items-start justify-between gap-4">
@@ -2648,6 +2737,15 @@ function PaintTab({ unit }: { unit: PreviewUnit }) {
             </button>
           </div>
         ) : null}
+      </section>
+
+      <section id="painting-session-history" aria-label="Painting session history" hidden={!isHistoryOpen} className="rounded-[14px] border border-white/[0.06] bg-[#111821] p-4">
+        <h2 className="mb-3 text-sm font-black text-white">Previous Sessions</h2>
+        <div className="grid gap-3">
+          {loggedSessions.length ? loggedSessions.map(session => (
+            <PaintSessionLog key={session.id} session={session} unitId={unit.id} onSaved={handleSessionSaved} />
+          )) : <p className="text-sm text-white/45">No completed sessions yet.</p>}
+        </div>
       </section>
 
       <button

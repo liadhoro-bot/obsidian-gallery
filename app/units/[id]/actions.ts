@@ -241,17 +241,19 @@ export async function updateUnitStatus(
   }
 }
 
-export async function startUnitSession(unitId: string) {
+export async function startUnitSession(unitId: string, requestedStartedAt?: string) {
   const perf = createPerfTimer('action:startUnitSession')
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)
 
   const { data: existing, error: existingError } = await supabase
     .from('unit_sessions')
-    .select('id')
+    .select('id, started_at')
     .eq('unit_id', unitId)
     .eq('user_id', user.id)
     .is('ended_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (existingError) {
@@ -264,12 +266,19 @@ export async function startUnitSession(unitId: string) {
     return existing
   }
 
+  // Include the time spent saving, while bounding untrusted client timestamps.
+  const serverNow = Date.now()
+  const requestedTime = requestedStartedAt ? Date.parse(requestedStartedAt) : NaN
+  const startedAt = Number.isFinite(requestedTime)
+    && requestedTime <= serverNow && requestedTime >= serverNow - 5 * 60 * 1000
+    ? requestedTime : serverNow
+
   const { data, error } = await supabase
     .from('unit_sessions')
     .insert({
       unit_id: unitId,
       user_id: user.id,
-      started_at: new Date().toISOString(),
+      started_at: new Date(startedAt).toISOString(),
       entry_source: 'timer',
     })
     .select('id, started_at')

@@ -91,6 +91,7 @@ type UnitV3ImageRow = {
 }
 
 type UnitV3SessionRow = {
+  ended_at: string | null
   id: string
   started_at: string
   duration_seconds: number | null
@@ -287,10 +288,10 @@ async function getUnitV3PreviewUnit(
   const sessionsPromise = shouldLoadPaintTab
     ? supabase
         .from('unit_sessions')
-        .select('id, started_at, duration_seconds, notes, entry_source')
+        .select('id, started_at, ended_at, duration_seconds, notes, entry_source')
         .eq('unit_id', id)
         .eq('user_id', userId)
-        .gt('duration_seconds', 0)
+        .or('ended_at.is.null,duration_seconds.gt.0')
         .order('started_at', { ascending: false })
         .limit(50)
     : Promise.resolve({ data: [], error: null })
@@ -534,12 +535,14 @@ async function getUnitV3PreviewUnit(
     (sum, session) => sum + (session.duration_seconds ?? 0),
     0
   )
-  const paintSessions = sessions.map((session) => ({
+  const activeSession = sessions.find(session => session.ended_at === null) ?? null
+  const paintSessions = sessions.filter(session => session.ended_at !== null).map((session) => ({
     id: session.id,
     dateKey: formatUnitV3DateKey(session.started_at),
     startedAt: session.started_at,
     title: getUnitV3SessionTitle(session),
     duration: formatUnitV3Duration(session.duration_seconds),
+    durationSeconds: session.duration_seconds,
     notes: session.notes?.trim() || '',
   }))
   const scheduledSessions = scheduledSessionsResult.error
@@ -618,6 +621,7 @@ async function getUnitV3PreviewUnit(
     logged: formatUnitV3Duration(totalLoggedSeconds),
     lastPainted: paintSessions[0]?.dateKey ?? null,
     paintSessions,
+    activeSession,
     scheduledSessions,
     complexity: Math.max(1, Math.min(5, unit.complexity ?? 1)),
     modelCount: Math.max(1, unit.unit_size ?? 1),
@@ -1152,7 +1156,7 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   }
 
   if (isPreview) {
-    const previewTab =
+    const previewTab = resolvedSearchParams.autostart === '1' || resolvedSearchParams.session === 'started' ? 'paint' :
       resolvedSearchParams.tab === 'paint' ||
       resolvedSearchParams.tab === 'progress'
         ? resolvedSearchParams.tab
@@ -1175,6 +1179,7 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
         id={id}
         featureGuides={unitPreviewFeatureGuides}
         initialTab={previewTab}
+        autoStartSession={resolvedSearchParams.autostart === '1'}
         initialEditTarget={initialEditTarget}
         liveUnit={liveUnit}
       />
