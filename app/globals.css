@@ -1014,22 +1014,22 @@ button:disabled {
 .recipe-guide-theme-paint-list {
   display: flex;
   flex-direction: column;
-  /* space-between (not flex-start) so leftover vertical space becomes
-     extra room BETWEEN rows instead of dead space below the last one -
-     the first row still sits flush at the top either way. Rows used to
-     be flex: 1 1 0 and stretch to fill available space, which ballooned
-     the swatch itself to fill the whole card when there was only 1-4
-     paints; rows are now content-sized (swatch stays a fixed size,
-     driven by --paint-count below) so that space has to go somewhere
-     else, and gaps are the right place for it, not the swatch. */
-  justify-content: space-between;
+  /* flex-start, not space-between: below 5 paints the gap stays the
+     fixed size below rather than stretching to fill the card, even if
+     that leaves room at the bottom - rows used to be flex: 1 1 0 and
+     stretch to fill available space, which ballooned the swatch itself
+     to fill the whole card when there was only 1-4 paints. Swatch size
+     and row count (via --paint-fit below) are tuned so 5-7 paints
+     already reach close to the bottom on their own content size, with
+     no need to stretch gaps to get there. */
+  justify-content: flex-start;
   min-height: 0;
   overflow: hidden;
   /* Swatches stay a fixed size through 5 paints and only shrink beyond
      that (driven by --paint-count, the shown-paint count set inline
      where this renders). */
-  --paint-fit: min(1, 5 / max(var(--paint-count, 5), 1));
-  gap: calc(clamp(12px, 3.2cqw, 22px) * var(--paint-fit));
+  --paint-fit: min(1, 4.3 / max(var(--paint-count, 5), 1));
+  gap: calc(clamp(6px, 1.6cqw, 12px) * var(--paint-fit));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1039,7 +1039,7 @@ button:disabled {
   display: flex;
   flex: 0 0 auto;
   align-items: stretch;
-  gap: clamp(10px, 2.8cqw, 18px);
+  gap: calc(clamp(12px, 3.2cqw, 20px) * var(--paint-fit));
   min-height: 0;
 }
 
@@ -1049,7 +1049,7 @@ button:disabled {
   overflow: hidden;
   flex: 0 0 auto;
   aspect-ratio: 1;
-  width: calc(clamp(56px, 19cqw, 100px) * var(--paint-fit));
+  width: calc(clamp(76px, 27cqw, 128px) * var(--paint-fit));
   border: 2px solid color-mix(in srgb, var(--og-brass-500) 86%, var(--og-paper-50));
   border-radius: clamp(8px, 2.4cqw, 14px);
   box-shadow:
