@@ -5,8 +5,10 @@ import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 
 const ARROW_KEY_STEP = 4
 
+// Rounded because this is persisted into a smallint column - an
+// unrounded drag delta (e.g. 46.868551169312454) fails that insert.
 function clampPercent(value: number) {
-  return Math.max(0, Math.min(100, value))
+  return Math.round(Math.max(0, Math.min(100, value)))
 }
 
 // A focal point (not a crop): the image always fills the box at its real

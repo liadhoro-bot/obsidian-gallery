@@ -87,6 +87,14 @@ function safePersistedImage(value: string | null | undefined) {
   return null
 }
 
+// image_focal_x/y and cover_focal_x/y are smallint columns - a drag-computed
+// percentage (e.g. 46.868551169312454) fails that insert, so clamp and round
+// here too rather than trusting the client sent a whole number.
+function safeFocalValue(value: number | null | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 50
+  return Math.round(Math.max(0, Math.min(100, value)))
+}
+
 function safePersistedYoutubeUrl(value: string | null | undefined) {
   let trimmed = value?.trim()
   if (!trimmed) return null
@@ -354,8 +362,8 @@ export async function createDeckFromForge(
   // happens to sit in the editor's card list at save time.
   const coverPosition = coverIndex === -1 ? null : coverIndex
   const coverImage = safePersistedImage(input.image ?? coverCard?.image)
-  const coverFocalX = input.heroFocalX ?? coverCard?.imageFocalX ?? 50
-  const coverFocalY = input.heroFocalY ?? coverCard?.imageFocalY ?? 50
+  const coverFocalX = safeFocalValue(input.heroFocalX ?? coverCard?.imageFocalX)
+  const coverFocalY = safeFocalValue(input.heroFocalY ?? coverCard?.imageFocalY)
   const isPublic = input.status === 'Public'
   const difficulty = input.difficulty || null
 
@@ -395,8 +403,8 @@ export async function createDeckFromForge(
       instructions: encodeDeckCardInstructions(card),
       image_url: safePersistedImage(card.image),
       youtube_url: youtubeUrl,
-      image_focal_x: card.imageFocalX ?? 50,
-      image_focal_y: card.imageFocalY ?? 50,
+      image_focal_x: safeFocalValue(card.imageFocalX),
+      image_focal_y: safeFocalValue(card.imageFocalY),
     }
   })
 
@@ -494,8 +502,8 @@ export async function updateDeckFromForge(
   const coverCard = coverIndex === -1 ? undefined : input.cards[coverIndex]
   const coverPosition = coverIndex === -1 ? null : coverIndex
   const coverImage = safePersistedImage(input.image ?? coverCard?.image)
-  const coverFocalX = input.heroFocalX ?? coverCard?.imageFocalX ?? 50
-  const coverFocalY = input.heroFocalY ?? coverCard?.imageFocalY ?? 50
+  const coverFocalX = safeFocalValue(input.heroFocalX ?? coverCard?.imageFocalX)
+  const coverFocalY = safeFocalValue(input.heroFocalY ?? coverCard?.imageFocalY)
   const isPublic = input.status === 'Public'
   const difficulty = input.difficulty || null
 
@@ -563,8 +571,8 @@ export async function updateDeckFromForge(
       instructions: encodeDeckCardInstructions(card),
       image_url: safePersistedImage(card.image),
       youtube_url: youtubeUrl,
-      image_focal_x: card.imageFocalX ?? 50,
-      image_focal_y: card.imageFocalY ?? 50,
+      image_focal_x: safeFocalValue(card.imageFocalX),
+      image_focal_y: safeFocalValue(card.imageFocalY),
     }
   })
 
