@@ -980,7 +980,7 @@ button:disabled {
 .recipe-guide-theme-title {
   overflow: hidden;
   max-width: 100%;
-  color: #b08855; /* color-mix(in srgb, var(--og-brass-500) 78%, var(--og-paper-50)) */
+  color: #fefdfb; /* matches .recipe-guide-theme-paint-name */
   /* Longer titles shrink to fit one line instead of just getting cut off -
      driven by --title-len (the title's character count, set inline where
      this renders) rather than by measuring rendered text width in JS,
@@ -1003,7 +1003,7 @@ button:disabled {
 
 .recipe-guide-theme-kicker {
   margin: 0;
-  color: #d1b590; /* color-mix(in srgb, var(--og-paper-50) 64%, var(--og-brass-500)) */
+  color: #fefdfb; /* matches .recipe-guide-theme-paint-name */
   font-size: clamp(0.66rem, 2.55cqw, 0.88rem);
   font-weight: 900;
   letter-spacing: 0.2em;
@@ -1029,7 +1029,7 @@ button:disabled {
      that (driven by --paint-count, the shown-paint count set inline
      where this renders). */
   --paint-fit: min(1, 4.3 / max(var(--paint-count, 5), 1));
-  gap: calc(clamp(6px, 1.6cqw, 12px) * var(--paint-fit));
+  gap: calc(clamp(10px, 2.4cqw, 18px) * var(--paint-fit));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1049,7 +1049,7 @@ button:disabled {
   overflow: hidden;
   flex: 0 0 auto;
   aspect-ratio: 1;
-  width: calc(clamp(76px, 27cqw, 128px) * var(--paint-fit));
+  width: calc(clamp(88px, 33cqw, 152px) * var(--paint-fit));
   border: 2px solid color-mix(in srgb, var(--og-brass-500) 86%, var(--og-paper-50));
   border-radius: clamp(8px, 2.4cqw, 14px);
   box-shadow:
@@ -1096,7 +1096,7 @@ button:disabled {
   margin: 0;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  color: #b28a58; /* color-mix(in srgb, var(--og-brass-500) 76%, var(--og-paper-50)) */
+  color: #fefdfb; /* matches .recipe-guide-theme-paint-name */
   font-size: clamp(0.55rem, 2.05cqw, 0.72rem);
   font-weight: 900;
   letter-spacing: 0.22em;
