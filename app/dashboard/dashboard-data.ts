@@ -10,6 +10,7 @@ import {
 import { resolveOnboardingActionDestination } from '../../lib/onboarding/action-destinations'
 import { onboardingActionDefinitions } from '../../lib/onboarding/action-definitions'
 import { selectVisibleOnboardingActionBatch } from '../../lib/onboarding/action-batches'
+import { getDashboardProgressSnapshot } from '../../lib/dashboard/progressSnapshot'
 
 export type DashboardProfile = {
   avatar_url: string | null
@@ -1039,6 +1040,71 @@ export const getDashboardPaintingTableFeed = cache(async (userId: string) => {
 
 export const getDashboardMetadataSummary = cache(async (userId: string) => {
   const supabase = await createClient()
+  const progressSnapshot = await getDashboardProgressSnapshot(supabase, userId)
+  if (progressSnapshot && Object.keys(progressSnapshot.metadata).length) {
+    const value = (key: string) => {
+      const item = progressSnapshot.metadata[key]
+      return typeof item === 'number' && Number.isFinite(item) ? item : 0
+    }
+    const lastSessionAt = typeof progressSnapshot.metadata.last_session_at === 'string'
+      ? progressSnapshot.metadata.last_session_at
+      : null
+    const paintStreak = getPaintStreak(
+      progressSnapshot.paintingDays.map(created_at => ({ created_at, duration_seconds: 60 })),
+      DASHBOARD_TIMEZONE
+    )
+    const paintStreakDays = Number.parseInt(paintStreak, 10) || 0
+    const bucketRows = Array.isArray(progressSnapshot.metadata.painting_time_buckets)
+      ? progressSnapshot.metadata.painting_time_buckets
+      : []
+    const paintingTimeBuckets = DASHBOARD_PAINTING_TIME_BUCKETS.map(defaultBucket => {
+      const row = bucketRows.find(item => Boolean(
+        item && typeof item === 'object' && !Array.isArray(item) &&
+        (item as Record<string, unknown>).id === defaultBucket.id
+      )) as Record<string, unknown> | undefined
+      return {
+        ...defaultBucket,
+        count: typeof row?.count === 'number' ? row.count : 0,
+        percent: typeof row?.percent === 'number' ? row.percent : 0,
+      }
+    })
+    const totalUnits = value('total_units')
+    const completedUnits = value('completed_units')
+    const totalLoggedSeconds = value('total_logged_seconds')
+    const averageSessionSeconds = value('average_session_seconds')
+    const longestSessionSeconds = value('longest_session_seconds')
+    const paintingSessionsCount = value('painting_sessions_count')
+    return {
+      totalUnits,
+      recentUnits: value('recent_units'),
+      ownedColors: value('owned_colors'),
+      wishlistedPaints: value('wishlisted_paints'),
+      ownedPaintBrands: value('owned_paint_brands'),
+      ownedPaintUnits: value('owned_paint_units'),
+      timeLogged: formatDuration(totalLoggedSeconds),
+      averageSessionLength: formatSessionLength(averageSessionSeconds),
+      weeklySessions: formatWeeklySessions(value('average_sessions_per_week')),
+      timeSinceLastSession: formatTimeSince(lastSessionAt),
+      paintStreak,
+      totalLoggedSeconds,
+      averageSessionSeconds,
+      longestSessionSeconds,
+      longestSessionLength: formatSessionLength(longestSessionSeconds),
+      paintingSessionsCount,
+      activePaintingDays: value('active_painting_days'),
+      completedSessionsCount: paintingSessionsCount,
+      completedUnits,
+      modelsCompleted: value('models_completed'),
+      collectionCompletedPercent: formatCompletionPercent(completedUnits, totalUnits),
+      mostUsedPaint: typeof progressSnapshot.metadata.most_used_paint === 'string'
+        ? progressSnapshot.metadata.most_used_paint
+        : '-',
+      paintingTimeBuckets,
+      lastSessionAt,
+      paintStreakDays,
+    } satisfies DashboardMetadataSummary
+  }
+
   const [
     metricsResult,
     completedSessionsResult,

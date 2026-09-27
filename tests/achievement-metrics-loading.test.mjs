@@ -1,13 +1,18 @@
 import assert from 'node:assert/strict'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
-import { readFileSync } from 'node:fs'
-import ts from 'typescript'
+import { build } from 'esbuild'
 
-// Next supplies server-only at build time. Remove only that marker for this
-// Node test; execute the actual metric loader with a controlled database client.
-const source = readFileSync(new URL('../lib/achievements/achievementMetrics.ts', import.meta.url), 'utf8').replace("import 'server-only'", '')
-const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } })
-const { calculateAchievementMetrics } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
+const compiled = await build({
+  entryPoints: [fileURLToPath(new URL('../lib/achievements/achievementMetrics.ts', import.meta.url))], bundle: true, write: false,
+  platform: 'node', format: 'esm', plugins: [{
+    name: 'server-only', setup(buildApi) {
+      buildApi.onResolve({ filter: /^server-only$/ }, () => ({ path: 'server-only', namespace: 'empty' }))
+      buildApi.onLoad({ filter: /.*/, namespace: 'empty' }, () => ({ contents: '' }))
+    },
+  }],
+})
+const { calculateAchievementMetrics } = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString('base64')}`)
 
 test('exact counts survive capped ID rows and shared reads retain ownership filters', async () => {
   const requests = []
@@ -39,4 +44,28 @@ test('exact counts survive capped ID rows and shared reads retain ownership filt
   assert.deepEqual(dependent.filters.find(f => f[1] === 'unit_id')[2], ['units-1'])
   assert.equal(result.metrics.units_completed_total, 0)
   assert.equal(result.metrics.guides_published_total, 0)
+})
+
+test('precomputed snapshot replaces achievement query fan-out', async () => {
+  const requests = []
+  const client = { from(table) {
+    const query = {
+      select() { return query },
+      eq() { return query },
+      then(resolve) {
+        requests.push(table)
+        return Promise.resolve({ error: null, data: [{
+          achievement_metrics: { units_created_total: 8, painting_minutes_total: 90 },
+          painting_days: ['2026-09-26', '2026-09-27'], metadata: {},
+        }] }).then(resolve)
+      },
+    }
+    return query
+  } }
+  const result = await calculateAchievementMetrics(client, 'owner')
+  assert.deepEqual(requests, ['dashboard_progress_snapshots'])
+  assert.equal(result.metrics.units_created_total, 8)
+  assert.equal(result.metrics.painting_minutes_total, 90)
+  assert.equal(result.metrics.consecutive_painting_days, 2)
+  assert.equal(result.sessions.length, 2)
 })

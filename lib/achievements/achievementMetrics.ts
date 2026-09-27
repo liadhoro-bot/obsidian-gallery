@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getDashboardProgressSnapshot } from '../dashboard/progressSnapshot'
 
 export type AchievementMetricSnapshot = {
   metrics: Record<string, number>
@@ -135,6 +136,30 @@ export async function calculateAchievementMetrics(
   userId: string
 ): Promise<AchievementMetricSnapshot> {
   const unsupportedTriggers = new Set<string>()
+  unsupportedTriggers.add('confirmed_bug_reports_total')
+  unsupportedTriggers.add('return_after_inactivity')
+  unsupportedTriggers.add('same_paint_sessions_max')
+  unsupportedTriggers.add('manual_beta_award')
+  unsupportedTriggers.add('special_event_wins_total')
+
+  const progressSnapshot = await getDashboardProgressSnapshot(supabase, userId)
+  if (progressSnapshot) {
+    const sessions = progressSnapshot.paintingDays.map(day => ({
+      created_at: `${day}T12:00:00+03:00`,
+      duration_seconds: 60,
+      unit_id: null,
+    }))
+    const derived = getSessionDerivedMetrics(sessions)
+    return {
+      metrics: {
+        ...progressSnapshot.achievementMetrics,
+        consecutive_painting_days: derived.consecutivePaintingDays,
+        weekly_painting_streak: derived.weeklyPaintingStreak,
+      },
+      sessions,
+      unsupportedTriggers,
+    }
+  }
 
   const [
     unitsCompleted,
@@ -265,12 +290,6 @@ export async function calculateAchievementMetrics(
     guide_saves_received_total: guideSavesReceived ?? 0,
     contest_wins_total: contestWins ?? 0,
   }
-
-  unsupportedTriggers.add('confirmed_bug_reports_total')
-  unsupportedTriggers.add('return_after_inactivity')
-  unsupportedTriggers.add('same_paint_sessions_max')
-  unsupportedTriggers.add('manual_beta_award')
-  unsupportedTriggers.add('special_event_wins_total')
 
   return {
     metrics,
