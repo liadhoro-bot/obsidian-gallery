@@ -654,10 +654,42 @@
 }
 
 .paintRow {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(64px, 0.7fr) 30px;
+  grid-template-columns: 24px minmax(0, 1.65fr) minmax(52px, 0.5fr) 30px;
   align-items: end;
   gap: 8px;
+}
+
+.paintRow > .dragHandle {
+  align-self: center;
+}
+
+.paintRowDragging {
+  opacity: 0.56;
+  transform: scale(0.985);
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--og-walnut-950) 26%, transparent);
+}
+
+.paintRowDropBefore::before,
+.paintRowDropAfter::after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--og-brass-500);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--og-brass-500) 18%, transparent);
+  content: '';
+}
+
+.paintRowDropBefore::before {
+  top: -5px;
+}
+
+.paintRowDropAfter::after {
+  bottom: -5px;
 }
 
 .paintRow label {

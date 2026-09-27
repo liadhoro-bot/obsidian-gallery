@@ -1626,6 +1626,22 @@ function CardEditorSheet({
     () => deckPaints.map(deckPaintToPickerPaint),
     [deckPaints]
   )
+  const [draggingPaintId, setDraggingPaintId] = useState<string | null>(null)
+  const [paintDropTarget, setPaintDropTarget] = useState<DropTarget | null>(null)
+
+  function reorderPaint(paintId: string, targetId: string, edge: DropTarget['edge']) {
+    if (paintId === targetId) return
+    const fromIndex = card.paints.findIndex((paint) => paint.id === paintId)
+    const toIndex = card.paints.findIndex((paint) => paint.id === targetId)
+    if (fromIndex < 0 || toIndex < 0) return
+    const next = [...card.paints]
+    const [moved] = next.splice(fromIndex, 1)
+    if (!moved) return
+    const targetOffset = edge === 'after' ? 1 : 0
+    const adjustedIndex = fromIndex < toIndex ? toIndex - 1 : toIndex
+    next.splice(adjustedIndex + targetOffset, 0, moved)
+    onChange({ paints: next })
+  }
 
   return (
     <div className={styles.sheetBackdrop} role="dialog" aria-modal="true">
@@ -1765,7 +1781,56 @@ function CardEditorSheet({
             {card.paints.length ? (
               <div className={styles.paintRows}>
                 {card.paints.map((paint, index) => (
-                  <div key={`${paint.id}:${index}`} className={styles.paintRow}>
+                  <div
+                    key={paint.id}
+                    className={[
+                      styles.paintRow,
+                      draggingPaintId === paint.id ? styles.paintRowDragging : '',
+                      paintDropTarget?.id === paint.id && paintDropTarget.edge === 'before'
+                        ? styles.paintRowDropBefore
+                        : '',
+                      paintDropTarget?.id === paint.id && paintDropTarget.edge === 'after'
+                        ? styles.paintRowDropAfter
+                        : '',
+                    ].join(' ')}
+                    draggable
+                    onDragStart={(event) => {
+                      setDraggingPaintId(paint.id)
+                      event.dataTransfer.effectAllowed = 'move'
+                      event.dataTransfer.setData('text/plain', paint.id)
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault()
+                      const rect = event.currentTarget.getBoundingClientRect()
+                      const edge =
+                        event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+                      setPaintDropTarget({ id: paint.id, edge })
+                      event.dataTransfer.dropEffect = 'move'
+                    }}
+                    onDragLeave={() => {
+                      if (paintDropTarget?.id === paint.id) setPaintDropTarget(null)
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      const draggedId = event.dataTransfer.getData('text/plain') || draggingPaintId
+                      if (draggedId) {
+                        reorderPaint(draggedId, paint.id, paintDropTarget?.edge ?? 'before')
+                      }
+                      setDraggingPaintId(null)
+                      setPaintDropTarget(null)
+                    }}
+                    onDragEnd={() => {
+                      setDraggingPaintId(null)
+                      setPaintDropTarget(null)
+                    }}
+                  >
+                    <span
+                      className={styles.dragHandle}
+                      aria-label={`Drag to reorder ${paint.name || `paint ${index + 1}`}`}
+                      title="Drag to reorder"
+                    >
+                      <DragHandleIcon />
+                    </span>
                     <DeckPaintPickerField
                       initialPaints={initialPaints}
                       paint={paint}
