@@ -558,7 +558,10 @@ export function RecipeGuideThemeStepCard({
             </p>
           </div>
 
-          <ul className="recipe-guide-theme-paint-list">
+          <ul
+            className="recipe-guide-theme-paint-list"
+            style={{ '--paint-count': shownPaints.length || 1 } as CSSProperties}
+          >
             {shownPaints.map((paint, index) => (
               <ThemePaintReferenceRow
                 key={`${paint?.id || 'paint'}-${index}`}

@@ -1014,18 +1014,25 @@ button:disabled {
 .recipe-guide-theme-paint-list {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   min-height: 0;
-  gap: clamp(12px, 3.2cqw, 22px);
+  overflow: hidden;
+  /* Swatches stay a fixed size through 5 paints and only shrink beyond
+     that (driven by --paint-count, the shown-paint count set inline
+     where this renders) - rows used to be flex: 1 1 0 and stretch to
+     fill whatever vertical space was available, which ballooned the
+     swatch to fill the whole card when there was only 1-4 paints. Rows
+     are now content-sized instead, so they pack from the top. */
+  --paint-fit: min(1, 5 / max(var(--paint-count, 5), 1));
+  gap: calc(clamp(12px, 3.2cqw, 22px) * var(--paint-fit));
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* Each row grows to fill the list's available height, so 5 paints sit in
-   large rows and 6-7 shrink to fit - no fixed row height. */
 .recipe-guide-theme-paint-row {
   display: flex;
-  flex: 1 1 0;
+  flex: 0 0 auto;
   align-items: stretch;
   gap: clamp(10px, 2.8cqw, 18px);
   min-height: 0;
@@ -1037,7 +1044,7 @@ button:disabled {
   overflow: hidden;
   flex: 0 0 auto;
   aspect-ratio: 1;
-  height: 100%;
+  width: calc(clamp(56px, 19cqw, 100px) * var(--paint-fit));
   border: 2px solid color-mix(in srgb, var(--og-brass-500) 86%, var(--og-paper-50));
   border-radius: clamp(8px, 2.4cqw, 14px);
   box-shadow:

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-v3-launch-fixes-2026-09-17'
+const CACHE_VERSION = 'obsidian-gallery-v3-theme-card-fix-2026-09-27'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'
