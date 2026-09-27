@@ -1101,7 +1101,14 @@ button:disabled {
   overflow: hidden;
   margin: 0;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  /* --footer-lines (set inline, only on .recipe-guide-theme-footer) lets
+     the caption use more lines when the paint list has room to spare -
+     it only fully fills its own space at 5+ paints (see --paint-fit
+     above), so fewer paints means genuine unused height below it that
+     this can grow into instead of always truncating at a flat 2 lines.
+     .recipe-guide-theme-empty never sets that property, so it keeps the
+     plain 2-line fallback. */
+  -webkit-line-clamp: var(--footer-lines, 2);
   color: #fefdfb; /* matches .recipe-guide-theme-paint-name */
   font-size: clamp(0.55rem, 2.05cqw, 0.72rem);
   font-weight: 900;

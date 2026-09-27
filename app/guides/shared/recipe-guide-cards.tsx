@@ -33,6 +33,19 @@ function isInlinePreviewImageUrl(value?: string | null) {
   return url.startsWith('blob:') || url.startsWith('data:image/')
 }
 
+// The Theme Card's paint list only fills its own space fully at 5+ paints
+// (see --paint-fit in globals.css) - below that it's intentionally left
+// with room underneath rather than stretched, so the footer caption can
+// use more lines there without any risk of pushing the paint rows into
+// overflow. At 5+ paints that room is gone, so it stays tightly clamped.
+function themeFooterLineClamp(paintCount: number) {
+  if (paintCount <= 1) return 6
+  if (paintCount === 2) return 5
+  if (paintCount === 3) return 4
+  if (paintCount === 4) return 3
+  return 2
+}
+
 function getYoutubeVideoId(url: string | null) {
   if (!url) return null
 
@@ -571,7 +584,10 @@ export function RecipeGuideThemeStepCard({
             ))}
           </ul>
 
-          <p className="recipe-guide-theme-footer font-serif uppercase">
+          <p
+            className="recipe-guide-theme-footer font-serif uppercase"
+            style={{ '--footer-lines': themeFooterLineClamp(shownPaints.length) } as CSSProperties}
+          >
             {hiddenPaintCount > 0
               ? `${footerText} + ${hiddenPaintCount} more`
               : footerText}
