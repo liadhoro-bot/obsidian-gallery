@@ -1,12 +1,10 @@
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import PrefetchLink from '../components/prefetch-link'
 
 export default async function DashboardTopStats() {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     return null

@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { updateAvatar } from './settings-actions'
 import BackButton from '../components/back-button'
 import AvatarUploadInput from './avatar-upload-input'
@@ -9,9 +9,7 @@ import styles from '../settings-support-silver.module.css'
 export default async function SettingsProfileCard() {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) return null
 

@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import SettingsProfileCard from './settings-profile-card'
 import SettingsSupportSection from './settings-support-section'
 import SettingsSessionSection from './settings-session-section'
@@ -24,9 +24,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     redirect(

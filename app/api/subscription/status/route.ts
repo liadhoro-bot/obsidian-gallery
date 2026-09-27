@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
-import { getSubscriptionStatus } from '../../../../lib/subscription/subscription-guard'
+import {
+  getSubscriptionCacheTag,
+  getSubscriptionStatus,
+} from '../../../../lib/subscription/subscription-guard'
 
 export async function GET() {
   const supabase = await createClient()
@@ -11,6 +15,9 @@ export async function GET() {
   }
 
   const status = await getSubscriptionStatus(user.email)
+  if (status.isActive) {
+    revalidateTag(getSubscriptionCacheTag(user.email), { expire: 0 })
+  }
 
   return NextResponse.json(status, {
     headers: { 'Cache-Control': 'no-store' },

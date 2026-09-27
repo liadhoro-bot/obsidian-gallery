@@ -89,9 +89,7 @@ async function addUnit(formData: FormData) {
 
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     throw new Error('Not authenticated')
@@ -319,9 +317,7 @@ async function updateProjectHeader(formData: FormData) {
 
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     throw new Error('Not authenticated')
@@ -354,9 +350,7 @@ async function setFeaturedUnit(formData: FormData) {
 
   if (!unitId || !projectId) return
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     throw new Error('Not authenticated')
@@ -407,9 +401,7 @@ async function uploadProjectImage(formData: FormData) {
 
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     throw new Error('Not authenticated')
@@ -540,9 +532,7 @@ async function setFeaturedProjectImage(formData: FormData) {
 
   if (!assetId || !projectId) return
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     throw new Error('Not authenticated')
@@ -597,9 +587,7 @@ async function deleteProjectImage(formData: FormData) {
 
   if (!assetId || !projectId) return
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     throw new Error('Not authenticated')

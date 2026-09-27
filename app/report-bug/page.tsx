@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import BackButton from '../components/back-button'
-import { createClient } from '../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../utils/supabase/server'
 import ReportBugForm from './report-bug-form'
 import styles from './report-bug.module.css'
 
@@ -14,9 +14,7 @@ export default async function ReportBugPage({
   searchParams,
 }: ReportBugPageProps) {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     redirect('/login?next=/report-bug')

@@ -20,10 +20,6 @@ type UserOnboardingFlowRow = {
   dismissed_at?: string | null
 }
 
-type TermsAcceptanceRow = {
-  accepted_at: string | null
-}
-
 type AuthTermsMetadata = {
   terms_accepted_at?: string | null
 }
@@ -53,20 +49,17 @@ export function resolveDashboardOnboardingRequirement({
   authMetadata,
   hasTermsCookie = false,
   profile,
-  termsAcceptance,
   flow,
   unitCount,
 }: {
   authMetadata?: AuthTermsMetadata | null
   hasTermsCookie?: boolean
   profile: ProfileTermsRow | null
-  termsAcceptance: TermsAcceptanceRow | null
   flow: UserOnboardingFlowRow | null
   unitCount: number | null
 }): DashboardOnboardingRequirement {
   const termsAccepted = Boolean(
     profile?.terms_accepted_at ||
-      termsAcceptance?.accepted_at ||
       authMetadata?.terms_accepted_at ||
       hasTermsCookie
   )
@@ -138,35 +131,31 @@ export async function getDashboardOnboardingRequirement(
     readSupabase = supabase
   }
 
-  const [profileResult, termsAcceptanceResult, flowResult, unitResult] =
-    await Promise.all([
-      readSupabase
-        .from('profiles')
-        .select('terms_accepted_at')
-        .eq('id', userId)
-        .maybeSingle(),
-      readSupabase
-        .from('user_terms_acceptances')
-        .select('accepted_at')
-        .eq('user_id', userId)
-        .order('accepted_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      readSupabase
-        .from('user_onboarding_flows')
-        .select('flow_name, dismissed_at')
-        .eq('user_id', userId)
-        .maybeSingle(),
-      readSupabase
-        .from('units')
-        // The guard only needs existence; avoid counting a user's collection.
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1),
-    ])
+  const hasTrustedTermsSignal = Boolean(
+    authMetadata?.terms_accepted_at || hasTermsCookie
+  )
+  const [profileResult, flowResult, unitResult] = await Promise.all([
+    hasTrustedTermsSignal
+      ? Promise.resolve({ data: null })
+      : readSupabase
+          .from('profiles')
+          .select('terms_accepted_at')
+          .eq('id', userId)
+          .maybeSingle(),
+    readSupabase
+      .from('user_onboarding_flows')
+      .select('flow_name, dismissed_at')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    readSupabase
+      .from('units')
+      // The guard only needs existence; avoid counting a user's collection.
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1),
+  ])
 
   const profile = profileResult.data as ProfileTermsRow | null
-  const termsAcceptance = termsAcceptanceResult.data as TermsAcceptanceRow | null
   const flow = flowResult.data as UserOnboardingFlowRow | null
   let persistedAuthMetadata = authMetadata
 
@@ -180,7 +169,6 @@ export async function getDashboardOnboardingRequirement(
     authMetadata: persistedAuthMetadata,
     hasTermsCookie,
     profile,
-    termsAcceptance,
     flow,
     unitCount: unitResult.data?.length ?? null,
   })

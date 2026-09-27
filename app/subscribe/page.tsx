@@ -1,7 +1,11 @@
 import { redirect } from 'next/navigation'
+import { revalidateTag } from 'next/cache'
 import Image from 'next/image'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
-import { getSubscriptionStatus } from '../../lib/subscription/subscription-guard'
+import {
+  getSubscriptionCacheTag,
+  getSubscriptionStatus,
+} from '../../lib/subscription/subscription-guard'
 import authStyles from '../auth-flow-silver.module.css'
 import styles from './subscribe-silver.module.css'
 import SubscribeClient from './subscribe-client'
@@ -81,6 +85,7 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
   const status = await getSubscriptionStatus(user.email)
 
   if (status.isActive) {
+    revalidateTag(getSubscriptionCacheTag(user.email ?? ''), { expire: 0 })
     redirect(nextPath)
   }
 

@@ -9,9 +9,13 @@ import {
   isV3DeploymentHost,
 } from './lib/v3-preview'
 import {
-  getSubscriptionStatus,
+  getCachedSubscriptionStatus,
   isSubscriptionGateEnabled,
 } from './lib/subscription/subscription-guard'
+import {
+  FORWARDED_USER_HEADER,
+  serializeForwardedUser,
+} from './lib/auth/forwarded-user'
 
 const TERMS_VERSION = '2026-05-13'
 const TERMS_ACCEPTANCE_COOKIE = 'og_terms_acceptance'
@@ -40,6 +44,10 @@ function hasAcceptedTermsCookie(
 
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const forwardedRequestHeaders = new Headers(request.headers)
+  // Never trust a value supplied by the browser. Only this proxy may attach
+  // the verified identity consumed by Server Components and route handlers.
+  forwardedRequestHeaders.delete(FORWARDED_USER_HEADER)
   const hasInspectionPreviewCookie =
     request.cookies.get(V3_PREVIEW_COOKIE)?.value === '1'
   const hasInspectionPreviewParam = canUseV3PreviewParam(
@@ -102,7 +110,7 @@ export default async function proxy(request: NextRequest) {
   ) {
     return finalizeResponse(
       NextResponse.next({
-        request,
+        request: { headers: forwardedRequestHeaders },
       })
     )
   }
@@ -144,13 +152,13 @@ export default async function proxy(request: NextRequest) {
   if (!shouldCheckSession) {
     return finalizeResponse(
       NextResponse.next({
-        request,
+        request: { headers: forwardedRequestHeaders },
       })
     )
   }
 
   let response = NextResponse.next({
-    request,
+    request: { headers: forwardedRequestHeaders },
   })
 
   const supabase = createServerClient(
@@ -167,7 +175,7 @@ export default async function proxy(request: NextRequest) {
           )
 
           response = NextResponse.next({
-            request,
+            request: { headers: forwardedRequestHeaders },
           })
 
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -199,31 +207,34 @@ export default async function proxy(request: NextRequest) {
     return finalizeResponse(response)
   }
 
-  const [profileResult, termsAcceptanceResult] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('terms_accepted_at')
-      .eq('id', activeUser.id)
-      .maybeSingle(),
-    supabase
-      .from('user_terms_acceptances')
-      .select('accepted_at')
-      .eq('user_id', activeUser.id)
-      .order('accepted_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ])
+  forwardedRequestHeaders.set(
+    FORWARDED_USER_HEADER,
+    serializeForwardedUser(activeUser)
+  )
+  const refreshedCookies = response.cookies.getAll()
+  response = NextResponse.next({
+    request: { headers: forwardedRequestHeaders },
+  })
+  refreshedCookies.forEach(({ name, value, ...options }) => {
+    response.cookies.set(name, value, options)
+  })
 
-  const hasAcceptedTerms = Boolean(
-    profileResult.data?.terms_accepted_at ||
-      termsAcceptanceResult.data?.accepted_at ||
-      (activeUser.user_metadata as TermsAuthMetadata | null)
-        ?.terms_accepted_at ||
+  const hasTrustedTermsSignal = Boolean(
+    (activeUser.user_metadata as TermsAuthMetadata | null)?.terms_accepted_at ||
       hasAcceptedTermsCookie(
         request.cookies.get(TERMS_ACCEPTANCE_COOKIE)?.value,
         activeUser.id
       )
   )
+  const profileResult = hasTrustedTermsSignal
+    ? null
+    : await supabase
+        .from('profiles')
+        .select('terms_accepted_at')
+        .eq('id', activeUser.id)
+        .maybeSingle()
+  const hasAcceptedTerms =
+    hasTrustedTermsSignal || Boolean(profileResult?.data?.terms_accepted_at)
 
   if (!hasAcceptedTerms && (!isPublicRoute || shouldRequireAuthenticatedPreview)) {
     return finalizeResponse(
@@ -238,7 +249,7 @@ export default async function proxy(request: NextRequest) {
   // up and tested. /subscribe, /payment-success and /api/subscription/*
   // are all in isPublicRoute above, so they never get caught by this check.
   if (isSubscriptionGateEnabled() && !isPublicRoute) {
-    const subscription = await getSubscriptionStatus(activeUser.email)
+    const subscription = await getCachedSubscriptionStatus(activeUser.email)
 
     if (!subscription.isActive) {
       const subscribeUrl = new URL('/subscribe', request.url)

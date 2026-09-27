@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { unstable_cache } from 'next/cache'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
 
 export type SubscriptionStatus = {
@@ -31,6 +32,10 @@ function getBypassEmails() {
  */
 export function isSubscriptionGateEnabled() {
   return process.env.SUBSCRIPTION_REQUIRED === 'true'
+}
+
+export function getSubscriptionCacheTag(email: string) {
+  return `subscription:${email.trim().toLowerCase()}`
 }
 
 export async function getSubscriptionStatus(
@@ -69,4 +74,20 @@ export async function getSubscriptionStatus(
     paidUntil: data.paid_until,
     planName: data.plan_name ?? null,
   }
+}
+
+export async function getCachedSubscriptionStatus(
+  email: string | null | undefined
+) {
+  const normalizedEmail = email?.trim().toLowerCase()
+  if (!normalizedEmail) return INACTIVE_STATUS
+
+  return unstable_cache(
+    () => getSubscriptionStatus(normalizedEmail),
+    ['subscription-guard', normalizedEmail],
+    {
+      revalidate: 15,
+      tags: [getSubscriptionCacheTag(normalizedEmail)],
+    }
+  )()
 }

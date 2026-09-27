@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { createClient } from '../../../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 import BackButton from '../../../components/back-button'
 import DashboardTopBar from '../../../dashboard/dashboard-top-bar'
 import PaintHero from './paint-hero'
@@ -265,9 +265,7 @@ export default async function PaintPage({ params }: PageProps) {
 
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
   perf.mark('auth/session fetch')
 
   if (!user) {

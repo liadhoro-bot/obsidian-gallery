@@ -224,10 +224,9 @@ test('visible onboarding action batch stays fixed until all three are complete',
   )
 })
 
-test('dashboard onboarding accepts terms audit rows when profile row is missing', () => {
+test('dashboard onboarding accepts persisted profile terms', () => {
   const requirement = resolveDashboardOnboardingRequirement({
-    profile: null,
-    termsAcceptance: { accepted_at: '2026-08-30T10:00:00.000Z' },
+    profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },
     flow: { flow_name: 'paint_miniature' },
     unitCount: 1,
   })
@@ -240,7 +239,6 @@ test('dashboard onboarding accepts auth metadata terms fallback', () => {
   const requirement = resolveDashboardOnboardingRequirement({
     authMetadata: { terms_accepted_at: '2026-08-31T10:00:00.000Z' },
     profile: null,
-    termsAcceptance: null,
     flow: { flow_name: 'paint_miniature' },
     unitCount: 1,
   })
@@ -253,7 +251,6 @@ test('dashboard onboarding accepts terms cookie fallback', () => {
   const requirement = resolveDashboardOnboardingRequirement({
     hasTermsCookie: true,
     profile: null,
-    termsAcceptance: null,
     flow: { flow_name: 'paint_miniature' },
     unitCount: 1,
   })
@@ -265,7 +262,6 @@ test('dashboard onboarding accepts terms cookie fallback', () => {
 test('dashboard onboarding does not require units for guide or look-around flows', () => {
   const guideRequirement = resolveDashboardOnboardingRequirement({
     profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },
-    termsAcceptance: null,
     flow: { flow_name: 'create_content' },
     unitCount: 0,
   })
@@ -275,7 +271,6 @@ test('dashboard onboarding does not require units for guide or look-around flows
 
   const lookAroundRequirement = resolveDashboardOnboardingRequirement({
     profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },
-    termsAcceptance: null,
     flow: { flow_name: null, dismissed_at: '2026-08-30T10:00:00.000Z' },
     unitCount: 0,
   })
@@ -287,7 +282,6 @@ test('dashboard onboarding does not require units for guide or look-around flows
 test('dashboard onboarding allows skipped unit setup after a unit-based goal', () => {
   const requirement = resolveDashboardOnboardingRequirement({
     profile: { terms_accepted_at: '2026-08-30T10:00:00.000Z' },
-    termsAcceptance: null,
     flow: {
       flow_name: 'paint_miniature',
       dismissed_at: '2026-08-30T10:05:00.000Z',

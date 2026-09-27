@@ -1,15 +1,13 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import DashboardTopBar from '../../dashboard/dashboard-top-bar'
-import { createClient } from '../../../utils/supabase/server'
+import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import NewUnitForm from './new-unit-form'
 
 export default async function NewUnitPage() {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getSessionUser(supabase)
 
   if (!user) {
     redirect('/login')

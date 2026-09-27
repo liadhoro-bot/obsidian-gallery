@@ -1,5 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { headers } from 'next/headers'
+import {
+  FORWARDED_USER_HEADER,
+  parseForwardedUser,
+} from '../../lib/auth/forwarded-user'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -29,6 +34,13 @@ export async function createClient() {
 export async function getSessionUser(
   supabase: Awaited<ReturnType<typeof createClient>>
 ) {
+  // The proxy has already verified protected requests with Supabase. Reuse
+  // that result rather than making the page perform the same network call.
+  const forwardedUser = parseForwardedUser(
+    (await headers()).get(FORWARDED_USER_HEADER)
+  )
+  if (forwardedUser) return forwardedUser
+
   const {
     data: { user },
     error,
