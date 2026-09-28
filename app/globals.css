@@ -1127,6 +1127,202 @@ button:disabled {
   text-transform: none;
 }
 
+/* Alt Theme card - same data as .recipe-guide-theme-*, presented with the
+   photo left mostly uncovered instead of full-bleed text-on-image. Title
+   and footer sit on an actual parchment panel (.v3-parchment-panel, the
+   same material used elsewhere in the app) rather than floating over the
+   photo with a text-outline; the paint list is confined to the left half so
+   the image stays the dominant element. */
+.recipe-guide-alt-theme-card {
+  border-radius: clamp(13px, 3.8cqw, 18px);
+  background: linear-gradient(135deg, #15130f, #030504);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    inset 0 0 0 2px color-mix(in srgb, var(--og-walnut-700) 48%, transparent),
+    0 2px 8px rgba(77, 52, 28, 0.26);
+}
+
+.recipe-guide-alt-theme-card > img {
+  object-fit: cover;
+}
+
+.recipe-guide-alt-theme-content {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(9px, 2.4cqw, 14px);
+  padding: clamp(11px, 3.2cqw, 16px);
+}
+
+.recipe-guide-alt-theme-heading-panel,
+.recipe-guide-alt-theme-footer-panel {
+  border-radius: clamp(9px, 2.8cqw, 14px);
+  border: 1px solid rgba(107, 72, 36, 0.72);
+  text-align: center;
+}
+
+.recipe-guide-alt-theme-heading-panel {
+  display: grid;
+  gap: clamp(2px, 0.8cqw, 5px);
+  padding: clamp(9px, 2.8cqw, 15px) clamp(12px, 3.6cqw, 20px);
+}
+
+.recipe-guide-alt-theme-title {
+  overflow: hidden;
+  max-width: 100%;
+  color: color-mix(in srgb, var(--og-ink-950) 88%, var(--og-walnut-700));
+  /* Same length-driven shrink-to-fit formula as .recipe-guide-theme-title -
+     see that rule for why this is length-based rather than JS-measured. */
+  --title-fit: min(1, 11 / max(var(--title-len, 11), 1));
+  font-size: clamp(0.6rem, calc(clamp(1.5rem, 6.6cqw, 2.4rem) * var(--title-fit)), 2.4rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 0.95;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.recipe-guide-alt-theme-kicker {
+  margin: 0;
+  color: color-mix(in srgb, var(--og-walnut-700) 78%, var(--og-brass-700));
+  font-size: clamp(0.6rem, 2.2cqw, 0.78rem);
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  line-height: 1;
+}
+
+.recipe-guide-alt-theme-body {
+  position: relative;
+  min-height: 0;
+}
+
+/* Type A preserves the original square swatches and adjoining glass labels. */
+.recipe-guide-type-a-paint-list {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+
+.recipe-guide-type-a-paint-list .recipe-guide-theme-paint-row {
+  gap: 0;
+}
+
+.recipe-guide-type-a-text-glass {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: clamp(6px, 1.8cqw, 11px) clamp(12px, 3.2cqw, 18px);
+  border-radius: 0 clamp(8px, 2.4cqw, 14px) clamp(8px, 2.4cqw, 14px) 0;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-left: none;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.28),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(130%) brightness(1.15) contrast(0.92);
+  -webkit-backdrop-filter: blur(24px) saturate(130%) brightness(1.15) contrast(0.92);
+}
+
+.recipe-guide-type-a-text-glass::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 22%, transparent 38%),
+    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.2), transparent 32%);
+}
+
+.recipe-guide-type-a-text-glass .recipe-guide-theme-paint-copy {
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.95),
+    1px -1px 0 rgba(0, 0, 0, 0.95),
+    -1px 1px 0 rgba(0, 0, 0, 0.95),
+    1px 1px 0 rgba(0, 0, 0, 0.95),
+    0 0 3px rgba(0, 0, 0, 0.9),
+    0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Type B: compact glass palette and round daubs within half the image. */
+.recipe-guide-alt-theme-paint-list {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 50%;
+  overflow: visible;
+  gap: clamp(5px, 1.7cqw, 10px);
+}
+.recipe-guide-alt-theme-paint-list .recipe-guide-theme-paint-row { gap: 0; min-width: 0; }
+.recipe-guide-alt-theme-text-glass {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.3cqw;
+  width: 100%;
+  min-width: 0;
+  padding: 1.5cqw 1.8cqw 1.5cqw 0.8cqw;
+  border-radius: 3.6cqw;
+  background: linear-gradient(135deg, rgba(238,238,228,0.2), rgba(26,29,28,0.48));
+  border: 1px solid rgba(255,255,245,0.28);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.1);
+  backdrop-filter: blur(16px) saturate(115%);
+  -webkit-backdrop-filter: blur(16px) saturate(115%);
+}
+.recipe-guide-alt-theme-daub {
+  display: block;
+  width: 13.5cqw;
+  height: 14cqw;
+  flex: 0 0 13.5cqw;
+  overflow: visible;
+  filter: drop-shadow(0 2px 1px rgba(0,0,0,0.55));
+}
+.recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-copy {
+  gap: 0.7cqw;
+  flex: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+.recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-name,
+.recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-source {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+.recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-name {
+  font-family: var(--font-og-display), Georgia, serif;
+  font-size: 4.3cqw;
+  font-weight: 700;
+  line-height: 1.03;
+}
+.recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-source {
+  font-size: 3cqw;
+  font-weight: 500;
+  line-height: 1.15;
+  color: #f1ede5;
+}
+
+.recipe-guide-alt-theme-footer-panel {
+  padding: clamp(8px, 2.4cqw, 13px) clamp(12px, 3.6cqw, 20px);
+}
+
+.recipe-guide-alt-theme-footer {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: color-mix(in srgb, var(--og-ink-950) 88%, var(--og-walnut-700));
+  font-size: clamp(0.56rem, 2.05cqw, 0.72rem);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  line-height: 1.25;
+  text-align: center;
+}
+
 .recipe-guide-paints-label {
   color: color-mix(in srgb, var(--og-walnut-700) 72%, var(--og-brass-700));
   font-size: clamp(0.56rem, 2.45cqw, 0.78rem);
@@ -1791,4 +1987,28 @@ button:disabled {
 
 [data-feature-guide-launcher-button]:hover {
   color: #e4dfd4 !important;
+}
+
+
+/* Mirror only the paint layout: the artwork and daub texture keep their orientation. */
+.recipe-guide-theme-align-right .recipe-guide-type-a-paint-list,
+.recipe-guide-theme-align-right .recipe-guide-alt-theme-paint-list {
+  left: auto;
+  right: 0;
+}
+.recipe-guide-theme-align-right .recipe-guide-theme-paint-row,
+.recipe-guide-theme-align-right .recipe-guide-alt-theme-text-glass {
+  flex-direction: row-reverse;
+}
+.recipe-guide-theme-align-right .recipe-guide-theme-paint-copy {
+  text-align: right;
+}
+.recipe-guide-theme-align-right .recipe-guide-type-a-text-glass {
+  border-left: 2px solid rgba(255, 255, 255, 0.4);
+  border-right: none;
+  border-radius: clamp(8px, 2.4cqw, 14px) 0 0 clamp(8px, 2.4cqw, 14px);
+}
+.recipe-guide-theme-align-right .recipe-guide-alt-theme-text-glass {
+  padding-left: 1.8cqw;
+  padding-right: 0.8cqw;
 }

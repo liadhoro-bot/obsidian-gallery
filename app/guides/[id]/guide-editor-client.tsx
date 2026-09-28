@@ -7,6 +7,7 @@ import FeatureGuideLauncher from '../../components/feature-guide-launcher'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import type { Recipe, RecipeImage, RecipeStep } from '../shared/types'
 import {
+  RecipeGuideAltThemeStepCard,
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
@@ -96,6 +97,7 @@ function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
     image_url: step.rawImage || step.image,
     image_focal_x: step.imageFocalX,
     image_focal_y: step.imageFocalY,
+    paint_alignment: step.paintAlignment ?? 'left',
   }
 }
 
@@ -526,6 +528,15 @@ function DeckPreviewGroup({ deck }: { deck: GuidesV3DeckDetail }) {
             title={step.title}
             description={step.instructions}
             paints={paints}
+          />
+        ) : step.template === 'theme-alt' ? (
+          <RecipeGuideAltThemeStepCard
+            step={recipeStep}
+            stepsLength={deck.steps.length}
+            paints={paints}
+            fallbackImageUrl={deck.fullImage || deck.image}
+            fallbackFocalX={deck.coverFocalX ?? 50}
+            fallbackFocalY={deck.coverFocalY ?? 50}
           />
         ) : isThemeTemplateStep(step, recipeStep.image_url) ? (
           <RecipeGuideThemeStepCard

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Recipe, RecipeImage, RecipeStep } from '../../shared/types'
 import {
+  RecipeGuideAltThemeStepCard,
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
@@ -87,6 +88,7 @@ function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
     image_url: step.rawImage || step.image,
     image_focal_x: step.imageFocalX,
     image_focal_y: step.imageFocalY,
+    paint_alignment: step.paintAlignment ?? 'left',
   }
 }
 
@@ -203,6 +205,16 @@ export default async function DeckDetailPage({
         title={step.title}
         description={step.instructions}
         paints={paints}
+        showBrandMark={showBrandMark}
+      />
+    ) : step.template === 'theme-alt' ? (
+      <RecipeGuideAltThemeStepCard
+        step={recipeStep}
+        stepsLength={recipeSteps.length}
+        paints={paints}
+        fallbackImageUrl={deck.fullImage || deck.image}
+        fallbackFocalX={deck.coverFocalX ?? 50}
+        fallbackFocalY={deck.coverFocalY ?? 50}
         showBrandMark={showBrandMark}
       />
     ) : isThemeTemplateStep(step, recipeStep.image_url) ? (

@@ -1172,6 +1172,7 @@ export default function GuidesV3Preview({
             body: card.body,
             image: card.image,
             videoUrl: card.videoUrl,
+            paintAlignment: card.paintAlignment ?? 'left',
             paints: card.paints?.map((paint) => ({
               id: paint.id,
               ratio_text: paint.ratio_text ?? null,

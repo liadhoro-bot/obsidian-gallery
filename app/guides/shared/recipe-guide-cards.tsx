@@ -33,19 +33,6 @@ function isInlinePreviewImageUrl(value?: string | null) {
   return url.startsWith('blob:') || url.startsWith('data:image/')
 }
 
-// The Theme Card's paint list only fills its own space fully at 5+ paints
-// (see --paint-fit in globals.css) - below that it's intentionally left
-// with room underneath rather than stretched, so the footer caption can
-// use more lines there without any risk of pushing the paint rows into
-// overflow. At 5+ paints that room is gone, so it stays tightly clamped.
-function themeFooterLineClamp(paintCount: number) {
-  if (paintCount <= 1) return 6
-  if (paintCount === 2) return 5
-  if (paintCount === 3) return 4
-  if (paintCount === 4) return 3
-  return 2
-}
-
 function getYoutubeVideoId(url: string | null) {
   if (!url) return null
 
@@ -496,6 +483,7 @@ function ThemePaintReferenceRow({
           />
         ) : null}
       </span>
+      <span className="recipe-guide-type-a-text-glass">
       <span className="recipe-guide-theme-paint-copy">
         <strong className="recipe-guide-theme-paint-name">
           {name}
@@ -510,18 +498,12 @@ function ThemePaintReferenceRow({
           </span>
         )}
       </span>
+      </span>
     </li>
   )
 }
 
-export function RecipeGuideThemeStepCard({
-  step,
-  paints,
-  fallbackImageUrl = null,
-  fallbackFocalX = 50,
-  fallbackFocalY = 50,
-  showBrandMark = false,
-}: {
+type ThemeCardProps = {
   step: RecipeStep
   stepsLength: number
   paints: RecipeGuidePaint[]
@@ -529,7 +511,79 @@ export function RecipeGuideThemeStepCard({
   fallbackFocalX?: number
   fallbackFocalY?: number
   showBrandMark?: boolean
+}
+
+// Keep persisted template keys stable: theme = Type A, theme-alt = Type B.
+export function RecipeGuideThemeStepCard(props: ThemeCardProps) {
+  return <ThemeStepCard {...props} variant="a" />
+}
+
+export function RecipeGuideAltThemeStepCard(props: ThemeCardProps) {
+  return <ThemeStepCard {...props} variant="b" />
+}
+
+// A neutral impasto texture is tinted per paint, preserving the raised
+// knife marks and irregular silhouette even for near-black and ivory.
+function AltThemePaintDaub({ paint }: { paint: RecipeGuidePaint }) {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const color = paint.hex_approx || '#8b8b8b'
+  return (
+    <svg viewBox="0 0 1024 1024" className="recipe-guide-alt-theme-daub" aria-hidden="true">
+      <defs>
+        <filter id={`${id}-tint`} filterUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024" colorInterpolationFilters="sRGB">
+          <feComponentTransfer in="SourceGraphic" result="texture">
+            <feFuncR type="linear" slope="1.5" intercept="-0.48" />
+            <feFuncG type="linear" slope="1.5" intercept="-0.48" />
+            <feFuncB type="linear" slope="1.5" intercept="-0.48" />
+          </feComponentTransfer>
+          <feFlood floodColor={color} result="color" />
+          <feComposite in="color" in2="SourceAlpha" operator="in" result="base" />
+          <feBlend in="texture" in2="base" mode="hard-light" />
+          <feComposite in2="SourceAlpha" operator="in" />
+        </filter>
+      </defs>
+      <image href="/recipe-guide/round-paint-daub.png" width="1024" height="1024" filter={`url(#${id}-tint)`} />
+    </svg>
+  )
+}
+
+function AltThemePaintRow({
+  paint,
+}: {
+  paint: RecipeGuidePaint
 }) {
+  const name = paint?.name || 'Unnamed paint'
+  const source = [paint?.brand, paint?.line].filter(Boolean)
+
+  return (
+    <li className="recipe-guide-theme-paint-row">
+      <span className="recipe-guide-alt-theme-text-glass">
+        <AltThemePaintDaub paint={paint} />
+        <span className="recipe-guide-theme-paint-copy">
+          <strong className="recipe-guide-theme-paint-name">{name}</strong>
+          {source.length ? (
+            <span className="recipe-guide-theme-paint-source">
+              {source.join(' / ')}
+            </span>
+          ) : (
+            <span className="recipe-guide-theme-paint-source">Unknown source</span>
+          )}
+        </span>
+      </span>
+    </li>
+  )
+}
+
+// Shared parchment frame; each saved type retains its own paint treatment.
+function ThemeStepCard({
+  step,
+  paints,
+  fallbackImageUrl = null,
+  fallbackFocalX = 50,
+  fallbackFocalY = 50,
+  showBrandMark = false,
+  variant,
+}: ThemeCardProps & { variant: 'a' | 'b' }) {
   const usesOwnImage = isUsableImageUrl(step.image_url)
   const imageUrl = usesOwnImage
     ? step.image_url
@@ -544,7 +598,7 @@ export function RecipeGuideThemeStepCard({
 
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
-      <div className="recipe-guide-theme-card relative min-h-0 flex-1 overflow-hidden">
+      <div className={`recipe-guide-alt-theme-card recipe-guide-theme-type-${variant} ${step.paint_alignment === 'right' ? 'recipe-guide-theme-align-right' : ''} relative min-h-0 flex-1 overflow-hidden`}>
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -557,41 +611,50 @@ export function RecipeGuideThemeStepCard({
             unoptimized={isInlinePreviewImageUrl(imageUrl)}
           />
         ) : null}
-        <div className="recipe-guide-theme-card-shade absolute inset-0" />
-        <section className="recipe-guide-theme-content absolute inset-0">
-          <div className="recipe-guide-theme-heading">
+        <section className="recipe-guide-alt-theme-content absolute inset-0">
+          <div className="recipe-guide-alt-theme-heading-panel v3-parchment-panel">
             <h2
-              className="recipe-guide-theme-title font-serif"
+              className="recipe-guide-alt-theme-title font-serif"
               style={{ '--title-len': step.title.trim().length || 1 } as CSSProperties}
             >
               {step.title}
             </h2>
-            <p className="recipe-guide-theme-kicker font-serif uppercase">
+            <p className="recipe-guide-alt-theme-kicker font-serif uppercase">
               Colour Reference
             </p>
           </div>
 
-          <ul
-            className="recipe-guide-theme-paint-list"
-            style={{ '--paint-count': shownPaints.length || 1 } as CSSProperties}
-          >
-            {shownPaints.map((paint, index) => (
-              <ThemePaintReferenceRow
-                key={`${paint?.id || 'paint'}-${index}`}
-                paint={paint}
-                showBrandMark={showBrandMark}
-              />
-            ))}
-          </ul>
+          {shownPaints.length ? (
+            <div className="recipe-guide-alt-theme-body">
+              <ul
+                className={`recipe-guide-theme-paint-list ${variant === 'a' ? 'recipe-guide-type-a-paint-list' : 'recipe-guide-alt-theme-paint-list'}`}
+                style={{ '--paint-count': shownPaints.length || 1 } as CSSProperties}
+              >
+                {shownPaints.map((paint, index) => variant === 'a' ? (
+                  <ThemePaintReferenceRow
+                    key={`${paint?.id || 'paint'}-${index}`}
+                    paint={paint}
+                    showBrandMark={showBrandMark}
+                  />
+                ) : (
+                  <AltThemePaintRow
+                    key={`${paint?.id || 'paint'}-${index}`}
+                    paint={paint}
+                  />
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="recipe-guide-alt-theme-body" />
+          )}
 
-          <p
-            className="recipe-guide-theme-footer font-serif uppercase"
-            style={{ '--footer-lines': themeFooterLineClamp(shownPaints.length) } as CSSProperties}
-          >
-            {hiddenPaintCount > 0
-              ? `${footerText} + ${hiddenPaintCount} more`
-              : footerText}
-          </p>
+          <div className="recipe-guide-alt-theme-footer-panel v3-parchment-panel">
+            <p className="recipe-guide-alt-theme-footer font-serif uppercase">
+              {hiddenPaintCount > 0
+                ? `${footerText} + ${hiddenPaintCount} more`
+                : footerText}
+            </p>
+          </div>
         </section>
       </div>
     </ObsidianShareCardFrame>

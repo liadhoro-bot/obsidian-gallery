@@ -11,6 +11,7 @@ import {
 } from '../../utils/images/gallery-upload'
 
 export type CreateDeckCardInput = {
+  paintAlignment?: 'left' | 'right'
   title: string
   template: string
   body: string
@@ -138,7 +139,12 @@ function encodeDeckCardInstructions(card: CreateDeckCardInput) {
   const metadata: {
     template: string
     youtubeUrl?: string
+    paintAlignment?: 'left' | 'right'
   } = { template }
+
+  if (template === 'theme' || template === 'theme-alt') {
+    metadata.paintAlignment = card.paintAlignment === 'right' ? 'right' : 'left'
+  }
 
   if (youtubeUrl) {
     metadata.youtubeUrl = youtubeUrl
@@ -172,6 +178,7 @@ function safeCardTemplate(value: string | null | undefined) {
   if (
     value === 'step' ||
     value === 'theme' ||
+    value === 'theme-alt' ||
     value === 'image' ||
     value === 'small-image' ||
     value === 'paints' ||

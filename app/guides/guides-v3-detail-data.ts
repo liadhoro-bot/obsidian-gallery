@@ -11,6 +11,7 @@ import {
 } from './guides-v3-data'
 
 export type GuidesV3DeckStep = {
+  paintAlignment?: 'left' | 'right'
   id: string
   number: number
   title: string
@@ -189,6 +190,7 @@ function parseDeckCardMetaTemplate(value: unknown) {
   if (
     value === 'step' ||
     value === 'theme' ||
+    value === 'theme-alt' ||
     value === 'image' ||
     value === 'small-image' ||
     value === 'paints' ||
@@ -209,6 +211,7 @@ function parseDeckCardInstructions(value: string | null | undefined) {
       instructions: text,
       template: null as string | null,
       videoUrl: null as string | null,
+      paintAlignment: 'left' as const,
     }
   }
 
@@ -216,6 +219,7 @@ function parseDeckCardInstructions(value: string | null | undefined) {
     const metadata = JSON.parse(firstLine.slice(deckCardMetaPrefix.length)) as {
       template?: unknown
       youtubeUrl?: unknown
+      paintAlignment?: unknown
     }
     const body = rest.join('\n').replace(/^\s+/, '')
     const youtubeUrl =
@@ -228,12 +232,14 @@ function parseDeckCardInstructions(value: string | null | undefined) {
       instructions: body,
       template: parseDeckCardMetaTemplate(metadata.template),
       videoUrl: youtubeUrl,
+      paintAlignment: metadata.paintAlignment === 'right' ? 'right' as const : 'left' as const,
     }
   } catch {
     return {
       instructions: text,
       template: null as string | null,
       videoUrl: null as string | null,
+      paintAlignment: 'left' as const,
     }
   }
 }
@@ -465,6 +471,7 @@ export const getGuidesV3DeckDetail = cache(
         paints: paintsByStepId.get(step.id) ?? [],
         imageFocalX: step.image_focal_x ?? 50,
         imageFocalY: step.image_focal_y ?? 50,
+        paintAlignment: parsedInstructions.paintAlignment,
       }
     })
 

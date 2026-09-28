@@ -1,5 +1,7 @@
 'use client'
 
+import { PaintAlignmentToggle } from '../../shared/paint-alignment-toggle'
+
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useRef, useState } from 'react'
@@ -8,6 +10,7 @@ import FeatureGuideLauncher from '../../../components/feature-guide-launcher'
 import type { FeatureGuideEntry } from '../../../components/feature-guide-types'
 import type { Recipe, RecipeImage, RecipeStep } from '../../shared/types'
 import {
+  RecipeGuideAltThemeStepCard,
   RecipeGuideCoverCard,
   RecipeGuideDescriptiveStepCard,
   RecipeGuideImageStepCard,
@@ -27,7 +30,7 @@ import styles from './deck-editor-client.module.css'
 type DeckEditorTab = 'details' | 'cards' | 'preview'
 type DeckDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 type DeckStatus = 'Draft' | 'Private' | 'Public'
-export type DeckEditorCardTemplate = 'cover' | 'step' | 'theme' | 'image' | 'small-image' | 'paints' | 'video'
+export type DeckEditorCardTemplate = 'cover' | 'step' | 'theme' | 'theme-alt' | 'image' | 'small-image' | 'paints' | 'video'
 type CardTemplate = DeckEditorCardTemplate
 
 export type DeckEditorSavePaint = {
@@ -44,6 +47,7 @@ export type DeckEditorSavePaint = {
 }
 
 export type DeckEditorInitialCard = {
+  paintAlignment?: 'left' | 'right'
   id: string
   title: string
   template: DeckEditorCardTemplate
@@ -69,6 +73,7 @@ export type DeckEditorSavePayload = {
 }
 
 type EditorCard = {
+  paintAlignment?: 'left' | 'right'
   id: string
   title: string
   template: CardTemplate
@@ -95,8 +100,8 @@ type DropTarget = {
 
 const difficultyOptions: DeckDifficulty[] = ['Beginner', 'Intermediate', 'Advanced']
 const statusOptions: DeckStatus[] = ['Draft', 'Private', 'Public']
-const cardTemplateOptions: CardTemplate[] = ['step', 'theme', 'image', 'small-image', 'paints', 'video']
-const addCardTemplateOptions: CardTemplate[] = ['cover', 'step', 'theme', 'image', 'small-image', 'paints', 'video']
+const cardTemplateOptions: CardTemplate[] = ['step', 'theme', 'theme-alt', 'image', 'small-image', 'paints', 'video']
+const addCardTemplateOptions: CardTemplate[] = ['cover', 'step', 'theme', 'theme-alt', 'image', 'small-image', 'paints', 'video']
 const themePaintLimit = 7
 const stepPaintLimit = 4
 
@@ -107,7 +112,7 @@ function inferDifficulty(cardCount: number): DeckDifficulty {
 }
 
 function paintLimitForTemplate(template: CardTemplate) {
-  if (template === 'theme') return themePaintLimit
+  if (template === 'theme' || template === 'theme-alt') return themePaintLimit
   if (template === 'paints') return Infinity
   return stepPaintLimit
 }
@@ -142,6 +147,7 @@ function cardTemplateFromSavedStep(
   if (
     template === 'step' ||
     template === 'theme' ||
+    template === 'theme-alt' ||
     template === 'image' ||
     template === 'small-image' ||
     template === 'paints' ||
@@ -190,6 +196,7 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
     videoUrl: step.videoUrl,
     imageFocalX: step.imageFocalX,
     imageFocalY: step.imageFocalY,
+    paintAlignment: step.paintAlignment ?? 'left',
   }))
 
   // Where the synthesized cover card belongs, if at all - undefined
@@ -290,7 +297,8 @@ function getYoutubeEmbedUrl(url: string | null) {
 
 function templateLabel(template: CardTemplate) {
   if (template === 'cover') return 'Cover'
-  if (template === 'theme') return 'Theme'
+  if (template === 'theme') return 'Theme Card Type A'
+  if (template === 'theme-alt') return 'Theme Card Type B'
   if (template === 'image') return 'Big Image'
   if (template === 'small-image') return 'Small Image'
   if (template === 'paints') return 'Paints'
@@ -300,7 +308,8 @@ function templateLabel(template: CardTemplate) {
 
 function templateDescription(template: CardTemplate) {
   if (template === 'cover') return 'Deck title, hero image, and description'
-  if (template === 'theme') return 'Palette intent, mood, and reference notes'
+  if (template === 'theme') return 'Square paint swatches with full-width glass labels'
+  if (template === 'theme-alt') return 'Textured paint daubs with compact glass labels'
   if (template === 'image') return 'Full-card image with a small title and notes panel'
   if (template === 'small-image') return 'Cover-style image above title and longer notes'
   if (template === 'paints') return 'Deck paints and current ownership status'
@@ -314,6 +323,7 @@ function templateEditorSubtitle(template: CardTemplate) {
   if (template === 'video') return 'YouTube link and a short caption'
   if (template === 'image') return 'Large image card with a compact title and instruction panel'
   if (template === 'small-image') return 'Small image card with a top reference image and more room for text'
+  if (template === 'theme-alt') return 'Step content, paints, ratios, and image - parchment-panel layout'
   return 'Step content, paints, ratios, and image'
 }
 
@@ -420,7 +430,7 @@ function makeNewCard(
     body:
       template === 'cover'
         ? 'Describe the deck at a glance: subject, style, and promise.'
-        : template === 'theme'
+        : template === 'theme' || template === 'theme-alt'
           ? 'Describe the palette, mood, finish, and visual intent.'
           : template === 'image'
             ? 'Add the visual checkpoint notes for this card.'
@@ -666,6 +676,7 @@ export default function DeckEditorClient({
     const template =
       editingCard?.template === 'cover' ||
       editingCard?.template === 'theme' ||
+      editingCard?.template === 'theme-alt' ||
       editingCard?.template === 'small-image'
         ? editingCard.template
         : 'image'
@@ -753,6 +764,7 @@ export default function DeckEditorClient({
         videoUrl: card.videoUrl,
         imageFocalX: card.imageFocalX,
         imageFocalY: card.imageFocalY,
+        paintAlignment: card.paintAlignment ?? 'left',
       })),
     })
   }
@@ -1614,11 +1626,13 @@ function CardEditorSheet({
   onSelectPaint: (paintIndex: number, paint: PaintPickerPaint | null) => void
 }) {
   const isCover = card.template === 'cover'
-  const isStepLike = card.template === 'step' || card.template === 'theme'
+  const isStepLike =
+    card.template === 'step' || card.template === 'theme' || card.template === 'theme-alt'
   const isImageCard = card.template === 'image' || card.template === 'small-image'
   const isPaintsList = card.template === 'paints'
   const isVideo = card.template === 'video'
-  const canRepositionImage = isCover || isImageCard || card.template === 'theme'
+  const canRepositionImage =
+    isCover || isImageCard || card.template === 'theme' || card.template === 'theme-alt'
   const [isRepositioningImage, setIsRepositioningImage] = useState(false)
   const paintLimit = paintLimitForTemplate(card.template)
   const embedUrl = isVideo ? getYoutubeEmbedUrl(card.videoUrl) : null
@@ -1772,11 +1786,19 @@ function CardEditorSheet({
           <section className={styles.paintEditor}>
             <div className={styles.paintEditorHeader}>
               <h3>Paints & Ratios</h3>
+              <div className={styles.paintEditorActions}>
+              {card.template === 'theme' || card.template === 'theme-alt' ? (
+                <PaintAlignmentToggle
+                  value={card.paintAlignment}
+                  onChange={(paintAlignment) => onChange({ paintAlignment })}
+                />
+              ) : null}
               {card.paints.length < paintLimit ? (
                 <button type="button" onClick={onAddPaint}>
                   Add Paint
                 </button>
               ) : null}
+              </div>
             </div>
             {card.paints.length ? (
               <div className={styles.paintRows}>
@@ -2065,6 +2087,7 @@ function DeckPreview({
           image_url: card.image,
           image_focal_x: card.imageFocalX,
           image_focal_y: card.imageFocalY,
+          paint_alignment: card.paintAlignment ?? 'left',
         }
 
         return (
@@ -2083,6 +2106,15 @@ function DeckPreview({
               />
             ) : card.template === 'theme' ? (
               <RecipeGuideThemeStepCard
+                step={step}
+                stepsLength={stepCards.length}
+                paints={card.paints}
+                fallbackImageUrl={heroImage}
+                fallbackFocalX={previewCoverCard?.imageFocalX ?? 50}
+                fallbackFocalY={previewCoverCard?.imageFocalY ?? 50}
+              />
+            ) : card.template === 'theme-alt' ? (
+              <RecipeGuideAltThemeStepCard
                 step={step}
                 stepsLength={stepCards.length}
                 paints={card.paints}
