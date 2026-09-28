@@ -67,7 +67,7 @@ type RecipeStepInsert = {
   user_id: string
   step_number: number
   title: string
-  card_template?: string
+  card_template?: string | null
   instructions: string
   image_url: string | null
   youtube_url: string | null
@@ -406,7 +406,9 @@ export async function createDeckFromForge(
       user_id: user.id,
       step_number: index + 1,
       title: cleanText(card.title, `Card ${index + 1}`),
-      card_template: safeCardTemplate(card.template),
+      // Older schemas restrict card_template to the original template names.
+      // Type B is restored from its existing OG_DECK_CARD_META instructions.
+      card_template: card.template === 'theme-alt' ? null : safeCardTemplate(card.template),
       instructions: encodeDeckCardInstructions(card),
       image_url: safePersistedImage(card.image),
       youtube_url: youtubeUrl,
@@ -574,7 +576,9 @@ export async function updateDeckFromForge(
       user_id: user.id,
       step_number: index + 1,
       title: cleanText(card.title, `Card ${index + 1}`),
-      card_template: safeCardTemplate(card.template),
+      // Older schemas restrict card_template to the original template names.
+      // Type B is restored from its existing OG_DECK_CARD_META instructions.
+      card_template: card.template === 'theme-alt' ? null : safeCardTemplate(card.template),
       instructions: encodeDeckCardInstructions(card),
       image_url: safePersistedImage(card.image),
       youtube_url: youtubeUrl,

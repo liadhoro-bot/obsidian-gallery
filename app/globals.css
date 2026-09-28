@@ -1266,11 +1266,11 @@ button:disabled {
   min-width: 0;
   padding: 1.5cqw 1.8cqw 1.5cqw 0.8cqw;
   border-radius: 3.6cqw;
-  background: linear-gradient(135deg, rgba(238,238,228,0.2), rgba(26,29,28,0.48));
+  background: linear-gradient(135deg, rgba(80,85,82,0.34), rgba(18,22,21,0.60));
   border: 1px solid rgba(255,255,245,0.28);
   box-shadow: 0 3px 10px rgba(0,0,0,0.18), inset 0 1px 1px rgba(255,255,255,0.24), inset 0 -1px 1px rgba(255,255,255,0.1);
-  backdrop-filter: blur(16px) saturate(115%);
-  -webkit-backdrop-filter: blur(16px) saturate(115%);
+  backdrop-filter: blur(22px) saturate(110%);
+  -webkit-backdrop-filter: blur(22px) saturate(110%);
 }
 .recipe-guide-alt-theme-daub {
   display: block;
@@ -1283,7 +1283,12 @@ button:disabled {
 .recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-copy {
   gap: 0.7cqw;
   flex: 1;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  text-shadow:
+    -0.45px -0.45px 0 #4a4c4b,
+    0.45px -0.45px 0 #4a4c4b,
+    -0.45px 0.45px 0 #4a4c4b,
+    0.45px 0.45px 0 #4a4c4b,
+    0 1px 2px rgba(0,0,0,0.8);
 }
 .recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-name,
 .recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-source {
@@ -1294,6 +1299,7 @@ button:disabled {
 }
 .recipe-guide-alt-theme-text-glass .recipe-guide-theme-paint-name {
   font-family: var(--font-og-display), Georgia, serif;
+  color: #ffffff;
   font-size: 4.3cqw;
   font-weight: 700;
   line-height: 1.03;
@@ -1302,7 +1308,7 @@ button:disabled {
   font-size: 3cqw;
   font-weight: 500;
   line-height: 1.15;
-  color: #f1ede5;
+  color: #fcfcfa;
 }
 
 .recipe-guide-alt-theme-footer-panel {
