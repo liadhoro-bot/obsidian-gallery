@@ -330,7 +330,7 @@ export function RecipeGuideCoverCard({
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
             style={{ objectPosition: `${featuredImage?.focal_x ?? 50}% ${featuredImage?.focal_y ?? 50}%` }}
-            unoptimized={isInlinePreviewImageUrl(imageUrl)}
+            unoptimized={isInlinePreviewImageUrl(imageUrl) || showBrandMark}
           />
         ) : (
           <div className="h-full w-full bg-[radial-gradient(circle_at_30%_25%,rgba(45,212,191,0.34),transparent_30%),linear-gradient(135deg,#111827,#020617)]" />
@@ -386,7 +386,7 @@ export function RecipeGuideImageStepCard({
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
             style={{ objectPosition: `${step.image_focal_x ?? 50}% ${step.image_focal_y ?? 50}%` }}
-            unoptimized={isInlinePreviewImageUrl(imageUrl)}
+            unoptimized={isInlinePreviewImageUrl(imageUrl) || showBrandMark}
           />
         ) : null}
         <div className="recipe-guide-image-card-shade absolute inset-0" />
@@ -427,7 +427,7 @@ export function RecipeGuideSmallImageStepCard({
               sizes="(max-width: 768px) 92vw, 420px"
               className="object-cover"
               style={{ objectPosition: `${step.image_focal_x ?? 50}% ${step.image_focal_y ?? 50}%` }}
-              unoptimized={isInlinePreviewImageUrl(imageUrl)}
+              unoptimized={isInlinePreviewImageUrl(imageUrl) || showBrandMark}
             />
           ) : null}
           <div className="recipe-guide-small-image-shade absolute inset-0" />
@@ -480,6 +480,7 @@ function ThemePaintReferenceRow({
             priority={showBrandMark}
             sizes="72px"
             className="object-cover"
+            unoptimized={showBrandMark}
           />
         ) : null}
       </span>
@@ -608,7 +609,7 @@ function ThemeStepCard({
             sizes="(max-width: 768px) 92vw, 420px"
             className="object-cover"
             style={{ objectPosition: `${focalX}% ${focalY}%` }}
-            unoptimized={isInlinePreviewImageUrl(imageUrl)}
+            unoptimized={isInlinePreviewImageUrl(imageUrl) || showBrandMark}
           />
         ) : null}
         <section className="recipe-guide-alt-theme-content absolute inset-0">
@@ -731,6 +732,7 @@ function PaintListSwatch({
           priority={showBrandMark}
           sizes="48px"
           className="object-cover"
+          unoptimized={showBrandMark}
         />
       ) : null}
     </span>
