@@ -92,9 +92,9 @@ export default function DeckHeroActions({
         onClick={handleToggleLike}
         aria-pressed={liked}
         aria-label={liked ? 'Unlike guide' : 'Like guide'}
-        className={`flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors ${
-          liked ? 'text-rose-400' : 'text-white/85'
-        }`}
+        data-glass-control="true"
+        data-action-state={liked ? 'liked' : 'idle'}
+        className="flex h-10 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors"
       >
         <HeartIcon filled={liked} />
         <span>{likes}</span>
@@ -104,9 +104,9 @@ export default function DeckHeroActions({
         onClick={handleToggleSave}
         aria-pressed={saved}
         aria-label={saved ? 'Remove from your guides' : 'Save to your guides'}
-        className={`flex items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors ${
-          saved ? 'text-cyan-300' : 'text-white/85'
-        }`}
+        data-glass-control="true"
+        data-action-state={saved ? 'saved' : 'idle'}
+        className="flex h-10 items-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors"
       >
         <BookmarkIcon filled={saved} />
         <span>{saves}</span>

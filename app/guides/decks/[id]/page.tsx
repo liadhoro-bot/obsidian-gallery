@@ -313,33 +313,22 @@ export default async function DeckDetailPage({
           ...stepEntries.slice(coverPosition),
         ]
 
-  // Like/save/share always live on whichever card ends up first, whether
-  // that's the cover (the common case) or - if the cover was removed or
-  // moved - a step card instead.
-  if (cards.length) {
-    cards[0] = {
-      ...cards[0],
-      node: (
-        <div className="relative h-full">
-          {cards[0].node}
-          <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
-            <DeckHeroActions
-              recipeId={deck.id}
-              likeCount={deck.likeCount ?? 0}
-              saveCount={deck.saveCount ?? 0}
-              viewerHasLiked={deck.viewerHasLiked ?? false}
-              viewerHasSaved={deck.viewerHasSaved ?? false}
-            />
-            <DeckShareMenu
-              cards={shareCards}
-              fileBaseName={deck.title}
-              sharePath={`/guides/decks/${deck.id}`}
-            />
-          </div>
-        </div>
-      ),
-    }
-  }
+  const heroActions = (
+    <>
+      <DeckHeroActions
+        recipeId={deck.id}
+        likeCount={deck.likeCount ?? 0}
+        saveCount={deck.saveCount ?? 0}
+        viewerHasLiked={deck.viewerHasLiked ?? false}
+        viewerHasSaved={deck.viewerHasSaved ?? false}
+      />
+      <DeckShareMenu
+        cards={shareCards}
+        fileBaseName={deck.title}
+        sharePath={`/guides/decks/${deck.id}`}
+      />
+    </>
+  )
 
   return (
     <main>
@@ -349,6 +338,7 @@ export default async function DeckDetailPage({
         title={deck.title}
         backHref="/guides?preview=1"
         featureGuides={featureGuides}
+        heroActions={heroActions}
       />
     </main>
   )

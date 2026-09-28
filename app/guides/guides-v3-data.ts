@@ -281,8 +281,16 @@ async function loadRecipeStats(
   const stepToRecipeId = new Map(stepRows.map((step) => [step.id, step.recipe_id]))
   const statsByRecipeId = new Map<string, { cards: number; paintIds: Set<string> }>()
 
+  // Starts at 0, not 1 - this feeds the library listing's "X cards" count
+  // (GuidesV3Deck.cards below), which should reflect real content cards
+  // only. The cover isn't a recipe_steps row, so it was never counted here
+  // to begin with; the +1 this used to start at just overcounted every
+  // deck by one (most visibly a 1-step deck showing "2 cards"). The deck
+  // detail page's own on-card "X Cards" stat is a separate, deliberately
+  // cover-inclusive computation (steps.length + hasCover) in
+  // guides-v3-detail-data.ts and page.tsx - unaffected by this.
   for (const recipeId of recipeIds) {
-    statsByRecipeId.set(recipeId, { cards: 1, paintIds: new Set() })
+    statsByRecipeId.set(recipeId, { cards: 0, paintIds: new Set() })
   }
 
   for (const step of stepRows) {

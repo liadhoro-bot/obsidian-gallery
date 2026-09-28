@@ -13,7 +13,6 @@
 
 .backButton,
 .helpButton {
-  position: absolute;
   z-index: 20;
   display: inline-grid;
   width: 40px;
@@ -40,14 +39,27 @@
 }
 
 .backButton {
+  position: absolute;
   top: max(14px, env(safe-area-inset-top));
   left: max(14px, env(safe-area-inset-left));
 }
 
 .helpButton {
+  font-size: 1rem;
+  flex: 0 0 auto;
+}
+
+/* Sibling row to .backButton, on the opposite corner: hosts the relocated
+   like/save/share buttons immediately to the left of the "?" launcher so
+   none of them sit over the card face below. */
+.topRightGroup {
+  position: absolute;
+  z-index: 20;
   top: max(14px, env(safe-area-inset-top));
   right: max(14px, env(safe-area-inset-right));
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .backButton:active,

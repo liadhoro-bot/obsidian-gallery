@@ -1949,7 +1949,8 @@ button:disabled {
    "?" launcher button with data-feature-guide-launcher-button to opt in.
    Sizing/shape (width, height, border-radius, position) stays owned by
    each route's own layout classes - only the glass material is shared. */
-[data-feature-guide-launcher-button] {
+[data-feature-guide-launcher-button],
+[data-glass-control] {
   position: relative;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.4) !important;
@@ -1957,7 +1958,6 @@ button:disabled {
   background-image: none !important;
   color: #c7c2b8 !important;
   font-weight: 700;
-  font-size: 1.3rem !important;
   box-shadow:
     0 8px 20px rgba(0, 0, 0, 0.35),
     inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
@@ -1968,7 +1968,12 @@ button:disabled {
   transition: color 120ms ease;
 }
 
-[data-feature-guide-launcher-button]::before {
+[data-feature-guide-launcher-button] {
+  font-size: 1.3rem !important;
+}
+
+[data-feature-guide-launcher-button]::before,
+[data-glass-control]::before {
   content: '' !important;
   pointer-events: none !important;
   position: absolute !important;
@@ -1982,17 +1987,35 @@ button:disabled {
     radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.45), transparent 30%) !important;
 }
 
-[data-feature-guide-launcher-button]::after {
+[data-feature-guide-launcher-button]::after,
+[data-glass-control]::after {
   display: none !important;
 }
 
-[data-feature-guide-launcher-button] svg {
+[data-feature-guide-launcher-button] svg,
+[data-glass-control] svg {
   position: relative;
   filter: drop-shadow(0 1px 2px rgba(20, 16, 10, 0.4));
 }
 
 [data-feature-guide-launcher-button]:hover {
   color: #e4dfd4 !important;
+}
+
+/* Same glass material as the launcher button, plus toggle-state coloring
+   for the deck viewer's like/save/share row: white by default, and a
+   distinct color once the viewer has liked/saved so the state reads at a
+   glance. */
+[data-glass-control][data-action-state='idle'] {
+  color: #ffffff !important;
+}
+
+[data-glass-control][data-action-state='liked'] {
+  color: #f87171 !important;
+}
+
+[data-glass-control][data-action-state='saved'] {
+  color: #60a5fa !important;
 }
 
 

@@ -18,6 +18,7 @@ type DeckCardViewerProps = {
   title: string
   backHref: string
   featureGuides: FeatureGuideEntry[]
+  heroActions?: ReactNode
 }
 
 export default function DeckCardViewer({
@@ -25,6 +26,7 @@ export default function DeckCardViewer({
   title,
   backHref,
   featureGuides,
+  heroActions,
 }: DeckCardViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const swipeStartX = useRef<number | null>(null)
@@ -113,11 +115,14 @@ export default function DeckCardViewer({
         <span>&lt;</span>
       </Link>
 
-      <FeatureGuideLauncher
-        buttonClassName={styles.helpButton}
-        guides={featureGuides}
-        label="Show deck detail explanation"
-      />
+      <div className={styles.topRightGroup}>
+        {heroActions}
+        <FeatureGuideLauncher
+          buttonClassName={styles.helpButton}
+          guides={featureGuides}
+          label="Show deck detail explanation"
+        />
+      </div>
 
       <div
         className={styles.track}

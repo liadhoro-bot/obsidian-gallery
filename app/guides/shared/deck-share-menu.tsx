@@ -247,7 +247,9 @@ export default function DeckShareMenu({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label="Share guide"
-        className={`flex items-center rounded-full bg-black/50 font-semibold text-white/85 backdrop-blur-sm transition-colors hover:text-white ${buttonSizeClass} ${className}`}
+        data-glass-control="true"
+        data-action-state="idle"
+        className={`flex h-10 items-center rounded-full font-semibold transition-colors ${buttonSizeClass} ${className}`}
       >
         <ShareIcon size={iconSize} />
       </button>
