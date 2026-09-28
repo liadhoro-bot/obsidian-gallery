@@ -19,7 +19,7 @@ export default async function GuidesPage() {
 
   const [payload, featureGuides] = await perf.measure('v3 guides data', () =>
     Promise.all([
-      getGuidesV3Payload(user.id),
+      getGuidesV3Payload(user.id, 'library'),
       getFeatureGuidesForPage('/guides', guidesFeatureGuides),
     ])
   )

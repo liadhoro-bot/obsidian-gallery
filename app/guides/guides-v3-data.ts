@@ -69,6 +69,8 @@ export type GuidesV3Payload = {
   savedDeckIds: string[]
 }
 
+export type GuidesV3Tab = 'library' | 'guides' | 'decks'
+
 type RecipeRow = {
   id: string
   name: string | null
@@ -485,17 +487,22 @@ function toGuideFile(
   }
 }
 
-export const getGuidesV3Payload = cache(async (userId: string) => {
+export const getGuidesV3Payload = cache(async (
+  userId: string,
+  tab: GuidesV3Tab | 'all' = 'all'
+) => {
   const supabase = await createClient()
 
   const [myRecipesResult, savedRowsResult, publicGuidesResult, myGuidesResult] =
     await Promise.all([
-      selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, created_at, user_id', selection => supabase
-        .from('recipes')
-        .select(selection)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(deckLimit).returns<RecipeRow[]>()),
+      tab === 'decks' || tab === 'all'
+        ? selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, created_at, user_id', selection => supabase
+          .from('recipes')
+          .select(selection)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(deckLimit).returns<RecipeRow[]>())
+        : Promise.resolve({ data: [] as RecipeRow[], error: null }),
       selectDifficultyCompatible(`
           recipe_id,
           recipes (
@@ -517,19 +524,23 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
       // or has a public member deck", so this is effectively "every guide
       // with at least one public deck, plus my own (possibly private)
       // guides" - the isGuidePublic() filter below removes the latter.
-      selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
-        .from('guides')
-        .select(selection)
-        .order('created_at', { ascending: false })
-        .limit(publicDeckLimit).returns<GuideRow[]>()),
+      tab === 'library' || tab === 'all'
+        ? selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
+          .from('guides')
+          .select(selection)
+          .order('created_at', { ascending: false })
+          .limit(publicDeckLimit).returns<GuideRow[]>())
+        : Promise.resolve({ data: [] as GuideRow[], error: null }),
       // My Guides: guides I own (draft/private/public alike, per RLS's
       // "own" clause).
-      selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
-        .from('guides')
-        .select(selection)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(deckLimit).returns<GuideRow[]>()),
+      tab === 'guides' || tab === 'all'
+        ? selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
+          .from('guides')
+          .select(selection)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(deckLimit).returns<GuideRow[]>())
+        : Promise.resolve({ data: [] as GuideRow[], error: null }),
     ])
 
   if (myRecipesResult.error) throw new Error(myRecipesResult.error.message)
@@ -558,7 +569,7 @@ export const getGuidesV3Payload = cache(async (userId: string) => {
   // ids, per PostgREST's embedded-filter semantics.
   const savedRecipeIdList = Array.from(savedRecipeIds)
   const savedGuidesResult =
-    savedRecipeIdList.length > 0
+    (tab === 'guides' || tab === 'all') && savedRecipeIdList.length > 0
       ? await selectDifficultyCompatible(`
             id,
             user_id,

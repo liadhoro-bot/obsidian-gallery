@@ -15,6 +15,7 @@ import type {
   GuidesV3Deck,
   GuidesV3GuideFile,
   GuidesV3Payload,
+  GuidesV3Tab,
 } from './guides-v3-data'
 import type { GuidesV3DeckDetail } from './guides-v3-detail-data'
 import DeckEditorClient, {
@@ -396,7 +397,7 @@ const libraryTags = [
   'Weathering',
 ]
 
-const LIBRARY_PAGE_SIZE = 9
+const GUIDES_PAGE_SIZE = 8
 
 type GuideSortMode = 'name-asc' | 'name-desc' | 'popularity' | 'new-old' | 'old-new'
 type GuideViewMode = 'card' | 'grid'
@@ -763,25 +764,32 @@ export default function GuidesV3Preview({
   initialPayload,
 }: GuidesV3PreviewProps) {
   const seedGuideFiles: GuideFile[] =
-    initialPayload?.guideFiles.length
-      ? initialPayload.guideFiles
-      : initialGuideFiles
+    initialPayload ? initialPayload.guideFiles : initialGuideFiles
   const seedDecks: Deck[] =
-    initialPayload?.decks.length ? initialPayload.decks : initialDecks
+    initialPayload ? initialPayload.decks : initialDecks
   const seedLibraryGuides =
-    initialPayload?.libraryGuides.length
-      ? initialPayload.libraryGuides
-      : publicGuideFiles
+    initialPayload ? initialPayload.libraryGuides : publicGuideFiles
   const [activeTab, setActiveTab] = useState<GuideTab>('library')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks, setDecks] = useState<Deck[]>(seedDecks)
+  const [libraryGuides, setLibraryGuides] = useState(seedLibraryGuides)
+  const [loadedTabs, setLoadedTabs] = useState<Set<GuidesV3Tab>>(
+    () => new Set(['library'])
+  )
+  const [loadingTabs, setLoadingTabs] = useState<Set<GuidesV3Tab>>(
+    () => new Set()
+  )
+  const [tabErrors, setTabErrors] = useState<Partial<Record<GuidesV3Tab, string>>>({})
+  const tabLoadPromises = useRef(new Map<GuidesV3Tab, Promise<void>>())
   const [query, setQuery] = useState('')
   const [librarySortMode, setLibrarySortMode] = useState<GuideSortMode>('new-old')
-  const [libraryVisibleCount, setLibraryVisibleCount] = useState(LIBRARY_PAGE_SIZE)
+  const [libraryVisibleCount, setLibraryVisibleCount] = useState(GUIDES_PAGE_SIZE)
   const [guidesQuery, setGuidesQuery] = useState('')
   const [guidesSortMode, setGuidesSortMode] = useState<GuideSortMode>('new-old')
+  const [guidesVisibleCount, setGuidesVisibleCount] = useState(GUIDES_PAGE_SIZE)
   const [decksQuery, setDecksQuery] = useState('')
   const [decksSortMode, setDecksSortMode] = useState<GuideSortMode>('new-old')
+  const [decksVisibleCount, setDecksVisibleCount] = useState(GUIDES_PAGE_SIZE)
   const [guidesViewMode, setGuidesViewMode] = useState<GuideViewMode>('card')
   const [decksViewMode, setDecksViewMode] = useState<GuideViewMode>('card')
   const [libraryViewMode, setLibraryViewMode] = useState<GuideViewMode>('card')
@@ -827,7 +835,7 @@ export default function GuidesV3Preview({
   }, [])
 
   const normalizedQuery = query.trim().toLowerCase()
-  const filteredLibraryGuides = seedLibraryGuides.filter((guide) =>
+  const filteredLibraryGuides = libraryGuides.filter((guide) =>
     `${guide.title} ${guide.subtitle} ${guide.level}`
       .toLowerCase()
       .includes(normalizedQuery)
@@ -841,12 +849,16 @@ export default function GuidesV3Preview({
     `${guide.title} ${guide.subtitle}`.toLowerCase().includes(normalizedGuidesQuery)
   )
   const sortedGuideFiles = sortGuideFiles(filteredGuideFiles, guidesSortMode)
+  const visibleGuideFiles = sortedGuideFiles.slice(0, guidesVisibleCount)
+  const hasMoreGuideFiles = sortedGuideFiles.length > guidesVisibleCount
 
   const normalizedDecksTabQuery = decksQuery.trim().toLowerCase()
   const filteredDecksTabDecks = decks.filter((deck) =>
     `${deck.title} ${deck.category}`.toLowerCase().includes(normalizedDecksTabQuery)
   )
   const sortedDecksTabDecks = sortDecks(filteredDecksTabDecks, decksSortMode)
+  const visibleDecks = sortedDecksTabDecks.slice(0, decksVisibleCount)
+  const hasMoreDecks = sortedDecksTabDecks.length > decksVisibleCount
 
   const normalizedGuideDeckSearch = guideDeckSearch.trim().toLowerCase()
   const filteredCollectionDecks = decks.filter((deck) =>
@@ -880,9 +892,60 @@ export default function GuidesV3Preview({
     forgeScreen === 'build' &&
     (forgeMode === 'deck' || sourceKind === 'blank' || sourceKind === 'scratch')
 
+  function loadTab(tab: GuidesV3Tab, force = false) {
+    if (!force && loadedTabs.has(tab)) return Promise.resolve()
+
+    const existing = tabLoadPromises.current.get(tab)
+    if (existing) return existing
+
+    setLoadingTabs((current) => new Set(current).add(tab))
+    setTabErrors((current) => ({ ...current, [tab]: undefined }))
+
+    const request = fetch(`/api/guides/v3-tab?tab=${tab}`, {
+      cache: 'no-store',
+    })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as
+          | (GuidesV3Payload & { error?: string })
+          | null
+        if (!response.ok || !payload) {
+          throw new Error(payload?.error || 'Could not load this tab.')
+        }
+
+        if (tab === 'library') setLibraryGuides(payload.libraryGuides)
+        if (tab === 'guides') setGuideFiles(payload.guideFiles)
+        if (tab === 'decks') setDecks(payload.decks)
+        setLoadedTabs((current) => new Set(current).add(tab))
+      })
+      .catch((error) => {
+        setTabErrors((current) => ({
+          ...current,
+          [tab]: error instanceof Error ? error.message : 'Could not load this tab.',
+        }))
+        throw error
+      })
+      .finally(() => {
+        tabLoadPromises.current.delete(tab)
+        setLoadingTabs((current) => {
+          const next = new Set(current)
+          next.delete(tab)
+          return next
+        })
+      })
+
+    tabLoadPromises.current.set(tab, request)
+    return request
+  }
+
+  function selectTab(tab: GuideTab) {
+    setActiveTab(tab)
+    void loadTab(tab).catch(() => undefined)
+  }
+
   function openCreateChoice() {
     setActiveGuideIndex(null)
     setIsCreateChoiceOpen(true)
+    void loadTab('decks').catch(() => undefined)
   }
 
   function startFeatureTour() {
@@ -907,10 +970,16 @@ export default function GuidesV3Preview({
     )
   }
 
-  function startCreate(mode: ForgeMode) {
+  async function startCreate(mode: ForgeMode) {
     setForgeMode(mode)
     setIsCreateChoiceOpen(false)
     if (mode === 'guide') {
+      try {
+        await loadTab('decks')
+      } catch {
+        setIsCreateChoiceOpen(true)
+        return
+      }
       setSourceKind('unit')
       setSelectedGuideDeckIds(new Set())
       setGuideDeckSearch('')
@@ -1566,53 +1635,91 @@ export default function GuidesV3Preview({
           onHelpToggle={startFeatureTour}
         />
 
-        <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <Tabs activeTab={activeTab} onTabChange={selectTab} />
 
         {activeTab === 'guides' ? (
-          <GuidesTab
-            guideFiles={sortedGuideFiles}
+          <TabLoadBoundary
+            error={tabErrors.guides}
+            isLoading={loadingTabs.has('guides')}
+            onRetry={() => void loadTab('guides', true).catch(() => undefined)}
+          >
+            <GuidesTab
+            guideFiles={visibleGuideFiles}
             onOpenDraft={editDraftGuide}
             query={guidesQuery}
-            onQueryChange={setGuidesQuery}
+            onQueryChange={(value) => {
+              setGuidesQuery(value)
+              setGuidesVisibleCount(GUIDES_PAGE_SIZE)
+            }}
             sortMode={guidesSortMode}
-            onSortChange={setGuidesSortMode}
+            onSortChange={(mode) => {
+              setGuidesSortMode(mode)
+              setGuidesVisibleCount(GUIDES_PAGE_SIZE)
+            }}
             viewMode={guidesViewMode}
             onViewModeChange={setGuidesViewMode}
+            hasMore={hasMoreGuideFiles}
+            onLoadMore={() =>
+              setGuidesVisibleCount((count) => count + GUIDES_PAGE_SIZE)
+            }
           />
+          </TabLoadBoundary>
         ) : null}
         {activeTab === 'decks' ? (
-          <DecksTab
-            decks={sortedDecksTabDecks}
+          <TabLoadBoundary
+            error={tabErrors.decks}
+            isLoading={loadingTabs.has('decks')}
+            onRetry={() => void loadTab('decks', true).catch(() => undefined)}
+          >
+            <DecksTab
+            decks={visibleDecks}
             onAddDeck={openCreateChoice}
             onEditDraftDeck={editDraftDeck}
             query={decksQuery}
-            onQueryChange={setDecksQuery}
+            onQueryChange={(value) => {
+              setDecksQuery(value)
+              setDecksVisibleCount(GUIDES_PAGE_SIZE)
+            }}
             sortMode={decksSortMode}
-            onSortChange={setDecksSortMode}
+            onSortChange={(mode) => {
+              setDecksSortMode(mode)
+              setDecksVisibleCount(GUIDES_PAGE_SIZE)
+            }}
             viewMode={decksViewMode}
             onViewModeChange={setDecksViewMode}
+            hasMore={hasMoreDecks}
+            onLoadMore={() =>
+              setDecksVisibleCount((count) => count + GUIDES_PAGE_SIZE)
+            }
           />
+          </TabLoadBoundary>
         ) : null}
         {activeTab === 'library' ? (
+          <TabLoadBoundary
+            error={tabErrors.library}
+            isLoading={loadingTabs.has('library')}
+            onRetry={() => void loadTab('library', true).catch(() => undefined)}
+          >
           <LibraryTab
             query={query}
             onQueryChange={(value) => {
               setQuery(value)
-              setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
+              setLibraryVisibleCount(GUIDES_PAGE_SIZE)
             }}
             guides={visibleLibraryGuides}
             hasMore={hasMoreLibraryGuides}
             onLoadMore={() =>
-              setLibraryVisibleCount((count) => count + LIBRARY_PAGE_SIZE)
+              setLibraryVisibleCount((count) => count + GUIDES_PAGE_SIZE)
             }
             viewMode={libraryViewMode}
             onViewModeChange={setLibraryViewMode}
             sortMode={librarySortMode}
             onSortChange={(mode) => {
               setLibrarySortMode(mode)
-              setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
+              setLibraryVisibleCount(GUIDES_PAGE_SIZE)
             }}
           />
+          </TabLoadBoundary>
         ) : null}
       </div>
 
@@ -3314,6 +3421,8 @@ function Tabs({
 
 function GuidesTab({
   guideFiles,
+  hasMore,
+  onLoadMore,
   onOpenDraft,
   query,
   onQueryChange,
@@ -3323,6 +3432,8 @@ function GuidesTab({
   onViewModeChange,
 }: {
   guideFiles: GuideFile[]
+  hasMore: boolean
+  onLoadMore: () => void
   onOpenDraft: (guide: GuideFile) => void
   query: string
   onQueryChange: (query: string) => void
@@ -3381,12 +3492,15 @@ function GuidesTab({
           text="Create a guide by choosing decks from your collection."
         />
       )}
+      {hasMore ? <LoadMoreButton onClick={onLoadMore} /> : null}
     </section>
   )
 }
 
 function DecksTab({
   decks,
+  hasMore,
+  onLoadMore,
   onAddDeck,
   onEditDraftDeck,
   query,
@@ -3397,6 +3511,8 @@ function DecksTab({
   onViewModeChange,
 }: {
   decks: Deck[]
+  hasMore: boolean
+  onLoadMore: () => void
   onAddDeck: () => void
   onEditDraftDeck: (deck: Deck) => void
   query: string
@@ -3472,6 +3588,7 @@ function DecksTab({
           </div>
         </section>
       )}
+      {hasMore ? <LoadMoreButton onClick={onLoadMore} /> : null}
     </section>
   )
 }
@@ -3537,17 +3654,65 @@ function LibraryTab({
         </LibrarySection>
       )}
       {hasMore ? (
-        <button
-          type="button"
-          onClick={onLoadMore}
-          data-v3-guides-indicator="library-load-more"
-          className="rounded-[8px] py-3 text-xs font-black transition"
-        >
-          Load More
-        </button>
+        <LoadMoreButton onClick={onLoadMore} />
       ) : null}
     </section>
   )
+}
+
+function LoadMoreButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-v3-guides-indicator="library-load-more"
+      className="rounded-[8px] py-3 text-xs font-black transition"
+    >
+      Load More
+    </button>
+  )
+}
+
+function TabLoadBoundary({
+  children,
+  error,
+  isLoading,
+  onRetry,
+}: {
+  children: ReactNode
+  error?: string
+  isLoading: boolean
+  onRetry: () => void
+}) {
+  if (isLoading) {
+    return (
+      <div className="grid gap-3" aria-label="Loading guides">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-28 animate-pulse rounded-[8px] border border-white/[0.06] bg-white/[0.045]"
+          />
+        ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="grid gap-3 rounded-[8px] border border-white/[0.06] bg-[#111821] p-4 text-center">
+        <p className="text-sm text-white/65">{error}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="rounded-[8px] py-2 text-xs font-black text-cyan-300"
+        >
+          Try Again
+        </button>
+      </section>
+    )
+  }
+
+  return children
 }
 
 function GuideSearchSortBar({
