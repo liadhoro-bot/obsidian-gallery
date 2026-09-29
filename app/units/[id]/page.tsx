@@ -383,9 +383,9 @@ async function getUnitV3PreviewUnit(
         .eq('entity_type', 'unit')
         .eq('entity_id', id)
         .eq('user_id', userId)
-        .order('is_featured', { ascending: false })
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: false }),
+        // Manual gallery order (drag to reorder); ties fall back to upload order.
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true }),
       supabase
         .from('unit_projects')
         .select(
@@ -594,6 +594,7 @@ async function getUnitV3PreviewUnit(
     name: unit.name || 'Untitled Unit',
     notes: unit.notes,
     label: unit.is_featured ? 'Featured' : status,
+    isFeatured: unit.is_featured === true,
     image: featuredImage?.image ?? '/onboarding/first-project-bg.jpeg',
     galleryImages,
     project: projectName,
@@ -640,8 +641,8 @@ async function getUnitV3PreviewUnit(
       projectTheme?.theme_paints
         ?.slice()
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        .slice(0, 5)
         .map((paint) => ({
+          themePaintId: paint.id,
           id:
             paint.paint_source === 'custom'
               ? paint.custom_paint_id || paint.id

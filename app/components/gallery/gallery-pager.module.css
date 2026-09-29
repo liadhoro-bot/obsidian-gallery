@@ -1,0 +1,81 @@
+/* Chained selectors: page stylesheets (unit V3) restyle buttons/spans. */
+
+.pager {
+  margin-top: 12px;
+}
+
+.pager .controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.pager .controls .pagerButton {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-round);
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  box-shadow: none;
+  color: var(--og-text-primary);
+  padding: 0;
+}
+
+.pager .controls .pagerButton:disabled {
+  opacity: 0.35;
+}
+
+.pager .pagerButton .icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pager .controls .dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pager .dots .dot {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.pager .dots .dot::after {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-brass-700) 38%, transparent);
+  content: "";
+  transition:
+    width 140ms ease,
+    background-color 140ms ease;
+}
+
+.pager .dots .dot[aria-current="page"]::after {
+  width: 16px;
+  background: var(--og-brass-500);
+}
+
+.pager .controls .count {
+  min-width: 48px;
+  color: var(--og-text-muted);
+  font: 800 12px/1 var(--og-font-ui);
+  text-align: center;
+}

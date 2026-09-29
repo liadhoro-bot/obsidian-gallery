@@ -1,0 +1,281 @@
+/*
+ * Palette card shared by the unit and project pages. Selectors chain under
+ * .palette for the same reason as the gallery (see
+ * app/components/gallery/workbench-gallery.module.css): the unit page's
+ * silver stylesheet restyles buttons/spans inside its tab content.
+ */
+
+.palette .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.palette .header .title {
+  margin: 0;
+  color: var(--og-brass-500);
+  font: 800 0.66rem/1.2 var(--og-font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.palette .header .count {
+  margin-inline-start: 6px;
+  color: var(--og-text-muted);
+  font: 700 0.66rem/1.2 var(--og-font-ui);
+  letter-spacing: 0.08em;
+}
+
+.palette .header .addButton {
+  min-height: 34px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  box-shadow: none;
+  color: var(--og-ink-950);
+  padding: 0 12px;
+  font: 800 11px/1.1 var(--og-font-ui);
+  white-space: nowrap;
+}
+
+.palette .header .addButton:disabled {
+  opacity: 0.6;
+}
+
+.palette .header .headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.palette .header .modeButton {
+  min-height: 34px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  box-shadow: none;
+  color: var(--og-text-primary);
+  padding: 0 11px;
+  font: 800 11px/1.1 var(--og-font-ui);
+  white-space: nowrap;
+}
+
+.palette .header .modeButton[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--og-brass-500) 80%, var(--og-walnut-700));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  color: var(--og-paper-50);
+}
+
+.palette .header .modeButton:disabled {
+  opacity: 0.5;
+}
+
+.palette .modeHint {
+  margin: 8px 0 0;
+  color: var(--og-text-muted);
+  font: 700 12px/1.3 var(--og-font-ui);
+}
+
+/* Move mode: the finger drags the paint instead of scrolling the page. */
+.palette .grid[data-mode="move"] .cell {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.palette .grid[data-mode="move"] .cell .swatchButton {
+  cursor: grab;
+  animation: paletteWiggle 1.4s ease-in-out infinite;
+}
+
+.palette .grid .cellDragging {
+  z-index: 3;
+  cursor: grabbing;
+}
+
+.palette .grid[data-mode="move"] .cellDragging .swatchButton {
+  animation: none;
+  transform: scale(1.1);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--og-walnut-950) 42%, transparent);
+}
+
+.palette .cell .swatchButton {
+  position: relative;
+}
+
+.palette .cell .moveGrip {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--og-ink-950) 26%, transparent);
+  color: var(--og-paper-50);
+  pointer-events: none;
+}
+
+.palette .cell .moveGrip svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--og-ink-950) 70%, transparent));
+}
+
+@keyframes paletteWiggle {
+  0%,
+  100% {
+    transform: rotate(-1.2deg);
+  }
+  50% {
+    transform: rotate(1.2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .palette .grid[data-mode="move"] .cell .swatchButton {
+    animation: none;
+  }
+}
+
+.palette .emptyText {
+  margin: 10px 0 0;
+  color: var(--og-text-muted);
+  font: 600 13px/1.4 var(--og-font-ui);
+}
+
+.palette .grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px 8px;
+  margin-top: 14px;
+}
+
+.palette .grid .cell {
+  position: relative;
+  min-width: 0;
+}
+
+.palette .cell .swatchButton {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 52%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-walnut-950);
+  background-image: none;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--og-walnut-950) 30%, transparent);
+  padding: 0;
+}
+
+.palette .cell .swatchButton:disabled {
+  opacity: 0.6;
+}
+
+.palette .cell .swatchButton img,
+.palette .cell .swatchButton .swatchColor {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.palette .cell .removeButton {
+  position: absolute;
+  right: -6px;
+  top: -6px;
+  z-index: 2;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-ink-950));
+  border-radius: 999px;
+  background: var(--og-walnut-950);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--og-ink-950) 40%, transparent);
+  color: var(--og-paper-50);
+  padding: 0;
+  font: 800 12px/1 var(--og-font-ui);
+}
+
+.palette .cell .removeButton .removeGlyph {
+  color: var(--og-paper-50);
+}
+
+.palette .cell .brand {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--og-brass-700);
+  font: 800 8px/1.2 var(--og-font-ui);
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.palette .cell .name {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--og-text-primary);
+  font: 800 9px/1.2 var(--og-font-ui);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette .magic {
+  margin-top: 12px;
+}
+
+.palette .magic .magicButton {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  box-shadow: none;
+  color: var(--og-text-primary);
+  padding: 0 14px;
+  font: 800 12px/1.1 var(--og-font-ui);
+}
+
+/* SubmitButton wraps its label in spans, which page styles may recolor. */
+.palette .magic .magicButton span {
+  color: inherit;
+}
+
+.palette .magic .magicButton:disabled {
+  opacity: 0.6;
+}
+
+.palette .error {
+  margin: 10px 0 0;
+  color: var(--og-status-danger);
+  font: 700 12px/1.35 var(--og-font-ui);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

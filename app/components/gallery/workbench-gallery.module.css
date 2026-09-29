@@ -1,0 +1,398 @@
+/*
+ * Gallery panel shared by the unit and project pages. Mirrors the deck
+ * editor gallery (app/guides/decks/[id]/deck-editor-client.module.css).
+ *
+ * Rules are chained under .gallery (two or three classes deep) because the
+ * unit page's silver stylesheet styles every button/span/h2 inside its tab
+ * content and edit sheet; the extra specificity keeps this panel looking
+ * the same wherever it is mounted. The header is a <header>, not a <div>,
+ * so the unit page's "section > div:first-child button" rule never matches.
+ */
+
+.gallery {
+  padding: 14px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 300px auto, 100% 100%;
+  box-shadow: var(--og-shadow-constructed-panel);
+  color: var(--og-text-primary);
+  font-family: var(--og-font-ui);
+}
+
+.gallery .header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.gallery .header .title {
+  margin: 0;
+  color: var(--og-text-primary);
+  font: 600 26px/1 var(--og-font-display);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.gallery .header .subtitle {
+  margin: 5px 0 0;
+  color: var(--og-text-muted);
+  font: 600 13px/1.25 var(--og-font-ui);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.gallery .actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.gallery .addImageMenu {
+  position: relative;
+}
+
+.gallery .actions .editToggle,
+.gallery .selectionBar .selectionButton {
+  min-height: 36px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  box-shadow: none;
+  color: var(--og-text-primary);
+  padding: 0 12px;
+  font: 800 11px/1.1 var(--og-font-ui);
+  white-space: nowrap;
+}
+
+.gallery .actions .addImageButton {
+  min-height: 36px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  box-shadow: none;
+  color: var(--og-ink-950);
+  padding: 0 12px;
+  font: 800 11px/1.1 var(--og-font-ui);
+  white-space: nowrap;
+}
+
+.gallery .addImageMenu .addImageBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.gallery .addImageMenu .addImageChoices {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+  display: grid;
+  width: 168px;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-paper-card);
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.gallery .addImageChoices .addImageChoice {
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--og-text-primary);
+  padding: 0 12px;
+  font: 800 12px/1.1 var(--og-font-ui);
+  text-align: left;
+}
+
+.gallery .addImageChoices .addImageChoice + .addImageChoice {
+  border-top: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 30%, var(--og-border-subtle));
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.gallery .selectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 38%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: color-mix(in srgb, var(--og-paper-50) 30%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  padding: 10px;
+}
+
+.gallery .selectionBar .selectionCount {
+  color: var(--og-text-muted);
+  font: 800 11px/1.2 var(--og-font-ui);
+  text-transform: uppercase;
+}
+
+.gallery .selectionBar .selectionButtons {
+  display: flex;
+  gap: 7px;
+}
+
+.gallery .selectionBar .selectionButton.deleteButton {
+  border-color: color-mix(in srgb, var(--og-status-danger) 64%, var(--og-brass-700));
+  background: color-mix(in srgb, var(--og-status-danger) 72%, var(--og-ink-950));
+  color: var(--og-paper-50);
+}
+
+.gallery .message {
+  margin: 10px 0 0;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-status-danger) 48%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background: color-mix(in srgb, var(--og-status-danger) 10%, var(--og-surface-primary));
+  color: color-mix(in srgb, var(--og-status-danger) 78%, var(--og-ink-950));
+  padding: 9px 11px;
+  font: 700 12px/1.35 var(--og-font-ui);
+}
+
+.gallery .grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.gallery .tile {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 44%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-photo-mount);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.gallery .tileDragging {
+  opacity: 0.58;
+  transform: scale(0.965);
+  box-shadow: 0 16px 28px color-mix(in srgb, var(--og-walnut-950) 26%, transparent);
+}
+
+.gallery .dropBefore::before,
+.gallery .dropAfter::after {
+  position: absolute;
+  inset-block: 10px;
+  z-index: 4;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--og-brass-500);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--og-brass-500) 18%, transparent);
+  content: "";
+}
+
+.gallery .dropBefore::before {
+  left: -7px;
+}
+
+.gallery .dropAfter::after {
+  right: -7px;
+}
+
+.gallery .tile .imageButton,
+.gallery .grid .uploadTile {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-walnut-950);
+  background-image: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.gallery .tile .imageButton {
+  cursor: zoom-in;
+}
+
+.gallery .tile .imageButton img {
+  object-fit: cover;
+}
+
+.gallery .tile .imageButton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--og-ink-950) 34%, transparent));
+  content: "";
+}
+
+.gallery .tile .pendingVeil {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border-radius: var(--og-radius-m);
+  background: color-mix(in srgb, var(--og-ink-950) 52%, transparent);
+  color: var(--og-paper-50);
+  font: 800 10px/1 var(--og-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.gallery .grid .uploadTile {
+  display: grid;
+  place-items: center;
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--og-brass-700) 48%, var(--og-border-subtle));
+  background-color: color-mix(in srgb, var(--og-paper-50) 28%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-muted);
+  font: 800 12px/1.2 var(--og-font-ui);
+}
+
+.gallery .tile .checkbox {
+  position: absolute;
+  right: 7px;
+  top: 7px;
+  z-index: 6;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-ink-950) 74%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--og-paper-50) 18%, transparent);
+}
+
+.gallery .tile .checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--og-status-danger);
+}
+
+.gallery .tile .heroBadge,
+.gallery .tile .makeHeroButton {
+  position: absolute;
+  left: 7px;
+  bottom: 7px;
+  z-index: 5;
+  min-height: 26px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-500) 44%, transparent);
+  border-radius: var(--og-radius-round);
+  background: color-mix(in srgb, var(--og-ink-950) 74%, transparent);
+  box-shadow: none;
+  color: var(--og-paper-50);
+  padding: 0 8px;
+  font: 800 10px/1 var(--og-font-ui);
+}
+
+.gallery .tile .heroBadge {
+  border-color: color-mix(in srgb, var(--og-brass-500) 82%, transparent);
+  color: var(--og-brass-300, var(--og-paper-50));
+}
+
+.gallery .tile .makeHeroButton {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.gallery .tile:focus-within .makeHeroButton,
+.gallery .tile:hover .makeHeroButton {
+  opacity: 1;
+}
+
+/* Touch screens have no hover: keep the "set as hero" control reachable. */
+@media (hover: none) {
+  .gallery .tile .makeHeroButton {
+    opacity: 0.86;
+  }
+}
+
+.gallery .empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--og-text-muted);
+  font: 600 13px/1.35 var(--og-font-ui);
+}
+
+/* Portaled to <body>, outside any page stylesheet. */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--og-ink-950) 92%, black);
+  padding: 12px;
+}
+
+.lightboxClose {
+  position: fixed;
+  right: 16px;
+  top: max(16px, env(safe-area-inset-top));
+  z-index: 2;
+  min-height: 38px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-ink-950));
+  border-radius: var(--og-radius-round);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  color: var(--og-brass-500);
+  padding: 0 14px;
+  font: 800 12px/1 var(--og-font-ui);
+}
+
+.lightboxTools {
+  position: fixed;
+  left: 16px;
+  top: max(16px, env(safe-area-inset-top));
+  z-index: 2;
+}
+
+.lightboxImage {
+  display: grid;
+  width: min(100%, 1100px);
+  height: min(88dvh, 1100px);
+  place-items: center;
+}
+
+.lightboxImage img {
+  max-width: 100%;
+  /* A % max-height doesn't resolve inside the auto grid track. */
+  max-height: min(88dvh, 1100px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 620px) {
+  .gallery .header {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery .actions {
+    justify-content: flex-start;
+  }
+}

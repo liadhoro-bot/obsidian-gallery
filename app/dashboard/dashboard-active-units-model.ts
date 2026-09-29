@@ -1,5 +1,6 @@
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import type {
+  DashboardFeaturedProject,
   DashboardFeedUnit,
   DashboardNextActionsState,
   DashboardPaintingTableFeed,
@@ -45,6 +46,9 @@ export type DashboardActiveUnitsNextActionsViewModel = {
 }
 
 export type DashboardFeaturedUnitViewModel = {
+  // The hero card features either a unit or a whole project.
+  kind?: 'unit' | 'project'
+  href?: string
   id: string
   name: string
   descriptor: string
@@ -229,6 +233,8 @@ function mapFeaturedUnit(
   const progress = clampProgress(unit.progress_percent)
 
   return {
+    kind: 'unit',
+    href: `/units/${unit.unit_id}`,
     id: unit.unit_id,
     name: unit.name,
     descriptor: getDescriptor(unit),
@@ -255,18 +261,57 @@ function mapActiveUnit(unit: DashboardFeedUnit): DashboardActiveUnitCardViewMode
   }
 }
 
+function mapFeaturedProject(
+  project: DashboardFeaturedProject,
+  feedUnits: DashboardFeedUnit[]
+): DashboardFeaturedUnitViewModel {
+  const projectUnitIds = new Set(project.unitIds)
+  const units = feedUnits.filter((unit) => projectUnitIds.has(unit.unit_id))
+  const progress = units.length
+    ? clampProgress(
+        units.reduce((sum, unit) => sum + clampProgress(unit.progress_percent), 0) /
+          units.length
+      )
+    : 0
+  const completeCount = units.filter((unit) => unit.status === 'complete').length
+  const imageUrl =
+    project.imageUrl ??
+    units.find((unit) => unit.primary_image_url)?.primary_image_url ??
+    null
+
+  return {
+    kind: 'project',
+    href: `/projects/${project.id}`,
+    id: project.id,
+    name: project.name,
+    descriptor: units.length
+      ? `${units.length} ${units.length === 1 ? 'unit' : 'units'}`
+      : 'No units yet',
+    imageUrl: mapUnitImage(imageUrl, 640),
+    progress,
+    progressLabel: 'Project Progress',
+    stageLabel: `${completeCount} of ${units.length} complete`,
+    statusLabel: 'Project',
+  }
+}
+
 export function createDashboardActiveUnitsViewModel({
   feed,
   nextActions,
+  featuredProject = null,
 }: {
   feed: DashboardPaintingTableFeed
   nextActions: DashboardNextActionsState | null
+  featuredProject?: DashboardFeaturedProject | null
 }): DashboardActiveUnitsViewModel {
-  const featuredUnit = mapFeaturedUnit(feed.heroUnit)
+  const heroUnit = mapFeaturedUnit(feed.heroUnit)
 
   return {
-    nextActions: mapNextActions(nextActions, featuredUnit),
-    featuredUnit,
+    // "Resume painting" always needs a unit, even when a project is featured.
+    nextActions: mapNextActions(nextActions, heroUnit),
+    featuredUnit: featuredProject
+      ? mapFeaturedProject(featuredProject, feed.units)
+      : heroUnit,
     units: feed.units.map(mapActiveUnit),
   }
 }

@@ -425,7 +425,7 @@ async function uploadProjectImage(formData: FormData) {
 
   const { data: existingImages } = await supabase
     .from('image_assets')
-    .select('id')
+    .select('id, sort_order')
     .eq('entity_type', 'project')
     .eq('entity_id', projectId)
     .eq('user_id', user.id)
@@ -433,8 +433,15 @@ async function uploadProjectImage(formData: FormData) {
   const result: GalleryUploadResult = {
     uploadedCount: 0,
     failed: [],
+    uploadedImages: [],
   }
   const hasExistingImages = Boolean(existingImages && existingImages.length > 0)
+  // New photos go to the end of the gallery's manual order.
+  let nextSortOrder =
+    (existingImages ?? []).reduce(
+      (max, image) => Math.max(max, image.sort_order ?? -1),
+      -1
+    ) + 1
 
   for (const file of files) {
     const validationError = validateGalleryImageFile(file)
@@ -479,8 +486,9 @@ async function uploadProjectImage(formData: FormData) {
 
     const isFirstImage = !hasExistingImages && result.uploadedCount === 0
 
-    const { error: insertError } = await supabase.from('image_assets').insert([
-      {
+    const { data: imageAsset, error: insertError } = await supabase
+      .from('image_assets')
+      .insert({
         user_id: user.id,
         entity_type: 'project',
         entity_id: projectId,
@@ -488,10 +496,14 @@ async function uploadProjectImage(formData: FormData) {
         alt_text: altText,
         is_featured: isFirstImage,
         is_primary: isFirstImage,
+        sort_order: nextSortOrder++,
         storage_bucket: 'obsidian-images',
         storage_path: filePath,
-      },
-    ])
+      })
+      .select(
+        'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path'
+      )
+      .single()
 
     if (insertError) {
       console.error('Error saving project image asset:', insertError)
@@ -501,6 +513,9 @@ async function uploadProjectImage(formData: FormData) {
     }
 
     result.uploadedCount += 1
+    if (imageAsset) {
+      result.uploadedImages?.push(imageAsset)
+    }
 
     await captureServerEvent({
       distinctId: user.id,
@@ -556,7 +571,7 @@ async function setFeaturedProjectImage(formData: FormData) {
 
   if (clearError) {
     console.error('Error clearing project featured image:', clearError)
-    return
+    throw new Error('Could not update the hero image.')
   }
 
   const { error: setError } = await supabase
@@ -572,7 +587,7 @@ async function setFeaturedProjectImage(formData: FormData) {
 
   if (setError) {
     console.error('Error setting project featured image:', setError)
-    return
+    throw new Error('Could not update the hero image.')
   }
 
   revalidatePath(`/projects/${projectId}`)
@@ -582,10 +597,13 @@ async function deleteProjectImage(formData: FormData) {
   'use server'
 
   const supabase = await createClient()
-  const assetId = formData.get('assetId')?.toString()
+  const assetIds = formData
+    .getAll('assetId')
+    .map((value) => value.toString())
+    .filter(Boolean)
   const projectId = formData.get('projectId')?.toString()
 
-  if (!assetId || !projectId) return
+  if (assetIds.length === 0 || !projectId) return
 
   const user = await getSessionUser(supabase)
 
@@ -599,44 +617,54 @@ async function deleteProjectImage(formData: FormData) {
     throw new Error('Project not found')
   }
 
-  const { data: imageToDelete, error: fetchError } = await supabase
+  const { data: imagesToDelete, error: fetchError } = await supabase
     .from('image_assets')
     .select('id, is_featured, storage_bucket, storage_path')
-    .eq('id', assetId)
+    .in('id', assetIds)
     .eq('entity_type', 'project')
     .eq('entity_id', projectId)
     .eq('user_id', user.id)
-    .single()
 
-  if (fetchError || !imageToDelete) {
-    console.error('Error fetching project image:', fetchError)
-    return
+  if (fetchError || !imagesToDelete?.length) {
+    console.error('Error fetching project images:', fetchError)
+    throw new Error('Could not find those images.')
   }
 
-  const wasFeatured = !!imageToDelete.is_featured
+  const wasFeatured = imagesToDelete.some((image) => image.is_featured)
+  const storagePathsByBucket = imagesToDelete.reduce<Record<string, string[]>>(
+    (acc, image) => {
+      if (image.storage_bucket && image.storage_path) {
+        acc[image.storage_bucket] = acc[image.storage_bucket] || []
+        acc[image.storage_bucket].push(image.storage_path)
+      }
+      return acc
+    },
+    {}
+  )
 
-  if (imageToDelete.storage_bucket && imageToDelete.storage_path) {
-    const { error: storageError } = await supabase.storage
-      .from(imageToDelete.storage_bucket)
-      .remove([imageToDelete.storage_path])
+  for (const [bucket, paths] of Object.entries(storagePathsByBucket)) {
+    const { error: storageError } = await supabase.storage.from(bucket).remove(paths)
 
     if (storageError) {
-      console.error('Error deleting project image storage object:', storageError)
-      return
+      console.error('Error deleting project image storage objects:', storageError)
+      throw new Error('Could not delete images.')
     }
   }
 
   const { error: deleteError } = await supabase
     .from('image_assets')
     .delete()
-    .eq('id', assetId)
+    .in(
+      'id',
+      imagesToDelete.map((image) => image.id)
+    )
     .eq('entity_type', 'project')
     .eq('entity_id', projectId)
     .eq('user_id', user.id)
 
   if (deleteError) {
-    console.error('Error deleting project image:', deleteError)
-    return
+    console.error('Error deleting project images:', deleteError)
+    throw new Error('Could not delete images.')
   }
 
   if (wasFeatured) {
@@ -646,7 +674,9 @@ async function deleteProjectImage(formData: FormData) {
       .eq('entity_type', 'project')
       .eq('entity_id', projectId)
       .eq('user_id', user.id)
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: true })
+      .limit(1)
 
     const nextImage = remainingImages?.[0]
 
@@ -664,6 +694,50 @@ async function deleteProjectImage(formData: FormData) {
   revalidatePath(`/projects/${projectId}`)
 }
 
+async function reorderProjectImages(projectId: string, orderedAssetIds: string[]) {
+  'use server'
+
+  const supabase = await createClient()
+
+  const user = await getSessionUser(supabase)
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const assetIds = orderedAssetIds.filter(
+    (assetId) => typeof assetId === 'string' && assetId.length > 0
+  )
+
+  if (!projectId || assetIds.length === 0) return
+
+  const project = await getOwnedProject(supabase, projectId, user.id)
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
+
+  const results = await Promise.all(
+    assetIds.map((assetId, index) =>
+      supabase
+        .from('image_assets')
+        .update({ sort_order: index })
+        .eq('id', assetId)
+        .eq('entity_type', 'project')
+        .eq('entity_id', projectId)
+        .eq('user_id', user.id)
+    )
+  )
+
+  const failed = results.find((result) => result.error)
+  if (failed?.error) {
+    console.error('Error reordering project images:', failed.error)
+    throw new Error('Could not save the new image order.')
+  }
+
+  revalidatePath(`/projects/${projectId}`)
+}
+
 async function getProjectDetailData(args: {
   projectId: string
   userId: string
@@ -673,7 +747,7 @@ async function getProjectDetailData(args: {
   const { projectId, userId } = args
   // The image is independent of the unit/progress chain. Await both only when
   // assembling the final result, preserving the original rendered content.
-  const [data, featuredProjectImageResult] = await Promise.all([
+  const [data, featuredProjectImageResult, projectFeaturedResult] = await Promise.all([
     getProjectDetailBody({ ...args, supabase }),
     supabase
         .from('image_assets')
@@ -685,12 +759,22 @@ async function getProjectDetailData(args: {
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle(),
+    // Separate query so the page still loads before the projects.is_featured
+    // migration is applied (the error just reads as "not featured").
+    supabase
+      .from('projects')
+      .select('is_featured')
+      .eq('id', projectId)
+      .eq('user_id', userId)
+      .maybeSingle(),
   ])
   return {
     ...data,
     featuredProjectImage: data.project
       ? (featuredProjectImageResult.data as ProjectImage | null) ?? null
       : null,
+    isProjectFeatured:
+      !projectFeaturedResult.error && projectFeaturedResult.data?.is_featured === true,
   }
 }
 
@@ -772,12 +856,16 @@ async function getProjectDetailBody({
                   catalog_paint:paint_catalog (
                     id,
                     name,
+                    brand,
+                    line,
                     hex_approx,
                     swatch_image_url
                   ),
                   custom_paint:paints (
                     id,
                     name,
+                    manufacturer,
+                    series,
                     color_hex
                   )
                 )
@@ -792,6 +880,7 @@ async function getProjectDetailBody({
           .eq('entity_type', 'project')
           .eq('entity_id', projectId)
           .eq('user_id', userId)
+          .order('sort_order', { ascending: true, nullsFirst: false })
           .order('created_at', { ascending: true }),
         projectUnitIds.length > 0
           ? supabase
@@ -1000,6 +1089,7 @@ export default async function ProjectDetailPage({
           projectError={data.projectError}
           projectId={id}
           featuredProjectImage={data.featuredProjectImage}
+          isProjectFeatured={data.isProjectFeatured}
           projectImages={data.projectImages}
           projectUnitCount={data.projectUnitCount}
           projectTotalSessionSeconds={data.projectTotalSessionSeconds}
@@ -1016,6 +1106,7 @@ export default async function ProjectDetailPage({
           uploadProjectImageAction={uploadProjectImage}
           setFeaturedProjectImageAction={setFeaturedProjectImage}
           deleteProjectImageAction={deleteProjectImage}
+          reorderProjectImagesAction={reorderProjectImages}
           deleteProjectAction={deleteProject}
           featureGuides={featureGuides}
         />

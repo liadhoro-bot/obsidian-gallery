@@ -9,6 +9,7 @@ import {
   findNearestUniquePaints,
 } from '../../../utils/color-matching'
 import { completeOnboardingAction } from '../../../lib/onboarding/completion'
+import { applyPaletteEdit, type PaletteEdit } from '../../../lib/palette/palette-edit'
 
 type StoredImageAsset = {
   storage_bucket: string | null
@@ -283,19 +284,16 @@ export async function unassignProjectTheme(formData: FormData) {
   }
 }
 
-export async function setProjectPaletteSlot(
-  projectId: string,
-  slotIndex: number,
-  paintSource: 'catalog' | 'custom',
-  paintId: string
-) {
+export async function editProjectPalette(projectId: string, edit: PaletteEdit) {
   const supabase = await createClient()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) return
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
 
   const { data: project } = await supabase
     .from('projects')
@@ -304,11 +302,35 @@ export async function setProjectPaletteSlot(
     .eq('user_id', user.id)
     .single()
 
-  if (!project) return
+  if (!project) {
+    throw new Error('Project not found')
+  }
 
-  let themeId = project.theme_id
+  let themeId: string | null = project.theme_id
+
+  if (themeId) {
+    // theme_id can point at a public theme assigned back in the V2 themes
+    // era - never edit someone else's theme through this card.
+    const { data: ownedTheme } = await supabase
+      .from('themes')
+      .select('id')
+      .eq('id', themeId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!ownedTheme) {
+      if (edit.type !== 'add') {
+        throw new Error('This palette belongs to a shared theme and cannot be edited here.')
+      }
+      themeId = null
+    }
+  }
 
   if (!themeId) {
+    if (edit.type !== 'add') {
+      throw new Error('Palette not found')
+    }
+
     const { data: newTheme, error: themeError } = await supabase
       .from('themes')
       .insert({
@@ -321,60 +343,121 @@ export async function setProjectPaletteSlot(
       .single()
 
     if (themeError || !newTheme) {
-      console.error(themeError)
-      return
+      throw themeError || new Error('Failed to create project palette')
     }
 
-    themeId = newTheme.id
+    themeId = newTheme.id as string
 
-    await supabase
+    const { error: assignError } = await supabase
       .from('projects')
       .update({ theme_id: themeId })
       .eq('id', projectId)
       .eq('user_id', user.id)
+
+    if (assignError) {
+      throw assignError
+    }
   }
 
-  const sortOrder = slotIndex + 1
+  const result = await applyPaletteEdit(supabase, themeId, edit)
 
-  await supabase
-    .from('theme_paints')
-    .delete()
-    .eq('theme_id', themeId)
-    .eq('sort_order', sortOrder)
-
-  const { error: insertError } = await supabase.from('theme_paints').insert({
-    theme_id: themeId,
-    paint_source: paintSource,
-    paint_catalog_id: paintSource === 'catalog' ? paintId : null,
-    custom_paint_id: paintSource === 'custom' ? paintId : null,
-    sort_order: sortOrder,
-  })
-
-  if (insertError) {
-    throw insertError
+  if (edit.type === 'add' || edit.type === 'replace') {
+    await completeOnboardingAction({
+      userId: user.id,
+      actionKey: 'create_project_palette',
+      subjectProjectId: projectId,
+    })
   }
-
-  await completeOnboardingAction({
-    userId: user.id,
-    actionKey: 'create_project_palette',
-    subjectProjectId: projectId,
-  })
 
   await captureServerEvent({
     distinctId: user.id,
-    event: 'palette_slot_set',
+    event: 'palette_paint_edited',
     properties: {
       source_type: 'project',
       project_id: projectId,
       theme_id: themeId,
-      slot_index: slotIndex,
-      paint_source: paintSource,
+      edit_type: edit.type,
+      paint_source: 'paintSource' in edit ? edit.paintSource : null,
     },
   })
 
   revalidatePath(`/projects/${projectId}`)
   revalidatePath(`/themes/${themeId}`)
+
+  return result
 }
+
+export async function setProjectFeatured(projectId: string, featured: boolean) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!project) {
+    throw new Error('Project not found')
+  }
+
+  // The dashboard hero shows one featured thing, so clear any other
+  // featured project (and, below, any featured unit) first.
+  const { error: clearError } = await supabase
+    .from('projects')
+    .update({ is_featured: false })
+    .eq('user_id', user.id)
+    .eq('is_featured', true)
+
+  if (clearError) {
+    console.error('Error clearing featured project:', clearError)
+    throw new Error(
+      'Featuring projects needs the latest database migration (projects.is_featured).'
+    )
+  }
+
+  if (featured) {
+    const { error: setError } = await supabase
+      .from('projects')
+      .update({ is_featured: true })
+      .eq('id', projectId)
+      .eq('user_id', user.id)
+
+    if (setError) {
+      throw setError
+    }
+
+    const { error: clearUnitsError } = await supabase
+      .from('units')
+      .update({ is_featured: false })
+      .eq('user_id', user.id)
+      .eq('is_featured', true)
+
+    if (clearUnitsError) {
+      throw clearUnitsError
+    }
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: featured ? 'project_featured' : 'project_unfeatured',
+    properties: {
+      project_id: projectId,
+    },
+  })
+
+  revalidatePath(`/projects/${projectId}`)
+  revalidatePath('/dashboard')
+}
+
 export async function calculateProjectPaletteAction(formData: FormData) {
   const supabase = await createClient()
 

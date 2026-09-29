@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import dynamic from 'next/dynamic'
-import type { ChangeEvent, FormEvent, ReactNode } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
@@ -16,11 +16,14 @@ import {
   deleteUnitImage,
   deleteUnit,
   endUnitSession,
+  reorderUnitImages,
   scheduleUnitSession,
   updateUnitScheduledSession,
+  setFeaturedUnit,
   setFeaturedUnitImage,
   startUnitSession,
   toggleStepDone,
+  unfeatureUnit,
   updateUnitDetails,
   updateUnitHeader,
   updateUnitStatus,
@@ -28,8 +31,9 @@ import {
   uploadUnitGalleryImages,
 } from './actions'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
-import { resolveOversizedGalleryImages } from '../../../utils/images/resolve-gallery-image-selection'
-import ProjectPaletteStarter from '../../projects/[id]/project-palette-starter'
+import WorkbenchGallery from '../../components/gallery/workbench-gallery'
+import FeatureOnDashboardButton from '../../components/feature-on-dashboard-button'
+import PaletteCard, { type PaletteCardPaint } from '../../projects/[id]/palette-card'
 import styles from './unit-v3-silver.module.css'
 
 const FeatureGuideTour = dynamic(() => import('../../components/feature-guide-tour'), {
@@ -56,6 +60,7 @@ type PreviewUnit = {
   name: string
   notes?: string | null
   label: string
+  isFeatured?: boolean
   image: string
   galleryImages?: PreviewGalleryImage[]
   paintSessions?: UnitPaintSession[]
@@ -106,6 +111,7 @@ type UnitStatus = 'complete' | 'active' | 'bench' | 'pile' | 'other'
 type EditTarget = 'details' | 'header' | 'gallery'
 
 type PreviewPalettePaint = {
+  themePaintId: string
   id: string
   source: 'catalog' | 'custom'
   name: string
@@ -683,16 +689,44 @@ export default function UnitV3Preview({
             </div>
           </div>
 
-          <div className="absolute inset-x-0 bottom-4 z-10 px-4" data-v3-unit-indicator="hero-title">
-            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300">
-              Unit
-            </p>
-            <h1
-              className="mt-1 text-[26px] font-black leading-none tracking-normal"
-              data-feature-guide-target="units.detail.page"
-            >
-              {unit.name}
-            </h1>
+          <div
+            className="absolute inset-x-0 bottom-4 z-10 flex items-end justify-between gap-3 px-4"
+            data-v3-unit-indicator="hero-title"
+          >
+            <div className="min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-300">
+                Unit
+              </p>
+              <h1
+                className="mt-1 text-[26px] font-black leading-none tracking-normal"
+                data-feature-guide-target="units.detail.page"
+              >
+                {unit.name}
+              </h1>
+            </div>
+            {liveUnit ? (
+              <FeatureOnDashboardButton
+                entityLabel="unit"
+                isFeatured={Boolean(unit.isFeatured)}
+                onToggle={async (nextFeatured) => {
+                  setLocalUnit((current) =>
+                    current ? { ...current, isFeatured: nextFeatured } : current
+                  )
+                  try {
+                    if (nextFeatured) {
+                      await setFeaturedUnit(unit.id)
+                    } else {
+                      await unfeatureUnit(unit.id)
+                    }
+                  } catch (error) {
+                    setLocalUnit((current) =>
+                      current ? { ...current, isFeatured: !nextFeatured } : current
+                    )
+                    throw error
+                  }
+                }}
+              />
+            ) : null}
           </div>
         </section>
 
@@ -1194,60 +1228,7 @@ function DetailsTab({
         </div>
       </section>
 
-      <section className="rounded-[8px] border border-white/[0.06] bg-[#111821] p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/26">
-            Palette
-          </h2>
-          <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/34">
-            Assign paints
-          </span>
-        </div>
-        <div className="mt-4 grid grid-cols-5 gap-2">
-          {Array.from({ length: 5 }).map((_, index) => {
-            const paint = unit.palettePaints?.[index]
-
-            return (
-              <ProjectPaletteStarter
-                key={`palette-slot-${index}`}
-                projectId=""
-                unitId={unit.id}
-                slotIndex={index}
-                initialPaint={
-                  paint
-                    ? {
-                        id: paint.id,
-                        source: paint.source,
-                        name: paint.name,
-                        brand: paint.brand,
-                        line: paint.line,
-                        swatch_image_url: paint.swatchImageUrl,
-                        hex: paint.hex,
-                      }
-                    : null
-                }
-              />
-            )
-          })}
-        </div>
-        {unit.palettePaints?.length ? (
-          <div className="mt-3 grid grid-cols-5 gap-2">
-            {unit.palettePaints.slice(0, 5).map((paint, index) => (
-              <div
-                key={`${paint.source}-${paint.id}-label-${index}`}
-                title={paint.name}
-              >
-                <p className="truncate text-center text-[8px] font-black uppercase tracking-[0.12em] text-[color:var(--og-brass-700)]">
-                  {paint.brand || paint.line || 'Paint'}
-                </p>
-                <p className="mt-0.5 truncate text-center text-[9px] font-black text-[color:var(--og-text-primary)]">
-                  {paint.name}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </section>
+      <UnitPaletteCard unit={unit} />
 
       <UnitGuidesCard
         unit={unit}
@@ -1260,6 +1241,31 @@ function DetailsTab({
   )
 }
 
+function UnitPaletteCard({ unit }: { unit: PreviewUnit }) {
+  const paints = useMemo<PaletteCardPaint[]>(
+    () =>
+      (unit.palettePaints ?? []).map((paint) => ({
+        themePaintId: paint.themePaintId,
+        id: paint.id,
+        source: paint.source,
+        name: paint.name,
+        brand: paint.brand,
+        line: paint.line,
+        hex: paint.hex,
+        swatch_image_url: paint.swatchImageUrl,
+      })),
+    [unit.palettePaints]
+  )
+
+  return (
+    <PaletteCard
+      unitId={unit.id}
+      paints={paints}
+      className="p-4"
+    />
+  )
+}
+
 function UnitV3GalleryCard({
   unit,
   onLocalUnitChange,
@@ -1267,488 +1273,74 @@ function UnitV3GalleryCard({
   unit: PreviewUnit
   onLocalUnitChange: (updater: (current: PreviewUnit | null) => PreviewUnit | null) => void
 }) {
-  const [isAddingImage, setIsAddingImage] = useState(false)
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [uploadSource, setUploadSource] = useState<'gallery_picker' | 'camera'>(
-    'gallery_picker'
+  const images = useMemo(() => unit.galleryImages ?? [], [unit.galleryImages])
+
+  const handleImagesChange = useCallback(
+    (nextImages: PreviewGalleryImage[]) => {
+      const featuredImage =
+        nextImages.find((image) => image.isFeatured) ?? nextImages[0] ?? null
+
+      onLocalUnitChange((current) =>
+        current
+          ? {
+              ...current,
+              galleryImages: nextImages,
+              image: featuredImage?.image ?? current.image,
+            }
+          : current
+      )
+    },
+    [onLocalUnitChange]
   )
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = useState<PreviewGalleryImage | null>(null)
-  const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<string | null>(null)
-  const [localImages, setLocalImages] = useState<PreviewGalleryImage[]>(
-    unit.galleryImages ?? []
-  )
-  const [isPending, startTransition] = useTransition()
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const cameraInputRef = useRef<HTMLInputElement | null>(null)
-  const filePreviews = useMemo(
-    () =>
-      selectedFiles.map((file) => ({
-        file,
-        previewUrl: URL.createObjectURL(file),
-      })),
-    [selectedFiles]
-  )
-
-  useEffect(() => {
-    setLocalImages(unit.galleryImages ?? [])
-  }, [unit.galleryImages])
-
-  useEffect(() => {
-    return () => {
-      filePreviews.forEach((preview) => URL.revokeObjectURL(preview.previewUrl))
-    }
-  }, [filePreviews])
-
-  function commitImages(nextImages: PreviewGalleryImage[]) {
-    const featuredImage =
-      nextImages.find((image) => image.isFeatured) ?? nextImages[0] ?? null
-
-    setLocalImages(nextImages)
-    onLocalUnitChange((current) =>
-      current
-        ? {
-            ...current,
-            galleryImages: nextImages,
-            image: featuredImage?.image ?? current.image,
-          }
-        : current
-    )
-  }
-
-  async function handleFileSelection(
-    event: ChangeEvent<HTMLInputElement>,
-    source: 'gallery_picker' | 'camera'
-  ) {
-    const input = event.target
-    const files = Array.from(input.files ?? [])
-
-    setActionError(null)
-    setUploadSource(source)
-
-    if (files.length === 0) {
-      setUploadError(null)
-      setSelectedFiles([])
-      return
-    }
-
-    const { files: resolvedFiles, error } =
-      await resolveOversizedGalleryImages(files)
-    input.value = ''
-
-    if (error) {
-      setUploadError(error)
-      setSelectedFiles([])
-      return
-    }
-
-    setUploadError(null)
-    setSelectedFiles(resolvedFiles)
-  }
-
-  function removePendingFile(indexToRemove: number) {
-    setSelectedFiles((current) =>
-      current.filter((_, index) => index !== indexToRemove)
-    )
-  }
-
-  function clearFileInputs() {
-    setSelectedFiles([])
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = ''
-    }
-  }
-
-  function handleUpload() {
-    if (selectedFiles.length === 0) {
-      setUploadError('Choose at least one image to upload.')
-      return
-    }
-
-    const filesToUpload = selectedFiles
-    const previousImages = localImages
-    const optimisticImages = filesToUpload.map((file, index) =>
-      buildOptimisticGalleryImage({
-        file,
-        altText: unit.name,
-        isFeatured: localImages.length === 0 && index === 0,
-      })
-    )
-
-    setUploadError(null)
-    setActionError(null)
-    clearFileInputs()
-    commitImages([
-      ...optimisticImages,
-      ...previousImages.map((image) =>
-        optimisticImages.some((optimisticImage) => optimisticImage.isFeatured)
-          ? { ...image, isFeatured: false }
-          : image
-      ),
-    ])
-
-    startTransition(async () => {
-      const formData = new FormData()
-      formData.set('unitId', unit.id)
-      formData.set('uploadSource', uploadSource)
-      filesToUpload.forEach((file) => formData.append('image', file))
-
-      try {
-        const result = await uploadUnitGalleryImages(formData)
-        const uploadedImages = mapUploadedUnitImages(result, unit.name)
-
-        if (uploadedImages.length > 0) {
-          commitImages([
-            ...uploadedImages,
-            ...previousImages.map((image) =>
-              uploadedImages.some((uploaded) => uploaded.isFeatured)
-                ? { ...image, isFeatured: false }
-                : image
-            ),
-          ])
-        } else {
-          commitImages(previousImages)
-        }
-
-        if (result?.failed.length) {
-          setUploadError(
-            `Could not upload ${result.failed
-              .map((failure) => `${failure.fileName}: ${failure.reason}`)
-              .join('; ')}`
-          )
-        } else {
-          setIsAddingImage(false)
-        }
-      } catch (error) {
-        commitImages(previousImages)
-        setUploadError(
-          error instanceof Error ? error.message : 'Could not upload images.'
-        )
-      } finally {
-        optimisticImages.forEach((image) => {
-          if (image.image.startsWith('blob:')) {
-            URL.revokeObjectURL(image.image)
-          }
-        })
-      }
-    })
-  }
-
-  function handleSetFeatured(imageId: string) {
-    const previousImages = localImages
-    const nextImages = localImages.map((image) => ({
-      ...image,
-      isFeatured: image.id === imageId,
-    }))
-
-    setActionError(null)
-    setDeleteConfirmImageId(null)
-    commitImages(nextImages)
-
-    startTransition(async () => {
-      try {
-        await setFeaturedUnitImage(unit.id, imageId)
-      } catch (error) {
-        commitImages(previousImages)
-        setActionError(
-          error instanceof Error ? error.message : 'Could not update image.'
-        )
-      }
-    })
-  }
-
-  function handleDeleteImage(imageId: string) {
-    const previousImages = localImages
-    const nextImages = localImages.filter((image) => image.id !== imageId)
-    const formData = new FormData()
-
-    formData.set('unitId', unit.id)
-    formData.append('imageIds', imageId)
-
-    setActionError(null)
-    setDeleteConfirmImageId(null)
-    setSelectedImage((current) => (current?.id === imageId ? null : current))
-    commitImages(nextImages)
-
-    startTransition(async () => {
-      try {
-        await deleteUnitImage(formData)
-      } catch (error) {
-        commitImages(previousImages)
-        setDeleteConfirmImageId(imageId)
-        setActionError(
-          error instanceof Error ? error.message : 'Could not delete image.'
-        )
-      }
-    })
-  }
 
   return (
-    <section
-      className="rounded-[18px] p-4"
-      data-v3-unit-indicator="gallery-card"
-      data-feature-guide-target="units.detail.gallery"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/26">
-            Gallery
-          </p>
-          <p className="mt-2 text-sm font-semibold leading-5 text-white/48">
-            Add unit photos and choose the image shown at the top of this page.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsAddingImage((current) => !current)}
-          aria-label={isAddingImage ? 'Close add image options' : 'Add image'}
-          title={isAddingImage ? 'Close' : 'Add image'}
-          data-v3-unit-indicator="gallery-add-toggle"
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-xl font-black transition"
-        >
-          {isAddingImage ? 'x' : '+'}
-        </button>
-      </div>
+    <WorkbenchGallery<PreviewGalleryImage>
+      images={images}
+      subtitle="unit photos and the hero image"
+      emptyText="No unit photos yet."
+      featureGuideTarget="units.detail.gallery"
+      samplerSourceType="unit_gallery"
+      getSrc={(image) => image.image}
+      getAlt={(image) => image.alt || unit.name}
+      isPending={(image) => Boolean(image.isOptimistic)}
+      createOptimisticImage={(_file, previewUrl) => ({
+        id: `optimistic-${crypto.randomUUID()}`,
+        image: previewUrl,
+        alt: unit.name,
+        isFeatured: false,
+        createdAt: new Date().toISOString(),
+        sortOrder: null,
+        storageBucket: null,
+        storagePath: null,
+        isOptimistic: true,
+      })}
+      onImagesChange={handleImagesChange}
+      uploadImages={async (files, source) => {
+        const formData = new FormData()
+        formData.set('unitId', unit.id)
+        formData.set('uploadSource', source)
+        files.forEach((file) => formData.append('image', file))
 
-      {isAddingImage ? (
-        <div
-          className="mt-4 grid gap-3 rounded-[12px] p-3"
-          data-v3-unit-indicator="gallery-add-panel"
-        >
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            ref={fileInputRef}
-            onChange={(event) => handleFileSelection(event, 'gallery_picker')}
-            className="hidden"
-          />
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            ref={cameraInputRef}
-            onChange={(event) => handleFileSelection(event, 'camera')}
-            className="hidden"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              data-v3-unit-indicator="gallery-source-button"
-              className="min-h-11 rounded-[10px] px-3 text-sm font-black transition"
-            >
-              Gallery
-            </button>
-            <button
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              data-v3-unit-indicator="gallery-source-button"
-              className="min-h-11 rounded-[10px] px-3 text-sm font-black transition"
-            >
-              Camera
-            </button>
-          </div>
+        const result = await uploadUnitGalleryImages(formData)
 
-          {filePreviews.length > 0 ? (
-            <div className="grid grid-cols-3 gap-2">
-              {filePreviews.map((preview, index) => (
-                <div
-                  key={`${preview.file.name}-${preview.file.lastModified}-${index}`}
-                  className="relative aspect-[1.1] overflow-hidden rounded-[10px]"
-                  data-v3-unit-indicator="gallery-photo-tile"
-                >
-                  <Image
-                    src={preview.previewUrl}
-                    alt={preview.file.name}
-                    fill
-                    sizes="110px"
-                    unoptimized
-                    className="object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removePendingFile(index)}
-                    data-v3-unit-indicator="gallery-delete-button"
-                    className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full text-xs font-black"
-                    aria-label={`Remove ${preview.file.name}`}
-                  >
-                    X
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {uploadError ? (
-            <p
-              className="rounded-[10px] p-3 text-sm font-semibold"
-              data-v3-unit-indicator="gallery-error"
-            >
-              {uploadError}
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={handleUpload}
-            disabled={selectedFiles.length === 0 || isPending}
-            data-v3-unit-indicator="gallery-upload-button"
-            className="min-h-11 rounded-[10px] px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-55"
-          >
-            {isPending
-              ? 'Uploading...'
-              : selectedFiles.length > 1
-                ? `Upload ${selectedFiles.length} images`
-                : 'Upload image'}
-          </button>
-        </div>
-      ) : null}
-
-      {actionError ? (
-        <p
-          className="mt-4 rounded-[10px] p-3 text-sm font-semibold"
-          data-v3-unit-indicator="gallery-error"
-        >
-          {actionError}
-        </p>
-      ) : null}
-
-      {localImages.length > 0 ? (
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          {localImages.map((image, index) => (
-            <div key={image.id} className="min-w-0">
-              <div
-                className="relative aspect-[0.82] overflow-hidden rounded-[10px]"
-                data-v3-unit-indicator="gallery-photo-tile"
-              >
-                <button
-                  type="button"
-                  onClick={() => setSelectedImage(image)}
-                  aria-label={`${unit.name} gallery image ${index + 1}`}
-                  className="block h-full w-full"
-                >
-                  <Image
-                    src={image.image}
-                    alt={image.alt || unit.name}
-                    fill
-                    sizes="(max-width: 640px) 30vw, 128px"
-                    unoptimized={image.isOptimistic}
-                    className="object-cover transition hover:scale-[1.02]"
-                  />
-                </button>
-                <div className="absolute left-1 top-1">
-                  {image.isFeatured ? (
-                    <span
-                      className="rounded-[6px] px-1.5 py-1 text-[8px] font-black uppercase tracking-wide"
-                      data-v3-unit-indicator="gallery-featured-badge"
-                    >
-                      Featured
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleSetFeatured(image.id)}
-                      disabled={isPending || image.isOptimistic}
-                      data-v3-unit-indicator="gallery-feature-button"
-                      className="grid h-8 w-8 place-items-center rounded-full text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55"
-                      aria-label="Make featured image"
-                      title="Make featured"
-                    >
-                      *
-                    </button>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDeleteConfirmImageId((current) =>
-                      current === image.id ? null : image.id
-                    )
-                  }
-                  disabled={isPending || image.isOptimistic}
-                  data-v3-unit-indicator="gallery-delete-button"
-                  className="absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55"
-                  aria-label="Delete image"
-                  title="Delete image"
-                >
-                  X
-                </button>
-              </div>
-
-              {deleteConfirmImageId === image.id ? (
-                <div className="mt-2 rounded-[10px] border border-red-400/35 bg-red-500/10 p-2">
-                  <p className="text-xs font-semibold text-red-100">
-                    Delete this image?
-                  </p>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteImage(image.id)}
-                      disabled={isPending}
-                      data-v3-unit-indicator="gallery-confirm-delete"
-                      className="min-h-9 rounded-[8px] px-2 text-xs font-black disabled:opacity-55"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteConfirmImageId(null)}
-                      className="min-h-9 rounded-[8px] border border-white/10 px-2 text-xs font-black text-white/62"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p
-          className="mt-4 rounded-[10px] px-3 py-5 text-center text-sm font-semibold"
-          data-v3-unit-indicator="gallery-empty"
-        >
-          No unit images yet.
-        </p>
-      )}
-
-      {selectedImage ? (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/82 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${unit.name} image preview`}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              setSelectedImage(null)
-            }
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setSelectedImage(null)}
-            className="absolute right-4 top-4 z-10 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-sm font-black text-white transition hover:bg-white/20"
-            aria-label="Close image preview"
-          >
-            X
-          </button>
-          <Image
-            src={selectedImage.image}
-            alt={selectedImage.alt || unit.name}
-            width={1400}
-            height={1400}
-            sizes="100vw"
-            unoptimized={selectedImage.isOptimistic}
-            className="max-h-[86dvh] w-auto max-w-full rounded-[14px] object-contain"
-          />
-        </div>
-      ) : null}
-    </section>
+        return {
+          uploaded: mapUploadedUnitImages(result, unit.name),
+          error: result?.failed.length
+            ? `Could not upload ${result.failed
+                .map((failure) => `${failure.fileName}: ${failure.reason}`)
+                .join('; ')}`
+            : null,
+        }
+      }}
+      setFeaturedImage={(imageId) => setFeaturedUnitImage(unit.id, imageId)}
+      deleteImages={async (imageIds) => {
+        const formData = new FormData()
+        formData.set('unitId', unit.id)
+        imageIds.forEach((imageId) => formData.append('imageIds', imageId))
+        await deleteUnitImage(formData)
+      }}
+      reorderImages={(imageIds) => reorderUnitImages(unit.id, imageIds)}
+    />
   )
 }
 
@@ -2028,28 +1620,6 @@ function GuideCardPopup({
       </section>
     </div>
   )
-}
-
-function buildOptimisticGalleryImage({
-  file,
-  altText,
-  isFeatured,
-}: {
-  file: File
-  altText: string
-  isFeatured: boolean
-}): PreviewGalleryImage {
-  return {
-    id: `optimistic-${crypto.randomUUID()}`,
-    image: URL.createObjectURL(file),
-    alt: altText,
-    isFeatured,
-    createdAt: new Date().toISOString(),
-    sortOrder: 0,
-    storageBucket: null,
-    storagePath: null,
-    isOptimistic: true,
-  }
 }
 
 function mapUploadedUnitImages(

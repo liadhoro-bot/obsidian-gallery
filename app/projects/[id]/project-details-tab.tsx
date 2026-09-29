@@ -20,6 +20,7 @@ type Props = {
   uploadProjectImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
+  reorderProjectImagesAction: (projectId: string, orderedAssetIds: string[]) => Promise<void>
 }
 
 function formatSessionDuration(seconds: number) {
@@ -42,6 +43,7 @@ export default function ProjectDetailsTab({
   uploadProjectImageAction,
   setFeaturedProjectImageAction,
   deleteProjectImageAction,
+  reorderProjectImagesAction,
 }: Props) {
   return (
     <div className={styles.detailsStack}>
@@ -89,6 +91,7 @@ export default function ProjectDetailsTab({
         uploadProjectImageAction={uploadProjectImageAction}
         setFeaturedProjectImageAction={setFeaturedProjectImageAction}
         deleteProjectImageAction={deleteProjectImageAction}
+        reorderProjectImagesAction={reorderProjectImagesAction}
       />
     </div>
   )

@@ -1,0 +1,58 @@
+.wrap {
+  position: relative;
+  display: grid;
+  flex-shrink: 0;
+  justify-items: end;
+  gap: 6px;
+}
+
+.wrap .button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 6px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  border-radius: var(--og-radius-round);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  box-shadow: var(--og-shadow-control-built);
+  color: var(--og-paper-100);
+  padding: 0 13px 0 11px;
+  font: 800 11px/1 var(--og-font-ui);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.wrap .button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--og-brass-500) 80%, var(--og-walnut-700));
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+}
+
+.wrap .button:disabled {
+  opacity: 0.7;
+}
+
+.wrap .button .icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.wrap .error {
+  display: block;
+  max-width: 220px;
+  margin: 0;
+  border-radius: var(--og-radius-s);
+  background: color-mix(in srgb, var(--og-ink-950) 82%, transparent);
+  color: var(--og-paper-50);
+  padding: 6px 8px;
+  font: 700 11px/1.3 var(--og-font-ui);
+  letter-spacing: 0;
+  text-align: right;
+  text-transform: none;
+}

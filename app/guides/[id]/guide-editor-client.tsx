@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useState } from 'react'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
+import GalleryPager, { useGalleryPages } from '../../components/gallery/gallery-pager'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import type { Recipe, RecipeImage, RecipeStep } from '../shared/types'
 import {
@@ -193,6 +194,7 @@ export default function GuideEditorClient({
     id: deck.id,
     image: deckDetailById.get(deck.id)?.fullImage || deckDetailById.get(deck.id)?.image || deck.image,
   }))
+  const coverPages = useGalleryPages(coverImageCandidates)
 
   function reorderDeck(deckId: string, targetId: string, edge: DropTarget['edge']) {
     if (deckId === targetId) return
@@ -331,8 +333,8 @@ export default function GuideEditorClient({
                 <h2>Cover Image</h2>
                 <span>From selected decks</span>
               </div>
-              <div className={styles.galleryGrid}>
-                {coverImageCandidates.map((candidate) => (
+              <div className={styles.galleryGrid} {...coverPages.swipeHandlers}>
+                {coverPages.pageItems.map((candidate) => (
                   <button
                     key={candidate.id}
                     type="button"
@@ -348,6 +350,12 @@ export default function GuideEditorClient({
                   </button>
                 ))}
               </div>
+              <GalleryPager
+                page={coverPages.page}
+                pageCount={coverPages.pageCount}
+                onPageChange={coverPages.goToPage}
+                label="Cover image pages"
+              />
             </section>
           </div>
         ) : null}

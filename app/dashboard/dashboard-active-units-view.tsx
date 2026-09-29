@@ -365,15 +365,21 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
     )
   }
 
+  const isProject = unit.kind === 'project'
+  const href = unit.href ?? `/units/${unit.id}`
+
   return (
     <section
       className={styles.featuredPanel}
       id="featured-unit"
       data-v3-dashboard-indicator="featured-unit"
+      data-v3-dashboard-featured-kind={isProject ? 'project' : 'unit'}
       data-feature-guide-target="dashboard.featured_unit"
     >
       <div className={styles.featuredDetails}>
-        <OgPlaque className={styles.featuredPlaque}>Featured Unit</OgPlaque>
+        <OgPlaque className={styles.featuredPlaque}>
+          {isProject ? 'Featured Project' : 'Featured Unit'}
+        </OgPlaque>
         <div>
           <h2 className={styles.featuredTitle}>{unit.name}</h2>
           <p className={styles.featuredDescriptor}>{unit.descriptor}</p>
@@ -393,13 +399,19 @@ function FeaturedUnit({ unit }: { unit: DashboardActiveUnitsViewModel['featuredU
         </div>
 
         <div className={styles.resumeAction}>
-          <span data-feature-guide-target="dashboard.resume_painting">
-            <DashboardResumeButton unitId={unit.id} icon={<PlayIcon />} label="Resume" />
-          </span>
+          {isProject ? (
+            <PrefetchLink href={href} className={styles.inlineLinkButton}>
+              Open Project
+            </PrefetchLink>
+          ) : (
+            <span data-feature-guide-target="dashboard.resume_painting">
+              <DashboardResumeButton unitId={unit.id} icon={<PlayIcon />} label="Resume" />
+            </span>
+          )}
         </div>
       </div>
 
-      <PrefetchLink href={`/units/${unit.id}`} className={styles.featuredImageMount} aria-label={`Open ${unit.name}`}>
+      <PrefetchLink href={href} className={styles.featuredImageMount} aria-label={`Open ${unit.name}`}>
         <span className={styles.featuredImageFrame}>
           <MiniatureImage imageUrl={unit.imageUrl} name={unit.name} priority />
         </span>

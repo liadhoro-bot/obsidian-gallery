@@ -941,6 +941,76 @@ export const getDashboardHeroUnit = cache(async (userId: string) => {
   } satisfies DashboardFeedUnit
 })
 
+export type DashboardFeaturedProject = {
+  id: string
+  name: string
+  imageUrl: string | null
+  unitIds: string[]
+}
+
+// A featured project takes the dashboard hero card instead of a unit (see
+// projects.is_featured). Before that column is migrated the query errors,
+// which reads as "no featured project".
+export const getDashboardFeaturedProject = cache(
+  async (userId: string): Promise<DashboardFeaturedProject | null> => {
+    const supabase = await createClient()
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select('id, name')
+      .eq('user_id', userId)
+      .eq('is_featured', true)
+      .limit(1)
+      .maybeSingle()
+
+    if (error || !project) {
+      return null
+    }
+
+    const [imageResult, directUnitsResult, linkedUnitsResult] = await Promise.all([
+      supabase
+        .from('image_assets')
+        .select('image_url')
+        .eq('entity_type', 'project')
+        .eq('entity_id', project.id)
+        .eq('user_id', userId)
+        .order('is_featured', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('units')
+        .select('id')
+        .eq('project_id', project.id)
+        .eq('user_id', userId),
+      supabase
+        .from('unit_projects')
+        .select('unit_id')
+        .eq('project_id', project.id)
+        .eq('user_id', userId),
+    ])
+
+    const unitIds = Array.from(
+      new Set(
+        [
+          ...((directUnitsResult.data ?? []) as Array<{ id: string | null }>).map(
+            (unit) => unit.id
+          ),
+          ...((linkedUnitsResult.data ?? []) as Array<{ unit_id: string | null }>).map(
+            (link) => link.unit_id
+          ),
+        ].filter((unitId): unitId is string => Boolean(unitId))
+      )
+    )
+
+    return {
+      id: project.id,
+      name: project.name || 'Untitled project',
+      imageUrl: (imageResult.data?.image_url as string | undefined) ?? null,
+      unitIds,
+    }
+  }
+)
+
 export const getDashboardPaintingTableFeed = cache(async (userId: string) => {
   const perf = createPerfTimer('/dashboard:data')
   const supabase = await createClient()

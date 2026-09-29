@@ -11,6 +11,8 @@ import ProjectDetailTabs from './project-detail-tabs'
 import ProjectDetailsTab from './project-details-tab'
 import ProjectUnitsTab from './project-units-tab'
 import DeleteProjectCard from './delete-project-card'
+import FeatureOnDashboardButton from '../../components/feature-on-dashboard-button'
+import { setProjectFeatured } from './actions'
 import type {
   ProjectImage,
   ProjectRow,
@@ -35,6 +37,7 @@ type Props = {
   projectError: SerializableError | null
   projectId: string
   featuredProjectImage: ProjectImage | null
+  isProjectFeatured: boolean
   projectImages: ProjectImage[]
   projectUnitCount: number
   projectTotalSessionSeconds: number
@@ -51,6 +54,7 @@ type Props = {
   uploadProjectImageAction: (formData: FormData) => Promise<GalleryUploadResult | void>
   setFeaturedProjectImageAction: (formData: FormData) => Promise<void>
   deleteProjectImageAction: (formData: FormData) => Promise<void>
+  reorderProjectImagesAction: (projectId: string, orderedAssetIds: string[]) => Promise<void>
   deleteProjectAction: (formData: FormData) => Promise<void>
   featureGuides?: FeatureGuideEntry[]
 }
@@ -64,6 +68,7 @@ export default function ProjectDetailClient({
   projectError,
   projectId,
   featuredProjectImage,
+  isProjectFeatured,
   projectImages,
   projectUnitCount,
   projectTotalSessionSeconds,
@@ -77,6 +82,7 @@ export default function ProjectDetailClient({
   uploadProjectImageAction,
   setFeaturedProjectImageAction,
   deleteProjectImageAction,
+  reorderProjectImagesAction,
   deleteProjectAction,
   featureGuides = [],
 }: Props) {
@@ -147,13 +153,22 @@ export default function ProjectDetailClient({
           </div>
         </div>
 
-        <div className={styles.heroTitle}>
-          <p className={styles.eyebrow}>
-            Project Detail
-          </p>
-          <h1 data-feature-guide-target="projects.detail.page">
-            {projectName}
-          </h1>
+        <div className={`${styles.heroTitle} flex items-end justify-between gap-3`}>
+          <div className="min-w-0">
+            <p className={styles.eyebrow}>
+              Project Detail
+            </p>
+            <h1 data-feature-guide-target="projects.detail.page">
+              {projectName}
+            </h1>
+          </div>
+          {project ? (
+            <FeatureOnDashboardButton
+              entityLabel="project"
+              isFeatured={isProjectFeatured}
+              onToggle={(nextFeatured) => setProjectFeatured(projectId, nextFeatured)}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -239,6 +254,7 @@ export default function ProjectDetailClient({
           uploadProjectImageAction={uploadProjectImageAction}
           setFeaturedProjectImageAction={setFeaturedProjectImageAction}
           deleteProjectImageAction={deleteProjectImageAction}
+          reorderProjectImagesAction={reorderProjectImagesAction}
         />
       ) : null}
 

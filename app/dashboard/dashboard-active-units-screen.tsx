@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { createPerfTimer } from '../../utils/perf/server'
 import {
+  getDashboardFeaturedProject,
   getDashboardNextActions,
   getDashboardPaintingTableFeed,
 } from './dashboard-data'
@@ -219,11 +220,14 @@ export async function DashboardActiveUnitsScreen({
     )
   }
 
-  const [feed, nextActions] = await perf.measure('active units view model', () =>
-    Promise.all([
-      getDashboardPaintingTableFeed(userId),
-      getDashboardNextActions(userId),
-    ])
+  const [feed, nextActions, featuredProject] = await perf.measure(
+    'active units view model',
+    () =>
+      Promise.all([
+        getDashboardPaintingTableFeed(userId),
+        getDashboardNextActions(userId),
+        getDashboardFeaturedProject(userId),
+      ])
   )
   perf.total()
 
@@ -232,7 +236,7 @@ export async function DashboardActiveUnitsScreen({
       userId={userId}
       featureGuides={featureGuides}
       initialTab={initialTab}
-      model={createDashboardActiveUnitsViewModel({ feed, nextActions })}
+      model={createDashboardActiveUnitsViewModel({ feed, nextActions, featuredProject })}
       profilePanel={profilePanel}
     />
   )

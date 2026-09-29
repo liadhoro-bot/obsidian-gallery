@@ -4,7 +4,8 @@ import { PaintAlignmentToggle } from '../../shared/paint-alignment-toggle'
 
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import GalleryPager, { useGalleryPages } from '../../../components/gallery/gallery-pager'
 import type { ChangeEvent, RefObject } from 'react'
 import FeatureGuideLauncher from '../../../components/feature-guide-launcher'
 import type { FeatureGuideEntry } from '../../../components/feature-guide-types'
@@ -1216,6 +1217,17 @@ function DeckGallery({
   selectedImageIds: string[]
 }) {
   const [isAddImageOpen, setIsAddImageOpen] = useState(false)
+  const pages = useGalleryPages(images)
+  const previousImageCount = useRef(images.length)
+
+  // Page to newly added images so the upload is visible.
+  useEffect(() => {
+    if (images.length > previousImageCount.current) {
+      pages.showItemAt(previousImageCount.current)
+    }
+    previousImageCount.current = images.length
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images.length])
 
   return (
     <section className={styles.galleryPanel}>
@@ -1313,8 +1325,8 @@ function DeckGallery({
         </div>
       ) : null}
 
-      <div className={styles.galleryGrid}>
-        {images.map((image) => {
+      <div className={styles.galleryGrid} {...pages.swipeHandlers}>
+        {pages.pageItems.map((image) => {
           const isHero = image.id === heroImageId
           const isSelected = selectedImageIds.includes(image.id)
 
@@ -1390,14 +1402,18 @@ function DeckGallery({
           )
         })}
 
-        <button
-          type="button"
-          className={styles.galleryUploadTile}
-          onClick={() => galleryInputRef.current?.click()}
-        >
-          Add Image
-        </button>
+        {pages.isLastPage && pages.pageItems.length < pages.pageSize ? (
+          <button
+            type="button"
+            className={styles.galleryUploadTile}
+            onClick={() => galleryInputRef.current?.click()}
+          >
+            Add Image
+          </button>
+        ) : null}
       </div>
+
+      <GalleryPager page={pages.page} pageCount={pages.pageCount} onPageChange={pages.goToPage} />
     </section>
   )
 }

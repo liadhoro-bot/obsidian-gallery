@@ -25,6 +25,7 @@ import {
   completeOnboardingActions,
 } from '../../../lib/onboarding/completion'
 import { safeEvaluateAchievements } from '../../../lib/achievements/evaluateAchievements'
+import { applyPaletteEdit, type PaletteEdit } from '../../../lib/palette/palette-edit'
 
 const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
 const unitThemeDescription = (unitId: string, source: string) =>
@@ -116,6 +117,14 @@ export async function setFeaturedUnit(unitId: string) {
     throw error
   }
 
+  // The dashboard hero shows one featured thing: a unit or a project.
+  // Ignore the error when projects.is_featured isn't migrated yet.
+  await supabase
+    .from('projects')
+    .update({ is_featured: false })
+    .eq('user_id', user.id)
+    .eq('is_featured', true)
+
   await completeOnboardingAction({
     userId: user.id,
     actionKey: 'feature_unit',
@@ -123,8 +132,27 @@ export async function setFeaturedUnit(unitId: string) {
   })
 
   revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
   perf.mark('revalidation duration')
   perf.total()
+}
+
+export async function unfeatureUnit(unitId: string) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+
+  const { error } = await supabase
+    .from('units')
+    .update({ is_featured: false })
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  revalidatePath(`/units/${unitId}`)
+  revalidatePath('/dashboard')
 }
 
 export async function updateUnitStatus(
@@ -873,12 +901,7 @@ export async function unassignUnitTheme(formData: FormData) {
   revalidateUnitThemePages(unitId, themeId)
 }
 
-export async function setUnitPaletteSlot(
-  unitId: string,
-  slotIndex: number,
-  paintSource: 'catalog' | 'custom',
-  paintId: string
-) {
+export async function editUnitPalette(unitId: string, edit: PaletteEdit) {
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)
 
@@ -893,7 +916,9 @@ export async function setUnitPaletteSlot(
     throw unitError
   }
 
-  if (!unit) return
+  if (!unit) {
+    throw new Error('Unit not found')
+  }
 
   const { data: unitThemeRow, error: themeColumnError } = await supabase
     .from('units')
@@ -920,6 +945,10 @@ export async function setUnitPaletteSlot(
   }
 
   if (!themeId) {
+    if (edit.type !== 'add') {
+      throw new Error('Palette not found')
+    }
+
     const { data: featuredImage } = await supabase
       .from('image_assets')
       .select('image_url')
@@ -950,7 +979,7 @@ export async function setUnitPaletteSlot(
       throw themeError || new Error('Failed to create unit palette')
     }
 
-    themeId = newTheme.id
+    themeId = newTheme.id as string
 
     if (canUseUnitThemeColumn) {
       const { error: updateUnitError } = await supabase
@@ -963,52 +992,77 @@ export async function setUnitPaletteSlot(
         throw updateUnitError
       }
     }
+  } else {
+    const { data: ownedTheme } = await supabase
+      .from('themes')
+      .select('id')
+      .eq('id', themeId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!ownedTheme) {
+      throw new Error('Palette not found')
+    }
   }
 
-  const sortOrder = slotIndex + 1
+  const result = await applyPaletteEdit(supabase, themeId, edit)
 
-  const { error: deleteError } = await supabase
-    .from('theme_paints')
-    .delete()
-    .eq('theme_id', themeId)
-    .eq('sort_order', sortOrder)
-
-  if (deleteError) {
-    throw deleteError
+  if (edit.type === 'add' || edit.type === 'replace') {
+    await completeOnboardingActions({
+      userId: user.id,
+      subjectUnitId: unitId,
+      actionKeys: ['add_unit_paints', 'use_project_palette'],
+    })
   }
-
-  const { error: insertError } = await supabase.from('theme_paints').insert({
-    theme_id: themeId,
-    paint_source: paintSource,
-    paint_catalog_id: paintSource === 'catalog' ? paintId : null,
-    custom_paint_id: paintSource === 'custom' ? paintId : null,
-    sort_order: sortOrder,
-  })
-
-  if (insertError) {
-    throw insertError
-  }
-
-  await completeOnboardingActions({
-    userId: user.id,
-    subjectUnitId: unitId,
-    actionKeys: ['add_unit_paints', 'use_project_palette'],
-  })
 
   await captureServerEvent({
     distinctId: user.id,
-    event: 'palette_slot_set',
+    event: 'palette_paint_edited',
     properties: {
       source_type: 'unit',
       unit_id: unitId,
       theme_id: themeId,
-      slot_index: slotIndex,
-      paint_source: paintSource,
+      edit_type: edit.type,
+      paint_source: 'paintSource' in edit ? edit.paintSource : null,
     },
   })
 
   revalidatePath(`/units/${unitId}`)
   revalidatePath(`/themes/${themeId}`)
+
+  return result
+}
+
+export async function reorderUnitImages(unitId: string, orderedImageIds: string[]) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+
+  const imageIds = orderedImageIds.filter(
+    (imageId) => typeof imageId === 'string' && imageId.length > 0
+  )
+
+  if (!unitId || imageIds.length === 0) {
+    return
+  }
+
+  const results = await Promise.all(
+    imageIds.map((imageId, index) =>
+      supabase
+        .from('image_assets')
+        .update({ sort_order: index })
+        .eq('id', imageId)
+        .eq('entity_type', 'unit')
+        .eq('entity_id', unitId)
+        .eq('user_id', user.id)
+    )
+  )
+
+  const failed = results.find((result) => result.error)
+  if (failed?.error) {
+    throw failed.error
+  }
+
+  revalidatePath(`/units/${unitId}`)
 }
 
 export async function uploadUnitGalleryImages(
@@ -1058,6 +1112,17 @@ export async function uploadUnitGalleryImages(
     existingFeatured && existingFeatured.length > 0
   )
 
+  // New photos go to the end of the gallery's manual order.
+  const { data: lastOrderedImage } = await supabase
+    .from('image_assets')
+    .select('sort_order')
+    .eq('entity_type', 'unit')
+    .eq('entity_id', unitId)
+    .order('sort_order', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle()
+  let nextSortOrder = (lastOrderedImage?.sort_order ?? -1) + 1
+
   for (const file of files) {
     const validationError = validateGalleryImageFile(file)
 
@@ -1097,7 +1162,7 @@ export async function uploadUnitGalleryImages(
         storage_bucket: 'obsidian-images',
         storage_path: filePath,
         is_featured: shouldBeFeatured,
-        sort_order: 0,
+        sort_order: nextSortOrder++,
         alt_text: null,
       })
       .select(
