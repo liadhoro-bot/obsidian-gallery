@@ -42,6 +42,8 @@ export type StepPaintLink = {
 
 export type RecipeStep = {
   paint_alignment?: 'left' | 'right'
+  // Theme card kicker under the title; falls back to "Color Reference".
+  subtitle?: string | null
   id: string
   step_number: number
   title: string

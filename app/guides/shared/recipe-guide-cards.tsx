@@ -621,7 +621,7 @@ function ThemeStepCard({
               {step.title}
             </h2>
             <p className="recipe-guide-alt-theme-kicker font-serif uppercase">
-              Colour Reference
+              {step.subtitle?.trim() || 'Color Reference'}
             </p>
           </div>
 

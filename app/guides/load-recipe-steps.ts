@@ -10,12 +10,13 @@ export type RecipeStepRow = {
   youtube_url: string | null
   image_focal_x: number | null
   image_focal_y: number | null
+  subtitle: string | null
 }
 
 // Keep compatibility with older schemas without retrying unrelated errors or
 // dropping an optional field that the database actually supports.
 export async function loadRecipeSteps(supabase: SupabaseClient, deckId: string) {
-  const optionalColumns = new Set(['card_template', 'youtube_url', 'image_focal_x', 'image_focal_y'])
+  const optionalColumns = new Set(['card_template', 'youtube_url', 'image_focal_x', 'image_focal_y', 'subtitle'])
   for (;;) {
     const result = await supabase
       .from('recipe_steps')
@@ -43,6 +44,7 @@ export async function loadRecipeSteps(supabase: SupabaseClient, deckId: string) 
           youtube_url: row.youtube_url ?? null,
           image_focal_x: row.image_focal_x ?? null,
           image_focal_y: row.image_focal_y ?? null,
+          subtitle: row.subtitle ?? null,
         }
       }) ?? null,
     }

@@ -12,6 +12,7 @@ import {
 
 export type GuidesV3DeckStep = {
   paintAlignment?: 'left' | 'right'
+  subtitle?: string | null
   id: string
   number: number
   title: string
@@ -119,6 +120,7 @@ type StepRow = {
   youtube_url: string | null
   image_focal_x: number | null
   image_focal_y: number | null
+  subtitle: string | null
 }
 
 type StepPaintRow = {
@@ -472,6 +474,7 @@ export const getGuidesV3DeckDetail = cache(
         imageFocalX: step.image_focal_x ?? 50,
         imageFocalY: step.image_focal_y ?? 50,
         paintAlignment: parsedInstructions.paintAlignment,
+        subtitle: step.subtitle?.trim() || null,
       }
     })
 

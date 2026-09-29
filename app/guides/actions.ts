@@ -12,6 +12,7 @@ import {
 
 export type CreateDeckCardInput = {
   paintAlignment?: 'left' | 'right'
+  subtitle?: string | null
   title: string
   template: string
   body: string
@@ -73,6 +74,14 @@ type RecipeStepInsert = {
   youtube_url: string | null
   image_focal_x: number
   image_focal_y: number
+  subtitle?: string | null
+}
+
+// Theme card kicker (recipe_steps.subtitle). Null renders the default
+// "Color Reference"; other card types don't show a subtitle.
+function safeThemeSubtitle(card: CreateDeckCardInput) {
+  if (card.template !== 'theme' && card.template !== 'theme-alt') return null
+  return card.subtitle?.trim().slice(0, 60) || null
 }
 
 function cleanText(value: string | null | undefined, fallback: string) {
@@ -414,6 +423,7 @@ export async function createDeckFromForge(
       youtube_url: youtubeUrl,
       image_focal_x: safeFocalValue(card.imageFocalX),
       image_focal_y: safeFocalValue(card.imageFocalY),
+      subtitle: safeThemeSubtitle(card),
     }
   })
 
@@ -584,6 +594,7 @@ export async function updateDeckFromForge(
       youtube_url: youtubeUrl,
       image_focal_x: safeFocalValue(card.imageFocalX),
       image_focal_y: safeFocalValue(card.imageFocalY),
+      subtitle: safeThemeSubtitle(card),
     }
   })
 

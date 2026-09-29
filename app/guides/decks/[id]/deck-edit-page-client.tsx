@@ -43,6 +43,7 @@ export default function DeckEditPageClient({
             image: card.image,
             videoUrl: card.videoUrl,
             paintAlignment: card.paintAlignment ?? 'left',
+            subtitle: card.subtitle ?? null,
             imageFocalX: card.imageFocalX,
             imageFocalY: card.imageFocalY,
             paints: card.paints?.map((paint) => ({

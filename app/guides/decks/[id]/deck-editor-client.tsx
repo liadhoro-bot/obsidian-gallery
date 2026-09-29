@@ -49,6 +49,8 @@ export type DeckEditorSavePaint = {
 
 export type DeckEditorInitialCard = {
   paintAlignment?: 'left' | 'right'
+  // Theme card kicker; empty means the default "Color Reference".
+  subtitle?: string | null
   id: string
   title: string
   template: DeckEditorCardTemplate
@@ -75,6 +77,7 @@ export type DeckEditorSavePayload = {
 
 type EditorCard = {
   paintAlignment?: 'left' | 'right'
+  subtitle?: string | null
   id: string
   title: string
   template: CardTemplate
@@ -198,6 +201,7 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
     imageFocalX: step.imageFocalX,
     imageFocalY: step.imageFocalY,
     paintAlignment: step.paintAlignment ?? 'left',
+    subtitle: step.subtitle ?? null,
   }))
 
   // Where the synthesized cover card belongs, if at all - undefined
@@ -766,6 +770,7 @@ export default function DeckEditorClient({
         imageFocalX: card.imageFocalX,
         imageFocalY: card.imageFocalY,
         paintAlignment: card.paintAlignment ?? 'left',
+        subtitle: card.subtitle?.trim() || null,
       })),
     })
   }
@@ -1694,6 +1699,18 @@ function CardEditorSheet({
           />
         </label>
 
+        {card.template === 'theme' || card.template === 'theme-alt' ? (
+          <label className={styles.field}>
+            <span>Subtitle</span>
+            <input
+              value={card.subtitle ?? 'Color Reference'}
+              placeholder="Color Reference"
+              maxLength={60}
+              onChange={(event) => onChange({ subtitle: event.target.value })}
+            />
+          </label>
+        ) : null}
+
         {!isPaintsList && !isVideo ? (
           <section className={styles.cardImageEditor}>
             <div className={styles.cardImagePreview}>
@@ -2104,6 +2121,7 @@ function DeckPreview({
           image_focal_x: card.imageFocalX,
           image_focal_y: card.imageFocalY,
           paint_alignment: card.paintAlignment ?? 'left',
+          subtitle: card.subtitle ?? null,
         }
 
         return (
