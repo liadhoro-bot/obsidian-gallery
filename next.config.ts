@@ -34,7 +34,10 @@ const nextConfig: NextConfig = {
     // image (it validates its own `src` param server-side), so next/image
     // needs an explicit localPatterns entry to optimize it - without one
     // it 400s any local image src carrying a query string.
-    localPatterns: [{ pathname: '/api/paints/v3-swatch' }],
+    localPatterns: [
+      { pathname: '/**', search: '' },
+      { pathname: '/api/paints/v3-swatch' },
+    ],
   },
 
   async headers() {
