@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
+import { completeEditorExit } from '@/app/components/navigation-feedback/unsaved-changes'
 import type { FeatureGuideEntry } from '../../../components/feature-guide-types'
 import type { GuidesV3DeckDetail } from '../../guides-v3-detail-data'
 import { deleteDeck, toggleDeckPaintOwnership, updateDeckFromForge } from '../../actions'
@@ -19,47 +20,50 @@ export default function DeckEditPageClient({
   initialExpertTips?: string
 }) {
   const router = useRouter()
-  const [isSaving, startSaveTransition] = useTransition()
+  const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  function handleSaveDraft(payload: DeckEditorSavePayload) {
+  async function handleSaveDraft(payload: DeckEditorSavePayload) {
     setSaveError(null)
-    startSaveTransition(async () => {
-      try {
-        await updateDeckFromForge(deck.id, {
-          title: payload.title,
-          description: payload.description,
-          status: payload.status,
-          difficulty: payload.difficulty,
-          image: payload.heroImage,
-          heroFocalX: payload.heroFocalX,
-          heroFocalY: payload.heroFocalY,
-          inventoryRequired: payload.inventoryNotes,
-          expertTips: payload.expertTips,
-          cards: payload.cards.map((card) => ({
-            title: card.title,
-            template: card.template,
-            body: card.body,
-            image: card.image,
-            videoUrl: card.videoUrl,
-            paintAlignment: card.paintAlignment ?? 'left',
-            subtitle: card.subtitle ?? null,
-            imageFocalX: card.imageFocalX,
-            imageFocalY: card.imageFocalY,
-            paints: card.paints?.map((paint) => ({
-              id: paint.id,
-              ratio_text: paint.ratio_text ?? null,
-            })),
+    setIsSaving(true)
+    try {
+      await updateDeckFromForge(deck.id, {
+        title: payload.title,
+        description: payload.description,
+        status: payload.status,
+        difficulty: payload.difficulty,
+        image: payload.heroImage,
+        heroFocalX: payload.heroFocalX,
+        heroFocalY: payload.heroFocalY,
+        inventoryRequired: payload.inventoryNotes,
+        expertTips: payload.expertTips,
+        cards: payload.cards.map((card) => ({
+          title: card.title,
+          template: card.template,
+          body: card.body,
+          image: card.image,
+          videoUrl: card.videoUrl,
+          paintAlignment: card.paintAlignment ?? 'left',
+          subtitle: card.subtitle ?? null,
+          imageFocalX: card.imageFocalX,
+          imageFocalY: card.imageFocalY,
+          paints: card.paints?.map((paint) => ({
+            id: paint.id,
+            ratio_text: paint.ratio_text ?? null,
           })),
-        })
+        })),
+      })
 
-        router.refresh()
-      } catch (error) {
-        setSaveError(
-          error instanceof Error ? error.message : 'Could not save deck.'
-        )
-      }
-    })
+      router.refresh()
+      return true
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Could not save deck.'
+      )
+      return false
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   async function handleTogglePaintOwnership(formData: FormData) {
@@ -69,7 +73,7 @@ export default function DeckEditPageClient({
 
   async function handleDeleteDeck() {
     await deleteDeck(deck.id)
-    router.replace('/guides')
+    completeEditorExit(() => router.replace('/guides'))
   }
 
   return (

@@ -1,5 +1,7 @@
 'use client'
 
+import { confirmLeaveEditor, useUnsavedChanges } from '@/app/components/navigation-feedback/unsaved-changes'
+
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { ReactNode, useEffect, useRef, useState, useTransition } from 'react'
@@ -829,6 +831,14 @@ export default function GuidesV3Preview({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSavingForge, startSaveTransition] = useTransition()
   const isSavingForgeRef = useRef(false)
+  const hasGuideDraft = forgeMode === 'guide' && (
+    selectedGuideDeckIds.size > 0 || guideName !== '' || guideDescription !== '' ||
+    guideImage !== '/onboarding/pains/tough-choices.jpeg'
+  )
+  const hasDeckDraft = forgeMode === 'deck' && (
+    forgeScreen === 'draft' || forgeScreen === 'build' || forgeScreen === 'deck-editor'
+  )
+  useUnsavedChanges(Boolean(forgeScreen) && (isSavingForge || hasGuideDraft || hasDeckDraft))
 
   useEffect(() => {
     performance.mark('v3-guides-hydrated')
@@ -996,7 +1006,8 @@ export default function GuidesV3Preview({
     setForgeScreen('source')
   }
 
-  function closeForge() {
+  function closeForge(saved = false) {
+    if (!saved && !confirmLeaveEditor()) return
     setForgeScreen(null)
     setIsAddCardOpen(false)
     setEditingCardId(null)
@@ -1111,6 +1122,7 @@ export default function GuidesV3Preview({
   }
 
   function backFromBuild() {
+    if (!confirmLeaveEditor()) return
     if (sourceKind === 'scratch') {
       setForgeScreen('source')
       return
@@ -1211,7 +1223,7 @@ export default function GuidesV3Preview({
           ...current.filter((guide) => guide.id !== savedGuideFile.id && !guide.draft),
         ])
         setActiveTab('guides')
-        closeForge()
+        closeForge(true)
       } catch (error) {
         setSaveError(
           error instanceof Error ? error.message : 'Could not save guide.'
@@ -1256,7 +1268,7 @@ export default function GuidesV3Preview({
         ])
         setActiveTab('decks')
         resetDeckForge()
-        closeForge()
+        closeForge(true)
       } catch (error) {
         setSaveError(
           error instanceof Error ? error.message : 'Could not save deck.'
@@ -1443,7 +1455,7 @@ export default function GuidesV3Preview({
             setForgeScreen('build')
           } else setForgeScreen('source')
         }}
-        onClose={closeForge}
+        onClose={() => closeForge()}
         title={getForgeScreenTitle(forgeScreen, forgeMode)}
       >
         <V3PerfIndicator surface="guide-forge" detail={forgeScreen} />

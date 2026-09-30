@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import type { GuidesV3Deck } from '../guides-v3-data'
 import type { GuidesV3DeckDetail, GuidesV3GuideDetail } from '../guides-v3-detail-data'
@@ -24,29 +24,32 @@ export default function GuideEditPageClient({
   featureGuides: FeatureGuideEntry[]
 }) {
   const router = useRouter()
-  const [isSaving, startSaveTransition] = useTransition()
+  const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  function handleSaveDraft(payload: GuideEditorSavePayload) {
+  async function handleSaveDraft(payload: GuideEditorSavePayload) {
     setSaveError(null)
-    startSaveTransition(async () => {
-      try {
-        await updateGuideFromDecks(guide.id, {
-          title: payload.title,
-          description: payload.description,
-          image: payload.image,
-          status: payload.status,
-          difficulty: payload.difficulty,
-          deckIds: payload.deckIds,
-        })
+    setIsSaving(true)
+    try {
+      await updateGuideFromDecks(guide.id, {
+        title: payload.title,
+        description: payload.description,
+        image: payload.image,
+        status: payload.status,
+        difficulty: payload.difficulty,
+        deckIds: payload.deckIds,
+      })
 
-        router.refresh()
-      } catch (error) {
-        setSaveError(
-          error instanceof Error ? error.message : 'Could not save guide.'
-        )
-      }
-    })
+      router.refresh()
+      return true
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Could not save guide.'
+      )
+      return false
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (

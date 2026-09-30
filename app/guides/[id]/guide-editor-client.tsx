@@ -1,5 +1,7 @@
 'use client'
 
+import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-changes'
+
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useState } from 'react'
@@ -148,7 +150,7 @@ export default function GuideEditorClient({
   featureGuides: FeatureGuideEntry[]
   backHref: string
   isSaving?: boolean
-  onSaveDraft?: (payload: GuideEditorSavePayload) => void
+  onSaveDraft?: (payload: GuideEditorSavePayload) => void | Promise<boolean>
   saveError?: string | null
   saveLabel?: string
 }) {
@@ -220,15 +222,17 @@ export default function GuideEditorClient({
     setSelectedDeckIds((current) => current.filter((id) => id !== deckId))
   }
 
+  const saveChanges = useEditorChanges(JSON.stringify({ title, description, coverImage, selectedDeckIds, status, difficulty }), isSaving)
+
   function handleSave() {
-    onSaveDraft?.({
+    void saveChanges(() => onSaveDraft?.({
       title,
       description,
       image: coverImage,
       status,
       difficulty,
       deckIds: selectedDeckIds,
-    })
+    }))
   }
 
   return (

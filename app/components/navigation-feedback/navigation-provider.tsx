@@ -1,11 +1,13 @@
 'use client'
 
-import { createContext, useCallback, useContext, useMemo, useState, useTransition, useOptimistic, type ReactNode } from 'react'
+import { createContext, useLayoutEffect, useCallback, useContext, useMemo, useState, useTransition, useOptimistic, type ReactNode } from 'react'
 import { useRouter as useNextRouter } from 'next/navigation'
 import ReturnSurface from './return-surface'
 import DashboardCacheLifecycle from './dashboard-cache-lifecycle'
 import { clearDashboardReturn } from '@/app/dashboard/dashboard-return-store'
 import styles from './navigation-feedback.module.css'
+
+import { confirmLeaveEditor, installEditorNavigationProtection, isPageChange } from './unsaved-changes'
 
 type Router = ReturnType<typeof useNextRouter>
 type PendingLink = { id: symbol; href: string }
@@ -19,6 +21,7 @@ const NavigationContext = createContext<NavigationContextValue | null>(null)
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const nextRouter = useNextRouter()
+  useLayoutEffect(installEditorNavigationProtection, [])
   const [, startTransition] = useTransition()
   const [destination, setDestination] = useOptimistic<string | null>(null)
   const [link, setLink] = useState<PendingLink | null>(null)
@@ -26,6 +29,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const clearLink = useCallback((id: symbol) => setLink(current => current?.id === id ? null : current), [])
   const router = useMemo<Router>(() => {
     const navigate = (method: 'push' | 'replace', href: string, options?: Parameters<Router['push']>[1]) => {
+      if (isPageChange(href) && !confirmLeaveEditor()) return
       const next = new URL(href, window.location.href)
       const current = new URL(window.location.href)
       if (next.origin !== current.origin || (next.hash !== current.hash && next.pathname === current.pathname && next.search === current.search)) {

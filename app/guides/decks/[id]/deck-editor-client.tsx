@@ -1,5 +1,7 @@
 'use client'
 
+import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-changes'
+
 import { PaintAlignmentToggle } from '../../shared/paint-alignment-toggle'
 
 import Image from 'next/image'
@@ -490,7 +492,7 @@ export default function DeckEditorClient({
   isSaving?: boolean
   onBack?: () => void
   onDeleteDeck?: () => Promise<void>
-  onSaveDraft?: (payload: DeckEditorSavePayload) => void
+  onSaveDraft?: (payload: DeckEditorSavePayload) => void | Promise<boolean>
   onTogglePaintOwnership?: (formData: FormData) => void | Promise<void>
   saveError?: string | null
   saveLabel?: string
@@ -538,6 +540,7 @@ export default function DeckEditorClient({
   const editingCard = cards.find((card) => card.id === editingCardId) ?? null
   const coverCard = cards.find((card) => card.template === 'cover')
   const isUploadingImages = pendingImageUploads > 0
+  const saveChanges = useEditorChanges(JSON.stringify({ title, description, inventoryNotes, expertTips, difficulty, status, cards, gallery, heroImageId }), isSaving || isUploadingImages)
 
   function reorderCard(cardId: string, targetId: string, edge: DropTarget['edge']) {
     if (cardId === targetId) return
@@ -749,7 +752,7 @@ export default function DeckEditorClient({
       return
     }
 
-    onSaveDraft?.({
+    void saveChanges(() => onSaveDraft?.({
       title,
       description,
       difficulty,
@@ -772,7 +775,7 @@ export default function DeckEditorClient({
         paintAlignment: card.paintAlignment ?? 'left',
         subtitle: card.subtitle?.trim() || null,
       })),
-    })
+    }))
   }
 
   async function addGalleryFiles(
