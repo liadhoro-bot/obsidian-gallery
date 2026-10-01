@@ -5,6 +5,7 @@ import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import UnitDetailClient from './unit-detail-client'
 import UnitHeroClient from './unit-hero-client'
 import { createPerfTimer } from '../../../utils/perf/server'
+import { closeExpiredUnitSessions } from '../../../utils/sessions/expire-unit-sessions'
 import { getDashboardProfile } from '../../dashboard/dashboard-data'
 import NominateForContestCard from '../../../components/contests/nominate-for-contest-card'
 import { getEligibleContestsForSource } from '../../../lib/contests/queries'
@@ -264,6 +265,11 @@ async function getUnitV3PreviewUnit(
   initialTab: 'details' | 'paint' | 'progress'
 ) {
   const supabase = await createClient()
+  // Runs alongside the unit query; awaited before sessions are read so a
+  // timer past the two-hour cap is shown as a finished session.
+  const expiredSessionsPromise = initialTab === 'paint'
+    ? closeExpiredUnitSessions(supabase, userId)
+    : Promise.resolve(0)
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
@@ -281,6 +287,8 @@ async function getUnitV3PreviewUnit(
   if (!unit) {
     return null
   }
+
+  await expiredSessionsPromise
 
   const shouldLoadPaintTab = initialTab === 'paint'
   const shouldLoadProgressTab = initialTab === 'progress'

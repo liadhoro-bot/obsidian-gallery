@@ -16,6 +16,7 @@ import {
   deleteUnitImage,
   deleteUnit,
   endUnitSession,
+  expireUnitSessionAtTwoHours,
   reorderUnitImages,
   scheduleUnitSession,
   updateUnitScheduledSession,
@@ -31,6 +32,10 @@ import {
   uploadUnitGalleryImages,
 } from './actions'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import {
+  capTimerSessionSeconds,
+  MAX_TIMER_SESSION_SECONDS,
+} from '../../../utils/sessions/expire-unit-sessions'
 import WorkbenchGallery from '../../components/gallery/workbench-gallery'
 import FeatureOnDashboardButton from '../../components/feature-on-dashboard-button'
 import PaletteCard, { type PaletteCardPaint } from '../../projects/[id]/palette-card'
@@ -1896,8 +1901,28 @@ function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoS
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [activeSession])
+  // Timers stop counting at the two-hour cap; the server closes the session
+  // at exactly started_at + 2h.
+  useEffect(() => {
+    if (!activeSession || activeSession.id === 'optimistic') return
+    const stopAt = Date.parse(activeSession.started_at) + MAX_TIMER_SESSION_SECONDS * 1000
+    const timeout = setTimeout(() => {
+      if (timerMutation.current) return
+      timerMutation.current = true
+      startTransition(async () => {
+        try {
+          await expireUnitSessionAtTwoHours(unit.id)
+          setActiveSession(null)
+          router.refresh()
+        } finally {
+          timerMutation.current = false
+        }
+      })
+    }, Math.max(0, stopAt - Date.now()))
+    return () => clearTimeout(timeout)
+  }, [activeSession, router, startTransition, unit.id])
   const elapsed = activeSession
-    ? Math.max(0, Math.floor((now - Date.parse(activeSession.started_at)) / 1000))
+    ? capTimerSessionSeconds(Math.floor((now - Date.parse(activeSession.started_at)) / 1000))
     : 0
   const runningClock = `${String(Math.floor(elapsed / 3600)).padStart(2, '0')}:${String(Math.floor(elapsed / 60) % 60).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
   const [startPaintingError, setStartPaintingError] = useState<string | null>(

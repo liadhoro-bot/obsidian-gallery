@@ -26,6 +26,11 @@ import {
 } from '../../../lib/onboarding/completion'
 import { safeEvaluateAchievements } from '../../../lib/achievements/evaluateAchievements'
 import { applyPaletteEdit, type PaletteEdit } from '../../../lib/palette/palette-edit'
+import {
+  capTimerSessionSeconds,
+  closeExpiredUnitSessions,
+  MAX_TIMER_SESSION_SECONDS,
+} from '../../../utils/sessions/expire-unit-sessions'
 
 const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
 const unitThemeDescription = (unitId: string, source: string) =>
@@ -274,6 +279,9 @@ export async function startUnitSession(unitId: string, requestedStartedAt?: stri
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)
 
+  // Close timers past the cap first so a stale one is not "resumed" here.
+  await closeExpiredUnitSessions(supabase, user.id)
+
   const { data: existing, error: existingError } = await supabase
     .from('unit_sessions')
     .select('id, started_at')
@@ -368,6 +376,8 @@ export async function endUnitSession(unitId: string) {
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)
 
+  await closeExpiredUnitSessions(supabase, user.id)
+
   const { data: session, error: sessionError } = await supabase
     .from('unit_sessions')
     .select('id, started_at')
@@ -389,10 +399,11 @@ export async function endUnitSession(unitId: string) {
   }
 
   const started = new Date(session.started_at).getTime()
-  const ended = Date.now()
-  const durationSeconds = Math.max(0, Math.floor((ended - started) / 1000))
+  const durationSeconds = capTimerSessionSeconds(
+    Math.floor((Date.now() - started) / 1000)
+  )
 
-  const endedAt = new Date().toISOString()
+  const endedAt = new Date(started + durationSeconds * 1000).toISOString()
 
   const { data: updatedSession, error } = await supabase
     .from('unit_sessions')
@@ -1551,13 +1562,13 @@ export async function expireUnitSessionAtTwoHours(unitId: string) {
   }
 
   const startedAt = new Date(session.started_at)
-  const forcedEndAt = new Date(startedAt.getTime() + 2 * 60 * 60 * 1000)
+  const forcedEndAt = new Date(startedAt.getTime() + MAX_TIMER_SESSION_SECONDS * 1000)
 
   const { error } = await supabase
     .from('unit_sessions')
     .update({
       ended_at: forcedEndAt.toISOString(),
-      duration_seconds: 7200,
+      duration_seconds: MAX_TIMER_SESSION_SECONDS,
     })
     .eq('id', session.id)
 
@@ -1567,7 +1578,7 @@ export async function expireUnitSessionAtTwoHours(unitId: string) {
 
   revalidatePath(`/units/${unitId}`)
 
-  return { durationSeconds: 7200 }
+  return { durationSeconds: MAX_TIMER_SESSION_SECONDS }
 }
 
 export async function toggleStepDone(formData: FormData) {
