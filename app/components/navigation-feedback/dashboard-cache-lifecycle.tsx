@@ -16,7 +16,7 @@ export default function DashboardCacheLifecycle() {
     return () => { subscription.unsubscribe(); unsubscribe() }
   }, [])
   useEffect(() => {
-    if (/^\/(login|auth|onboarding|subscribe)(\/|$)/.test(pathname)) clearDashboardReturn()
+    if (/^\/(login|auth|onboarding|subscribe|trial)(\/|$)/.test(pathname)) clearDashboardReturn()
   }, [pathname])
   return null
 }

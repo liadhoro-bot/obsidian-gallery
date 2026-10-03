@@ -5,7 +5,7 @@ export function routeLabel(href: string) {
     dashboard: 'Dashboard', projects: 'Projects', units: 'Unit', paints: 'Paint Vault',
     guides: 'Guides', recipes: 'Recipe', community: 'Community', contests: 'Contests',
     themes: 'Themes', vault: 'Paint Vault', settings: 'Settings', onboarding: 'Getting started',
-    subscribe: 'Membership', login: 'Sign in', support: 'Support',
+    subscribe: 'Membership', trial: 'Free trial', login: 'Sign in', support: 'Support',
   }
   return {
     title: titles[root] ?? 'Obsidian Gallery',

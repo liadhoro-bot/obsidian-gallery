@@ -33,7 +33,8 @@ export default function ClientShell({
     !pathname.startsWith('/settings/terms') &&
     !pathname.startsWith('/guides/decks') &&
     !pathname.startsWith('/subscribe') &&
-    !pathname.startsWith('/payment-success')
+    !pathname.startsWith('/payment-success') &&
+    !pathname.startsWith('/trial')
   const showInstallPrompt =
     !pathname.startsWith('/auth') &&
     !pathname.startsWith('/login') &&
@@ -41,7 +42,8 @@ export default function ClientShell({
     !pathname.startsWith('/offline') &&
     !pathname.startsWith('/settings/terms') &&
     !pathname.startsWith('/subscribe') &&
-    !pathname.startsWith('/payment-success')
+    !pathname.startsWith('/payment-success') &&
+    !pathname.startsWith('/trial')
 
   return (
     <>

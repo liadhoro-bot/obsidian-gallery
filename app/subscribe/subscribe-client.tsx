@@ -54,9 +54,11 @@ function LockIcon() {
 export default function SubscribeClient({
   email,
   nextPath,
+  ctaLabel = "Claim my Founder's Pass - ₪15",
 }: {
   email: string
   nextPath: string
+  ctaLabel?: string
 }) {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
@@ -234,7 +236,7 @@ export default function SubscribeClient({
             ? 'Opening payment...'
             : status === 'waiting'
               ? 'Waiting for payment...'
-              : "Claim my Founder's Pass - ₪15"}
+              : ctaLabel}
         </button>
       </form>
 
