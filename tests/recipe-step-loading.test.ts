@@ -5,7 +5,7 @@ import { loadRecipeSteps } from '../app/guides/load-recipe-steps'
 
 function fixture(missing: string[] = [], failure?: { code: string; message: string }) {
   const queries: string[][] = []
-  const source = { id: 'step-1', step_number: 1, title: 'First coat', instructions: 'Thin layers', image_url: '/paint.webp', card_template: 'video', youtube_url: 'https://youtu.be/example' }
+  const source = { id: 'step-1', step_number: 1, title: 'First coat', instructions: 'Thin layers', image_url: '/paint.webp', card_template: 'video', youtube_url: 'https://youtu.be/example', image_focal_x: 25, image_focal_y: 75, subtitle: '' }
   const client = { from(table: string) {
     assert.equal(table, 'recipe_steps')
     return { select(selection: string) {

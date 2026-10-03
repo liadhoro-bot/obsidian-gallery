@@ -1,5 +1,7 @@
 'use client'
 
+import { themeSubtitleText } from './deck-save-values'
+
 import Image from 'next/image'
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useId, useMemo, useState } from 'react'
@@ -620,9 +622,11 @@ function ThemeStepCard({
             >
               {step.title}
             </h2>
-            <p className="recipe-guide-alt-theme-kicker font-serif uppercase">
-              {step.subtitle?.trim() || 'Color Reference'}
-            </p>
+            {themeSubtitleText(step.subtitle) ? (
+              <p className="recipe-guide-alt-theme-kicker font-serif uppercase">
+                {themeSubtitleText(step.subtitle)}
+              </p>
+            ) : null}
           </div>
 
           {shownPaints.length ? (

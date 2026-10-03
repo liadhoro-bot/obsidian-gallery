@@ -2,6 +2,8 @@
 
 import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-changes'
 
+import { hasUnuploadedImage, normalizeThemeSubtitle } from '../../shared/deck-save-values'
+
 import { PaintAlignmentToggle } from '../../shared/paint-alignment-toggle'
 
 import Image from 'next/image'
@@ -752,6 +754,11 @@ export default function DeckEditorClient({
       return
     }
 
+    if (hasUnuploadedImage([heroImage, ...cards.map(card => card.image)])) {
+      setImageUploadError('An image could not be uploaded. Upload it again before saving; your changes are still here.')
+      return
+    }
+
     void saveChanges(() => onSaveDraft?.({
       title,
       description,
@@ -773,7 +780,7 @@ export default function DeckEditorClient({
         imageFocalX: card.imageFocalX,
         imageFocalY: card.imageFocalY,
         paintAlignment: card.paintAlignment ?? 'left',
-        subtitle: card.subtitle?.trim() || null,
+        subtitle: normalizeThemeSubtitle(card.template, card.subtitle),
       })),
     }))
   }
@@ -1125,7 +1132,7 @@ export default function DeckEditorClient({
         ) : null}
 
         {saveError || imageUploadError ? (
-          <p className={styles.saveError}>{saveError ?? imageUploadError}</p>
+          <p className={styles.saveError} role="alert">{saveError ?? imageUploadError}</p>
         ) : null}
       </div>
 
@@ -1137,6 +1144,7 @@ export default function DeckEditorClient({
           onAddPaint={addEditingCardPaint}
           onChange={updateActiveCard}
           onChangeImage={updateEditingCardImage}
+          imageUploadError={imageUploadError}
           onChangePaint={updateEditingCardPaint}
           onClose={() => setEditingCardId(null)}
           onDelete={deleteEditingCard}
@@ -1631,6 +1639,7 @@ function CardEditorSheet({
   onAddPaint,
   onChange,
   onChangeImage,
+  imageUploadError,
   onChangePaint,
   onClose,
   onDelete,
@@ -1642,6 +1651,7 @@ function CardEditorSheet({
   deckPaints: GuidesV3DeckDetail['paintList']
   onAddPaint: () => void
   onChange: (patch: Partial<EditorCard>) => void
+  imageUploadError?: string | null
   onChangeImage: (event: ChangeEvent<HTMLInputElement>) => void
   onChangePaint: (paintIndex: number, patch: Partial<PreviewPaint>) => void
   onClose: () => void
@@ -1707,12 +1717,14 @@ function CardEditorSheet({
             <span>Subtitle</span>
             <input
               value={card.subtitle ?? 'Color Reference'}
-              placeholder="Color Reference"
+              placeholder="Leave empty to hide subtitle"
               maxLength={60}
               onChange={(event) => onChange({ subtitle: event.target.value })}
             />
           </label>
         ) : null}
+
+        {imageUploadError ? <p className={styles.saveError} role="alert">{imageUploadError}</p> : null}
 
         {!isPaintsList && !isVideo ? (
           <section className={styles.cardImageEditor}>

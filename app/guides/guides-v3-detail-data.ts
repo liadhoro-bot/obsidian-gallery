@@ -474,7 +474,7 @@ export const getGuidesV3DeckDetail = cache(
         imageFocalX: step.image_focal_x ?? 50,
         imageFocalY: step.image_focal_y ?? 50,
         paintAlignment: parsedInstructions.paintAlignment,
-        subtitle: step.subtitle?.trim() || null,
+        subtitle: step.subtitle?.trim() ?? null,
       }
     })
 

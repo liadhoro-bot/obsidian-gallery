@@ -1,6 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { normalizeThemeSubtitle, hasUnuploadedImage } from './shared/deck-save-values'
+import { insertRecipeSteps, type RecipeStepInsert } from './insert-recipe-steps'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
@@ -58,30 +60,10 @@ export type DeckEditorImageUploadResult = {
   url: string
 }
 
-type SupabaseErrorLike = {
-  code?: string
-  message?: string
-}
-
-type RecipeStepInsert = {
-  recipe_id: string
-  user_id: string
-  step_number: number
-  title: string
-  card_template?: string | null
-  instructions: string
-  image_url: string | null
-  youtube_url: string | null
-  image_focal_x: number
-  image_focal_y: number
-  subtitle?: string | null
-}
-
 // Theme card kicker (recipe_steps.subtitle). Null renders the default
 // "Color Reference"; other card types don't show a subtitle.
 function safeThemeSubtitle(card: CreateDeckCardInput) {
-  if (card.template !== 'theme' && card.template !== 'theme-alt') return null
-  return card.subtitle?.trim().slice(0, 60) || null
+  return normalizeThemeSubtitle(card.template, card.subtitle)
 }
 
 function cleanText(value: string | null | undefined, fallback: string) {
@@ -234,99 +216,6 @@ export async function uploadDeckEditorImage(
   return { url: publicUrl }
 }
 
-function isMissingColumn(error: SupabaseErrorLike | null | undefined, column: string) {
-  const message = error?.message ?? ''
-
-  return (
-    error?.code === '42703' ||
-    (message.includes(column) &&
-      (message.includes('does not exist') || message.includes('schema cache')))
-  )
-}
-
-function withoutCardTemplate(steps: RecipeStepInsert[]) {
-  return steps.map((step) => ({
-    recipe_id: step.recipe_id,
-    user_id: step.user_id,
-    step_number: step.step_number,
-    title: step.title,
-    instructions: step.instructions,
-    image_url: step.image_url,
-    youtube_url: step.youtube_url,
-    image_focal_x: step.image_focal_x,
-    image_focal_y: step.image_focal_y,
-  }))
-}
-
-function withoutYoutubeUrl(steps: RecipeStepInsert[]) {
-  return steps.map((step) => ({
-    recipe_id: step.recipe_id,
-    user_id: step.user_id,
-    step_number: step.step_number,
-    title: step.title,
-    card_template: step.card_template,
-    instructions: step.instructions,
-    image_url:
-      step.card_template === 'video'
-        ? step.youtube_url ?? step.image_url
-        : step.image_url,
-    image_focal_x: step.image_focal_x,
-    image_focal_y: step.image_focal_y,
-  }))
-}
-
-function withoutCardTemplateAndYoutubeUrl(steps: RecipeStepInsert[]) {
-  return steps.map((step) => ({
-    recipe_id: step.recipe_id,
-    user_id: step.user_id,
-    step_number: step.step_number,
-    title: step.title,
-    instructions: step.instructions,
-    image_url:
-      step.card_template === 'video'
-        ? step.youtube_url ?? step.image_url
-        : step.image_url,
-    image_focal_x: step.image_focal_x,
-    image_focal_y: step.image_focal_y,
-  }))
-}
-
-async function insertRecipeSteps(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  steps: RecipeStepInsert[]
-) {
-  let result = await supabase
-    .from('recipe_steps')
-    .insert(steps)
-    .select('id, step_number')
-
-  if (isMissingColumn(result.error, 'youtube_url')) {
-    result = await supabase
-      .from('recipe_steps')
-      .insert(withoutYoutubeUrl(steps))
-      .select('id, step_number')
-  }
-
-  if (isMissingColumn(result.error, 'card_template')) {
-    result = await supabase
-      .from('recipe_steps')
-      .insert(withoutCardTemplate(steps))
-      .select('id, step_number')
-  }
-
-  if (
-    isMissingColumn(result.error, 'youtube_url') ||
-    isMissingColumn(result.error, 'card_template')
-  ) {
-    result = await supabase
-      .from('recipe_steps')
-      .insert(withoutCardTemplateAndYoutubeUrl(steps))
-      .select('id, step_number')
-  }
-
-  return result
-}
-
 function parsePaintSelection(rawValue: string | null | undefined) {
   if (!rawValue || rawValue.startsWith('paint:')) return null
 
@@ -366,6 +255,10 @@ export async function createDeckFromForge(
   } = await supabase.auth.getUser()
 
   if (!user) throw new Error('Not authenticated')
+
+  if (hasUnuploadedImage([input.image, ...input.cards.map(card => card.image)])) {
+    throw new Error('An image has not finished uploading. Upload it again before saving.')
+  }
 
   const title = cleanText(input.title, 'New Deck')
   const description = cleanText(input.description, 'A custom painting deck.')
@@ -512,6 +405,10 @@ export async function updateDeckFromForge(
 
   if (!user) throw new Error('Not authenticated')
   if (!deckId) throw new Error('Missing deck id')
+
+  if (hasUnuploadedImage([input.image, ...input.cards.map(card => card.image)])) {
+    throw new Error('An image has not finished uploading. Upload it again before saving.')
+  }
 
   const title = cleanText(input.title, 'New Deck')
   const description = cleanText(input.description, 'A custom painting deck.')
