@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
+import {
+  isMonthlyPaymentEnabled,
+  isPricingV2Active,
+} from '../../../../lib/subscription/pricing'
 
 const ISRAELI_MOBILE_PATTERN = /^0\d{8,9}$/
 
@@ -14,6 +18,15 @@ export async function POST(request: Request) {
 
   if (!user?.email) {
     return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
+  }
+
+  // After the pricing v2 cutover the Make scenario behind this route still
+  // charges the ₪15 Founder's Pass, so refuse until monthly billing is wired.
+  if (isPricingV2Active() && !isMonthlyPaymentEnabled()) {
+    return NextResponse.json(
+      { error: 'Subscriptions are not open yet.' },
+      { status: 403 }
+    )
   }
 
   const webhookUrl = process.env.MAKE_CREATE_PAYMENT_WEBHOOK_URL
