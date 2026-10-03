@@ -10,9 +10,12 @@ import {
   isV3DeploymentHost,
 } from './lib/v3-preview'
 import {
+  getCachedAccessState,
   getCachedSubscriptionStatus,
+  hasAppAccess,
   isSubscriptionGateEnabled,
 } from './lib/subscription/subscription-guard'
+import { isPricingV2Active } from './lib/subscription/pricing'
 import {
   FORWARDED_USER_HEADER,
   serializeForwardedUser,
@@ -123,6 +126,7 @@ export default async function proxy(request: NextRequest) {
     pathname === '/onboarding' ||
     pathname === '/subscribe' ||
     pathname === '/payment-success' ||
+    pathname === '/trial' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
     pathname === '/contests/dice-roll' ||
@@ -138,6 +142,7 @@ export default async function proxy(request: NextRequest) {
     pathname === '/api/vault/paint-equivalencies' ||
     pathname === '/api/youtube-oembed' ||
     pathname.startsWith('/api/subscription/') ||
+    pathname.startsWith('/api/trial/') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||
     pathname.includes('.')
@@ -148,6 +153,7 @@ export default async function proxy(request: NextRequest) {
     !isPublicRoute ||
     pathname === '/onboarding' ||
     pathname === '/subscribe' ||
+    pathname === '/trial' ||
     shouldRequireAuthenticatedPreview
 
   if (!shouldCheckSession) {
@@ -261,7 +267,22 @@ export default async function proxy(request: NextRequest) {
   // flip it on in Vercel's environment variables once Make/Grow are wired
   // up and tested. /subscribe, /payment-success and /api/subscription/*
   // are all in isPublicRoute above, so they never get caught by this check.
-  if (isSubscriptionGateEnabled() && !isPublicRoute) {
+  //
+  // After the pricing v2 cutover the gate is trial-aware instead: paid and
+  // bypass users pass, users without a trial go to /trial, and users whose
+  // trial has ended go to /subscribe. /trial and /api/trial/* are public too.
+  if (isSubscriptionGateEnabled() && !isPublicRoute && isPricingV2Active()) {
+    const access = await getCachedAccessState(activeUser)
+
+    if (!hasAppAccess(access)) {
+      const gateUrl = new URL(
+        access.status === 'trial_available' ? '/trial' : '/subscribe',
+        request.url
+      )
+      gateUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+      return finalizeResponse(NextResponse.redirect(gateUrl))
+    }
+  } else if (isSubscriptionGateEnabled() && !isPublicRoute) {
     const subscription = await getCachedSubscriptionStatus(activeUser.email)
 
     if (!subscription.isActive) {
