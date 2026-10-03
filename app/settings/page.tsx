@@ -44,7 +44,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     return (
       <SettingsV3Preview
         user={{
-          createdAt: user.created_at ?? null,
+          // The proxy-forwarded user comes from JWT claims, which omit
+          // created_at, so fetch it here for "Member since".
+          createdAt:
+            user.created_at ||
+            (await supabase.auth.getUser()).data.user?.created_at ||
+            null,
           displayName:
             profile?.display_name ||
             user.user_metadata?.full_name ||

@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import type { User } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 import {
   V3_PREVIEW_COOKIE,
@@ -186,10 +187,22 @@ export default async function proxy(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user: verifiedUser },
-  } = await supabase.auth.getUser()
-  const activeUser = verifiedUser ?? null
+  // getClaims() verifies the JWT locally against the project's cached
+  // asymmetric signing keys (ES256) instead of a Supabase Auth round-trip on
+  // every navigation and prefetch. The JWT carries no created_at, so pages
+  // that need it fetch it themselves.
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const claims = claimsData?.claims
+  const activeUser: User | null = claims?.sub
+    ? ({
+        id: claims.sub,
+        email: claims.email,
+        created_at: '',
+        user_metadata: claims.user_metadata ?? {},
+        app_metadata: claims.app_metadata ?? {},
+        aud: 'authenticated',
+      } as User)
+    : null
 
   if (!activeUser) {
     if (!isPublicRoute || shouldRequireAuthenticatedPreview) {
