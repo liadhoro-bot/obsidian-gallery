@@ -16,6 +16,17 @@ export async function canManageContest(userId: string, contestId: string) {
   return isCurrentUserAdmin(userId)
 }
 
+// Read-only reporting is available to the recorded contest owner. This does
+// not confer global admin privileges or permission to edit other contests.
+export async function canReadContestBallots(userId: string | null | undefined, contestId: string) {
+  if (!userId) return false
+  const supabase = await createClient()
+  const { data: contest, error } = await supabase.from('contests')
+    .select('created_by').eq('id', contestId).maybeSingle()
+  if (error || !contest) return false
+  return contest.created_by === userId || await canManageContest(userId, contestId)
+}
+
 export async function canViewContest(
   userId: string | null | undefined,
   contestId: string

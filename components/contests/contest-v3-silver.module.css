@@ -1135,6 +1135,16 @@
   padding: 0;
 }
 
+.reportContestTitle { margin-bottom: 16px; color: var(--og-paper-50); font-weight: 700; }
+.reportTableScroll { overflow-x: auto; margin-top: 12px; }
+.reportTable { width: 100%; border-collapse: collapse; font-size: .85rem; color: var(--og-text-primary); }
+.reportTable th, .reportTable td { padding: 12px 6px; border-bottom: 1px solid var(--og-border-subtle); text-align: right; }
+.reportTable th:first-child { text-align: left; overflow-wrap: anywhere; }
+.reportTable thead { color: var(--og-text-secondary); }
+.reportBallots { display: grid; gap: 12px; margin-top: 16px; }
+.reportBallot { border-top: 1px solid var(--og-border-subtle); padding-top: 12px; overflow-wrap: anywhere; }
+.reportBallot h3 { font-weight: 800; color: var(--og-text-primary); }
+
 .modalPanel.ballotDialog {
   margin: auto;
   width: calc(100% - 24px);

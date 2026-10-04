@@ -95,6 +95,7 @@ export default function ContestDetailTabs({
   pickerSources = [],
   userNominations,
   viewerUserId,
+  privateReportHref,
 }: {
   ballot: ContestBallot | null
   contest: Contest
@@ -107,6 +108,7 @@ export default function ContestDetailTabs({
   results: unknown[]
   userNominations: ContestNomination[]
   viewerUserId?: string
+  privateReportHref?: string
 }) {
   const [activeTab, setActiveTab] = useState<ContestDetailTab>(initialTab)
   const [search, setSearch] = useState('')
@@ -165,6 +167,14 @@ export default function ContestDetailTabs({
     setSort((current) => (current === 'newest' ? 'title' : 'newest'))
   }
 
+  function selectTab(tab: ContestDetailTab) {
+    setActiveTab(tab)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', tab)
+    // Keep browser/device Back and a refresh on the same contest section.
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+  }
+
   return (
     <section className={styles.tabbedWorkbench}>
       <div className={styles.segmentedTabs} role="tablist" aria-label="Contest sections">
@@ -175,7 +185,7 @@ export default function ContestDetailTabs({
             role="tab"
             aria-selected={activeTab === tab.key}
             className={styles.segmentedTab}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => selectTab(tab.key)}
           >
             {tab.label}
           </button>
@@ -341,6 +351,13 @@ export default function ContestDetailTabs({
 
       <div hidden={activeTab !== 'my-activity'} aria-hidden={activeTab !== 'my-activity'}>
         <div className={styles.standingStack}>
+          {privateReportHref ? (
+            <article className={styles.paperPanel}>
+              <p className={styles.eyebrow}>Organizer</p>
+              <p className={styles.bodyText}>See who has voted, their choices, and the current points totals.</p>
+              <Link href={privateReportHref} className={`${styles.brassButton} ${styles.ctaButtonFull}`}>View private voting report</Link>
+            </article>
+          ) : null}
           <article className={styles.paperPanel}>
             <p className={styles.eyebrow}>Your Status</p>
             {isGuideAutoNominate ? (

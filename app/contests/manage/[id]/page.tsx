@@ -43,10 +43,13 @@ export default async function ManageContestPage({
 
   const { id } = await params
   const isDemoContest = id === DEMO_CONTEST_ID
-  if (!(await canManageContest(user.id, id))) redirect('/contests')
-
   const contest = await getContestById(id)
   if (!contest) notFound()
+  if (!(await canManageContest(user.id, id))) {
+    // Preserve the old shared link, with a clear private-report access screen
+    // instead of silently sending the owner to the legacy contest directory.
+    redirect(`/contests/${contest.slug}/report`)
+  }
   const nominations = isDemoContest ? [] : await getContestNominations(id, true)
   const results = isDemoContest ? [] : await getContestResults(id)
   const allowlist = isDemoContest ? [] : await getContestAllowlist(id)

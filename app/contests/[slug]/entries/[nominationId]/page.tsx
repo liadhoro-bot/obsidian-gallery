@@ -43,8 +43,8 @@ export default async function ContestEntryDetailPage({
     <main className={styles.contestSilver}>
       <div className={styles.pageRail}>
         <ContestHeader
-          backHref={`/contests/${contest.slug}`}
-          backLabel="Back"
+          backHref={`/contests/${contest.slug}?tab=entries`}
+          backLabel="Back to entries"
           contest={contest}
           showFooter={false}
         />

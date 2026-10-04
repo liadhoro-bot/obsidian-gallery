@@ -16,6 +16,7 @@ import {
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import {
   canManageContest,
+  canReadContestBallots,
   canNominateInContest,
   canViewContest,
 } from '../../../lib/contests/permissions'
@@ -93,6 +94,7 @@ export default async function ContestDetailPage({
         <ContestDetailTabs
           initialTab={tab === 'entries' || tab === 'my-activity' ? tab : 'details'}
           viewerUserId={user?.id}
+          privateReportHref={await canReadContestBallots(user?.id, contest.id) ? `/contests/${contest.slug}/report` : undefined}
           ballot={ballot}
           isEligibleParticipant={isEligibleParticipant}
           contest={contest}
