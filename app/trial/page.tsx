@@ -7,7 +7,7 @@ import {
 import { isPricingV2Active } from '../../lib/subscription/pricing'
 import { safeNextPath } from '../../lib/subscription/next-path'
 import styles from '../subscribe/subscribe-silver.module.css'
-import SubscribeShell, { BookIcon, ImageIcon, TrophyIcon } from '../subscribe/subscribe-shell'
+import SubscribeShell, { BookIcon, ImageIcon } from '../subscribe/subscribe-shell'
 import TrialClient from './trial-client'
 
 export const dynamic = 'force-dynamic'
@@ -64,7 +64,7 @@ export default async function TrialPage({ searchParams }: TrialPageProps) {
           When your trial ends, you can continue for ₪10/month.
         </span>
 
-        <div className={styles.benefitRow}>
+        <div className={`${styles.benefitRow} ${styles.benefitRowPair}`}>
           <div className={styles.benefitItem}>
             <span className={styles.benefitIcon}>
               <ImageIcon />
@@ -77,13 +77,6 @@ export default async function TrialPage({ searchParams }: TrialPageProps) {
               <BookIcon />
             </span>
             <span className={styles.benefitLabel}>Guides &amp; Recipes</span>
-          </div>
-
-          <div className={styles.benefitItem}>
-            <span className={styles.benefitIcon}>
-              <TrophyIcon />
-            </span>
-            <span className={styles.benefitLabel}>Contest Eligibility</span>
           </div>
         </div>
       </div>
