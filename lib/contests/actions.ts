@@ -11,6 +11,10 @@ import { getContestPhase } from './phases'
 import { validateContestConfig } from './validation'
 import { canManageContest, canModerateContest, canNominateInContest } from './permissions'
 import {
+  getSubscriptionStatus,
+  isSubscriptionGateEnabled,
+} from '../subscription/subscription-guard'
+import {
   getSafeImageExtension,
   validateGalleryImageFile,
 } from '../../utils/images/gallery-upload'
@@ -611,6 +615,15 @@ export async function submitNominationAction(
 
     if (!(await canNominateInContest(user.id, contest))) {
       throw new Error('This contest only accepts nominations from invited participants.')
+    }
+
+    // Only paying (or bypass) members can be contest entries; free-trial
+    // accounts cannot. Fails closed if the subscription lookup errors.
+    if (
+      isSubscriptionGateEnabled() &&
+      !(await getSubscriptionStatus(user.email)).isActive
+    ) {
+      throw new Error('Contest entries are open to subscribed members only. Free trial accounts can’t enter contests.')
     }
 
     const countResult = await supabase

@@ -18,7 +18,10 @@ import type {
   ContestResult,
 } from './types'
 import { getContestPhase } from './phases'
-import { getTrialOnlyUserIds } from '../subscription/subscription-guard'
+import {
+  getPayingUserIds,
+  isSubscriptionGateEnabled,
+} from '../subscription/subscription-guard'
 import { isContestSchemaMissing } from './schema'
 
 export const DEMO_CONTEST_ID = '00000000-0000-4000-8000-000000000001'
@@ -811,14 +814,16 @@ export async function getPublicGuideCreatorLeaderboard(
   if (error) throw new Error(error.message)
   if (!publicRecipes || publicRecipes.length === 0) return []
 
-  // Free-trial users are not eligible for contests, so their guides are not
-  // entries.
-  const trialOnlyOwners = await getTrialOnlyUserIds(
-    Array.from(new Set(publicRecipes.map((recipe) => recipe.user_id as string)))
-  )
-  const recipes = publicRecipes.filter(
-    (recipe) => !trialOnlyOwners.has(recipe.user_id)
-  )
+  // Only paying (or bypass) members are contest entries; free-trial users
+  // are not. If the lookup fails, show everyone rather than an empty contest.
+  const payingOwners = isSubscriptionGateEnabled()
+    ? await getPayingUserIds(
+        Array.from(new Set(publicRecipes.map((recipe) => recipe.user_id as string)))
+      )
+    : null
+  const recipes = payingOwners
+    ? publicRecipes.filter((recipe) => payingOwners.has(recipe.user_id))
+    : publicRecipes
   if (recipes.length === 0) return []
 
   const recipeIdsByOwner = new Map<string, string[]>()

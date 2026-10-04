@@ -212,52 +212,45 @@ export async function getCachedAccessState(
 }
 
 /**
- * Of the given users, those on a free trial only: they have a trials row
- * but no bypass and no active paid subscription. Used to keep trial users
- * out of contests. On lookup errors nobody is excluded.
+ * Of the given users, those with bypass or an active paid subscription.
+ * Only they can be contest entries; free-trial users cannot. Returns null
+ * when the lookup fails so callers can decide how to degrade.
  */
-export async function getTrialOnlyUserIds(
+export async function getPayingUserIds(
   userIds: string[]
-): Promise<Set<string>> {
+): Promise<Set<string> | null> {
   if (userIds.length === 0) return new Set()
 
   const service = createServiceRoleClient()
-  const { data: trials, error: trialsError } = await service
-    .from('trials')
-    .select('user_id, email')
-    .in('user_id', userIds)
-
-  if (trialsError) {
-    console.error('[access] trial-only lookup failed', trialsError)
-    return new Set()
-  }
-  if (!trials?.length) return new Set()
-
-  const bypassEmails = getBypassEmails()
-  const emails = trials
-    .map((trial) => String(trial.email ?? '').trim().toLowerCase())
-    .filter(Boolean)
   const { data: paid, error: paidError } = await service
     .from('subscriptions')
     .select('email')
-    .in('email', emails)
     .gt('paid_until', new Date().toISOString())
 
   if (paidError) {
-    console.error('[access] trial-only subscriptions lookup failed', paidError)
-    return new Set()
+    console.error('[access] paying-users subscriptions lookup failed', paidError)
+    return null
   }
 
-  const paidEmails = new Set(
-    (paid ?? []).map((row) => String(row.email ?? '').trim().toLowerCase())
-  )
+  const payingEmails = getBypassEmails()
+  for (const row of paid ?? []) {
+    const email = String(row.email ?? '').trim().toLowerCase()
+    if (email) payingEmails.add(email)
+  }
 
-  return new Set(
-    trials
-      .filter((trial) => {
-        const email = String(trial.email ?? '').trim().toLowerCase()
-        return !bypassEmails.has(email) && !paidEmails.has(email)
-      })
-      .map((trial) => trial.user_id as string)
-  )
+  // subscriptions is keyed by email, so resolve each user's email.
+  const results = await Promise.all(
+    userIds.map(async (userId) => {
+      const { data, error } = await service.auth.admin.getUserById(userId)
+      if (error) throw error
+      const email = data.user?.email?.trim().toLowerCase()
+      return email && payingEmails.has(email) ? userId : null
+    })
+  ).catch((error) => {
+    console.error('[access] paying-users email lookup failed', error)
+    return null
+  })
+
+  if (!results) return null
+  return new Set(results.filter((userId): userId is string => Boolean(userId)))
 }
