@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 import { createServiceRoleClient } from '../../../../utils/supabase/service-role'
@@ -7,6 +7,7 @@ import {
   TRIAL_LENGTH_DAYS,
   isPricingV2Active,
 } from '../../../../lib/subscription/pricing'
+import { sendTrialStartedNotification } from '../../../../lib/subscription/trial-notification'
 import { TERMS_VERSION } from '../../../../lib/terms-version'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -32,16 +33,21 @@ export async function POST() {
 
   // One trial per account, ever: ON CONFLICT (user_id) DO NOTHING, so a
   // repeat call never resets or extends an existing trial.
-  const { error: insertError } = await service.from('trials').upsert(
-    {
-      user_id: user.id,
-      email: (user.email ?? '').trim().toLowerCase(),
-      started_at: startedAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-      terms_version: TERMS_VERSION,
-    },
-    { onConflict: 'user_id', ignoreDuplicates: true }
-  )
+  // RETURNING only yields a row when this call actually created the trial.
+  const email = (user.email ?? '').trim().toLowerCase()
+  const { data: inserted, error: insertError } = await service
+    .from('trials')
+    .upsert(
+      {
+        user_id: user.id,
+        email,
+        started_at: startedAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        terms_version: TERMS_VERSION,
+      },
+      { onConflict: 'user_id', ignoreDuplicates: true }
+    )
+    .select('started_at, ends_at')
 
   if (insertError) {
     console.error('[trial] start failed', insertError)
@@ -66,6 +72,19 @@ export async function POST() {
   }
 
   revalidateTag(getTrialCacheTag(user.id), { expire: 0 })
+
+  const createdTrial = inserted?.[0]
+  if (createdTrial) {
+    // Notify the admin after responding so the user isn't kept waiting.
+    after(() =>
+      sendTrialStartedNotification({
+        userId: user.id,
+        email,
+        startedAt: createdTrial.started_at,
+        endsAt: createdTrial.ends_at,
+      })
+    )
+  }
 
   return NextResponse.json(
     { endsAt: data.ends_at },
