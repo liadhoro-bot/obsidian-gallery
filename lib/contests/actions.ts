@@ -816,6 +816,44 @@ export async function moderateNominationAction(formData: FormData) {
   revalidatePath('/contests')
 }
 
+export async function submitArmyBallotAction(contestId: string, nominationIds: string[]): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Please sign in to cast your vote.' }
+  const { data: contest, error: contestError } = await supabase.from('contests')
+    .select('slug, allow_ballot_changes').eq('id', contestId).single()
+  if (contestError || contest?.slug !== 'path-to-glory-coolest-army') return { error: 'Contest not found.' }
+  // The database must also lock ballots, including requests made directly to its RPC.
+  if (contest.allow_ballot_changes) return { error: 'Voting is being prepared. Please try again shortly.' }
+  if (nominationIds.length !== 2 || new Set(nominationIds).size !== 2) {
+    return { error: 'Choose two different armies, one for each place.' }
+  }
+  const { data, error } = await supabase.rpc('replace_contest_ballot', {
+    p_contest_id: contestId, p_nomination_ids: nominationIds,
+  })
+  if (error) {
+    const messages: Record<string, string> = {
+      voting_not_open: 'Voting is not open. Refresh to see the latest contest dates.',
+      ballot_changes_locked: 'You have already voted. Your ballot cannot be changed.',
+      not_on_allowlist: 'Voting is limited to the invited campaign participants.',
+      verified_email_required: 'Please verify your email before voting.',
+      self_vote_not_allowed: 'You cannot vote for your own army.',
+      invalid_nomination: 'An entry is no longer eligible. Refresh and choose again.',
+      duplicate_nominees: 'Choose two different armies.',
+    }
+    return { error: messages[error.message] ?? 'Your ballot could not be saved. Please try again.' }
+  }
+  contestRevalidate(contest.slug)
+  // Recording the vote is authoritative even if optional analytics fails.
+  const summary = Array.isArray(data) ? data[0] : data
+  try {
+    await safeEvaluateAchievements(user.id, {
+      triggers: ['contest_votes_total'], sourceType: 'contest_vote_cast', sourceId: summary?.ballot_id ?? contestId,
+    })
+  } catch (error) { console.error('Contest achievement update failed', error) }
+  return { error: null }
+}
+
 export async function submitBallotAction(formData: FormData) {
   const supabase = await createClient()
   const {

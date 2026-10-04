@@ -32,6 +32,10 @@ export default async function ContestVotePage({
     notFound()
   }
 
+  if (contest.slug === 'path-to-glory-coolest-army') {
+    redirect(`/contests/${contest.slug}?tab=my-activity`)
+  }
+
   const phase = getContestPhase(contest)
   const nominations = await getContestNominations(contest.id)
   const ballot = await getViewerBallot(contest.id, user.id)

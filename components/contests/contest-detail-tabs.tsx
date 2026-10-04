@@ -24,6 +24,7 @@ import type {
   ContestNomineeType,
 } from '../../lib/contests/types'
 import NominateModal from './nominate-modal'
+import ArmyBallotModal from './army-ballot-modal'
 import styles from './contest-v3-silver.module.css'
 
 type ContestDetailTab = 'details' | 'entries' | 'my-activity'
@@ -40,6 +41,7 @@ function formatDate(value: string | null, withYear = false) {
 
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
+    timeZone: 'Asia/Jerusalem',
     day: 'numeric',
     ...(withYear ? { year: 'numeric' as const } : {}),
   }).format(new Date(value))
@@ -77,7 +79,7 @@ function ballotEntryNames(
     .sort((first, second) => (first.selection_rank ?? 99) - (second.selection_rank ?? 99))
     .map((item) => {
       const nomination = nominationById.get(item.nomination_id)
-      return nomination ? entryOwnerName(nomination, hideIdentity) : null
+      return nomination ? nomination.source_type === 'guide' ? entryOwnerName(nomination, hideIdentity) : nomination.snapshot_title : null
     })
     .filter((name): name is string => Boolean(name))
 }
@@ -92,6 +94,7 @@ export default function ContestDetailTabs({
   nominations,
   pickerSources = [],
   userNominations,
+  viewerUserId,
 }: {
   ballot: ContestBallot | null
   contest: Contest
@@ -103,11 +106,14 @@ export default function ContestDetailTabs({
   pickerSources?: ContestPickerSource[]
   results: unknown[]
   userNominations: ContestNomination[]
+  viewerUserId?: string
 }) {
   const [activeTab, setActiveTab] = useState<ContestDetailTab>(initialTab)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<EntrySort>('newest')
   const [isNominateModalOpen, setIsNominateModalOpen] = useState(false)
+  const [isBallotModalOpen, setIsBallotModalOpen] = useState(false)
+  const isArmyContest = contest.slug === 'path-to-glory-coolest-army'
   const phase = getContestPhase(contest)
   const votingIsOpen = phase === 'voting_open'
   const votingHasClosed = ['voting_closed', 'results_published'].includes(phase)
@@ -407,6 +413,11 @@ export default function ContestDetailTabs({
                     : `1 ${nomineeCopy.entryNoun}`}
                 </small>
               </div>
+            ) : isEligibleParticipant ? (
+              <div className={styles.emptyParticipation}>
+                <h2>You’re on the participant list.</h2>
+                <p>You can vote even if you haven’t nominated an entry.</p>
+              </div>
             ) : (
               <div className={styles.emptyParticipation}>
                 <h2>This contest is invite-only.</h2>
@@ -467,12 +478,15 @@ export default function ContestDetailTabs({
               <div className={styles.voteState}>
                 <span className={styles.clockIcon} aria-hidden="true">○</span>
                 <div>
-                  <h2>Ballot not cast</h2>
+                  <h2>You can now vote</h2>
+                  <p>Help decide who takes the prize.</p>
                   <p>Voting closes {votingClosesIn === 1 ? 'in 1 day' : `in ${votingClosesIn ?? 0} days`}.</p>
                 </div>
-                <Link href={`/contests/${contest.slug}/vote`} className={styles.brassButton}>
-                  Choose Your Winners
-                </Link>
+                {isArmyContest && viewerUserId ? (
+                  <button type="button" className={styles.brassButton} onClick={() => setIsBallotModalOpen(true)}>Cast your vote</button>
+                ) : (
+                  <Link href={`/contests/${contest.slug}/vote`} className={styles.brassButton}>Choose Your Winners</Link>
+                )}
               </div>
             )}
           </article>
@@ -484,6 +498,9 @@ export default function ContestDetailTabs({
         </div>
       </div>
 
+      {isBallotModalOpen && viewerUserId ? (
+        <ArmyBallotModal contest={contest} nominations={nominations} viewerUserId={viewerUserId} onClose={() => setIsBallotModalOpen(false)} />
+      ) : null}
       {isNominateModalOpen ? (
         <NominateModal
           action={submitNominationAction}

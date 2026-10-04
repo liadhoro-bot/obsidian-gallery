@@ -1135,6 +1135,28 @@
   padding: 0;
 }
 
+.modalPanel.ballotDialog {
+  margin: auto;
+  width: calc(100% - 24px);
+  max-width: 520px;
+  max-height: 90dvh;
+  border-radius: var(--og-radius-l);
+  color: var(--og-text-primary);
+  padding: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.ballotDialog:not([open]) { display: none; }
+.ballotDialog::backdrop { background: rgb(0 0 0 / 70%); }
+.ballotChoices { display: grid; gap: 8px; border: 0; padding: 0; margin: 8px 0; }
+.ballotChoices legend { margin-bottom: 10px; font-weight: 800; }
+.modalPickerRow.ballotChoice { grid-template-columns: auto minmax(0, 1fr); min-height: 48px; cursor: pointer; }
+.ballotChoice:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.ballotChoice small { display: block; font-size: .75rem; }
+.ballotChoice:focus-within { outline: 2px solid var(--og-brass-500); outline-offset: 2px; }
+.ballotFooter { display: flex; justify-content: flex-end; gap: 12px; padding: 14px; }
+.ballotFooter button:disabled { opacity: .5; cursor: not-allowed; }
+
 .modalPanel {
   display: grid;
   width: 100%;

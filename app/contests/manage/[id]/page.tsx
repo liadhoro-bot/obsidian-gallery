@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import ContestAdminForm from '../../../../components/contests/contest-admin-form'
 import ContestAllowlistManager from '../../../../components/contests/contest-allowlist-manager'
 import ContestModerationList from '../../../../components/contests/contest-moderation-list'
+import ContestPrivateBallotReport from '../../../../components/contests/contest-private-ballot-report'
 import PendingNavButton from '../../../../components/contests/pending-nav-button'
 import PendingSubmitButton from '../../../../components/contests/pending-submit-button'
 import {
@@ -73,6 +74,9 @@ export default async function ManageContestPage({
         {isDemoContest ? null : (
           <>
             <ContestModerationList contestId={contest.id} nominations={nominations} />
+            {contest.slug === 'path-to-glory-coolest-army' ? (
+              <ContestPrivateBallotReport contestId={contest.id} nominations={nominations} participants={participants} />
+            ) : null}
             <ContestAllowlistManager
               contestId={contest.id}
               allowlist={allowlist}

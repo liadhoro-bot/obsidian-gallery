@@ -1,6 +1,7 @@
 import { isCurrentUserAdmin } from '../admin'
 import { createClient } from '../../utils/supabase/server'
 import { isContestSchemaMissing } from './schema'
+import { matchVerifiedContestInvitation } from './match-invitation'
 import type { Contest } from './types'
 
 type ContestVisibilityRow = {
@@ -97,5 +98,5 @@ export async function canNominateInContest(
   if (isContestSchemaMissing(error)) return false
   if (error) throw new Error(error.message)
 
-  return Boolean(allowedUser)
+  return Boolean(allowedUser) || await matchVerifiedContestInvitation(contest.id, userId)
 }

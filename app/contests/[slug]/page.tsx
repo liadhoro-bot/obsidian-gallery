@@ -91,7 +91,8 @@ export default async function ContestDetailPage({
         />
 
         <ContestDetailTabs
-          initialTab={tab === 'entries' ? 'entries' : 'details'}
+          initialTab={tab === 'entries' || tab === 'my-activity' ? tab : 'details'}
+          viewerUserId={user?.id}
           ballot={ballot}
           isEligibleParticipant={isEligibleParticipant}
           contest={contest}
