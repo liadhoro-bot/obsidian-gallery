@@ -210,3 +210,54 @@ export async function getCachedAccessState(
     return { status: 'trialing', endsAt: null }
   }
 }
+
+/**
+ * Of the given users, those on a free trial only: they have a trials row
+ * but no bypass and no active paid subscription. Used to keep trial users
+ * out of contests. On lookup errors nobody is excluded.
+ */
+export async function getTrialOnlyUserIds(
+  userIds: string[]
+): Promise<Set<string>> {
+  if (userIds.length === 0) return new Set()
+
+  const service = createServiceRoleClient()
+  const { data: trials, error: trialsError } = await service
+    .from('trials')
+    .select('user_id, email')
+    .in('user_id', userIds)
+
+  if (trialsError) {
+    console.error('[access] trial-only lookup failed', trialsError)
+    return new Set()
+  }
+  if (!trials?.length) return new Set()
+
+  const bypassEmails = getBypassEmails()
+  const emails = trials
+    .map((trial) => String(trial.email ?? '').trim().toLowerCase())
+    .filter(Boolean)
+  const { data: paid, error: paidError } = await service
+    .from('subscriptions')
+    .select('email')
+    .in('email', emails)
+    .gt('paid_until', new Date().toISOString())
+
+  if (paidError) {
+    console.error('[access] trial-only subscriptions lookup failed', paidError)
+    return new Set()
+  }
+
+  const paidEmails = new Set(
+    (paid ?? []).map((row) => String(row.email ?? '').trim().toLowerCase())
+  )
+
+  return new Set(
+    trials
+      .filter((trial) => {
+        const email = String(trial.email ?? '').trim().toLowerCase()
+        return !bypassEmails.has(email) && !paidEmails.has(email)
+      })
+      .map((trial) => trial.user_id as string)
+  )
+}

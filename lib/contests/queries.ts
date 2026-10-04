@@ -18,6 +18,7 @@ import type {
   ContestResult,
 } from './types'
 import { getContestPhase } from './phases'
+import { getTrialOnlyUserIds } from '../subscription/subscription-guard'
 import { isContestSchemaMissing } from './schema'
 
 export const DEMO_CONTEST_ID = '00000000-0000-4000-8000-000000000001'
@@ -801,14 +802,24 @@ export async function getPublicGuideCreatorLeaderboard(
   viewerId?: string | null
 ): Promise<GuideCreatorLeaderboardEntry[]> {
   const supabase = await createClient()
-  const { data: recipes, error } = await supabase
+  const { data: publicRecipes, error } = await supabase
     .from('recipes')
     .select('id, user_id, image_url, created_at')
     .eq('is_public', true)
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
-  if (!recipes || recipes.length === 0) return []
+  if (!publicRecipes || publicRecipes.length === 0) return []
+
+  // Free-trial users are not eligible for contests, so their guides are not
+  // entries.
+  const trialOnlyOwners = await getTrialOnlyUserIds(
+    Array.from(new Set(publicRecipes.map((recipe) => recipe.user_id as string)))
+  )
+  const recipes = publicRecipes.filter(
+    (recipe) => !trialOnlyOwners.has(recipe.user_id)
+  )
+  if (recipes.length === 0) return []
 
   const recipeIdsByOwner = new Map<string, string[]>()
   const countByOwner = new Map<string, number>()
