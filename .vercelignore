@@ -25,3 +25,4 @@ Claude outputs/
 debug.log
 perf-debug-flows.log
 *.tsbuildinfo
+.migration-dumps/

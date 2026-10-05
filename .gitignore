@@ -50,3 +50,7 @@ debug.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Supabase region migration dumps (contain user data)
+.migration-dumps/
+scripts/region-migration/node_modules/
