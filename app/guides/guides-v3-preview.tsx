@@ -390,7 +390,14 @@ const blankTemplates: BlankTemplate[] = [
 
 const LIBRARY_PAGE_SIZE = 9
 
-type GuideSortMode = 'name-asc' | 'name-desc' | 'popularity' | 'new-old' | 'old-new'
+type GuideSortMode =
+  | 'mine-first'
+  | 'saved-first'
+  | 'name-asc'
+  | 'name-desc'
+  | 'popularity'
+  | 'new-old'
+  | 'old-new'
 type GuideViewMode = 'card' | 'grid'
 
 const guideSortOptions: { value: GuideSortMode; label: string }[] = [
@@ -401,9 +408,21 @@ const guideSortOptions: { value: GuideSortMode; label: string }[] = [
   { value: 'old-new', label: 'Oldest First' },
 ]
 
+// The Guides tab splits into My Guides and Saved Guides; these two choose
+// which section leads. Every other mode keeps My Guides on top.
+const myGuidesSortOptions: { value: GuideSortMode; label: string }[] = [
+  { value: 'mine-first', label: 'My Guides First' },
+  { value: 'saved-first', label: 'Saved Guides First' },
+  ...guideSortOptions,
+]
+
 function sortGuideFiles(guides: GuideFile[], mode: GuideSortMode): GuideFile[] {
   const sorted = [...guides]
   switch (mode) {
+    case 'mine-first':
+    case 'saved-first':
+      sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      break
     case 'name-asc':
       sorted.sort((a, b) => a.title.localeCompare(b.title))
       break
@@ -754,16 +773,11 @@ export default function GuidesV3Preview({
   featureGuides = [],
   initialPayload,
 }: GuidesV3PreviewProps) {
-  // Sample content is only for rendering without a server payload. A live
-  // payload is authoritative even when empty: falling back per-list showed
-  // users with no guides/decks the samples, whose ids 404 on click.
-  const seedGuideFiles: GuideFile[] = initialPayload
-    ? initialPayload.guideFiles
-    : initialGuideFiles
-  const seedDecks: Deck[] = initialPayload ? initialPayload.decks : initialDecks
-  const seedLibraryGuides = initialPayload
-    ? initialPayload.libraryGuides
-    : publicGuideFiles
+  // Never seed from sample content: its ids don't exist, so every sample card
+  // 404s. An empty list renders the tab's empty state instead.
+  const seedGuideFiles: GuideFile[] = initialPayload?.guideFiles ?? []
+  const seedDecks: Deck[] = initialPayload?.decks ?? []
+  const seedLibraryGuides = initialPayload?.libraryGuides ?? []
   const [activeTab, setActiveTab] = useState<GuideTab>('library')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks, setDecks] = useState<Deck[]>(seedDecks)
@@ -771,7 +785,7 @@ export default function GuidesV3Preview({
   const [librarySortMode, setLibrarySortMode] = useState<GuideSortMode>('new-old')
   const [libraryVisibleCount, setLibraryVisibleCount] = useState(LIBRARY_PAGE_SIZE)
   const [guidesQuery, setGuidesQuery] = useState('')
-  const [guidesSortMode, setGuidesSortMode] = useState<GuideSortMode>('new-old')
+  const [guidesSortMode, setGuidesSortMode] = useState<GuideSortMode>('mine-first')
   const [decksQuery, setDecksQuery] = useState('')
   const [decksSortMode, setDecksSortMode] = useState<GuideSortMode>('new-old')
   const [guidesViewMode, setGuidesViewMode] = useState<GuideViewMode>('card')
@@ -785,7 +799,7 @@ export default function GuidesV3Preview({
       setActiveTab(tab === 'guides' || tab === 'decks' ? tab : 'library')
       if (saved) {
         setQuery(saved.query ?? ''); setGuidesQuery(saved.guidesQuery ?? ''); setDecksQuery(saved.decksQuery ?? '')
-        setLibrarySortMode(saved.librarySortMode ?? 'new-old'); setGuidesSortMode(saved.guidesSortMode ?? 'new-old'); setDecksSortMode(saved.decksSortMode ?? 'new-old')
+        setLibrarySortMode(saved.librarySortMode ?? 'new-old'); setGuidesSortMode(saved.guidesSortMode ?? 'mine-first'); setDecksSortMode(saved.decksSortMode ?? 'new-old')
         setGuidesViewMode(saved.guidesViewMode ?? 'card'); setDecksViewMode(saved.decksViewMode ?? 'card'); setLibraryViewMode(saved.libraryViewMode ?? 'card')
         setLibraryVisibleCount(saved.libraryVisibleCount ?? LIBRARY_PAGE_SIZE)
       }
@@ -3372,6 +3386,27 @@ function GuidesTab({
   viewMode: GuideViewMode
   onViewModeChange: (mode: GuideViewMode) => void
 }) {
+  // Anything the viewer didn't create is in their Guides tab because they
+  // saved it. Local drafts are always their own.
+  const myGuides = guideFiles.filter((guide) => guide.isOwner || guide.draft)
+  const savedGuides = guideFiles.filter((guide) => !guide.isOwner && !guide.draft)
+  const mineSection = {
+    key: 'mine',
+    title: 'My Guides',
+    guides: myGuides,
+    emptyTitle: 'No guides of your own yet',
+    emptyText: 'Create a guide by choosing decks from your collection.',
+  }
+  const savedSection = {
+    key: 'saved',
+    title: 'Saved Guides',
+    guides: savedGuides,
+    emptyTitle: 'No saved guides yet',
+    emptyText: 'Save a public guide from Discover and it will appear here.',
+  }
+  const sections =
+    sortMode === 'saved-first' ? [savedSection, mineSection] : [mineSection, savedSection]
+
   return (
     <section className="grid gap-3">
       <GuideSearchSortBar
@@ -3382,48 +3417,67 @@ function GuidesTab({
         onSortChange={onSortChange}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
+        sortOptions={myGuidesSortOptions}
       />
-      {guideFiles.length ? (
-        viewMode === 'grid' ? (
-          <div
-            data-v3-guides-indicator="guide-grid"
-            aria-label="Guide files"
-            data-feature-guide-target="guides.tabs.guides"
-          >
-            {guideFiles.map((guide) => (
-              <GuideGridTile
-                key={guide.id}
-                image={guide.image}
-                editHref={guide.isOwner ? `/guides/${guide.id}?preview=1&edit=1` : undefined}
-                title={guide.title}
-                href={guide.draft ? undefined : `/guides/${guide.id}?preview=1&view=1`}
-                onClick={guide.draft ? () => onOpenDraft(guide) : undefined}
-              />
-            ))}
-          </div>
-        ) : (
-          <div
-            className="grid gap-3"
-            aria-label="Guide files"
-            data-v3-guides-indicator="guides-list"
-            data-feature-guide-target="guides.tabs.guides"
-          >
-            {guideFiles.map((guide) => (
-              <GuideFileCard
-                key={guide.id}
-                guide={guide}
+      {sections.map((section, index) => (
+        <LibrarySection key={section.key} title={section.title}>
+          <div data-v3-guides-indicator={`guides-section-${section.key}`}>
+            {section.guides.length ? (
+              <GuideFileList
+                guides={section.guides}
                 onOpenDraft={onOpenDraft}
+                viewMode={viewMode}
+                featureGuideTarget={index === 0 ? 'guides.tabs.guides' : undefined}
               />
-            ))}
+            ) : (
+              <EmptyPanel title={section.emptyTitle} text={section.emptyText} />
+            )}
           </div>
-        )
-      ) : (
-        <EmptyPanel
-          title="No guide files yet"
-          text="Create a guide by choosing decks from your collection."
-        />
-      )}
+        </LibrarySection>
+      ))}
     </section>
+  )
+}
+
+function GuideFileList({
+  guides,
+  onOpenDraft,
+  viewMode,
+  featureGuideTarget,
+}: {
+  guides: GuideFile[]
+  onOpenDraft: (guide: GuideFile) => void
+  viewMode: GuideViewMode
+  featureGuideTarget?: string
+}) {
+  return viewMode === 'grid' ? (
+    <div
+      data-v3-guides-indicator="guide-grid"
+      aria-label="Guide files"
+      data-feature-guide-target={featureGuideTarget}
+    >
+      {guides.map((guide) => (
+        <GuideGridTile
+          key={guide.id}
+          image={guide.image}
+          editHref={guide.isOwner ? `/guides/${guide.id}?preview=1&edit=1` : undefined}
+          title={guide.title}
+          href={guide.draft ? undefined : `/guides/${guide.id}?preview=1&view=1`}
+          onClick={guide.draft ? () => onOpenDraft(guide) : undefined}
+        />
+      ))}
+    </div>
+  ) : (
+    <div
+      className="grid gap-3"
+      aria-label="Guide files"
+      data-v3-guides-indicator="guides-list"
+      data-feature-guide-target={featureGuideTarget}
+    >
+      {guides.map((guide) => (
+        <GuideFileCard key={guide.id} guide={guide} onOpenDraft={onOpenDraft} />
+      ))}
+    </div>
   )
 }
 
@@ -3606,6 +3660,7 @@ function GuideSearchSortBar({
   onViewModeChange,
   tags,
   onTagClick,
+  sortOptions = guideSortOptions,
 }: {
   placeholder: string
   query: string
@@ -3616,6 +3671,7 @@ function GuideSearchSortBar({
   onViewModeChange: (mode: GuideViewMode) => void
   tags?: string[]
   onTagClick?: (tag: string) => void
+  sortOptions?: { value: GuideSortMode; label: string }[]
 }) {
   const [isTagsOpen, setIsTagsOpen] = useState(false)
   const [isSortOpen, setIsSortOpen] = useState(false)
@@ -3700,7 +3756,7 @@ function GuideSearchSortBar({
                 }}
                 className="h-11 w-full appearance-none px-3 pr-8 text-sm font-black outline-none"
               >
-                {guideSortOptions.map((option) => (
+                {sortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

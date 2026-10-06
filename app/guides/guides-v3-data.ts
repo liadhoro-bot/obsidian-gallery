@@ -90,7 +90,6 @@ type RecipeRow = {
 
 type SavedRecipeRow = {
   recipe_id: string
-  recipes?: RecipeRow | RecipeRow[] | null
 }
 
 type GuideDeckJoinRow = {
@@ -237,6 +236,12 @@ function memberRecipesOf(guide: GuideRow): RecipeRow[] {
   return (guide.guide_decks ?? [])
     .map((guideDeck) => firstValue(guideDeck.recipes))
     .filter((recipe): recipe is RecipeRow => Boolean(recipe))
+}
+
+// The deck a guide's like/save are keyed to: its first member, exactly as
+// toGuideFile sets GuidesV3GuideFile.deckId.
+function primaryRecipeOf(recipes: RecipeRow[]): RecipeRow | undefined {
+  return recipes[0]
 }
 
 function isGuidePublic(guide: GuideRow) {
@@ -520,23 +525,12 @@ export const getGuidesV3Payload = cache(async (
           .order('created_at', { ascending: false })
           .limit(deckLimit).returns<RecipeRow[]>())
         : Promise.resolve({ data: [] as RecipeRow[], error: null }),
-      selectDifficultyCompatible(`
-          recipe_id,
-          recipes (
-            id,
-            name,
-            description,
-            image_url,
-            is_public,
-            difficulty,
-            created_at,
-            user_id
-          )
-        `, selection => supabase
+      supabase
         .from('saved_recipes')
-        .select(selection)
+        .select('recipe_id')
         .eq('user_id', userId)
-        .limit(deckLimit).returns<SavedRecipeRow[]>()),
+        .limit(deckLimit)
+        .returns<SavedRecipeRow[]>(),
       // Public library: RLS on `guides` already restricts selects to "own
       // or has a public member deck", so this is effectively "every guide
       // with at least one public deck, plus my own (possibly private)
@@ -567,9 +561,6 @@ export const getGuidesV3Payload = cache(async (
 
   const myRecipes = (myRecipesResult.data ?? []) as RecipeRow[]
   const savedRows = (savedRowsResult.data ?? []) as SavedRecipeRow[]
-  const savedRecipes = savedRows
-    .map((row) => firstValue(row.recipes))
-    .filter((recipe): recipe is RecipeRow => Boolean(recipe))
   const savedRecipeIds = new Set(savedRows.map((row) => row.recipe_id))
   const ownedRecipeIds = new Set(myRecipes.map((recipe) => recipe.id))
 
@@ -580,67 +571,49 @@ export const getGuidesV3Payload = cache(async (
     (guide) => guide.user_id === userId
   )
 
-  // Saved guides: guides reachable via a deck (recipe) the user has
-  // bookmarked. `guide_decks!inner` narrows both the parent `guides` rows
-  // and the embedded `guide_decks` rows to those matching the saved recipe
-  // ids, per PostgREST's embedded-filter semantics.
+  // Saved guides: other creators' public guides the viewer bookmarked. A
+  // guide's bookmark saves its primary deck, so a guide counts as saved only
+  // when that primary deck is saved - otherwise saving one deck would also
+  // list every other guide that happens to contain it. The aliased
+  // `saved_match` inner join filters the guides while leaving the full
+  // `guide_decks` embed intact (filtering `guide_decks` directly would trim
+  // a multi-deck guide down to just its saved decks).
   const savedRecipeIdList = Array.from(savedRecipeIds)
   const savedGuidesResult =
     (tab === 'guides' || tab === 'all') && savedRecipeIdList.length > 0
-      ? await selectDifficultyCompatible(`
-            id,
-            user_id,
-            title,
-            description,
-            image_url,
-            difficulty,
-            is_auto,
-            created_at,
-            guide_decks!inner (
-              recipe_id,
-              position,
-              recipes (
-                id,
-                name,
-                description,
-                image_url,
-                is_public,
-                difficulty,
-                created_at,
-                user_id
-              )
-            )
-          `, selection => supabase
-          .from('guides')
-          .select(selection)
-          .in('guide_decks.recipe_id', savedRecipeIdList)
-          .order('created_at', { ascending: false }).returns<GuideRow[]>())
+      ? await selectDifficultyCompatible(
+          `${guideWithDecksSelect.trim()}, saved_match:guide_decks!inner(recipe_id)`,
+          selection => supabase
+            .from('guides')
+            .select(selection)
+            .neq('user_id', userId)
+            .in('saved_match.recipe_id', savedRecipeIdList)
+            .order('created_at', { ascending: false }).returns<GuideRow[]>())
       : { data: [] as GuideRow[], error: null }
 
   if (savedGuidesResult.error) throw new Error(savedGuidesResult.error.message)
 
   // A saved deck can only ever be one the user could already see when they
-  // saved it (own, or public per `recipes`' own RLS) - re-assert that here
-  // rather than trusting it blindly.
+  // saved it (public per `recipes`' own RLS) - re-assert that here rather
+  // than trusting it blindly.
   const savedGuides = ((savedGuidesResult.data ?? []) as GuideRow[]).filter(
-    (guide) => guide.user_id === userId || isGuidePublic(guide)
+    (guide) => {
+      if (!isGuidePublic(guide)) return false
+      const primary = primaryRecipeOf(memberRecipesOf(guide))
+      return primary ? savedRecipeIds.has(primary.id) : false
+    }
   )
 
-  const myGuideById = new Map<string, GuideRow>()
-  for (const guide of ownedGuides) myGuideById.set(guide.id, guide)
-  for (const guide of savedGuides) {
-    if (!myGuideById.has(guide.id)) myGuideById.set(guide.id, guide)
-  }
-  const myGuides = Array.from(myGuideById.values())
+  const ownedGuideIds = new Set(ownedGuides.map((guide) => guide.id))
+  const myGuides = [
+    ...ownedGuides,
+    ...savedGuides.filter((guide) => !ownedGuideIds.has(guide.id)),
+  ]
 
-  const deckRecipeMap = new Map<string, RecipeRow>()
-  for (const recipe of myRecipes) {
-    deckRecipeMap.set(recipe.id, recipe)
-  }
-  for (const recipe of savedRecipes) {
-    if (!deckRecipeMap.has(recipe.id)) deckRecipeMap.set(recipe.id, recipe)
-  }
-  const deckRecipes = Array.from(deckRecipeMap.values()).slice(0, deckLimit)
+  // Decks are only the viewer's own creations. Saving someone else's public
+  // deck saves it as a guide (every public deck has an auto guide), so it
+  // surfaces through savedGuides in the Guides tab, never here.
+  const deckRecipes = myRecipes.slice(0, deckLimit)
 
   const publicRecipesByGuideId = new Map<string, RecipeRow[]>()
   for (const guide of publicGuides) {
