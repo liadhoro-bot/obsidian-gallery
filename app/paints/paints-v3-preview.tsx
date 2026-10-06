@@ -641,6 +641,7 @@ export default function PaintsV3Preview({
   const [deferredLibraryPayload, setDeferredLibraryPayload] =
     useState<DeferredPaintLibraryPayload | null>(null)
   const [paintSwatchUrls, setPaintSwatchUrls] = useState<PaintSwatchUrlMap>({})
+  const fetchedSwatchIdsRef = useRef(new Set<string>())
   const libraryBasePaints = useMemo(
     () =>
       deferredLibraryPayload?.libraryPaints ??
@@ -801,7 +802,13 @@ export default function PaintsV3Preview({
   }, [activeTab, deferredLibraryPayload, initialPayload])
 
   useEffect(() => {
-    if (!showRealSwatches || basePaintIdsWithoutSwatches.length === 0) {
+    // Only ask for paints not looked up yet, so the deferred full library
+    // load adds swatches instead of re-requesting (and replacing) them all.
+    const paintIds = basePaintIdsWithoutSwatches.filter(
+      (paintId) => !fetchedSwatchIdsRef.current.has(paintId)
+    )
+
+    if (!showRealSwatches || paintIds.length === 0) {
       return
     }
 
@@ -814,7 +821,7 @@ export default function PaintsV3Preview({
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ paintIds: basePaintIdsWithoutSwatches }),
+          body: JSON.stringify({ paintIds }),
           signal: controller.signal,
         })
 
@@ -825,12 +832,23 @@ export default function PaintsV3Preview({
         const result = (await response.json()) as {
           swatches?: PaintSwatchUrlMap
         }
+        const swatches = result.swatches ?? {}
 
-        setPaintSwatchUrls(result.swatches ?? {})
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          setPaintSwatchUrls({})
+        for (const paintId of paintIds) {
+          fetchedSwatchIdsRef.current.add(paintId)
         }
+
+        setPaintSwatchUrls((currentUrls) => {
+          const nextUrls = { ...currentUrls }
+
+          for (const paintId of paintIds) {
+            nextUrls[paintId] = swatches[paintId] ?? null
+          }
+
+          return nextUrls
+        })
+      } catch {
+        // Keep whatever swatches already loaded; hex colors stay as fallback.
       }
     }
 

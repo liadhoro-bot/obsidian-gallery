@@ -6,7 +6,20 @@ type SwatchRequestBody = {
   paintIds?: unknown
 }
 
-const maxPaintIds = 1200
+const maxPaintIds = 5000
+// Keeps each `.in()` filter's URL under PostgREST's request size limit;
+// a few hundred UUIDs in one filter already overflows it.
+const lookupChunkSize = 150
+
+function chunkIds(ids: string[]) {
+  const chunks: string[][] = []
+
+  for (let index = 0; index < ids.length; index += lookupChunkSize) {
+    chunks.push(ids.slice(index, index + lookupChunkSize))
+  }
+
+  return chunks
+}
 
 function normalizePaintIds(value: unknown) {
   if (!Array.isArray(value)) {
@@ -54,12 +67,20 @@ export async function POST(request: Request) {
     .filter(Boolean)
   const swatches: Record<string, string | null> = {}
 
-  if (catalogPaintIds.length > 0) {
-    const { data } = await supabase
-      .from('paint_catalog')
-      .select('id, swatch_image_url')
-      .eq('is_active', true)
-      .in('id', catalogPaintIds)
+  const catalogResults = await Promise.all(
+    chunkIds(catalogPaintIds).map((ids) =>
+      supabase
+        .from('paint_catalog')
+        .select('id, swatch_image_url')
+        .eq('is_active', true)
+        .in('id', ids)
+    )
+  )
+
+  for (const { data, error } of catalogResults) {
+    if (error) {
+      return NextResponse.json({ swatches: {} }, { status: 502 })
+    }
 
     for (const row of (data ?? []) as Array<{
       id: string

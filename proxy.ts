@@ -141,6 +141,9 @@ export default async function proxy(request: NextRequest) {
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname === '/api/youtube-oembed' ||
+    // Serves allow-listed public storage swatches only. Must stay public:
+    // next/image fetches it without the visitor's cookies.
+    pathname === '/api/paints/v3-swatch' ||
     pathname.startsWith('/api/subscription/') ||
     pathname.startsWith('/api/trial/') ||
     pathname.startsWith('/auth') ||
