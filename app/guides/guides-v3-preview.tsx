@@ -754,16 +754,16 @@ export default function GuidesV3Preview({
   featureGuides = [],
   initialPayload,
 }: GuidesV3PreviewProps) {
-  const seedGuideFiles: GuideFile[] =
-    initialPayload?.guideFiles.length
-      ? initialPayload.guideFiles
-      : initialGuideFiles
-  const seedDecks: Deck[] =
-    initialPayload?.decks.length ? initialPayload.decks : initialDecks
-  const seedLibraryGuides =
-    initialPayload?.libraryGuides.length
-      ? initialPayload.libraryGuides
-      : publicGuideFiles
+  // Sample content is only for rendering without a server payload. A live
+  // payload is authoritative even when empty: falling back per-list showed
+  // users with no guides/decks the samples, whose ids 404 on click.
+  const seedGuideFiles: GuideFile[] = initialPayload
+    ? initialPayload.guideFiles
+    : initialGuideFiles
+  const seedDecks: Deck[] = initialPayload ? initialPayload.decks : initialDecks
+  const seedLibraryGuides = initialPayload
+    ? initialPayload.libraryGuides
+    : publicGuideFiles
   const [activeTab, setActiveTab] = useState<GuideTab>('library')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks, setDecks] = useState<Deck[]>(seedDecks)
