@@ -34,6 +34,7 @@ export type GuidesV3GuideFile = {
   viewerHasLiked: boolean
   viewerHasSaved: boolean
   createdAt: string
+  tags?: string[]
 }
 
 export type GuidesV3Deck = {
@@ -59,6 +60,11 @@ export type GuidesV3Deck = {
   isOwner: boolean
   accent: string
   createdAt: string
+  description?: string
+  likeCount?: number
+  saveCount?: number
+  viewerHasLiked?: boolean
+  viewerHasSaved?: boolean
 }
 
 export type GuidesV3Payload = {
@@ -68,8 +74,6 @@ export type GuidesV3Payload = {
   libraryDecks: GuidesV3Deck[]
   savedDeckIds: string[]
 }
-
-export type GuidesV3Tab = 'library' | 'guides' | 'decks'
 
 type RecipeRow = {
   id: string
@@ -102,6 +106,7 @@ type GuideRow = {
   difficulty: string | null
   is_auto: boolean | null
   created_at: string | null
+  tags?: string[] | null
   guide_decks?: GuideDeckJoinRow[] | null
 }
 
@@ -139,6 +144,7 @@ const guideWithDecksSelect = `
   description,
   image_url,
   difficulty,
+  tags,
   is_auto,
   created_at,
   guide_decks (
@@ -405,15 +411,18 @@ function toDeck({
   recipe,
   saved,
   statsByRecipeId,
+  socialByRecipeId,
   userId,
 }: {
   imageByRecipeId: Map<string, string>
   recipe: RecipeRow
   saved: boolean
   statsByRecipeId: Map<string, { cards: number; paints: number }>
+  socialByRecipeId: Map<string, { likeCount: number; saveCount: number; viewerHasLiked: boolean; viewerHasSaved: boolean }>
   userId: string
 }): GuidesV3Deck {
   const stats = statsByRecipeId.get(recipe.id)
+  const social = socialByRecipeId.get(recipe.id)
 
   return {
     id: recipe.id,
@@ -431,6 +440,11 @@ function toDeck({
     isOwner: recipe.user_id === userId,
     accent: accentFor(recipe.id),
     createdAt: recipe.created_at ?? '',
+    description: cleanText(recipe.description, `${stats?.cards ?? 0} cards · ${stats?.paints ?? 0} paints`),
+    likeCount: social?.likeCount ?? 0,
+    saveCount: social?.saveCount ?? 0,
+    viewerHasLiked: social?.viewerHasLiked ?? false,
+    viewerHasSaved: social?.viewerHasSaved ?? false,
   }
 }
 
@@ -478,6 +492,7 @@ function toGuideFile(
     deckId: primaryDeck.id,
     deckIds: memberDecks.map((deck) => deck.id),
     difficulty: guide.difficulty ?? null,
+    tags: Array.isArray(guide.tags) ? guide.tags : [],
     isOwner: guide.user_id === userId,
     likeCount: social?.likeCount ?? 0,
     saveCount: social?.saveCount ?? 0,
@@ -487,22 +502,17 @@ function toGuideFile(
   }
 }
 
-export const getGuidesV3Payload = cache(async (
-  userId: string,
-  tab: GuidesV3Tab | 'all' = 'all'
-) => {
+export const getGuidesV3Payload = cache(async (userId: string) => {
   const supabase = await createClient()
 
   const [myRecipesResult, savedRowsResult, publicGuidesResult, myGuidesResult] =
     await Promise.all([
-      tab === 'decks' || tab === 'all'
-        ? selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, created_at, user_id', selection => supabase
-          .from('recipes')
-          .select(selection)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(deckLimit).returns<RecipeRow[]>())
-        : Promise.resolve({ data: [] as RecipeRow[], error: null }),
+      selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, created_at, user_id', selection => supabase
+        .from('recipes')
+        .select(selection)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(deckLimit).returns<RecipeRow[]>()),
       selectDifficultyCompatible(`
           recipe_id,
           recipes (
@@ -524,23 +534,19 @@ export const getGuidesV3Payload = cache(async (
       // or has a public member deck", so this is effectively "every guide
       // with at least one public deck, plus my own (possibly private)
       // guides" - the isGuidePublic() filter below removes the latter.
-      tab === 'library' || tab === 'all'
-        ? selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
-          .from('guides')
-          .select(selection)
-          .order('created_at', { ascending: false })
-          .limit(publicDeckLimit).returns<GuideRow[]>())
-        : Promise.resolve({ data: [] as GuideRow[], error: null }),
+      selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
+        .from('guides')
+        .select(selection)
+        .order('created_at', { ascending: false })
+        .limit(publicDeckLimit).returns<GuideRow[]>()),
       // My Guides: guides I own (draft/private/public alike, per RLS's
       // "own" clause).
-      tab === 'guides' || tab === 'all'
-        ? selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
-          .from('guides')
-          .select(selection)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(deckLimit).returns<GuideRow[]>())
-        : Promise.resolve({ data: [] as GuideRow[], error: null }),
+      selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
+        .from('guides')
+        .select(selection)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(deckLimit).returns<GuideRow[]>()),
     ])
 
   if (myRecipesResult.error) throw new Error(myRecipesResult.error.message)
@@ -569,7 +575,7 @@ export const getGuidesV3Payload = cache(async (
   // ids, per PostgREST's embedded-filter semantics.
   const savedRecipeIdList = Array.from(savedRecipeIds)
   const savedGuidesResult =
-    (tab === 'guides' || tab === 'all') && savedRecipeIdList.length > 0
+    savedRecipeIdList.length > 0
       ? await selectDifficultyCompatible(`
             id,
             user_id,
@@ -660,6 +666,7 @@ export const getGuidesV3Payload = cache(async (
       recipe,
       saved: true,
       statsByRecipeId,
+      socialByRecipeId,
       userId,
     })
   )
@@ -675,6 +682,7 @@ export const getGuidesV3Payload = cache(async (
       recipe,
       saved: savedRecipeIds.has(recipe.id) || ownedRecipeIds.has(recipe.id),
       statsByRecipeId,
+      socialByRecipeId,
       userId,
     })
   )
@@ -703,6 +711,7 @@ export const getGuidesV3Payload = cache(async (
           recipe,
           saved: true,
           statsByRecipeId,
+          socialByRecipeId,
           userId,
         })
       )
@@ -761,6 +770,7 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
       const memberDecks = memberRecipes.map((recipe) =>
         toDeck({
           recipe, imageByRecipeId, statsByRecipeId,
+          socialByRecipeId,
           userId: viewerId,
           saved: socialByRecipeId.get(recipe.id)?.viewerHasSaved ?? false,
         })

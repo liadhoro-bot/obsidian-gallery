@@ -1,3 +1,8 @@
+import DeckCardViewer from '../decks/[id]/deck-card-viewer'
+import ViewCardsLink from '../shared/view-cards-link'
+import { deckCardEntries } from '../shared/deck-card-entries'
+import { guideCardKey, resolveGuideCards } from '../shared/guide-card-layout'
+import GuideBackButton from '../shared/guide-back-button'
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { notFound, redirect } from 'next/navigation'
@@ -15,7 +20,7 @@ import styles from '../guide-detail-silver.module.css'
 
 type GuideDetailPageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ edit?: string }>
+  searchParams?: Promise<{ edit?: string; view?: string; deck?: string }>
 }
 
 export default async function GuideDetailPage({
@@ -25,7 +30,7 @@ export default async function GuideDetailPage({
   const perf = createPerfTimer('/guides/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} as { edit?: string }),
+    searchParams ?? Promise.resolve({} as { edit?: string; view?: string; deck?: string }),
   ])
   const isEditing = resolvedSearchParams.edit === '1'
 
@@ -36,7 +41,7 @@ export default async function GuideDetailPage({
   if (!user) {
     const nextPath = isEditing
       ? `/guides/${id}?preview=1&edit=1`
-      : `/guides/${id}?preview=1`
+      : `/guides/${id}?preview=1${resolvedSearchParams.view === '1' ? '&view=1' : ''}`
 
     redirect(`/login?next=${encodeURIComponent(nextPath)}&preview=1`)
   }
@@ -60,10 +65,8 @@ export default async function GuideDetailPage({
 
   if (isEditing) {
     const deckIds = guide.deckIds ?? []
-    const [payload, deckDetails] = await Promise.all([
-      getGuidesV3Payload(user.id),
-      Promise.all(deckIds.map((deckId) => getGuidesV3DeckDetail(deckId, user.id))),
-    ])
+    const payload = await getGuidesV3Payload(user.id)
+    const deckDetails = await Promise.all(deckIds.map(deckId => getGuidesV3DeckDetail(deckId, user.id)))
 
     const memberDeckIds = new Set(deckIds)
     const availableDecks = payload.decks.filter(
@@ -73,7 +76,7 @@ export default async function GuideDetailPage({
       (deck): deck is NonNullable<typeof deck> => Boolean(deck)
     )
     const primaryDeckDetail = resolvedDeckDetails.find((deck) => deck.id === deckIds[0])
-    const initialCoverImage = primaryDeckDetail?.fullImage || primaryDeckDetail?.image || guide.image
+    const initialCoverImage = guide.image || primaryDeckDetail?.fullImage || primaryDeckDetail?.image
 
     return (
       <main>
@@ -90,18 +93,23 @@ export default async function GuideDetailPage({
     )
   }
 
+  if (resolvedSearchParams.view === '1') {
+    const details = (await Promise.all((guide.deckIds ?? []).map(deckId => getGuidesV3DeckDetail(deckId, user.id)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
+    const entries = new Map(details.flatMap(deck => deckCardEntries(deck).map(card => [deck.id + ':' + card.key, card.node] as const)))
+    const cards = resolveGuideCards(details, guide.cardLayout).filter(card => !card.hidden).map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
+    const firstCard = resolveGuideCards(details, guide.cardLayout).find(card => !card.hidden && card.groupId === resolvedSearchParams.deck)
+    return <main><DeckCardViewer initialCardKey={firstCard ? guideCardKey(firstCard) : undefined} cards={cards} title={guide.title} backHref={`/guides/${guide.id}?preview=1`} featureGuides={featureGuides} heroActions={<>
+      <Link href={`/guides/${guide.id}?preview=1`} className={styles.backButton}>Info</Link>
+      {guide.isOwner ? <Link href={`/guides/${guide.id}?preview=1&edit=1`} className={styles.backButton}>Edit</Link> : null}
+    </>} /></main>
+  }
+
   return (
     <main className={styles.root}>
       <V3PerfIndicator surface="guide-detail" detail="main" />
       <div className={styles.shell}>
         <header className={styles.topBar}>
-          <Link
-            href="/guides?preview=1"
-            className={styles.backButton}
-            aria-label="Back to guides"
-          >
-            <span>&lt;</span>
-          </Link>
+          <GuideBackButton className={styles.backButton} />
           <span className={styles.topLabel}>
             Guide
           </span>
@@ -112,6 +120,7 @@ export default async function GuideDetailPage({
           />
         </header>
 
+        <div className="flex items-center gap-3 py-3"><ViewCardsLink href={`/guides/${guide.id}?preview=1&view=1`} title={guide.title} />{guide.isOwner ? <Link href={`/guides/${guide.id}?preview=1&edit=1`}>Edit</Link> : null}</div>
         <section className={styles.heroCard}>
           <div className={`${styles.heroImage} ${styles.guideHeroImage}`}>
             <Image
@@ -146,9 +155,9 @@ export default async function GuideDetailPage({
             </div>
           </div>
           <div className={styles.statGrid}>
-            <span>{guide.decks} decks</span>
+            <span>{guide.decks} {guide.decks === 1 ? 'deck' : 'decks'}</span>
             <span>
-              {guide.cards} cards
+              {guide.cards} {guide.cards === 1 ? 'card' : 'cards'}
             </span>
             <span>{guide.level}</span>
           </div>
@@ -178,11 +187,8 @@ export default async function GuideDetailPage({
           <div className={styles.rows}>
             {guide.decksList.length ? (
               guide.decksList.map((deck) => (
-                <Link
-                  key={deck.id}
-                  href={`/guides/decks/${deck.id}?preview=1`}
-                  className={styles.deckRow}
-                >
+                <div key={deck.id} className={styles.deckRow}>
+                <Link href={`/guides/${guide.id}?preview=1&view=1&deck=${deck.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className={styles.deckThumb}>
                     <Image
                       src={deck.image}
@@ -200,8 +206,10 @@ export default async function GuideDetailPage({
                       {deck.cards} cards - {deck.paints} paints
                     </span>
                   </span>
-                  <span className={styles.chevron}>&gt;</span>
                 </Link>
+                <ViewCardsLink href={`/guides/${guide.id}?preview=1&view=1&deck=${deck.id}`} title={deck.title} />
+                {deck.isOwner ? <Link href={`/guides/decks/${deck.id}?preview=1&edit=1`}>Edit</Link> : null}
+                </div>
               ))
             ) : (
               <div className={styles.emptyPanel}>

@@ -1,5 +1,5 @@
 import Link from '@/app/components/navigation-feedback/navigation-link'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 export function ObsidianShareCardFrame({
   children,
@@ -91,16 +91,16 @@ export function ObsidianShareTitle({
 }) {
   return (
     <h2
+      style={{
+        '--title-len': title.trim().length || 1,
+        '--title-size': `${Math.max(4.9, Math.min(10.2, 248 / Math.max(title.trim().length, 18)))}cqw`,
+      } as CSSProperties}
       className={[
         'recipe-guide-title font-serif font-black uppercase',
         compact ? 'recipe-guide-title-compact' : '',
       ].join(' ')}
     >
-      {getTitleLines(title).map((line) => (
-        <span key={line} className="block">
-          {line}
-        </span>
-      ))}
+      {title}
     </h2>
   )
 }
@@ -145,11 +145,3 @@ export function ObsidianSharePaletteIcon() {
   )
 }
 
-function getTitleLines(title: string) {
-  const words = title.trim().split(/\s+/).filter(Boolean)
-
-  if (words.length <= 2) return words
-
-  const midpoint = Math.ceil(words.length / 2)
-  return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')]
-}

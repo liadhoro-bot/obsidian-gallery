@@ -2,12 +2,11 @@
 
 import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-changes'
 
-import { hasUnuploadedImage, normalizeThemeSubtitle } from '../../shared/deck-save-values'
-
 import { PaintAlignmentToggle } from '../../shared/paint-alignment-toggle'
 
+import GuideBackButton from '@/app/guides/shared/guide-back-button'
+import { useEditorTab } from '@/app/guides/shared/use-editor-tab'
 import Image from 'next/image'
-import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import GalleryPager, { useGalleryPages } from '../../../components/gallery/gallery-pager'
 import type { ChangeEvent, RefObject } from 'react'
@@ -470,6 +469,8 @@ function makeNewCard(
   }
 }
 
+const editorTabs = ['details', 'cards', 'preview'] as const
+
 export default function DeckEditorClient({
   backHref,
   deck,
@@ -481,7 +482,6 @@ export default function DeckEditorClient({
   onBack,
   onDeleteDeck,
   onSaveDraft,
-  onTogglePaintOwnership,
   saveError,
   saveLabel = 'Save',
 }: {
@@ -499,11 +499,11 @@ export default function DeckEditorClient({
   saveError?: string | null
   saveLabel?: string
 }) {
-  const [activeTab, setActiveTab] = useState<DeckEditorTab>('details')
+  const [activeTab, setActiveTab] = useEditorTab<DeckEditorTab>('details', editorTabs)
   const [title, setTitle] = useState(deck.title)
   const [description, setDescription] = useState(deck.description)
-  const [inventoryNotes, setInventoryNotes] = useState(initialInventoryNotes)
-  const [expertTips, setExpertTips] = useState(initialExpertTips)
+  const [inventoryNotes] = useState(initialInventoryNotes)
+  const [expertTips] = useState(initialExpertTips)
   const [difficulty, setDifficulty] = useState<DeckDifficulty>(
     (deck.difficulty as DeckDifficulty) || inferDifficulty(deck.cards)
   )
@@ -754,11 +754,6 @@ export default function DeckEditorClient({
       return
     }
 
-    if (hasUnuploadedImage([heroImage, ...cards.map(card => card.image)])) {
-      setImageUploadError('An image could not be uploaded. Upload it again before saving; your changes are still here.')
-      return
-    }
-
     void saveChanges(() => onSaveDraft?.({
       title,
       description,
@@ -780,7 +775,7 @@ export default function DeckEditorClient({
         imageFocalX: card.imageFocalX,
         imageFocalY: card.imageFocalY,
         paintAlignment: card.paintAlignment ?? 'left',
-        subtitle: normalizeThemeSubtitle(card.template, card.subtitle),
+        subtitle: card.subtitle?.trim() || null,
       })),
     }))
   }
@@ -892,9 +887,7 @@ export default function DeckEditorClient({
                 Back
               </button>
             ) : (
-              <Link href={backHref} className={styles.iconButton} aria-label="Back to guides">
-                Back
-              </Link>
+              <GuideBackButton fallbackHref={backHref} className={styles.iconButton} />
             )}
             <div className={styles.heroActions}>
               <FeatureGuideLauncher
@@ -944,7 +937,7 @@ export default function DeckEditorClient({
           <div className={styles.panelGrid}>
             <section className={styles.panel}>
               <div className={styles.formGrid}>
-                <label className={styles.field}>
+                <label className={`${styles.field} ${styles.fullWidthField}`}>
                   <span>Title</span>
                   <input value={title} onChange={(event) => setTitle(event.target.value)} />
                 </label>
@@ -970,10 +963,6 @@ export default function DeckEditorClient({
                     ))}
                   </select>
                 </label>
-                <div className={styles.field}>
-                  <span>Cards</span>
-                  <strong className={styles.statValue}>{cards.length}</strong>
-                </div>
               </div>
               <label className={styles.descriptionPanel}>
                 <span>Description</span>
@@ -983,33 +972,8 @@ export default function DeckEditorClient({
                   rows={7}
                 />
               </label>
-              <label className={styles.descriptionPanel}>
-                <span>Inventory Notes</span>
-                <textarea
-                  value={inventoryNotes}
-                  onChange={(event) => setInventoryNotes(event.target.value)}
-                  placeholder="Brushes, mediums, or other supplies this deck needs"
-                  rows={4}
-                />
-              </label>
-              <label className={styles.descriptionPanel}>
-                <span>Expert Tips</span>
-                <textarea
-                  value={expertTips}
-                  onChange={(event) => setExpertTips(event.target.value)}
-                  placeholder="Pro tips for painters following this deck"
-                  rows={4}
-                />
-              </label>
             </section>
 
-            {deck.paintList.length ? (
-              <DeckPaletteOwnership
-                deckId={deck.id}
-                paints={deck.paintList}
-                onTogglePaintOwnership={onTogglePaintOwnership}
-              />
-            ) : null}
 
             <DeckGallery
               cameraInputRef={cameraInputRef}
@@ -1132,7 +1096,7 @@ export default function DeckEditorClient({
         ) : null}
 
         {saveError || imageUploadError ? (
-          <p className={styles.saveError} role="alert">{saveError ?? imageUploadError}</p>
+          <p className={styles.saveError}>{saveError ?? imageUploadError}</p>
         ) : null}
       </div>
 
@@ -1144,7 +1108,6 @@ export default function DeckEditorClient({
           onAddPaint={addEditingCardPaint}
           onChange={updateActiveCard}
           onChangeImage={updateEditingCardImage}
-          imageUploadError={imageUploadError}
           onChangePaint={updateEditingCardPaint}
           onClose={() => setEditingCardId(null)}
           onDelete={deleteEditingCard}
@@ -1434,73 +1397,6 @@ function DeckGallery({
   )
 }
 
-function DeckPaletteOwnership({
-  deckId,
-  paints,
-  onTogglePaintOwnership,
-}: {
-  deckId: string
-  paints: GuidesV3DeckDetail['paintList']
-  onTogglePaintOwnership?: (formData: FormData) => void | Promise<void>
-}) {
-  return (
-    <section className={styles.panel}>
-      <div className={styles.paintEditorHeader}>
-        <h3>Palette Ownership</h3>
-      </div>
-      <div className={styles.paintRows}>
-        {paints.map((paint) => {
-          const isCatalogPaint = paint.id.startsWith('catalog:')
-          const catalogId = isCatalogPaint ? paint.id.slice('catalog:'.length) : null
-          const label = [paint.brand, paint.line, paint.name].filter(Boolean).join(' / ')
-
-          return (
-            <div key={paint.id} className={styles.paintsListRow}>
-              <span
-                className={styles.paintPickerSwatch}
-                style={{ backgroundColor: paint.color || 'var(--og-brass-500)' }}
-              />
-              <span className={styles.paintPickerCopy}>
-                <strong>{label || 'Unnamed paint'}</strong>
-              </span>
-              {catalogId && onTogglePaintOwnership ? (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <form action={onTogglePaintOwnership}>
-                    <input type="hidden" name="deckId" value={deckId} />
-                    <input type="hidden" name="paintCatalogId" value={catalogId} />
-                    <input type="hidden" name="action" value="owned" />
-                    <input type="hidden" name="currentValue" value={String(paint.isOwned)} />
-                    <button
-                      type="submit"
-                      className={paint.isOwned ? styles.ownershipBadgeOwned : styles.ownershipBadge}
-                    >
-                      Owned
-                    </button>
-                  </form>
-                  <form action={onTogglePaintOwnership}>
-                    <input type="hidden" name="deckId" value={deckId} />
-                    <input type="hidden" name="paintCatalogId" value={catalogId} />
-                    <input type="hidden" name="action" value="wishlist" />
-                    <input type="hidden" name="currentValue" value={String(paint.isWishlist)} />
-                    <button
-                      type="submit"
-                      className={paint.isWishlist ? styles.ownershipBadgeWishlist : styles.ownershipBadge}
-                    >
-                      Wishlist
-                    </button>
-                  </form>
-                </div>
-              ) : (
-                <span className={styles.ownershipBadge}>Custom paint</span>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
-
 type DeckDeleteStage = 'idle' | 'armed' | 'confirming'
 
 function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
@@ -1639,7 +1535,6 @@ function CardEditorSheet({
   onAddPaint,
   onChange,
   onChangeImage,
-  imageUploadError,
   onChangePaint,
   onClose,
   onDelete,
@@ -1651,7 +1546,6 @@ function CardEditorSheet({
   deckPaints: GuidesV3DeckDetail['paintList']
   onAddPaint: () => void
   onChange: (patch: Partial<EditorCard>) => void
-  imageUploadError?: string | null
   onChangeImage: (event: ChangeEvent<HTMLInputElement>) => void
   onChangePaint: (paintIndex: number, patch: Partial<PreviewPaint>) => void
   onClose: () => void
@@ -1717,14 +1611,12 @@ function CardEditorSheet({
             <span>Subtitle</span>
             <input
               value={card.subtitle ?? 'Color Reference'}
-              placeholder="Leave empty to hide subtitle"
+              placeholder="Color Reference"
               maxLength={60}
               onChange={(event) => onChange({ subtitle: event.target.value })}
             />
           </label>
         ) : null}
-
-        {imageUploadError ? <p className={styles.saveError} role="alert">{imageUploadError}</p> : null}
 
         {!isPaintsList && !isVideo ? (
           <section className={styles.cardImageEditor}>

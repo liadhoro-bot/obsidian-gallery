@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
 export default function GuideDecksIndexPage() {
-  redirect('/guides?preview=1')
+  redirect('/guides?preview=1&tab=decks')
 }

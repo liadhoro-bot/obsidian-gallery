@@ -72,7 +72,6 @@ test('clean, dirty, reverted, failed save, successful save and edits during save
   await checkBlocked(page, false)
   await page.close()
 })
-
 test('cancel link and browser Back/Forward preserves the editor and history', async () => {
   const page = await editor()
   await page.evaluate(() => {

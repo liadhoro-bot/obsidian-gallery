@@ -79,7 +79,7 @@ export default function DeckEditPageClient({
   return (
     <DeckEditorClient
       deck={deck}
-      backHref="/guides?preview=1"
+      backHref="/guides?preview=1&tab=decks"
       featureGuides={featureGuides}
       initialInventoryNotes={initialInventoryNotes}
       initialExpertTips={initialExpertTips}

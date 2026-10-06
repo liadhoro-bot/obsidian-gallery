@@ -38,6 +38,8 @@ export default function GuideEditPageClient({
         status: payload.status,
         difficulty: payload.difficulty,
         deckIds: payload.deckIds,
+        cardLayout: payload.cardLayout,
+        tags: payload.tags,
       })
 
       router.refresh()
@@ -59,7 +61,7 @@ export default function GuideEditPageClient({
       availableDecks={availableDecks}
       deckDetails={deckDetails}
       initialCoverImage={initialCoverImage}
-      backHref="/guides?preview=1"
+      backHref="/guides?preview=1&tab=guides"
       featureGuides={featureGuides}
       isSaving={isSaving}
       onSaveDraft={handleSaveDraft}

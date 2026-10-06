@@ -1,3 +1,4 @@
+import { parseGuideCardLayout, resolveGuideCards, type GuideCardPlacement } from './shared/guide-card-layout'
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { loadRecipeSteps } from './load-recipe-steps'
 import { cache } from 'react'
@@ -86,6 +87,7 @@ export type GuidesV3DeckDetail = GuidesV3Deck & {
 
 export type GuidesV3GuideDetail = GuidesV3GuideFile & {
   decksList: GuidesV3Deck[]
+  cardLayout?: GuideCardPlacement[]
 }
 
 type RecipeRow = {
@@ -474,7 +476,7 @@ export const getGuidesV3DeckDetail = cache(
         imageFocalX: step.image_focal_x ?? 50,
         imageFocalY: step.image_focal_y ?? 50,
         paintAlignment: parsedInstructions.paintAlignment,
-        subtitle: step.subtitle?.trim() ?? null,
+        subtitle: step.subtitle?.trim() || null,
       }
     })
 
@@ -536,9 +538,19 @@ export const getGuidesV3GuideDetail = cache(
       .map((deckId) => deckById.get(deckId))
       .filter((deck): deck is GuidesV3Deck => Boolean(deck))
 
+    const supabase = await createClient()
+    const { data: layout, error: layoutError } = await supabase.from('guides').select('card_layout').eq('id', guideId).maybeSingle()
+    // Allow rolling deployment before the migration; saves explicitly require it.
+    if (layoutError && layoutError.code !== '42703' && layoutError.code !== 'PGRST204') throw new Error(layoutError.message)
+    const cardLayout = parseGuideCardLayout(layout?.card_layout)
+    const visibleCards = cardLayout.length
+      ? resolveGuideCards((await Promise.all(decksList.map(deck => getGuidesV3DeckDetail(deck.id, userId)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck)), cardLayout).filter(card => !card.hidden)
+      : null
     return {
       ...guide,
-      decksList,
+      cards: visibleCards ? visibleCards.length : guide.cards,
+      cardLayout,
+      decksList: visibleCards ? decksList.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id).length })) : decksList,
     } satisfies GuidesV3GuideDetail
   }
 )

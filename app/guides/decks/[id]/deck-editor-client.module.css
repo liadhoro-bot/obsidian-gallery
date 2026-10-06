@@ -442,6 +442,39 @@
   padding: 0 10px;
 }
 
+.guideDeckRow {
+  grid-template-columns: 18px 24px minmax(0, 1fr) auto;
+  gap: 6px;
+  min-height: 56px;
+  padding: 7px 8px;
+}
+
+.guideDeckRow .editButton {
+  min-width: 74px;
+  min-height: 34px;
+  padding-inline: 10px;
+  border-radius: var(--og-radius-round);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.guideDeckRow .dangerButton {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 15px;
+}
+
+.guideDeckRow .cardNumber {
+  font-size: 19px;
+}
+
+.guideDeckRow .cardName {
+  font-size: 14px;
+}
+
 .addCardButton,
 .emptyPaintButton {
   display: inline-flex;
@@ -1389,4 +1422,253 @@
   color: var(--og-ink-950);
   background: var(--og-brass-500);
   opacity: 1;
+}
+
+.fullWidthField { grid-column: 1 / -1; }
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-block: 14px;
+}
+
+.tagPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-border-subtle));
+  border-radius: var(--og-radius-round);
+  background: color-mix(in srgb, var(--og-brass-500) 14%, var(--og-paper-50));
+  padding: 6px 8px 6px 11px;
+  color: var(--og-text-primary);
+  font: 800 12px/1 var(--og-font-ui);
+}
+
+.tagPill button {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--og-text-secondary);
+}
+
+.emptyTagText { color: var(--og-text-muted); font-size: 13px; }
+.addTagRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+
+.guideCardList {
+  grid-column: 1 / -1;
+  display: grid;
+  width: 100%;
+  margin-top: 2px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 28%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background: color-mix(in srgb, var(--og-paper-50) 28%, transparent);
+  padding: 0 12px;
+}
+
+.guideCardRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px 54px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 82px;
+  border-top: 1px solid var(--og-border-subtle);
+  padding: 10px 0;
+  overflow-wrap: anywhere;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.guideCardRow:first-child { border-top: 0; }
+.guideCardRow[data-hidden="true"] .guideCardPreview,
+.guideCardRow[data-hidden="true"] .guideCardInfo { opacity: .48; }
+
+.guideCardPreview {
+  position: relative;
+  width: 54px;
+  height: 72px;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 36%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background: var(--og-walnut-950);
+}
+
+.guideCardPreviewStage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 400px;
+  height: 533px;
+  transform: scale(.135);
+  transform-origin: top left;
+  pointer-events: none;
+}
+
+.guideCardPreviewStage > * {
+  width: 400px !important;
+  min-width: 400px !important;
+  max-width: 400px !important;
+  height: 533px !important;
+  min-height: 533px !important;
+  max-height: 533px !important;
+}
+
+.guideCardInfo {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.guideCardInfo strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: var(--og-text-primary);
+  font: 700 14px/1.15 var(--og-font-ui);
+}
+
+.visibilityButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 78px;
+  min-height: 30px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  padding-inline: 7px;
+  font: 700 11px/1 var(--og-font-ui);
+}
+
+.keyboardMoveActions {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+}
+
+.keyboardMoveActions:focus-within {
+  position: static;
+  display: flex;
+  grid-column: 3 / -1;
+  width: auto;
+  height: auto;
+  clip: auto;
+  clip-path: none;
+  gap: 6px;
+}
+
+.keyboardMoveActions button {
+  min-height: 36px;
+  border: 1px solid var(--og-border-subtle);
+  border-radius: 6px;
+  background: var(--og-surface-primary);
+  padding: 7px 12px;
+}
+
+.keyboardMoveActions select {
+  min-height: 36px;
+  max-width: 180px;
+  border: 1px solid var(--og-border-subtle);
+  border-radius: 6px;
+  background: var(--og-surface-primary);
+  padding: 7px;
+}
+
+.keyboardMoveActions button:disabled { opacity: .35; }
+
+@media (max-width: 620px) {
+  .guideDeckRow {
+    grid-template-columns: 12px 14px minmax(0, 1fr) 58px 28px;
+    gap: 4px;
+    min-height: 48px;
+    padding: 5px 6px;
+  }
+
+  .guideDeckRow .cardRowActions {
+    display: contents;
+  }
+
+  .guideDeckRow .editButton {
+    grid-column: 4;
+    min-width: 0;
+    min-height: 30px;
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+
+  .guideDeckRow .dangerButton {
+    grid-column: 5;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0;
+    font-size: 12px;
+  }
+
+  .guideDeckRow .cardNumber {
+    justify-content: flex-start;
+    font-size: 15px;
+  }
+
+  .guideDeckRow .cardTypeLabel {
+    font-size: 8px;
+  }
+
+  .guideDeckRow .cardName {
+    font-size: 12px;
+  }
+
+  .guideCardList { padding-inline: 6px; }
+
+  .guideCardRow {
+    grid-template-columns: 14px 46px minmax(0, 1fr) 68px;
+    gap: 6px;
+    min-height: 72px;
+    padding-block: 6px;
+  }
+
+  .guideCardPreview {
+    width: 46px;
+    height: 62px;
+  }
+
+  .guideCardPreviewStage {
+    transform: scale(.116);
+  }
+
+  .guideCardInfo {
+    gap: 3px;
+  }
+
+  .guideCardInfo .cardTypeLabel {
+    font-size: 8px;
+  }
+
+  .guideCardInfo strong {
+    font-size: 12px;
+  }
+
+  .visibilityButton {
+    grid-column: 4;
+    min-width: 0;
+    min-height: 27px;
+    gap: 4px;
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+
+  .visibilityButton svg {
+    width: 15px;
+    height: 15px;
+  }
 }

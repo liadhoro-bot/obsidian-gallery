@@ -1,7 +1,5 @@
 'use client'
 
-import { themeSubtitleText } from './deck-save-values'
-
 import Image from 'next/image'
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useId, useMemo, useState } from 'react'
@@ -33,6 +31,14 @@ function isUsableImageUrl(value?: string | null) {
 function isInlinePreviewImageUrl(value?: string | null) {
   const url = typeof value === 'string' ? value.trim() : ''
   return url.startsWith('blob:') || url.startsWith('data:image/')
+}
+
+function titleSizing(title: string, base: number, minimum: number) {
+  const length = Math.max(title.trim().length, 14)
+  return {
+    '--title-len': length,
+    '--title-size': `${Math.max(minimum, Math.min(base, 170 / length))}cqw`,
+  } as CSSProperties
 }
 
 function getYoutubeVideoId(url: string | null) {
@@ -174,6 +180,73 @@ function getPaintDaubPresentation(color: string) {
   }
 }
 
+// Shared paint-daub SVG: masks a flat colour (or swatch photo) into a
+// hand-dabbed blob shape via a pre-authored PNG mask, with a soft sheen and
+// corner shadow layered on top. Used by the Step card's "Paints Used" row;
+// the Alt Theme card has a separate round impasto texture below.
+function PaintDaubSvg({
+  paint,
+  className,
+}: {
+  paint: RecipeGuidePaint
+  className?: string
+}) {
+  const maskId = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const color = paint?.hex_approx || '#8b8b8b'
+  const daub = getPaintDaubPresentation(color)
+  const swatchUrl = isUsableImageUrl(paint?.swatch_image_url)
+    ? paint.swatch_image_url
+    : null
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 590 300"
+      preserveAspectRatio="xMidYMid meet"
+      className={className}
+    >
+      <defs>
+        <mask id={`${maskId}-paint-daub-mask`} maskUnits="userSpaceOnUse">
+          <image
+            href="/recipe-guide/paint-daub-mask.png"
+            width="590"
+            height="300"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        </mask>
+        <radialGradient id={`${maskId}-paint-daub-sheen`}>
+          <stop offset="0%" stopColor="#ffffff" stopOpacity={daub.sheenOpacity} />
+          <stop offset="58%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient
+          id={`${maskId}-paint-daub-shadow`}
+          x1="0"
+          x2="1"
+          y1="0"
+          y2="1"
+        >
+          <stop offset="35%" stopColor="#000000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.2" />
+        </linearGradient>
+      </defs>
+      <g mask={`url(#${maskId}-paint-daub-mask)`}>
+        <rect width="590" height="300" fill={daub.color} />
+        {swatchUrl ? (
+          <image
+            href={swatchUrl}
+            width="590"
+            height="300"
+            preserveAspectRatio="xMidYMid slice"
+            opacity="0.96"
+          />
+        ) : null}
+        <rect width="590" height="300" fill={`url(#${maskId}-paint-daub-sheen)`} />
+        <rect width="590" height="300" fill={`url(#${maskId}-paint-daub-shadow)`} />
+      </g>
+    </svg>
+  )
+}
+
 function PaintMark({
   paint,
   showParts,
@@ -181,15 +254,9 @@ function PaintMark({
   paint: RecipeGuidePaint
   showParts: boolean
 }) {
-  const maskId = useId().replace(/[^a-zA-Z0-9_-]/g, '')
-  const color = paint?.hex_approx || '#8b8b8b'
   const ratio = Math.max(1, Math.min(parseInt(paint?.ratio_text || '1', 10) || 1, 6))
   const name = paint?.name || 'Unnamed paint'
   const label = showParts ? `${ratio} ${ratio === 1 ? 'Pt' : 'Pts'} ${name}` : name
-  const daub = getPaintDaubPresentation(color)
-  const swatchUrl = isUsableImageUrl(paint?.swatch_image_url)
-    ? paint.swatch_image_url
-    : null
 
   return (
     <div className="recipe-guide-paint-row flex min-w-0 flex-col items-center text-center">
@@ -199,59 +266,7 @@ function PaintMark({
         title={label}
       >
         <span className="recipe-guide-paint-daub">
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 590 300"
-            preserveAspectRatio="xMidYMid meet"
-            className="recipe-guide-paint-daub-svg"
-          >
-            <defs>
-              <mask id={`${maskId}-paint-daub-mask`} maskUnits="userSpaceOnUse">
-                <image
-                  href="/recipe-guide/paint-daub-mask.png"
-                  width="590"
-                  height="300"
-                  preserveAspectRatio="xMidYMid meet"
-                />
-              </mask>
-              <radialGradient id={`${maskId}-paint-daub-sheen`}>
-                <stop offset="0%" stopColor="#ffffff" stopOpacity={daub.sheenOpacity} />
-                <stop offset="58%" stopColor="#ffffff" stopOpacity="0" />
-              </radialGradient>
-              <linearGradient
-                id={`${maskId}-paint-daub-shadow`}
-                x1="0"
-                x2="1"
-                y1="0"
-                y2="1"
-              >
-                <stop offset="35%" stopColor="#000000" stopOpacity="0" />
-                <stop offset="100%" stopColor="#000000" stopOpacity="0.2" />
-              </linearGradient>
-            </defs>
-            <g mask={`url(#${maskId}-paint-daub-mask)`}>
-              <rect width="590" height="300" fill={daub.color} />
-              {swatchUrl ? (
-                <image
-                  href={swatchUrl}
-                  width="590"
-                  height="300"
-                  preserveAspectRatio="xMidYMid slice"
-                  opacity="0.96"
-                />
-              ) : null}
-              <rect
-                width="590"
-                height="300"
-                fill={`url(#${maskId}-paint-daub-sheen)`}
-              />
-              <rect
-                width="590"
-                height="300"
-                fill={`url(#${maskId}-paint-daub-shadow)`}
-              />
-            </g>
-          </svg>
+          <PaintDaubSvg paint={paint} className="recipe-guide-paint-daub-svg" />
         </span>
       </div>
       <div className="recipe-guide-paint-copy min-w-0">
@@ -393,7 +408,7 @@ export function RecipeGuideImageStepCard({
         ) : null}
         <div className="recipe-guide-image-card-shade absolute inset-0" />
         <section className="recipe-guide-image-card-panel absolute">
-          <h2 className="recipe-guide-image-card-title font-serif">
+          <h2 className="recipe-guide-image-card-title font-serif" style={titleSizing(step.title, 4.6, 2.75)}>
             {step.title}
           </h2>
           <p className="recipe-guide-image-card-copy">
@@ -437,7 +452,7 @@ export function RecipeGuideSmallImageStepCard({
 
         <div className="recipe-guide-small-image-body flex min-h-0 flex-1 flex-col text-center">
           <div className="recipe-guide-small-image-title">
-            <h2 className="recipe-guide-small-image-heading font-serif">
+            <h2 className="recipe-guide-small-image-heading font-serif" style={titleSizing(step.title, 6.2, 3.25)}>
               {step.title}
             </h2>
           </div>
@@ -618,15 +633,13 @@ function ThemeStepCard({
           <div className="recipe-guide-alt-theme-heading-panel v3-parchment-panel">
             <h2
               className="recipe-guide-alt-theme-title font-serif"
-              style={{ '--title-len': step.title.trim().length || 1 } as CSSProperties}
+              style={titleSizing(step.title, 6.4, 2.8)}
             >
               {step.title}
             </h2>
-            {themeSubtitleText(step.subtitle) ? (
-              <p className="recipe-guide-alt-theme-kicker font-serif uppercase">
-                {themeSubtitleText(step.subtitle)}
-              </p>
-            ) : null}
+            <p className="recipe-guide-alt-theme-kicker font-serif uppercase">
+              {step.subtitle?.trim() || 'Color Reference'}
+            </p>
           </div>
 
           {shownPaints.length ? (
@@ -761,7 +774,7 @@ export function RecipeGuidePaintsCard({
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
       <section className="recipe-guide-paints-card min-h-0 flex-1">
         <header className="recipe-guide-paint-list-head text-center">
-          <h2 className="recipe-guide-paint-list-title font-serif">
+          <h2 className="recipe-guide-paint-list-title font-serif" style={titleSizing(title || 'Paint List', 7.2, 3.2)}>
             {title || 'Paint List'}
           </h2>
           <p className="recipe-guide-paint-list-count font-serif uppercase">
@@ -873,7 +886,7 @@ export function RecipeGuideVideoCard({
         </section>
         <section className="recipe-guide-video-card-copy shrink-0 text-center">
           <ObsidianShareOrnament />
-          <h2 className="recipe-guide-video-card-title font-serif">
+          <h2 className="recipe-guide-video-card-title font-serif" style={titleSizing(title || 'Tutorial Video', 6.2, 3)}>
             {title || 'Tutorial Video'}
           </h2>
         </section>

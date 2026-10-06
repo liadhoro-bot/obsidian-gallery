@@ -2041,3 +2041,45 @@ button:disabled {
   padding-left: 1.8cqw;
   padding-right: 0.8cqw;
 }
+
+/* Card titles share predictable wrapping and length-based sizing in the viewer,
+   editor, and exported images. Keep the entire title rather than an ellipsis. */
+.recipe-guide-title,
+.recipe-guide-title-compact,
+.recipe-guide-image-card-title,
+.recipe-guide-small-image-heading,
+.recipe-guide-theme-title,
+.recipe-guide-alt-theme-title,
+.recipe-guide-paint-list-title,
+.recipe-guide-video-card-title {
+  white-space: normal;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  text-wrap: balance;
+  line-height: 1.08;
+  flex-shrink: 0;
+  letter-spacing: .01em;
+}
+.recipe-guide-title { font-size: clamp(1.05rem, var(--title-size, 8cqw), 3.8rem); }
+.recipe-guide-title-compact { font-size: clamp(1rem, var(--title-size, 7cqw), 3rem); }
+.recipe-guide-image-card-title { font-size: clamp(.82rem, var(--title-size, 4.2cqw), 1.54rem); }
+.recipe-guide-small-image-heading { font-size: clamp(.95rem, var(--title-size, 5.8cqw), 2.2rem); }
+.recipe-guide-theme-title { font-size: clamp(.9rem, var(--title-size, 6.4cqw), 2.7rem); }
+.recipe-guide-alt-theme-title { font-size: clamp(.9rem, var(--title-size, 5.8cqw), 2.4rem); }
+.recipe-guide-paint-list-title { font-size: clamp(1rem, var(--title-size, 6.8cqw), 3rem); }
+.recipe-guide-video-card-title { font-size: clamp(1rem, var(--title-size, 5.8cqw), 2.62rem); }
+
+.recipe-guide-title,
+.recipe-guide-title-compact {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.recipe-guide-image-card-title,
+.recipe-guide-small-image-heading {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}

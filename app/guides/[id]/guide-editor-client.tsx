@@ -2,25 +2,19 @@
 
 import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-changes'
 
+import GuideBackButton from '@/app/guides/shared/guide-back-button'
+import { useEditorTab } from '@/app/guides/shared/use-editor-tab'
+import { loadGuideEditorDeck } from '../actions'
 import Image from 'next/image'
-import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useState } from 'react'
+import { deckCardEntries } from '../shared/deck-card-entries'
+import { guideCardKey, resolveGuideCards, type GuideCardPlacement } from '../shared/guide-card-layout'
+import { MAX_GUIDE_TAGS, normalizeGuideTag, normalizeGuideTags } from '../shared/guide-tags'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
 import GalleryPager, { useGalleryPages } from '../../components/gallery/gallery-pager'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
-import type { Recipe, RecipeImage, RecipeStep } from '../shared/types'
-import {
-  RecipeGuideAltThemeStepCard,
-  RecipeGuideCoverCard,
-  RecipeGuideDescriptiveStepCard,
-  RecipeGuideImageStepCard,
-  RecipeGuidePaintsCard,
-  RecipeGuideSmallImageStepCard,
-  RecipeGuideThemeStepCard,
-  RecipeGuideVideoCard,
-} from '../shared/recipe-guide-cards'
 import type { GuidesV3Deck } from '../guides-v3-data'
-import type { GuidesV3DeckDetail, GuidesV3DeckStep, GuidesV3GuideDetail } from '../guides-v3-detail-data'
+import type { GuidesV3DeckDetail, GuidesV3GuideDetail } from '../guides-v3-detail-data'
 import styles from '../decks/[id]/deck-editor-client.module.css'
 
 type GuideEditorTab = 'details' | 'decks' | 'preview'
@@ -28,15 +22,7 @@ type GuideDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 type GuideStatus = 'Draft' | 'Private' | 'Public'
 type DropTarget = { edge: 'before' | 'after'; id: string }
 
-type DeckGuidePaint = {
-  id: string
-  brand: string | null
-  line: string | null
-  name: string | null
-  hex_approx: string | null
-  swatch_image_url: string | null
-  ratio_text?: string | null
-}
+
 
 export type GuideEditorSavePayload = {
   title: string
@@ -45,6 +31,8 @@ export type GuideEditorSavePayload = {
   status: GuideStatus
   difficulty: GuideDifficulty
   deckIds: string[]
+  cardLayout: GuideCardPlacement[]
+  tags: string[]
 }
 
 const difficultyOptions: GuideDifficulty[] = ['Beginner', 'Intermediate', 'Advanced']
@@ -56,78 +44,7 @@ function inferDifficulty(cardCount: number): GuideDifficulty {
   return 'Beginner'
 }
 
-function isUsableImageUrl(value?: string | null) {
-  const url = typeof value === 'string' ? value.trim() : ''
-  return (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    (url.startsWith('/') && !url.startsWith('//'))
-  )
-}
-
-function toRecipe(deck: GuidesV3DeckDetail): Recipe {
-  return {
-    id: deck.id,
-    name: deck.title,
-    description: deck.description,
-    inventory_required: null,
-    expert_tips: null,
-    youtube_url: null,
-    is_public: deck.isPublic,
-  }
-}
-
-function toFeaturedImage(deck: GuidesV3DeckDetail): RecipeImage | null {
-  const image = deck.fullImage || deck.image
-  if (!isUsableImageUrl(image)) return null
-
-  return {
-    id: `${deck.id}-cover`,
-    image_url: image,
-    is_featured: true,
-    alt_text: deck.title,
-    focal_x: deck.coverFocalX ?? 50,
-    focal_y: deck.coverFocalY ?? 50,
-  }
-}
-
-function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
-  return {
-    id: step.id,
-    step_number: step.number,
-    title: step.title,
-    instructions: step.instructions,
-    image_url: step.rawImage || step.image,
-    image_focal_x: step.imageFocalX,
-    image_focal_y: step.imageFocalY,
-    paint_alignment: step.paintAlignment ?? 'left',
-    subtitle: step.subtitle ?? null,
-  }
-}
-
-function toRecipePaints(step: GuidesV3DeckStep): DeckGuidePaint[] {
-  return step.paints.map((paint) => ({
-    id: paint.id,
-    brand: paint.brand,
-    line: paint.line,
-    name: paint.name,
-    hex_approx: paint.color,
-    swatch_image_url: paint.swatchImageUrl,
-    ratio_text: paint.ratioText,
-  }))
-}
-
-function isThemeTemplateStep(step: GuidesV3DeckStep, imageUrl: string | null) {
-  const lowerTitle = step.title.toLowerCase()
-  const looksLikeTheme = lowerTitle.includes('theme') || lowerTitle.includes('palette')
-
-  return (
-    step.template === 'theme' ||
-    (step.template === 'image' && looksLikeTheme) ||
-    (!step.template && looksLikeTheme) ||
-    (!step.template && Boolean(imageUrl) && step.paints.length >= 4)
-  )
-}
+const editorTabs = ['details', 'decks', 'preview'] as const
 
 export default function GuideEditorClient({
   guide,
@@ -154,9 +71,11 @@ export default function GuideEditorClient({
   saveError?: string | null
   saveLabel?: string
 }) {
-  const [activeTab, setActiveTab] = useState<GuideEditorTab>('details')
+  const [activeTab, setActiveTab] = useEditorTab<GuideEditorTab>('details', editorTabs)
   const [title, setTitle] = useState(guide.title)
   const [description, setDescription] = useState(guide.subtitle)
+  const [tags, setTags] = useState(() => normalizeGuideTags(guide.tags))
+  const [tagDraft, setTagDraft] = useState('')
   const [coverImage, setCoverImage] = useState(initialCoverImage)
   const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(
     () => guide.deckIds ?? memberDecks.map((deck) => deck.id)
@@ -172,6 +91,13 @@ export default function GuideEditorClient({
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const [isAddDecksOpen, setIsAddDecksOpen] = useState(false)
   const [deckSearch, setDeckSearch] = useState('')
+  const [cardLayout, setCardLayout] = useState<GuideCardPlacement[]>(guide.cardLayout ?? [])
+  const [loadedDecks, setLoadedDecks] = useState<GuidesV3DeckDetail[]>([])
+  const [addingDeckId, setAddingDeckId] = useState<string | null>(null)
+  const [cardLoadError, setCardLoadError] = useState<string | null>(null)
+  const [expandedDecks, setExpandedDecks] = useState<string[]>([])
+  const [draggingCardKey, setDraggingCardKey] = useState<string | null>(null)
+  const [cardDropTarget, setCardDropTarget] = useState<DropTarget | null>(null)
 
   const deckById = useMemo(() => {
     const map = new Map<string, GuidesV3Deck>()
@@ -180,13 +106,41 @@ export default function GuideEditorClient({
     return map
   }, [memberDecks, availableDecks])
   const deckDetailById = useMemo(
-    () => new Map(deckDetails.map((deck) => [deck.id, deck])),
-    [deckDetails]
+    () => new Map([...deckDetails, ...loadedDecks].map((deck) => [deck.id, deck])),
+    [deckDetails, loadedDecks]
   )
 
   const selectedDecks = selectedDeckIds
     .map((id) => deckById.get(id))
     .filter((deck): deck is GuidesV3Deck => Boolean(deck))
+  const selectedDetails = selectedDeckIds.map(id => deckDetailById.get(id)).filter((deck): deck is GuidesV3DeckDetail => Boolean(deck))
+  const resolvedCards = resolveGuideCards(selectedDetails, cardLayout)
+  function moveCard(key: string, direction: -1 | 1) {
+    const next = [...resolvedCards]
+    const index = next.findIndex(card => guideCardKey(card) === key)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= next.length) return
+    const moved = { ...next[index], groupId: next[target].groupId }
+    next.splice(index, 1)
+    next.splice(target, 0, moved)
+    setCardLayout(next)
+  }
+
+  function reorderCard(cardKey: string, targetKey: string, edge: DropTarget['edge']) {
+    if (cardKey === targetKey) return
+    const next = [...resolvedCards]
+    const fromIndex = next.findIndex((card) => guideCardKey(card) === cardKey)
+    const targetIndex = next.findIndex((card) => guideCardKey(card) === targetKey)
+    if (fromIndex < 0 || targetIndex < 0) return
+    const targetGroupId = next[targetIndex].groupId
+    const [moved] = next.splice(fromIndex, 1)
+    const adjustedTarget = fromIndex < targetIndex ? targetIndex - 1 : targetIndex
+    next.splice(adjustedTarget + (edge === 'after' ? 1 : 0), 0, {
+      ...moved,
+      groupId: targetGroupId,
+    })
+    setCardLayout(next)
+  }
   const selectedDeckIdSet = new Set(selectedDeckIds)
   const pickableDecks = availableDecks.filter((deck) => !selectedDeckIdSet.has(deck.id))
   const normalizedDeckSearch = deckSearch.trim().toLowerCase()
@@ -214,15 +168,35 @@ export default function GuideEditorClient({
     })
   }
 
-  function addDeck(deckId: string) {
-    setSelectedDeckIds((current) => (current.includes(deckId) ? current : [...current, deckId]))
+  async function addDeck(deckId: string) {
+    if (addingDeckId) return
+    setAddingDeckId(deckId)
+    setCardLoadError(null)
+    try {
+      if (!deckDetailById.has(deckId)) {
+        const detail = await loadGuideEditorDeck(deckId)
+        setLoadedDecks(current => [...current, detail])
+      }
+      setSelectedDeckIds(current => current.includes(deckId) ? current : [...current, deckId])
+    } catch (error) {
+      setCardLoadError(error instanceof Error ? error.message : 'Could not load this deck.')
+    } finally { setAddingDeckId(null) }
   }
 
   function removeDeck(deckId: string) {
     setSelectedDeckIds((current) => current.filter((id) => id !== deckId))
   }
 
-  const saveChanges = useEditorChanges(JSON.stringify({ title, description, coverImage, selectedDeckIds, status, difficulty }), isSaving)
+  const saveChanges = useEditorChanges(JSON.stringify({ title, description, tags, coverImage, selectedDeckIds, cardLayout, status, difficulty }), isSaving || Boolean(addingDeckId))
+
+  function addTag() {
+    const tag = normalizeGuideTag(tagDraft)
+    if (!tag || tags.length >= MAX_GUIDE_TAGS) return
+    if (!tags.some((current) => current.toLocaleLowerCase() === tag.toLocaleLowerCase())) {
+      setTags((current) => [...current, tag])
+    }
+    setTagDraft('')
+  }
 
   function handleSave() {
     void saveChanges(() => onSaveDraft?.({
@@ -232,6 +206,8 @@ export default function GuideEditorClient({
       status,
       difficulty,
       deckIds: selectedDeckIds,
+      cardLayout: resolvedCards,
+      tags,
     }))
   }
 
@@ -242,9 +218,7 @@ export default function GuideEditorClient({
           <Image src={coverImage} alt="" fill priority sizes="760px" className={styles.heroImage} />
           <span className={styles.heroShade} />
           <div className={styles.heroTop}>
-            <Link href={backHref} className={styles.iconButton} aria-label="Back to guides">
-              Back
-            </Link>
+            <GuideBackButton fallbackHref={backHref} className={styles.iconButton} />
             <div className={styles.heroActions}>
               <FeatureGuideLauncher
                 guides={featureGuides}
@@ -254,7 +228,7 @@ export default function GuideEditorClient({
               <button
                 className={styles.saveButton}
                 type="button"
-                disabled={isSaving}
+                disabled={isSaving || Boolean(addingDeckId)}
                 onClick={handleSave}
               >
                 <SaveIcon />
@@ -292,7 +266,7 @@ export default function GuideEditorClient({
           <div className={styles.panelGrid}>
             <section className={styles.panel}>
               <div className={styles.formGrid}>
-                <label className={styles.field}>
+                <label className={`${styles.field} ${styles.fullWidthField}`}>
                   <span>Title</span>
                   <input value={title} onChange={(event) => setTitle(event.target.value)} />
                 </label>
@@ -318,10 +292,6 @@ export default function GuideEditorClient({
                     ))}
                   </select>
                 </label>
-                <div className={styles.field}>
-                  <span>Decks</span>
-                  <strong className={styles.statValue}>{selectedDecks.length}</strong>
-                </div>
               </div>
               <label className={styles.descriptionPanel}>
                 <span>Description</span>
@@ -335,7 +305,50 @@ export default function GuideEditorClient({
 
             <section className={styles.panel}>
               <div className={styles.panelHeader}>
-                <h2>Cover Image</h2>
+                <h2>Tags</h2>
+                <span>{tags.length}/{MAX_GUIDE_TAGS}</span>
+              </div>
+              <div className={styles.tagList} aria-label="Guide tags">
+                {tags.map((tag) => (
+                  <span key={tag.toLocaleLowerCase()} className={styles.tagPill}>
+                    {tag}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${tag} tag`}
+                      onClick={() => setTags((current) => current.filter((item) => item !== tag))}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {!tags.length ? <p className={styles.emptyTagText}>Add tags to make this guide easier to find.</p> : null}
+              </div>
+              <div className={styles.addTagRow}>
+                <label className={styles.field}>
+                  <span className="sr-only">New tag</span>
+                  <input
+                    value={tagDraft}
+                    maxLength={64}
+                    placeholder="New tag"
+                    disabled={tags.length >= MAX_GUIDE_TAGS}
+                    onChange={(event) => setTagDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        addTag()
+                      }
+                    }}
+                  />
+                </label>
+                <button type="button" className={styles.editButton} disabled={!tagDraft.trim() || tags.length >= MAX_GUIDE_TAGS} onClick={addTag}>
+                  Add Tag
+                </button>
+              </div>
+            </section>
+
+            <section className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>Gallery</h2>
                 <span>From selected decks</span>
               </div>
               <div className={styles.galleryGrid} {...coverPages.swipeHandlers}>
@@ -367,12 +380,14 @@ export default function GuideEditorClient({
 
         {activeTab === 'decks' ? (
           <section className={styles.panel}>
+            <p>Arrange cards for this guide only. Source decks stay unchanged. Moving past a group boundary moves the card into the next group.</p>
             <div className={styles.cardList}>
               {selectedDecks.map((deck) => (
                 <article
                   key={deck.id}
                   className={[
                     styles.cardRow,
+                    styles.guideDeckRow,
                     draggingDeckId === deck.id ? styles.cardRowDragging : '',
                     dropTarget?.id === deck.id && dropTarget.edge === 'before'
                       ? styles.cardRowDropBefore
@@ -381,7 +396,6 @@ export default function GuideEditorClient({
                       ? styles.cardRowDropAfter
                       : '',
                   ].join(' ')}
-                  draggable
                   onDragStart={(event) => {
                     setDraggingDeckId(deck.id)
                     event.dataTransfer.effectAllowed = 'move'
@@ -416,6 +430,7 @@ export default function GuideEditorClient({
                     className={styles.dragHandle}
                     aria-label={`Drag to reorder ${deck.title}`}
                     title="Drag to reorder"
+                    draggable
                   >
                     <DragHandleIcon />
                   </span>
@@ -423,16 +438,13 @@ export default function GuideEditorClient({
                     {selectedDeckIds.indexOf(deck.id) + 1}
                   </span>
                   <span className={styles.cardInfo}>
-                    <span className={styles.cardTypeLabel}>{deck.category}</span>
+                    <span className={styles.cardTypeLabel}>Deck</span>
                     <span className={styles.cardName}>{deck.title}</span>
                   </span>
                   <span className={styles.cardRowActions}>
-                    <Link
-                      href={`/guides/decks/${deck.id}?preview=1&edit=1`}
-                      className={styles.editButton}
-                    >
-                      Edit
-                    </Link>
+                    <button type="button" className={styles.editButton} aria-label={expandedDecks.includes(deck.id) ? 'Hide cards' : 'Show cards'} aria-expanded={expandedDecks.includes(deck.id)} aria-controls={`guide-cards-${deck.id}`} onClick={() => setExpandedDecks(current => current.includes(deck.id) ? current.filter(id => id !== deck.id) : [...current, deck.id])}>
+                      <span aria-hidden="true">{expandedDecks.includes(deck.id) ? '▴' : '▾'}</span> Cards
+                    </button>
                     <button
                       type="button"
                       className={styles.dangerButton}
@@ -442,6 +454,68 @@ export default function GuideEditorClient({
                       x
                     </button>
                   </span>
+                  {expandedDecks.includes(deck.id) ? <div id={`guide-cards-${deck.id}`} className={styles.guideCardList}>
+                    {resolvedCards.filter(card => card.groupId === deck.id).map(card => {
+                      const key = guideCardKey(card)
+                      const source = deckDetailById.get(card.deckId)!
+                      const step = source.steps.find(step => step.id === card.cardId)
+                      const label = card.cardId === 'cover' ? source.title + ' — Cover' : step?.title ?? 'Card'
+                      const index = resolvedCards.indexOf(card)
+                      const previewNode = deckCardEntries(source).find((entry) => entry.key === card.cardId)?.node
+                      const typeLabel = card.cardId === 'cover' ? 'Cover' : step?.template || 'Step'
+                      return <div
+                        key={key}
+                        className={[
+                          styles.guideCardRow,
+                          draggingCardKey === key ? styles.cardRowDragging : '',
+                          cardDropTarget?.id === key && cardDropTarget.edge === 'before' ? styles.cardRowDropBefore : '',
+                          cardDropTarget?.id === key && cardDropTarget.edge === 'after' ? styles.cardRowDropAfter : '',
+                        ].join(' ')}
+                        data-hidden={card.hidden}
+                        onDragStart={(event) => {
+                          event.stopPropagation()
+                          setDraggingCardKey(key)
+                          event.dataTransfer.effectAllowed = 'move'
+                          event.dataTransfer.setData('text/plain', key)
+                        }}
+                        onDragOver={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          const rect = event.currentTarget.getBoundingClientRect()
+                          setCardDropTarget({ id: key, edge: event.clientY < rect.top + rect.height / 2 ? 'before' : 'after' })
+                          event.dataTransfer.dropEffect = 'move'
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          const draggedKey = event.dataTransfer.getData('text/plain') || draggingCardKey
+                          if (draggedKey) reorderCard(draggedKey, key, cardDropTarget?.edge ?? 'before')
+                          setDraggingCardKey(null)
+                          setCardDropTarget(null)
+                        }}
+                        onDragEnd={() => {
+                          setDraggingCardKey(null)
+                          setCardDropTarget(null)
+                        }}
+                      >
+                        <span className={styles.dragHandle} aria-label={`Drag to reorder ${label}`} title="Drag to reorder" draggable><DragHandleIcon /></span>
+                        <span className={styles.guideCardPreview} aria-hidden="true"><span className={styles.guideCardPreviewStage}>{previewNode}</span></span>
+                        <span className={styles.guideCardInfo}><span className={styles.cardTypeLabel}>{typeLabel}</span><strong data-guide-card-title>{label}</strong></span>
+                        <button className={styles.visibilityButton} type="button" aria-pressed={card.hidden} onClick={() => setCardLayout(resolvedCards.map(item => guideCardKey(item) === key ? { ...item, hidden: !item.hidden } : item))}><VisibilityIcon hidden={card.hidden} />{card.hidden ? 'Unhide' : 'Hide'}</button>
+                        <span className={styles.keyboardMoveActions}>
+                          <button type="button" disabled={index === 0} aria-label={`Move ${label} up`} onClick={() => moveCard(key, -1)}>↑</button>
+                          <button type="button" disabled={index === resolvedCards.length - 1} aria-label={`Move ${label} down`} onClick={() => moveCard(key, 1)}>↓</button>
+                          <label><span className="sr-only">Move {label} to deck group</span><select value={card.groupId} onChange={event => {
+                            const next = resolvedCards.filter(item => guideCardKey(item) !== key)
+                            const last = next.findLastIndex(item => item.groupId === event.target.value)
+                            next.splice(last + 1, 0, { ...card, groupId: event.target.value })
+                            setCardLayout(next)
+                          }}>{selectedDecks.map(group => <option key={group.id} value={group.id}>{group.title}</option>)}</select></label>
+                        </span>
+                      </div>
+                    })}
+                    {!resolvedCards.some(card => card.groupId === deck.id) ? <p>No cards in this group.</p> : null}
+                  </div> : null}
                 </article>
               ))}
             </div>
@@ -456,7 +530,7 @@ export default function GuideEditorClient({
         ) : null}
 
         {activeTab === 'preview' ? (
-          <GuidePreview selectedDeckIds={selectedDeckIds} deckDetailById={deckDetailById} />
+          <GuidePreview decks={selectedDetails} cards={resolvedCards} />
         ) : null}
 
         {saveError ? <p className={styles.saveError}>{saveError}</p> : null}
@@ -465,9 +539,11 @@ export default function GuideEditorClient({
       {isAddDecksOpen ? (
         <AddDecksSheet
           decks={filteredPickableDecks}
+          isLoading={Boolean(addingDeckId)}
+          error={cardLoadError}
           query={deckSearch}
           onAddDeck={(deckId) => {
-            addDeck(deckId)
+            void addDeck(deckId)
           }}
           onClose={() => {
             setIsAddDecksOpen(false)
@@ -480,145 +556,25 @@ export default function GuideEditorClient({
   )
 }
 
-function GuidePreview({
-  selectedDeckIds,
-  deckDetailById,
-}: {
-  selectedDeckIds: string[]
-  deckDetailById: Map<string, GuidesV3DeckDetail>
-}) {
-  const decks = selectedDeckIds
-    .map((id) => deckDetailById.get(id))
-    .filter((deck): deck is GuidesV3DeckDetail => Boolean(deck))
-
-  if (!decks.length) {
-    return (
-      <section className={styles.panel}>
-        <p>Add a deck to preview its cards here. Newly added decks appear after you save.</p>
-      </section>
-    )
-  }
-
-  return (
-    <section className={styles.previewStack} aria-label="Guide preview">
-      {decks.map((deck) => (
-        <DeckPreviewGroup key={deck.id} deck={deck} />
-      ))}
-    </section>
-  )
-}
-
-function DeckPreviewGroup({ deck }: { deck: GuidesV3DeckDetail }) {
-  const recipe = toRecipe(deck)
-  const featuredImage = toFeaturedImage(deck)
-  const paintCount = deck.paintList.length
-
-  // Same "where does the cover belong, if at all" logic as the live
-  // viewer (see app/guides/decks/[id]/page.tsx) - undefined defaults to
-  // 0 (cover first) for decks that predate this column, null omits it.
-  const rawCoverPosition = deck.coverPosition === undefined ? 0 : deck.coverPosition
-  const coverPosition =
-    rawCoverPosition === null
-      ? null
-      : Math.max(0, Math.min(rawCoverPosition, deck.steps.length))
-  const cardCount = deck.steps.length + (coverPosition === null ? 0 : 1)
-
-  const stepNodes = deck.steps.map((step) => {
-    const recipeStep = toRecipeStep(step)
-    const paints = toRecipePaints(step)
-
-    return {
-      key: step.id,
-      node:
-        step.template === 'video' ? (
-          <RecipeGuideVideoCard
-            title={step.title}
-            description={step.instructions}
-            youtubeUrl={step.videoUrl}
-          />
-        ) : step.template === 'paints' ? (
-          <RecipeGuidePaintsCard
-            title={step.title}
-            description={step.instructions}
-            paints={paints}
-          />
-        ) : step.template === 'theme-alt' ? (
-          <RecipeGuideAltThemeStepCard
-            step={recipeStep}
-            stepsLength={deck.steps.length}
-            paints={paints}
-            fallbackImageUrl={deck.fullImage || deck.image}
-            fallbackFocalX={deck.coverFocalX ?? 50}
-            fallbackFocalY={deck.coverFocalY ?? 50}
-          />
-        ) : isThemeTemplateStep(step, recipeStep.image_url) ? (
-          <RecipeGuideThemeStepCard
-            step={recipeStep}
-            stepsLength={deck.steps.length}
-            paints={paints}
-            fallbackImageUrl={deck.fullImage || deck.image}
-            fallbackFocalX={deck.coverFocalX ?? 50}
-            fallbackFocalY={deck.coverFocalY ?? 50}
-          />
-        ) : step.template === 'small-image' && isUsableImageUrl(recipeStep.image_url) ? (
-          <RecipeGuideSmallImageStepCard
-            step={recipeStep}
-            stepsLength={deck.steps.length}
-            paints={paints}
-          />
-        ) : isUsableImageUrl(recipeStep.image_url) ? (
-          <RecipeGuideImageStepCard
-            step={recipeStep}
-            stepsLength={deck.steps.length}
-            paints={paints}
-          />
-        ) : (
-          <RecipeGuideDescriptiveStepCard
-            step={recipeStep}
-            stepsLength={deck.steps.length}
-            paints={paints}
-          />
-        ),
-    }
-  })
-
-  const coverNode =
-    coverPosition === null ? null : (
-      <RecipeGuideCoverCard
-        recipe={recipe}
-        featuredImage={featuredImage}
-        cardCount={cardCount}
-        paintCount={paintCount}
-      />
-    )
-
-  const cardNodes =
-    coverPosition === null
-      ? stepNodes
-      : [
-          ...stepNodes.slice(0, coverPosition),
-          { key: 'cover', node: coverNode },
-          ...stepNodes.slice(coverPosition),
-        ]
-
-  return (
-    <>
-      {cardNodes.map((card) => (
-        <div key={card.key} className={styles.previewShareMount}>
-          {card.node}
-        </div>
-      ))}
-    </>
-  )
+function GuidePreview({ decks, cards }: { decks: GuidesV3DeckDetail[]; cards: GuideCardPlacement[] }) {
+  const nodes = new Map(decks.flatMap(deck => deckCardEntries(deck).map(card => [deck.id + ':' + card.key, card.node] as const)))
+  const visible = cards.filter(card => !card.hidden)
+  return <section className={styles.previewStack} aria-label="Guide preview">
+    {visible.length ? visible.map(card => <div key={guideCardKey(card)} className={styles.previewShareMount}>{nodes.get(guideCardKey(card))}</div>) : <p>No visible cards. Unhide a card in the Decks tab.</p>}
+  </section>
 }
 
 function AddDecksSheet({
+  isLoading,
+  error,
   decks,
   onAddDeck,
   onClose,
   onQueryChange,
   query,
 }: {
+  isLoading: boolean
+  error: string | null
   decks: GuidesV3Deck[]
   onAddDeck: (deckId: string) => void
   onClose: () => void
@@ -642,6 +598,7 @@ function AddDecksSheet({
             placeholder="Search your decks..."
           />
         </label>
+        {error ? <p role="alert" className={styles.saveError}>{error}</p> : null}
         <div className={styles.cardList}>
           {decks.length ? (
             decks.map((deck) => (
@@ -654,6 +611,7 @@ function AddDecksSheet({
                 <button
                   type="button"
                   className={styles.editButton}
+                  disabled={isLoading}
                   onClick={() => onAddDeck(deck.id)}
                 >
                   Add
@@ -678,6 +636,21 @@ function DragHandleIcon() {
       <circle cx="15" cy="6" r="1.7" />
       <circle cx="15" cy="12" r="1.7" />
       <circle cx="15" cy="18" r="1.7" />
+    </svg>
+  )
+}
+
+function VisibilityIcon({ hidden }: { hidden: boolean }) {
+  return hidden ? (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.7a2 2 0 002.7 2.7" />
+      <path d="M9.9 4.2A10.7 10.7 0 0112 4c5.5 0 9 6 9 6a15.5 15.5 0 01-2.1 2.8M6.2 6.2C4.1 7.7 3 10 3 10s3.5 6 9 6c1 0 2-.2 2.8-.5" />
+    </svg>
+  ) : (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+      <circle cx="12" cy="12" r="2.5" />
     </svg>
   )
 }

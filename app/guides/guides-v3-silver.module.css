@@ -536,6 +536,8 @@
 }
 
 .guidesSilver [data-v3-guides-indicator="guide-card"],
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"],
+.guidesSilver [data-v3-guides-indicator="deck-row"],
 .guidesSilver [data-v3-guides-indicator="decks-list"],
 .guidesSilver [data-v3-guides-indicator="library-section"],
 .guidesSilver [data-v3-guides-indicator="library-tags"],
@@ -598,7 +600,7 @@
 }
 
 .guidesSilver [data-v3-guides-indicator="compact-guide-card"] > span:last-child,
-.guidesSilver [data-v3-guides-indicator="deck-row"] > button,
+.guidesSilver [data-v3-guides-indicator="deck-row"] > button[data-v3-guides-indicator="deck-edit-link"],
 .guidesSilver [data-v3-guides-indicator="deck-row"] > a[data-v3-guides-indicator="deck-edit-link"],
 .guidesSilver [data-v3-guides-indicator="forge-deck-row"] > span:last-child {
   border-color: color-mix(in srgb, var(--og-brass-500) 62%, var(--og-walnut-700));
@@ -636,7 +638,65 @@
 }
 
 .guidesSilver [data-v3-guides-indicator="deck-row"] {
-  border-block-start: var(--og-border-width) solid var(--og-border-subtle);
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 54%, var(--og-border-subtle));
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 54%, var(--og-border-subtle));
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.guidesSilver [data-v3-guides-indicator="list-card-actions"] {
+  color: var(--og-text-primary);
+}
+
+.guidesSilver [data-v3-guides-indicator="view-cards-link"] {
+  border-color: color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  color: var(--og-brass-500);
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.guidesSilver [data-v3-guides-indicator="view-cards-link"] span {
+  color: inherit;
+}
+
+.guidesSilver [data-v3-guides-indicator="view-cards-link"]:hover,
+.guidesSilver [data-v3-guides-indicator="view-cards-link"]:focus-visible {
+  border-color: var(--og-brass-500);
+  color: var(--og-paper-50);
+  outline: none;
+}
+
+.guidesSilver [data-v3-guides-indicator="list-card-actions"] > div {
+  gap: 4px;
+}
+
+.guidesSilver [data-v3-guides-indicator="list-card-actions"] > div button {
+  min-width: 38px;
+  justify-content: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 58%, var(--og-ink-950));
+  border-radius: 7px;
+  background-color: var(--og-walnut-950);
+  color: var(--og-paper-100);
+  box-shadow: var(--og-shadow-control-built);
+}
+
+@media (max-width: 350px) {
+  .guidesSilver [data-v3-guides-indicator="list-card-actions"] {
+    gap: 4px;
+  }
+
+  .guidesSilver [data-v3-guides-indicator="list-card-actions"] > a {
+    padding-inline: 6px;
+  }
 }
 
 .guidesSilver [data-v3-guides-indicator="library-section"] > div:first-child,
@@ -1000,3 +1060,6 @@
     font-size: 1.58rem;
   }
 }
+
+.guidesSilver [data-v3-guides-indicator="guide-grid-name"] { white-space: normal; overflow: visible; overflow-wrap: anywhere; -webkit-line-clamp: unset; }
+.guidesSilver [data-v3-guides-indicator="compact-guide-card"] a:focus-visible { outline: 2px solid var(--og-brass-500); outline-offset: 3px; }

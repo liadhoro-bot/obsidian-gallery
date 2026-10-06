@@ -1,6 +1,6 @@
 'use client'
 
-import Link from '@/app/components/navigation-feedback/navigation-link'
+import GuideBackButton from '../../shared/guide-back-button'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode, WheelEvent } from 'react'
 import FeatureGuideLauncher from '../../../components/feature-guide-launcher'
@@ -14,6 +14,7 @@ export type DeckCardEntry = {
 }
 
 type DeckCardViewerProps = {
+  initialCardKey?: string
   cards: DeckCardEntry[]
   title: string
   backHref: string
@@ -23,12 +24,13 @@ type DeckCardViewerProps = {
 
 export default function DeckCardViewer({
   cards,
+  initialCardKey,
   title,
   backHref,
   featureGuides,
   heroActions,
 }: DeckCardViewerProps) {
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, cards.findIndex(card => card.key === initialCardKey)))
   const swipeStartX = useRef<number | null>(null)
   const swipeStartY = useRef<number | null>(null)
   const swipeLastX = useRef<number | null>(null)
@@ -40,7 +42,7 @@ export default function DeckCardViewer({
   }, [])
 
   const goNext = useCallback(() => {
-    setActiveIndex((current) => Math.min(current + 1, totalCards - 1))
+    setActiveIndex((current) => Math.max(0, Math.min(current + 1, totalCards - 1)))
   }, [totalCards])
 
   useEffect(() => {
@@ -106,14 +108,7 @@ export default function DeckCardViewer({
 
   return (
     <div className={styles.viewer} role="group" aria-label={`${title} cards`}>
-      <Link
-        href={backHref}
-        className={styles.backButton}
-        aria-label="Back to guides"
-        data-feature-guide-target="guides.deck.page"
-      >
-        <span>&lt;</span>
-      </Link>
+      <GuideBackButton fallbackHref={backHref} className={styles.backButton} />
 
       <div className={styles.topRightGroup}>
         {heroActions}
@@ -124,6 +119,7 @@ export default function DeckCardViewer({
         />
       </div>
 
+      {!totalCards ? <p className="m-auto p-8 text-center">No visible cards in this guide.</p> : null}
       <div
         className={styles.track}
         onWheel={handleWheel}

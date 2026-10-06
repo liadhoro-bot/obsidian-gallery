@@ -1,8 +1,8 @@
 'use server'
 
+import { parseGuideCardLayout, type GuideCardPlacement } from './shared/guide-card-layout'
+import { normalizeGuideTags } from './shared/guide-tags'
 import { revalidatePath } from 'next/cache'
-import { normalizeThemeSubtitle, hasUnuploadedImage } from './shared/deck-save-values'
-import { insertRecipeSteps, type RecipeStepInsert } from './insert-recipe-steps'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
@@ -60,10 +60,30 @@ export type DeckEditorImageUploadResult = {
   url: string
 }
 
+type SupabaseErrorLike = {
+  code?: string
+  message?: string
+}
+
+type RecipeStepInsert = {
+  recipe_id: string
+  user_id: string
+  step_number: number
+  title: string
+  card_template?: string | null
+  instructions: string
+  image_url: string | null
+  youtube_url: string | null
+  image_focal_x: number
+  image_focal_y: number
+  subtitle?: string | null
+}
+
 // Theme card kicker (recipe_steps.subtitle). Null renders the default
 // "Color Reference"; other card types don't show a subtitle.
 function safeThemeSubtitle(card: CreateDeckCardInput) {
-  return normalizeThemeSubtitle(card.template, card.subtitle)
+  if (card.template !== 'theme' && card.template !== 'theme-alt') return null
+  return card.subtitle?.trim().slice(0, 60) || null
 }
 
 function cleanText(value: string | null | undefined, fallback: string) {
@@ -216,6 +236,99 @@ export async function uploadDeckEditorImage(
   return { url: publicUrl }
 }
 
+function isMissingColumn(error: SupabaseErrorLike | null | undefined, column: string) {
+  const message = error?.message ?? ''
+
+  return (
+    error?.code === '42703' ||
+    (message.includes(column) &&
+      (message.includes('does not exist') || message.includes('schema cache')))
+  )
+}
+
+function withoutCardTemplate(steps: RecipeStepInsert[]) {
+  return steps.map((step) => ({
+    recipe_id: step.recipe_id,
+    user_id: step.user_id,
+    step_number: step.step_number,
+    title: step.title,
+    instructions: step.instructions,
+    image_url: step.image_url,
+    youtube_url: step.youtube_url,
+    image_focal_x: step.image_focal_x,
+    image_focal_y: step.image_focal_y,
+  }))
+}
+
+function withoutYoutubeUrl(steps: RecipeStepInsert[]) {
+  return steps.map((step) => ({
+    recipe_id: step.recipe_id,
+    user_id: step.user_id,
+    step_number: step.step_number,
+    title: step.title,
+    card_template: step.card_template,
+    instructions: step.instructions,
+    image_url:
+      step.card_template === 'video'
+        ? step.youtube_url ?? step.image_url
+        : step.image_url,
+    image_focal_x: step.image_focal_x,
+    image_focal_y: step.image_focal_y,
+  }))
+}
+
+function withoutCardTemplateAndYoutubeUrl(steps: RecipeStepInsert[]) {
+  return steps.map((step) => ({
+    recipe_id: step.recipe_id,
+    user_id: step.user_id,
+    step_number: step.step_number,
+    title: step.title,
+    instructions: step.instructions,
+    image_url:
+      step.card_template === 'video'
+        ? step.youtube_url ?? step.image_url
+        : step.image_url,
+    image_focal_x: step.image_focal_x,
+    image_focal_y: step.image_focal_y,
+  }))
+}
+
+async function insertRecipeSteps(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  steps: RecipeStepInsert[]
+) {
+  let result = await supabase
+    .from('recipe_steps')
+    .insert(steps)
+    .select('id, step_number')
+
+  if (isMissingColumn(result.error, 'youtube_url')) {
+    result = await supabase
+      .from('recipe_steps')
+      .insert(withoutYoutubeUrl(steps))
+      .select('id, step_number')
+  }
+
+  if (isMissingColumn(result.error, 'card_template')) {
+    result = await supabase
+      .from('recipe_steps')
+      .insert(withoutCardTemplate(steps))
+      .select('id, step_number')
+  }
+
+  if (
+    isMissingColumn(result.error, 'youtube_url') ||
+    isMissingColumn(result.error, 'card_template')
+  ) {
+    result = await supabase
+      .from('recipe_steps')
+      .insert(withoutCardTemplateAndYoutubeUrl(steps))
+      .select('id, step_number')
+  }
+
+  return result
+}
+
 function parsePaintSelection(rawValue: string | null | undefined) {
   if (!rawValue || rawValue.startsWith('paint:')) return null
 
@@ -255,10 +368,6 @@ export async function createDeckFromForge(
   } = await supabase.auth.getUser()
 
   if (!user) throw new Error('Not authenticated')
-
-  if (hasUnuploadedImage([input.image, ...input.cards.map(card => card.image)])) {
-    throw new Error('An image has not finished uploading. Upload it again before saving.')
-  }
 
   const title = cleanText(input.title, 'New Deck')
   const description = cleanText(input.description, 'A custom painting deck.')
@@ -405,10 +514,6 @@ export async function updateDeckFromForge(
 
   if (!user) throw new Error('Not authenticated')
   if (!deckId) throw new Error('Missing deck id')
-
-  if (hasUnuploadedImage([input.image, ...input.cards.map(card => card.image)])) {
-    throw new Error('An image has not finished uploading. Upload it again before saving.')
-  }
 
   const title = cleanText(input.title, 'New Deck')
   const description = cleanText(input.description, 'A custom painting deck.')
@@ -725,6 +830,8 @@ export async function toggleDeckPaintOwnership(formData: FormData) {
 }
 
 export type CreateGuideInput = {
+  cardLayout?: GuideCardPlacement[]
+  tags?: string[]
   title: string
   description: string
   image: string | null
@@ -784,17 +891,20 @@ export async function createGuideFromDecks(
   )
   const image = safePersistedImage(input.image)
   const difficulty = input.difficulty || null
+  const tags = normalizeGuideTags(input.tags)
 
+  const guideInsert = {
+    user_id: user.id,
+    title,
+    description,
+    image_url: image,
+    difficulty,
+    is_auto: false,
+    ...(input.tags === undefined ? {} : { tags }),
+  }
   const { data: guide, error: guideError } = await supabase
     .from('guides')
-    .insert({
-      user_id: user.id,
-      title,
-      description,
-      image_url: image,
-      difficulty,
-      is_auto: false,
-    })
+    .insert(guideInsert)
     .select('id')
     .single()
 
@@ -860,46 +970,26 @@ export async function updateGuideFromDecks(
   )
   const image = safePersistedImage(input.image)
   const difficulty = input.difficulty || null
+  const tags = normalizeGuideTags(input.tags)
 
-  const { data: guide, error: guideError } = await supabase
-    .from('guides')
-    .update({ title, description, image_url: image, difficulty })
-    .eq('id', guideId)
-    .eq('user_id', user.id)
-    .select('id')
-    .single()
-
-  if (guideError || !guide) {
-    throw new Error(guideError?.message || 'Could not save guide')
-  }
-
-  const { error: deleteError } = await supabase
-    .from('guide_decks')
-    .delete()
-    .eq('guide_id', guideId)
-
-  if (deleteError) throw new Error(deleteError.message)
-
-  const { error: guideDecksError } = await supabase.from('guide_decks').insert(
-    deckIds.map((recipeId, index) => ({
-      guide_id: guideId,
-      recipe_id: recipeId,
-      user_id: user.id,
-      position: index,
-    }))
+  const cardLayout = input.cardLayout === undefined ? null : parseGuideCardLayout(input.cardLayout)
+  if (input.cardLayout !== undefined && cardLayout?.length !== input.cardLayout.length) throw new Error('Invalid guide card layout.')
+  let { error: guideError } = await supabase.rpc('save_guide_layout', {
+    p_guide_id: guideId, p_title: title, p_description: description, p_image: image,
+    p_difficulty: difficulty, p_deck_ids: deckIds, p_card_layout: cardLayout, p_tags: tags, p_publish: input.status === 'Public',
+  })
+  const missingTaggedSignature = guideError && (
+    guideError.code === 'PGRST202' ||
+    /save_guide_layout.*p_tags|function public\.save_guide_layout.*does not exist/i.test(guideError.message)
   )
-
-  if (guideDecksError) throw new Error(guideDecksError.message)
-
-  if (input.status === 'Public') {
-    const { error: publishError } = await supabase
-      .from('recipes')
-      .update({ is_public: true })
-      .in('id', deckIds)
-      .eq('user_id', user.id)
-
-    if (publishError) throw new Error(publishError.message)
+  if (missingTaggedSignature) {
+    const fallback = await supabase.rpc('save_guide_layout', {
+      p_guide_id: guideId, p_title: title, p_description: description, p_image: image,
+      p_difficulty: difficulty, p_deck_ids: deckIds, p_card_layout: cardLayout, p_publish: input.status === 'Public',
+    })
+    guideError = fallback.error
   }
+  if (guideError) throw new Error(guideError.message)
 
   await captureServerEvent({
     distinctId: user.id,
@@ -914,4 +1004,14 @@ export async function updateGuideFromDecks(
   }
 
   return { id: guideId }
+}
+
+export async function loadGuideEditorDeck(deckId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { getGuidesV3DeckDetail } = await import('./guides-v3-detail-data')
+  const deck = await getGuidesV3DeckDetail(deckId, user.id)
+  if (!deck?.isOwner) throw new Error('You can only add your own decks to a guide.')
+  return deck
 }
