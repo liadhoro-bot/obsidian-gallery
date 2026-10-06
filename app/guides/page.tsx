@@ -17,9 +17,11 @@ export default async function GuidesPage() {
     redirect('/login?next=%2Fguides%3Fpreview%3D1&preview=1')
   }
 
+  // Load every tab up front: the client has no per-tab fetch, so a
+  // 'library'-only payload left Guides and Decks permanently empty.
   const [payload, featureGuides] = await perf.measure('v3 guides data', () =>
     Promise.all([
-      getGuidesV3Payload(user.id, 'library'),
+      getGuidesV3Payload(user.id, 'all'),
       getFeatureGuidesForPage('/guides', guidesFeatureGuides),
     ])
   )
