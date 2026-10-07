@@ -69,7 +69,7 @@ export function getPhaseHeadline(contest: Contest): string {
   if (phase === 'submissions_open') return 'Accepting Nominations'
   if (phase === 'moderation') return 'Voting Opens Soon'
   if (phase === 'voting_open') return 'Voting Open'
-  if (phase === 'voting_closed') return 'Winners Coming Soon'
+  if (phase === 'voting_closed') return 'Contest Closed'
   if (phase === 'results_published') return 'Winners Announced'
   return getPhaseLabel(phase)
 }

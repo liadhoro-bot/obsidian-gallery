@@ -44,7 +44,7 @@ export function getPhaseLabel(phase: ContestPhase) {
     submissions_open: 'Submissions Open',
     moderation: 'Moderation',
     voting_open: 'Voting Open',
-    voting_closed: 'Voting Closed',
+    voting_closed: 'Contest Closed',
     results_published: 'Results Published',
     cancelled: 'Cancelled',
     archived: 'Archived',

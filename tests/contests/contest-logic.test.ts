@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getContestPhase } from '../../lib/contests/phases'
+import { getContestPhase, getPhaseLabel } from '../../lib/contests/phases'
 import { assignDenseRanks, getRankedPoints } from '../../lib/contests/ranking'
 import type { Contest } from '../../lib/contests/types'
 
@@ -98,6 +98,10 @@ test('contest lifecycle phases honor persistent status overrides and schedule bo
     ),
     'archived'
   )
+})
+
+test('a contest awaiting results is labeled closed', () => {
+  assert.equal(getPhaseLabel('voting_closed'), 'Contest Closed')
 })
 
 test('ranked points and dense ranks keep ties tied', () => {
