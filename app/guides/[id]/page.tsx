@@ -15,6 +15,8 @@ import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import { getGuidesV3Payload } from '../guides-v3-data'
 import { getGuidesV3DeckDetail, getGuidesV3GuideDetail } from '../guides-v3-detail-data'
 import GuideSocialActions from '../shared/guide-social-actions'
+import DeckHeroActions from '../decks/[id]/deck-hero-actions'
+import DeckShareMenu from '../shared/deck-share-menu'
 import GuideEditPageClient from './guide-edit-page-client'
 import styles from '../guide-detail-silver.module.css'
 
@@ -99,8 +101,20 @@ export default async function GuideDetailPage({
     const cards = resolveGuideCards(details, guide.cardLayout).filter(card => !card.hidden).map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
     const firstCard = resolveGuideCards(details, guide.cardLayout).find(card => !card.hidden && card.groupId === resolvedSearchParams.deck)
     return <main><DeckCardViewer initialCardKey={firstCard ? guideCardKey(firstCard) : undefined} cards={cards} title={guide.title} backHref={`/guides/${guide.id}?preview=1`} featureGuides={featureGuides} heroActions={<>
-      <Link href={`/guides/${guide.id}?preview=1`} className={styles.backButton}>Info</Link>
-      {guide.isOwner ? <Link href={`/guides/${guide.id}?preview=1&edit=1`} className={styles.backButton}>Edit</Link> : null}
+      {guide.deckId ? (
+        <DeckHeroActions
+          recipeId={guide.deckId}
+          likeCount={guide.likeCount}
+          saveCount={guide.saveCount}
+          viewerHasLiked={guide.viewerHasLiked}
+          viewerHasSaved={guide.viewerHasSaved}
+        />
+      ) : null}
+      <DeckShareMenu
+        cards={cards}
+        fileBaseName={guide.title}
+        sharePath={`/guides/${guide.id}`}
+      />
     </>} /></main>
   }
 

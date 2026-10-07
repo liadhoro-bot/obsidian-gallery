@@ -1,4 +1,3 @@
-import Link from '@/app/components/navigation-feedback/navigation-link'
 import { notFound, redirect } from 'next/navigation'
 import type { Recipe, RecipeImage, RecipeStep } from '../../shared/types'
 import {
@@ -317,7 +316,6 @@ export default async function DeckDetailPage({
 
   const heroActions = (
     <>
-      {deck.isOwner ? <Link href={`/guides/decks/${deck.id}?preview=1&edit=1`} className="rounded-full border px-3 py-2 text-xs font-bold">Edit</Link> : null}
       <DeckHeroActions
         recipeId={deck.id}
         likeCount={deck.likeCount ?? 0}
