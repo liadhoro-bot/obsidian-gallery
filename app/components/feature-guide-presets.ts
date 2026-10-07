@@ -31,8 +31,8 @@ export const projectsFeatureGuides = [
 
 export const paintsFeatureGuides = [
   guide('paints.page', 'Paints', 'Paints is your paint vault: the place to track owned colors, wishlist paints, search the catalog, export lists, and inspect paint details.', 100),
-  guide('paints.tabs.my_paints', 'My Paints Tab', 'My Paints focuses on the paints you own or want. Use it to manage your personal inventory and avoid buying duplicates.', 110),
-  guide('paints.tabs.library', 'Paint Library Tab', 'Paint Library opens the wider catalog so you can discover colors and add them to owned or wishlist status.', 120),
+  guide('paints.tabs.my_paints', 'My Paints Tab', 'My Paints focuses on the paints you own or want. Use it to manage your personal inventory and avoid buying duplicates.', 120),
+  guide('paints.tabs.library', 'Paint Library Tab', 'Paint Library opens the wider catalog so you can discover colors and add them to owned or wishlist status.', 110),
   guide('paints.search', 'Search', 'Search narrows the paint list by paint name, brand, or line.', 130),
   guide('paints.filters', 'Filters', 'Filters narrow the vault by brand, line, ownership, color group, or a color match sample.', 140),
   guide('paints.swatch_grid', 'Paint Swatches', 'The swatch grid is the main paint card area. Select a swatch to inspect the paint and update whether it is owned or on your wishlist.', 150, 'top'),

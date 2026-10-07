@@ -588,7 +588,7 @@ export default function PaintsV3Preview({
   featureGuides = [],
   initialPayload,
 }: PaintsV3PreviewProps) {
-  const [activeTab, setActiveTab] = useState<'owned' | 'library'>('owned')
+  const [activeTab, setActiveTab] = useState<'owned' | 'library'>('library')
   const [query, setQuery] = useState('')
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -1090,21 +1090,6 @@ export default function PaintsV3Preview({
           <button
             type="button"
             role="tab"
-            aria-selected={activeTab === 'owned'}
-            data-feature-guide-target="paints.tabs.my_paints"
-            onClick={() => handleTabChange('owned')}
-            className={[
-              'h-9 rounded-[6px] text-xs font-black transition',
-              activeTab === 'owned'
-                ? 'bg-[#101822] text-cyan-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.06)]'
-                : 'text-white/38 hover:text-white/70',
-            ].join(' ')}
-          >
-            My Paints
-          </button>
-          <button
-            type="button"
-            role="tab"
             aria-selected={activeTab === 'library'}
             data-feature-guide-target="paints.tabs.library"
             onClick={() => handleTabChange('library')}
@@ -1116,6 +1101,21 @@ export default function PaintsV3Preview({
             ].join(' ')}
           >
             Paint Library
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'owned'}
+            data-feature-guide-target="paints.tabs.my_paints"
+            onClick={() => handleTabChange('owned')}
+            className={[
+              'h-9 rounded-[6px] text-xs font-black transition',
+              activeTab === 'owned'
+                ? 'bg-[#101822] text-cyan-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.06)]'
+                : 'text-white/38 hover:text-white/70',
+            ].join(' ')}
+          >
+            My Paints
           </button>
         </div>
 
