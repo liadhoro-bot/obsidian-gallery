@@ -17,6 +17,7 @@ import {
   deleteUnit,
   endUnitSession,
   expireUnitSessionAtTwoHours,
+  logManualUnitSession,
   reorderUnitImages,
   scheduleUnitSession,
   updateUnitScheduledSession,
@@ -1857,12 +1858,148 @@ function PaintSessionLog({ session, unitId, onSaved }: {
   )
 }
 
+function ManualSessionDialog({ unitId, initialDateKey, onClose, onLogged }: {
+  unitId: string
+  initialDateKey: string
+  onClose: () => void
+  onLogged: (session: UnitPaintSession) => void
+}) {
+  const [saving, startSaving] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const fieldClass = 'h-12 min-w-0 rounded-[10px] border border-white/10 bg-black/24 px-4 text-sm font-black text-white outline-none transition focus:border-cyan-300/70'
+  const labelClass = 'text-xs font-black uppercase tracking-[0.18em] text-white/42'
+  // Today defaults to an hour-long session that just ended; past days to an evening.
+  const [defaultTime] = useState(() => {
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    if (initialDateKey !== getLocalDateKey(new Date()) || getLocalDateKey(hourAgo) !== initialDateKey) return '19:00'
+    return `${String(hourAgo.getHours()).padStart(2, '0')}:${String(hourAgo.getMinutes()).padStart(2, '0')}`
+  })
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (saving) return
+    const values = new FormData(event.currentTarget)
+    const start = new Date(`${values.get('date')}T${values.get('time')}`)
+    const seconds = Math.round(Number(values.get('minutes')) * 60)
+    const end = new Date(start.getTime() + seconds * 1000)
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(seconds) || seconds <= 0) {
+      setError('Enter a valid date, time, and length greater than zero.')
+      return
+    }
+    if (start.getTime() > Date.now()) {
+      setError('A logged session cannot start in the future. Use Schedule for upcoming sessions.')
+      return
+    }
+    const notes = String(values.get('notes') || '').trim()
+    const data = new FormData()
+    data.set('unitId', unitId)
+    data.set('startedAt', start.toISOString())
+    data.set('endedAt', end.toISOString())
+    data.set('notes', notes)
+    setError(null)
+    startSaving(async () => {
+      try {
+        const saved = await logManualUnitSession(data)
+        const durationSeconds = saved.duration_seconds ?? seconds
+        onLogged({
+          id: saved.id,
+          startedAt: saved.started_at,
+          dateKey: getLocalDateKey(new Date(saved.started_at)),
+          durationSeconds,
+          duration: `${Math.floor(durationSeconds / 3600)}h ${String(Math.floor(durationSeconds / 60) % 60).padStart(2, '0')}m`,
+          title: notes ? notes.split('\n')[0] : 'Manual painting log',
+          notes,
+        })
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Could not log session. Please try again.')
+      }
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm" data-v3-unit-indicator="manual-session-scrim">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manual-session-title"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">Log Session</p>
+            <h2 id="manual-session-title" className="mt-1 text-2xl font-black leading-tight">Log a painting session</h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Close log session"
+            onClick={onClose}
+            disabled={saving}
+            className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06] text-lg font-black text-white/48 transition hover:text-white"
+          >
+            x
+          </button>
+        </div>
+
+        <form onSubmit={submit} aria-label="Log painting session" className="mt-5 grid gap-4">
+          <label className="grid gap-2">
+            <span className={labelClass}>Date</span>
+            <input name="date" type="date" required defaultValue={initialDateKey} max={getLocalDateKey(new Date())} disabled={saving} className={fieldClass} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-2">
+              <span className={labelClass}>Start time</span>
+              <input name="time" type="time" required defaultValue={defaultTime} disabled={saving} className={fieldClass} />
+            </label>
+            <label className="grid gap-2">
+              <span className={labelClass}>Minutes</span>
+              <input name="minutes" type="number" inputMode="numeric" min="1" step="any" required defaultValue={60} disabled={saving} className={fieldClass} />
+            </label>
+          </div>
+          <label className="grid gap-2">
+            <span className={labelClass}>Notes</span>
+            <textarea
+              name="notes"
+              rows={3}
+              disabled={saving}
+              placeholder="What did you work on?"
+              className="resize-none rounded-[10px] border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold text-white outline-none transition focus:border-cyan-300/70"
+            />
+          </label>
+
+          {error ? (
+            <p role="alert" className="rounded-[10px] border border-red-400/40 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200">
+              {error}
+            </p>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="h-12 rounded-[10px] bg-[color:var(--og-brass-500)] bg-[image:var(--og-material-brass)] text-sm font-black text-[color:var(--og-ink-950)] shadow-[var(--og-shadow-brass-plate)] transition hover:bg-[color:var(--og-brass-400)] disabled:opacity-60"
+          >
+            {saving ? 'Saving…' : 'Log Session'}
+          </button>
+        </form>
+      </section>
+    </div>
+  )
+}
+
 function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoStartSession?: boolean }) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [loggedSessions, setLoggedSessions] = useState(unit.paintSessions ?? fallbackPaintSessions)
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [isManualLogOpen, setIsManualLogOpen] = useState(false)
   useEffect(() => setLoggedSessions(unit.paintSessions ?? fallbackPaintSessions), [unit.paintSessions])
+  function handleManualSessionLogged(logged: UnitPaintSession) {
+    setLoggedSessions(current => [logged, ...current.filter(session => session.id !== logged.id)]
+      .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)))
+    setSelectedDateKey(logged.dateKey)
+    setMonthCursor(getMonthCursorFromDateKey(logged.dateKey))
+    setIsManualLogOpen(false)
+    router.refresh()
+  }
   function handleSessionSaved(saved: UnitPaintSession) {
     setLoggedSessions(current => current.map(session => session.id === saved.id ? saved : session)
       .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)))
@@ -2345,11 +2482,22 @@ function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoS
 
       <button
         type="button"
+        onClick={() => setIsManualLogOpen(true)}
+        aria-haspopup="dialog"
         className="tap-press flex h-14 items-center justify-center gap-3 rounded-[14px] border border-dashed border-[color:color-mix(in_srgb,var(--og-brass-700)_42%,var(--og-border-subtle))] bg-black/18 text-sm font-black text-white/45 transition hover:border-[color:var(--og-brass-500)] hover:text-[color:var(--og-brass-500)]"
       >
         <span className="text-xl leading-none">+</span>
         Log a Session Manually
       </button>
+
+      {isManualLogOpen ? (
+        <ManualSessionDialog
+          unitId={unit.id}
+          initialDateKey={selectedDateKey <= todayKey ? selectedDateKey : todayKey}
+          onClose={() => setIsManualLogOpen(false)}
+          onLogged={handleManualSessionLogged}
+        />
+      ) : null}
 
       {isScheduleOpen ? (
         <div
