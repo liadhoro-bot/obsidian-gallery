@@ -30,7 +30,19 @@ type PaintRecord = {
 type PaintExportFormat = 'csv' | 'txt' | 'json' | 'pdf'
 type PaintOwnershipAction = 'owned' | 'wishlist'
 type PaintOwnershipState = Pick<PaintRecord, 'owned' | 'wish'>
-type PaintSortMode = 'name-asc' | 'name-desc' | 'brand-asc' | 'line-asc'
+type PaintSortMode = 'name-asc' | 'name-desc' | 'brand-asc' | 'line-asc' | 'match'
+type PaintEquivalentMatch = {
+  tier: 'chart' | 'community' | 'linked' | 'exact' | 'close' | 'near' | 'contextual'
+  deltaE: number | null
+  reason: string
+  rank: number
+}
+type PaintEquivalentsView = {
+  source: PaintRecord
+  status: 'loading' | 'ready' | 'error'
+  paints: PaintRecord[]
+  matches: Record<string, PaintEquivalentMatch>
+}
 type PaintViewMode = 'grid' | 'card'
 type PaintSwatchUrlMap = Record<string, string | null>
 
@@ -308,6 +320,36 @@ const paintSortOptions: {
     label: 'Line A-Z',
   },
 ]
+
+const matchSortOption: { value: PaintSortMode; label: string } = {
+  value: 'match',
+  label: 'Best match',
+}
+
+// Badges explaining why each equivalent matched ("Chart", "ΔE 2.1"). Kept for
+// later, hidden from users for now.
+const SHOW_EQUIVALENT_BADGES = false
+
+// User-facing reason in the info pane. The API's reason names the source
+// chart; users only need to know what kind of match it is.
+function describeEquivalent(match: PaintEquivalentMatch | undefined) {
+  if (!match) return undefined
+  if (match.tier === 'chart' || match.tier === 'community') {
+    return 'Listed as an equivalent in paint conversion charts.'
+  }
+  if (match.tier === 'linked') return 'Related through its conversion-chart equivalents.'
+  if (match.tier === 'contextual') return 'Same type of product, used for the same job.'
+  return 'Close colour match.'
+}
+
+function getEquivalentLabel(match: PaintEquivalentMatch | undefined) {
+  if (!match) return undefined
+  if (match.tier === 'chart') return 'Chart'
+  if (match.tier === 'community') return 'Cross-ref'
+  if (match.tier === 'linked') return 'Linked'
+  if (match.tier === 'contextual') return 'Same use'
+  return match.deltaE === null ? undefined : `ΔE ${match.deltaE.toFixed(1)}`
+}
 
 function getPaintColorGroup(hex: string) {
   const value = hex.replace('#', '')
@@ -638,6 +680,18 @@ export default function PaintsV3Preview({
   const [pendingPaintActions, setPendingPaintActions] = useState<
     Record<string, PaintOwnershipAction>
   >({})
+  const [equivalentsView, setEquivalentsView] =
+    useState<PaintEquivalentsView | null>(null)
+  // Filters the user had before opening equivalents, restored on the way back.
+  const filtersBeforeEquivalentsRef = useRef<{
+    query: string
+    brandFilter: string
+    lineFilter: string
+    ownershipFilter: string
+    colorGroupFilter: string
+    matchColor: string
+    sortMode: PaintSortMode
+  } | null>(null)
   const [deferredLibraryPayload, setDeferredLibraryPayload] =
     useState<DeferredPaintLibraryPayload | null>(null)
   const [paintSwatchUrls, setPaintSwatchUrls] = useState<PaintSwatchUrlMap>({})
@@ -688,13 +742,20 @@ export default function PaintsV3Preview({
       ),
     [libraryPaintsWithSwatches, paintStateOverrides]
   )
-  const activeFilterPaints = useMemo(
+  const equivalentPaints = useMemo(
     () =>
-      activeTab === 'owned'
-        ? allPaints.filter((paint) => paint.owned || paint.wish)
-        : libraryPaints,
-    [activeTab, allPaints, libraryPaints]
+      equivalentsView
+        ? applyPaintStateOverrides(equivalentsView.paints, paintStateOverrides)
+        : [],
+    [equivalentsView, paintStateOverrides]
   )
+  const activeFilterPaints = useMemo(() => {
+    if (equivalentsView) return equivalentPaints
+
+    return activeTab === 'owned'
+      ? allPaints.filter((paint) => paint.owned || paint.wish)
+      : libraryPaints
+  }, [activeTab, allPaints, equivalentPaints, equivalentsView, libraryPaints])
   const brandOptions = useMemo(
     () => uniqueSortedPaintValues(activeFilterPaints, (paint) => paint.brand),
     [activeFilterPaints]
@@ -911,11 +972,20 @@ export default function PaintsV3Preview({
         .slice(0, colorMatchLimit)
     }
 
+    if (sortMode === 'match' && equivalentsView) {
+      return [...matchingPaints].sort(
+        (first, second) =>
+          (equivalentsView.matches[first.id]?.rank ?? Infinity) -
+          (equivalentsView.matches[second.id]?.rank ?? Infinity)
+      )
+    }
+
     return sortPaintRecords(matchingPaints, sortMode)
   }, [
     activeFilterPaints,
     brandFilter,
     colorGroupFilter,
+    equivalentsView,
     lineFilter,
     matchColor,
     ownershipFilter,
@@ -930,8 +1000,15 @@ export default function PaintsV3Preview({
     normalizedPageIndex * pageSize + pageSize
   )
   const selectedPaint = selectedPaintId
-    ? allPaints.find((paint) => paint.id === selectedPaintId) ?? null
+    ? allPaints.find((paint) => paint.id === selectedPaintId) ??
+      equivalentPaints.find((paint) => paint.id === selectedPaintId) ??
+      (equivalentsView?.source.id === selectedPaintId
+        ? { ...equivalentsView.source, ...paintStateOverrides[selectedPaintId] }
+        : null)
     : null
+  const sortOptions = equivalentsView
+    ? [matchSortOption, ...paintSortOptions]
+    : paintSortOptions
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
@@ -948,7 +1025,83 @@ export default function PaintsV3Preview({
     setPageIndex((current) => (current + 1 >= pageCount ? 0 : current + 1))
   }
 
+  function clearPaintFilters() {
+    setQuery('')
+    setBrandFilter('all')
+    setLineFilter('all')
+    setOwnershipFilter('all')
+    setColorGroupFilter('all')
+    setMatchColor('')
+  }
+
+  async function showEquivalents(source: PaintRecord) {
+    if (!equivalentsView) {
+      filtersBeforeEquivalentsRef.current = {
+        query,
+        brandFilter,
+        lineFilter,
+        ownershipFilter,
+        colorGroupFilter,
+        matchColor,
+        sortMode,
+      }
+    }
+    clearPaintFilters()
+    setIsFilterOpen(false)
+    setIsSortOpen(false)
+    setSortMode('match')
+    setPageIndex(0)
+    setEquivalentsView({ source, status: 'loading', paints: [], matches: {} })
+
+    // Ignore a response that arrives after the user moved on to another paint.
+    const settle = (next: Omit<PaintEquivalentsView, 'source'>) =>
+      setEquivalentsView((current) =>
+        current?.source.id === source.id ? { source, ...next } : current
+      )
+
+    try {
+      const response = await fetch(
+        `/api/paints/v3-equivalents?paintId=${encodeURIComponent(source.id)}`
+      )
+      if (!response.ok) throw new Error('Failed to load equivalents.')
+
+      const result = (await response.json()) as {
+        paints?: PaintRecord[]
+        matches?: Record<string, PaintEquivalentMatch>
+      }
+      settle({
+        status: 'ready',
+        paints: result.paints ?? [],
+        matches: result.matches ?? {},
+      })
+    } catch {
+      settle({ status: 'error', paints: [], matches: {} })
+    }
+  }
+
+  function exitEquivalents() {
+    const previous = filtersBeforeEquivalentsRef.current
+    filtersBeforeEquivalentsRef.current = null
+    setEquivalentsView(null)
+    setPageIndex(0)
+
+    if (!previous) {
+      clearPaintFilters()
+      setSortMode('name-asc')
+      return
+    }
+
+    setQuery(previous.query)
+    setBrandFilter(previous.brandFilter)
+    setLineFilter(previous.lineFilter)
+    setOwnershipFilter(previous.ownershipFilter)
+    setColorGroupFilter(previous.colorGroupFilter)
+    setMatchColor(previous.matchColor)
+    setSortMode(previous.sortMode)
+  }
+
   function handleTabChange(nextTab: 'owned' | 'library') {
+    if (equivalentsView) exitEquivalents()
     setActiveTab(nextTab)
     if (nextTab === 'library') {
       setOwnershipFilter('all')
@@ -1359,7 +1512,7 @@ export default function PaintsV3Preview({
                     }}
                     className="h-11 w-full appearance-none rounded-[8px] border border-[#22304a] bg-[#02051a] px-4 pr-8 text-sm font-black text-white outline-none transition focus:border-cyan-300/60"
                   >
-                    {paintSortOptions.map((option) => (
+                    {sortOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -1466,8 +1619,37 @@ export default function PaintsV3Preview({
             : null}
         </section>
 
+        {equivalentsView ? (
+          <EquivalentsBanner
+            count={filteredPaints.length}
+            onExit={exitEquivalents}
+            source={equivalentsView.source}
+            status={equivalentsView.status}
+          />
+        ) : null}
+
         <section className="relative pr-8">
-          {visiblePaints.length > 0 ? (
+          {equivalentsView && equivalentsView.status !== 'ready' ? (
+            <div
+              className="rounded-[8px] border border-dashed border-white/10 bg-[#111821] p-6 text-center"
+              data-v3-paints-indicator="equivalents-status"
+            >
+              <p className="text-sm font-black text-white">
+                {equivalentsView.status === 'loading'
+                  ? 'Finding equivalents...'
+                  : 'Equivalents could not be loaded'}
+              </p>
+              {equivalentsView.status === 'error' ? (
+                <button
+                  type="button"
+                  onClick={() => showEquivalents(equivalentsView.source)}
+                  className="mt-3 rounded-full border border-cyan-300/40 px-4 py-1.5 text-xs font-black text-cyan-200 transition hover:bg-cyan-300/10"
+                >
+                  Try again
+                </button>
+              ) : null}
+            </div>
+          ) : visiblePaints.length > 0 ? (
             <div
               className={
                 viewMode === 'grid' ? 'grid grid-cols-3 gap-2' : 'grid gap-2'
@@ -1475,13 +1657,22 @@ export default function PaintsV3Preview({
               aria-label="Paint swatches"
               data-feature-guide-target="paints.swatch_grid"
               data-v3-paints-indicator={
-                activeTab === 'owned' ? 'my-paints-grid' : 'library-grid'
+                equivalentsView
+                  ? 'equivalents-grid'
+                  : activeTab === 'owned'
+                    ? 'my-paints-grid'
+                    : 'library-grid'
               }
             >
               {visiblePaints.map((paint) => (
                 viewMode === 'grid' ? (
                   <PaintSwatch
                     key={paint.id}
+                    matchLabel={
+                      SHOW_EQUIVALENT_BADGES
+                        ? getEquivalentLabel(equivalentsView?.matches[paint.id])
+                        : undefined
+                    }
                     paint={paint}
                     isSelected={paint.id === selectedPaintId}
                     showRealSwatch={showRealSwatches}
@@ -1490,6 +1681,11 @@ export default function PaintsV3Preview({
                 ) : (
                   <PaintCard
                     key={paint.id}
+                    matchLabel={
+                      SHOW_EQUIVALENT_BADGES
+                        ? getEquivalentLabel(equivalentsView?.matches[paint.id])
+                        : undefined
+                    }
                     paint={paint}
                     isSelected={paint.id === selectedPaintId}
                     showRealSwatch={showRealSwatches}
@@ -1541,6 +1737,13 @@ export default function PaintsV3Preview({
 
       {selectedPaint ? (
         <PaintInfoPanel
+          isEquivalentsSource={equivalentsView?.source.id === selectedPaint.id}
+          matchNote={describeEquivalent(equivalentsView?.matches[selectedPaint.id])}
+          onToggleEquivalents={() =>
+            equivalentsView?.source.id === selectedPaint.id
+              ? exitEquivalents()
+              : showEquivalents(selectedPaint)
+          }
           paint={selectedPaint}
           pendingAction={pendingPaintActions[selectedPaint.id]}
           showRealSwatch={showRealSwatches}
@@ -1769,11 +1972,13 @@ function TopNav({
 
 function PaintSwatch({
   isSelected,
+  matchLabel,
   onSelect,
   paint,
   showRealSwatch,
 }: {
   isSelected: boolean
+  matchLabel?: string
   onSelect: () => void
   paint: PaintRecord
   showRealSwatch: boolean
@@ -1803,6 +2008,14 @@ function PaintSwatch({
             sizes="(max-width: 640px) 31vw, 128px"
             className="object-cover"
           />
+        ) : null}
+        {matchLabel ? (
+          <span
+            className="absolute left-1.5 top-1.5 rounded-full bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.06em] text-cyan-200"
+            data-v3-paints-indicator="equivalent-badge"
+          >
+            {matchLabel}
+          </span>
         ) : null}
       </span>
       {(paint.owned || paint.wish) && (
@@ -1844,11 +2057,13 @@ function PaintSwatch({
 
 function PaintCard({
   isSelected,
+  matchLabel,
   onSelect,
   paint,
   showRealSwatch,
 }: {
   isSelected: boolean
+  matchLabel?: string
   onSelect: () => void
   paint: PaintRecord
   showRealSwatch: boolean
@@ -1891,6 +2106,14 @@ function PaintCard({
         </span>
       </span>
       <span className="grid justify-items-end gap-1 text-[9px] font-black text-white/34">
+        {matchLabel ? (
+          <span
+            className="text-cyan-200"
+            data-v3-paints-indicator="equivalent-badge"
+          >
+            {matchLabel}
+          </span>
+        ) : null}
         <span>{paint.finish}</span>
         <span>{paint.size}</span>
       </span>
@@ -1936,12 +2159,18 @@ function PaintInfoEmptyPanel() {
 }
 
 function PaintInfoPanel({
+  isEquivalentsSource,
+  matchNote,
+  onToggleEquivalents,
   onToggleOwned,
   onToggleWishlist,
   paint,
   pendingAction,
   showRealSwatch,
 }: {
+  isEquivalentsSource: boolean
+  matchNote?: string
+  onToggleEquivalents: () => void
   onToggleOwned: () => void
   onToggleWishlist: () => void
   paint: PaintRecord
@@ -2017,19 +2246,82 @@ function PaintInfoPanel({
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-4 gap-3 text-[11px] text-white/34">
+          <div className="mt-3 grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto_auto] items-start gap-2 text-[11px] text-white/34">
             <InfoPair label="Brand" value={paint.brand} />
             <InfoPair label="Line" value={paint.line} />
             <InfoPair label="Size" value={paint.size} />
             <InfoPair label="MSRP" value={paint.msrp ?? '-'} />
+            <button
+              type="button"
+              onClick={onToggleEquivalents}
+              disabled={isCustomPaint}
+              aria-pressed={isEquivalentsSource}
+              data-v3-paints-indicator="show-equivalents"
+              className={[
+                'shrink-0 self-center rounded-[6px] border px-2 py-1.5 text-center text-[9px] font-black uppercase leading-[1.2] tracking-normal transition disabled:cursor-not-allowed disabled:opacity-45',
+                isEquivalentsSource
+                  ? 'border-cyan-300/55 bg-cyan-300/12 text-cyan-200'
+                  : 'border-white/12 bg-white/[0.04] text-white/62 hover:border-cyan-300/45 hover:text-cyan-200',
+              ].join(' ')}
+            >
+              {/* Two stacked words keep the button narrow on phones. */}
+              <span className="block">{isEquivalentsSource ? 'Hide' : 'Show'}</span>
+              <span className="block">equivalents</span>
+            </button>
           </div>
 
           <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-white/46">
-            {paint.notes}
+            {matchNote ?? paint.notes}
           </p>
         </div>
       </div>
     </aside>
+  )
+}
+
+function EquivalentsBanner({
+  count,
+  onExit,
+  source,
+  status,
+}: {
+  count: number
+  onExit: () => void
+  source: PaintRecord
+  status: PaintEquivalentsView['status']
+}) {
+  return (
+    <section
+      className="flex items-center gap-3 rounded-[8px] border border-cyan-300/25 bg-cyan-300/[0.06] p-2"
+      data-v3-paints-indicator="equivalents-banner"
+      aria-live="polite"
+    >
+      <span
+        aria-hidden="true"
+        className="h-8 w-8 shrink-0 rounded-[6px] border border-white/15"
+        style={{ backgroundColor: source.color }}
+      />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-cyan-300">
+          Equivalents for
+        </span>
+        <span className="block truncate text-xs font-black text-white">
+          {source.name}
+          <span className="font-semibold text-white/40">
+            {' '}
+            · {source.brand}
+            {status === 'ready' ? ` · ${count} shown` : ''}
+          </span>
+        </span>
+      </span>
+      <button
+        type="button"
+        onClick={onExit}
+        className="shrink-0 rounded-full border border-white/12 px-3 py-1 text-[10px] font-black text-white/62 transition hover:border-cyan-300/45 hover:text-cyan-200"
+      >
+        Back to paints
+      </button>
+    </section>
   )
 }
 

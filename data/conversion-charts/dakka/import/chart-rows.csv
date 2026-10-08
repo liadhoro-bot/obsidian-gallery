@@ -1,0 +1,599 @@
+source_brand,source_line,source_name,target_brand,target_line,target_name,notes
+Warhammer Colour,Layer,White Scar,Vallejo,Game Color,Dead White,row 1; code 72.001
+Warhammer Colour,Layer,White Scar,Vallejo,Model Color,White,row 1; code 70.951
+Warhammer Colour,Layer,White Scar,P3 Formula,Colour,Morrow White,row 1
+Warhammer Colour,Layer,White Scar,SFG (discontinued),Formula P3,Morrow White,row 1
+Warhammer Colour,Layer,White Scar,Army Painter,Original Warpaints,Matt White,row 1
+Vallejo,Game Color,Dead White,Vallejo,Model Color,White,row 1; code 72.001; code 70.951
+Vallejo,Game Color,Dead White,P3 Formula,Colour,Morrow White,row 1; code 72.001
+Vallejo,Game Color,Dead White,SFG (discontinued),Formula P3,Morrow White,row 1; code 72.001
+Vallejo,Game Color,Dead White,Army Painter,Original Warpaints,Matt White,row 1; code 72.001
+Vallejo,Model Color,White,P3 Formula,Colour,Morrow White,row 1; code 70.951
+Vallejo,Model Color,White,SFG (discontinued),Formula P3,Morrow White,row 1; code 70.951
+Vallejo,Model Color,White,Army Painter,Original Warpaints,Matt White,row 1; code 70.951
+P3 Formula,Colour,Morrow White,SFG (discontinued),Formula P3,Morrow White,row 1
+P3 Formula,Colour,Morrow White,Army Painter,Original Warpaints,Matt White,row 1
+SFG (discontinued),Formula P3,Morrow White,Army Painter,Original Warpaints,Matt White,row 1
+Warhammer Colour,Base,Ceramite White,Vallejo,Game Color,White Primer,row 2; code 72.002
+Warhammer Colour,Base,Ceramite White,Vallejo,Model Color,Cold White,row 2; code 70.919
+Warhammer Colour,Base,Ceramite White,P3 Formula,Colour,Morrow White,row 2
+Warhammer Colour,Base,Ceramite White,SFG (discontinued),Formula P3,Morrow White,row 2
+Vallejo,Game Color,White Primer,Vallejo,Model Color,Cold White,row 2; code 72.002; code 70.919
+Vallejo,Game Color,White Primer,P3 Formula,Colour,Morrow White,row 2; code 72.002
+Vallejo,Game Color,White Primer,SFG (discontinued),Formula P3,Morrow White,row 2; code 72.002
+Vallejo,Model Color,Cold White,P3 Formula,Colour,Morrow White,row 2; code 70.919
+Vallejo,Model Color,Cold White,SFG (discontinued),Formula P3,Morrow White,row 2; code 70.919
+Warhammer Colour,Layer,Kislev Flesh,Vallejo,Game Color,Pale Flesh,row 3; code 72.003
+Warhammer Colour,Layer,Kislev Flesh,Vallejo,Model Color,Light Flesh,row 3; code 70.928
+Warhammer Colour,Layer,Kislev Flesh,P3 Formula,Colour,Ryn Flesh,row 3
+Warhammer Colour,Layer,Kislev Flesh,SFG (discontinued),Formula P3,Ryn Flesh,row 3
+Warhammer Colour,Layer,Kislev Flesh,Army Painter,Original Warpaints,Kobold Skin,row 3
+Vallejo,Game Color,Pale Flesh,Vallejo,Model Color,Light Flesh,row 3; code 72.003; code 70.928
+Vallejo,Game Color,Pale Flesh,P3 Formula,Colour,Ryn Flesh,row 3; code 72.003
+Vallejo,Game Color,Pale Flesh,SFG (discontinued),Formula P3,Ryn Flesh,row 3; code 72.003
+Vallejo,Game Color,Pale Flesh,Army Painter,Original Warpaints,Kobold Skin,row 3; code 72.003
+Vallejo,Model Color,Light Flesh,P3 Formula,Colour,Ryn Flesh,row 3; code 70.928
+Vallejo,Model Color,Light Flesh,SFG (discontinued),Formula P3,Ryn Flesh,row 3; code 70.928
+Vallejo,Model Color,Light Flesh,Army Painter,Original Warpaints,Kobold Skin,row 3; code 70.928
+P3 Formula,Colour,Ryn Flesh,SFG (discontinued),Formula P3,Ryn Flesh,row 3
+P3 Formula,Colour,Ryn Flesh,Army Painter,Original Warpaints,Kobold Skin,row 3
+SFG (discontinued),Formula P3,Ryn Flesh,Army Painter,Original Warpaints,Kobold Skin,row 3
+Warhammer Colour,Layer,Bestigor Flesh,Vallejo,Game Color,Elf Skin Tone,row 4; code 72.004
+Warhammer Colour,Layer,Bestigor Flesh,Vallejo,Model Color,Flat Flesh,row 4; code 70.955
+Vallejo,Game Color,Elf Skin Tone,Vallejo,Model Color,Flat Flesh,row 4; code 72.004; code 70.955
+Vallejo,Game Color,Moon Yellow,Vallejo,Model Color,Lemon Yellow,row 5; code 72.005; code 70.952
+Warhammer Colour,Layer,Flash Gitz Yellow,Vallejo,Game Color,Sun Yellow,row 6; code 72.006
+Warhammer Colour,Layer,Flash Gitz Yellow,Vallejo,Model Color,Flat Yellow,row 6
+Warhammer Colour,Layer,Flash Gitz Yellow,Army Painter,Original Warpaints,Daemonic Yellow,"row 6; chart prints ""Demonic Yelow"""
+Vallejo,Game Color,Sun Yellow,Vallejo,Model Color,Flat Yellow,row 6; code 72.006
+Vallejo,Game Color,Sun Yellow,Army Painter,Original Warpaints,Daemonic Yellow,"row 6; code 72.006; chart prints ""Demonic Yelow"""
+Vallejo,Model Color,Flat Yellow,Army Painter,Original Warpaints,Daemonic Yellow,"row 6; chart prints ""Demonic Yelow"""
+Warhammer Colour,Layer,Yriel Yellow,Vallejo,Game Color,Gold Yellow,row 7; code 72.007
+Warhammer Colour,Layer,Yriel Yellow,Vallejo,Model Color,Golden Yellow,row 7; code 70.948
+Warhammer Colour,Layer,Yriel Yellow,P3 Formula,Colour,Heartfire,row 7
+Warhammer Colour,Layer,Yriel Yellow,SFG (discontinued),Formula P3,Heartfire,row 7
+Vallejo,Game Color,Gold Yellow,Vallejo,Model Color,Golden Yellow,row 7; code 72.007; code 70.948
+Vallejo,Game Color,Gold Yellow,P3 Formula,Colour,Heartfire,row 7; code 72.007
+Vallejo,Game Color,Gold Yellow,SFG (discontinued),Formula P3,Heartfire,row 7; code 72.007
+Vallejo,Model Color,Golden Yellow,P3 Formula,Colour,Heartfire,row 7; code 70.948
+Vallejo,Model Color,Golden Yellow,SFG (discontinued),Formula P3,Heartfire,row 7; code 70.948
+P3 Formula,Colour,Heartfire,SFG (discontinued),Formula P3,Heartfire,row 7
+Warhammer Colour,Layer,Tallarn Sand,Vallejo,Game Color,Desert Yellow,row 8; code 72.063
+Warhammer Colour,Layer,Tallarn Sand,Vallejo,Model Color,Dark Yellow,row 8; code 70.978
+Warhammer Colour,Layer,Tallarn Sand,Army Painter,Original Warpaints,Desert Yellow,row 8
+Vallejo,Game Color,Desert Yellow,Vallejo,Model Color,Dark Yellow,row 8; code 72.063; code 70.978
+Vallejo,Game Color,Desert Yellow,Army Painter,Original Warpaints,Desert Yellow,row 8; code 72.063
+Vallejo,Model Color,Dark Yellow,Army Painter,Original Warpaints,Desert Yellow,row 8; code 70.978
+Warhammer Colour,Base,Jokaero Orange,Vallejo,Game Color,Heavy Orange,row 9; code 72.152
+Warhammer Colour,Base,Jokaero Orange,Vallejo,Model Color,German Orange,row 9; code 70.805
+Vallejo,Game Color,Heavy Orange,Vallejo,Model Color,German Orange,row 9; code 72.152; code 70.805
+Warhammer Colour,Layer,Fire Dragon Bright,Vallejo,Game Color,Orange Fire,row 10; code 72.008
+Warhammer Colour,Layer,Fire Dragon Bright,Vallejo,Model Color,Light Orange,row 10; code 70.911
+Vallejo,Game Color,Orange Fire,Vallejo,Model Color,Light Orange,row 10; code 72.008; code 70.911
+Warhammer Colour,Layer,Troll Slayer Orange,Vallejo,Game Color,Hot Orange,row 11; code 72.009
+Warhammer Colour,Layer,Troll Slayer Orange,Vallejo,Model Color,Scarlet,row 11; code 70.817
+Warhammer Colour,Layer,Troll Slayer Orange,Army Painter,Original Warpaints,Mythical Orange,row 11
+Vallejo,Game Color,Hot Orange,Vallejo,Model Color,Scarlet,row 11; code 72.009; code 70.817
+Vallejo,Game Color,Hot Orange,Army Painter,Original Warpaints,Mythical Orange,row 11; code 72.009
+Vallejo,Model Color,Scarlet,Army Painter,Original Warpaints,Mythical Orange,row 11; code 70.817
+Warhammer Colour,Base,Mephiston Red,Vallejo,Game Color,Heavy Red,row 12; code 72.141
+Warhammer Colour,Base,Mephiston Red,Vallejo,Model Color,Red,row 12; code 70.926
+Warhammer Colour,Base,Mephiston Red,Army Painter,Original Warpaints,Vampire Red,row 12
+Vallejo,Game Color,Heavy Red,Vallejo,Model Color,Red,row 12; code 72.141; code 70.926
+Vallejo,Game Color,Heavy Red,Army Painter,Original Warpaints,Vampire Red,row 12; code 72.141
+Vallejo,Model Color,Red,Army Painter,Original Warpaints,Vampire Red,row 12; code 70.926
+Warhammer Colour,Layer,Evil Sunz Scarlet,Vallejo,Game Color,Bloody Red,row 13; code 72.010
+Warhammer Colour,Layer,Evil Sunz Scarlet,Vallejo,Model Color,Vermilion,row 13; code 70.909
+Warhammer Colour,Layer,Evil Sunz Scarlet,Army Painter,Original Warpaints,Pure Red,row 13
+Vallejo,Game Color,Bloody Red,Vallejo,Model Color,Vermilion,row 13; code 72.010; code 70.909
+Vallejo,Game Color,Bloody Red,Army Painter,Original Warpaints,Pure Red,row 13; code 72.010
+Vallejo,Model Color,Vermilion,Army Painter,Original Warpaints,Pure Red,row 13; code 70.909
+Warhammer Colour,Layer,Wild Rider Red,Army Painter,Original Warpaints,Mars Red,row 14
+Warhammer Colour,Layer,Wazdakka Red,Vallejo,Game Color,Gory Red,row 15; code 72.011
+Warhammer Colour,Layer,Wazdakka Red,Vallejo,Model Color,Cavalry Brown,row 15; code 70.982
+Warhammer Colour,Layer,Wazdakka Red,Army Painter,Original Warpaints,Dragon Red,row 15
+Vallejo,Game Color,Gory Red,Vallejo,Model Color,Cavalry Brown,row 15; code 72.011; code 70.982
+Vallejo,Game Color,Gory Red,Army Painter,Original Warpaints,Dragon Red,row 15; code 72.011
+Vallejo,Model Color,Cavalry Brown,Army Painter,Original Warpaints,Dragon Red,row 15; code 70.982
+Warhammer Colour,Base,Khorne Red,Vallejo,Game Color,Scarlet Red,row 16; code 72.012
+Warhammer Colour,Base,Khorne Red,Vallejo,Model Color,Carmine Red,row 16; code 70.908
+Vallejo,Game Color,Scarlet Red,Vallejo,Model Color,Carmine Red,row 16; code 72.012; code 70.908
+Warhammer Colour,Layer,Word Bearers Red,Army Painter,Original Warpaints,Chaotic Red,row 17
+Warhammer Colour,Layer,Emperor's Children,Vallejo,Game Color,Squid Pink,row 18; code 72.013
+Warhammer Colour,Layer,Emperor's Children,Vallejo,Model Color,Pink,row 18; code 70.958
+Warhammer Colour,Layer,Emperor's Children,P3 Formula,Irregular,Carnal Pink,row 18
+Warhammer Colour,Layer,Emperor's Children,SFG (discontinued),Formula P3,Carnal Pink,row 18
+Vallejo,Game Color,Squid Pink,Vallejo,Model Color,Pink,row 18; code 72.013; code 70.958
+Vallejo,Game Color,Squid Pink,P3 Formula,Irregular,Carnal Pink,row 18; code 72.013
+Vallejo,Game Color,Squid Pink,SFG (discontinued),Formula P3,Carnal Pink,row 18; code 72.013
+Vallejo,Model Color,Pink,P3 Formula,Irregular,Carnal Pink,row 18; code 70.958
+Vallejo,Model Color,Pink,SFG (discontinued),Formula P3,Carnal Pink,row 18; code 70.958
+P3 Formula,Irregular,Carnal Pink,SFG (discontinued),Formula P3,Carnal Pink,row 18
+Warhammer Colour,Base,Screamer Pink,Vallejo,Game Color,Warlord Purple,row 19; code 72.014
+Warhammer Colour,Base,Screamer Pink,Vallejo,Model Color,Magenta,row 19; code 70.945
+Warhammer Colour,Base,Screamer Pink,P3 Formula,Colour,Murderous Magenta,row 19
+Warhammer Colour,Base,Screamer Pink,SFG (discontinued),Formula P3,Murderous Magenta,row 19
+Vallejo,Game Color,Warlord Purple,Vallejo,Model Color,Magenta,row 19; code 72.014; code 70.945
+Vallejo,Game Color,Warlord Purple,P3 Formula,Colour,Murderous Magenta,row 19; code 72.014
+Vallejo,Game Color,Warlord Purple,SFG (discontinued),Formula P3,Murderous Magenta,row 19; code 72.014
+Vallejo,Model Color,Magenta,P3 Formula,Colour,Murderous Magenta,row 19; code 70.945
+Vallejo,Model Color,Magenta,SFG (discontinued),Formula P3,Murderous Magenta,row 19; code 70.945
+P3 Formula,Colour,Murderous Magenta,SFG (discontinued),Formula P3,Murderous Magenta,row 19
+Warhammer Colour,Base,Barak-Nar Burgundy,Army Painter,Original Warpaints,Crusted Sore,row 20
+Warhammer Colour,Base,Gal Vorbak Red,Army Painter,Original Warpaints,Crusted Sore,row 21
+Warhammer Colour,Layer,Xereus Purple,Vallejo,Game Color,Hexed Lichen,row 22; code 72.015
+Warhammer Colour,Layer,Xereus Purple,Vallejo,Model Color,Royal Purple,row 22; code 70.810
+Warhammer Colour,Layer,Xereus Purple,P3 Formula,Colour,Beaten Purple,row 22
+Warhammer Colour,Layer,Xereus Purple,SFG (discontinued),Formula P3,Beaten Purple,row 22
+Warhammer Colour,Layer,Xereus Purple,Army Painter,Original Warpaints,Alien Purple,row 22
+Vallejo,Game Color,Hexed Lichen,Vallejo,Model Color,Royal Purple,row 22; code 72.015; code 70.810
+Vallejo,Game Color,Hexed Lichen,P3 Formula,Colour,Beaten Purple,row 22; code 72.015
+Vallejo,Game Color,Hexed Lichen,SFG (discontinued),Formula P3,Beaten Purple,row 22; code 72.015
+Vallejo,Game Color,Hexed Lichen,Army Painter,Original Warpaints,Alien Purple,row 22; code 72.015
+Vallejo,Model Color,Royal Purple,P3 Formula,Colour,Beaten Purple,row 22; code 70.810
+Vallejo,Model Color,Royal Purple,SFG (discontinued),Formula P3,Beaten Purple,row 22; code 70.810
+Vallejo,Model Color,Royal Purple,Army Painter,Original Warpaints,Alien Purple,row 22; code 70.810
+P3 Formula,Colour,Beaten Purple,SFG (discontinued),Formula P3,Beaten Purple,row 22
+P3 Formula,Colour,Beaten Purple,Army Painter,Original Warpaints,Alien Purple,row 22
+SFG (discontinued),Formula P3,Beaten Purple,Army Painter,Original Warpaints,Alien Purple,row 22
+Warhammer Colour,Base,Naggaroth Night,Vallejo,Game Color,Royal Purple,row 23; code 72.016
+Warhammer Colour,Base,Naggaroth Night,Vallejo,Model Color,Royal Purple,row 23; code 70.810
+Vallejo,Game Color,Royal Purple,Vallejo,Model Color,Royal Purple,row 23; code 72.016; code 70.810
+Vallejo,Game Color,Sick Blue,P3 Formula,Colour,Bad Bruise,row 24; code 72.017
+Vallejo,Game Color,Sick Blue,SFG (discontinued),Formula P3,Bad Bruise,row 24; code 72.017
+P3 Formula,Colour,Bad Bruise,SFG (discontinued),Formula P3,Bad Bruise,row 24
+Vallejo,Game Color,Stormy Blue,Vallejo,Model Color,Blue,row 25; code 72.018; code 70.925
+Vallejo,Game Color,Night Blue,Vallejo,Model Color,Dark Sea Blue,row 26; code 72.019
+Warhammer Colour,Base,Kantor Blue,Vallejo,Game Color,Imperial Blue,row 27; code 72.020
+Warhammer Colour,Base,Kantor Blue,Vallejo,Model Color,Dark Prussian Blue,row 27
+Warhammer Colour,Base,Kantor Blue,Army Painter,Original Warpaints,Deep Blue,row 27
+Vallejo,Game Color,Imperial Blue,Vallejo,Model Color,Dark Prussian Blue,row 27; code 72.020
+Vallejo,Game Color,Imperial Blue,Army Painter,Original Warpaints,Deep Blue,row 27; code 72.020
+Vallejo,Model Color,Dark Prussian Blue,Army Painter,Original Warpaints,Deep Blue,row 27
+Warhammer Colour,Layer,Altdorf Guard Blue,Vallejo,Game Color,Ultramarine Blue,row 28; code 72.022
+Warhammer Colour,Layer,Altdorf Guard Blue,Vallejo,Model Color,Ultramarine,row 28; code 70.839
+Warhammer Colour,Layer,Altdorf Guard Blue,Army Painter,Original Warpaints,Ultramarine Blue,row 28
+Vallejo,Game Color,Ultramarine Blue,Vallejo,Model Color,Ultramarine,row 28; code 72.022; code 70.839
+Vallejo,Game Color,Ultramarine Blue,Army Painter,Original Warpaints,Ultramarine Blue,row 28; code 72.022
+Vallejo,Model Color,Ultramarine,Army Painter,Original Warpaints,Ultramarine Blue,row 28; code 70.839
+Warhammer Colour,Base,Macragge Blue,Vallejo,Game Color,Heavy Blue,row 29; code 72.143
+Warhammer Colour,Base,Macragge Blue,Vallejo,Model Color,Prussian Blue,row 29; code 70.965
+Warhammer Colour,Base,Macragge Blue,Army Painter,Original Warpaints,Dark Sky,row 29
+Vallejo,Game Color,Heavy Blue,Vallejo,Model Color,Prussian Blue,row 29; code 72.143; code 70.965
+Vallejo,Game Color,Heavy Blue,Army Painter,Original Warpaints,Dark Sky,row 29; code 72.143
+Vallejo,Model Color,Prussian Blue,Army Painter,Original Warpaints,Dark Sky,row 29; code 70.965
+Warhammer Colour,Base,Caledor Sky,Vallejo,Game Color,Magic Blue,row 30; code 72.021
+Warhammer Colour,Base,Caledor Sky,Vallejo,Model Color,Dark Blue,row 30; code 70.930
+Warhammer Colour,Base,Caledor Sky,SFG (discontinued),Formula P3,Cygnar Blue Highlight,row 30
+Warhammer Colour,Base,Caledor Sky,Army Painter,Original Warpaints,Crystal Blue,row 30
+Vallejo,Game Color,Magic Blue,Vallejo,Model Color,Dark Blue,row 30; code 72.021; code 70.930
+Vallejo,Game Color,Magic Blue,SFG (discontinued),Formula P3,Cygnar Blue Highlight,row 30; code 72.021
+Vallejo,Game Color,Magic Blue,Army Painter,Original Warpaints,Crystal Blue,row 30; code 72.021
+Vallejo,Model Color,Dark Blue,SFG (discontinued),Formula P3,Cygnar Blue Highlight,row 30; code 70.930
+Vallejo,Model Color,Dark Blue,Army Painter,Original Warpaints,Crystal Blue,row 30; code 70.930
+SFG (discontinued),Formula P3,Cygnar Blue Highlight,Army Painter,Original Warpaints,Crystal Blue,row 30
+Warhammer Colour,Layer,Hoeth Blue,Army Painter,Original Warpaints,Voidshield Blue,row 31
+Warhammer Colour,Layer,Lothern Blue,Vallejo,Game Color,Glacier Blue,row 32; code 72.095
+Warhammer Colour,Layer,Lothern Blue,Army Painter,Original Warpaints,Voidshield Blue,row 32
+Vallejo,Game Color,Glacier Blue,Army Painter,Original Warpaints,Voidshield Blue,row 32; code 72.095
+Warhammer Colour,Layer,Teclis Blue,Vallejo,Game Color,Electric Blue,row 33; code 72.023
+Warhammer Colour,Layer,Teclis Blue,Vallejo,Model Color,Sky Blue,row 33; code 70.961
+Warhammer Colour,Layer,Teclis Blue,Army Painter,Original Warpaints,Electric Blue,row 33
+Vallejo,Game Color,Electric Blue,Vallejo,Model Color,Sky Blue,row 33; code 72.023; code 70.961
+Vallejo,Game Color,Electric Blue,Army Painter,Original Warpaints,Electric Blue,row 33; code 72.023
+Vallejo,Model Color,Sky Blue,Army Painter,Original Warpaints,Electric Blue,row 33; code 70.961
+Warhammer Colour,Base,Thousand Sons Blue,Army Painter,Original Warpaints,Hydra Turquoise,row 34
+Warhammer Colour,Layer,Ahriman Blue,Army Painter,Original Warpaints,Royal Cloak,row 35
+Warhammer Colour,Layer,Sotek Green,Vallejo,Game Color,Turquoise,row 36; code 72.024
+Warhammer Colour,Layer,Sotek Green,Vallejo,Model Color,Light Turquoise,row 36; code 70.840
+Warhammer Colour,Layer,Sotek Green,P3 Formula,Colour,Meredius Blue,row 36
+Warhammer Colour,Layer,Sotek Green,SFG (discontinued),Formula P3,Meredius Blue,row 36
+Warhammer Colour,Layer,Sotek Green,Army Painter,Original Warpaints,Hydra Turquoise,row 36
+Vallejo,Game Color,Turquoise,Vallejo,Model Color,Light Turquoise,row 36; code 72.024; code 70.840
+Vallejo,Game Color,Turquoise,P3 Formula,Colour,Meredius Blue,row 36; code 72.024
+Vallejo,Game Color,Turquoise,SFG (discontinued),Formula P3,Meredius Blue,row 36; code 72.024
+Vallejo,Game Color,Turquoise,Army Painter,Original Warpaints,Hydra Turquoise,row 36; code 72.024
+Vallejo,Model Color,Light Turquoise,P3 Formula,Colour,Meredius Blue,row 36; code 70.840
+Vallejo,Model Color,Light Turquoise,SFG (discontinued),Formula P3,Meredius Blue,row 36; code 70.840
+Vallejo,Model Color,Light Turquoise,Army Painter,Original Warpaints,Hydra Turquoise,row 36; code 70.840
+P3 Formula,Colour,Meredius Blue,SFG (discontinued),Formula P3,Meredius Blue,row 36
+P3 Formula,Colour,Meredius Blue,Army Painter,Original Warpaints,Hydra Turquoise,row 36
+SFG (discontinued),Formula P3,Meredius Blue,Army Painter,Original Warpaints,Hydra Turquoise,row 36
+Warhammer Colour,Layer,Sybarite Green,Vallejo,Game Color,Foul Green,row 37; code 72.025
+Warhammer Colour,Layer,Sybarite Green,Vallejo,Model Color,Park Green Flat,row 37; code 70.969
+Vallejo,Game Color,Foul Green,Vallejo,Model Color,Park Green Flat,row 37; code 72.025; code 70.969
+Warhammer Colour,Layer,Kabalite Green,Vallejo,Game Color,Jade Green,row 38; code 72.026
+Warhammer Colour,Layer,Kabalite Green,Vallejo,Model Color,Emerald,row 38; code 70.838
+Warhammer Colour,Layer,Kabalite Green,SFG (discontinued),Formula P3,Eldritch,row 38
+Vallejo,Game Color,Jade Green,Vallejo,Model Color,Emerald,row 38; code 72.026; code 70.838
+Vallejo,Game Color,Jade Green,SFG (discontinued),Formula P3,Eldritch,row 38; code 72.026
+Vallejo,Model Color,Emerald,SFG (discontinued),Formula P3,Eldritch,row 38; code 70.838
+Vallejo,Game Color,Scurvy Green,Vallejo,Model Color,Emerald,row 39; code 72.027; code 70.838
+Warhammer Colour,Base,Incubi Darkness,Vallejo,Model Color,Dark Sea Blue,row 40; code 70.898
+Warhammer Colour,Base,Caliban Green,Vallejo,Game Color,Dark Green,row 41; code 72.028
+Warhammer Colour,Base,Caliban Green,Vallejo,Model Color,Deep Green,row 41; code 70.970
+Warhammer Colour,Base,Caliban Green,Army Painter,Original Warpaints,Angel Green,row 41
+Vallejo,Game Color,Dark Green,Vallejo,Model Color,Deep Green,row 41; code 72.028; code 70.970
+Vallejo,Game Color,Dark Green,Army Painter,Original Warpaints,Angel Green,row 41; code 72.028
+Vallejo,Model Color,Deep Green,Army Painter,Original Warpaints,Angel Green,row 41; code 70.970
+Warhammer Colour,Layer,Warpstone Glow,Vallejo,Game Color,Sick Green,row 42; code 72.029
+Warhammer Colour,Layer,Warpstone Glow,Vallejo,Model Color,Intermediate Green,row 42; code 70.891
+Warhammer Colour,Layer,Warpstone Glow,P3 Formula,Colour,Iosan Green,"row 42; chart prints ""Ioson Green"""
+Warhammer Colour,Layer,Warpstone Glow,SFG (discontinued),Formula P3,Iosan Green,"row 42; chart prints ""Ioson Green"""
+Vallejo,Game Color,Sick Green,Vallejo,Model Color,Intermediate Green,row 42; code 72.029; code 70.891
+Vallejo,Game Color,Sick Green,P3 Formula,Colour,Iosan Green,"row 42; code 72.029; chart prints ""Ioson Green"""
+Vallejo,Game Color,Sick Green,SFG (discontinued),Formula P3,Iosan Green,"row 42; code 72.029; chart prints ""Ioson Green"""
+Vallejo,Model Color,Intermediate Green,P3 Formula,Colour,Iosan Green,"row 42; code 70.891; chart prints ""Ioson Green"""
+Vallejo,Model Color,Intermediate Green,SFG (discontinued),Formula P3,Iosan Green,"row 42; code 70.891; chart prints ""Ioson Green"""
+P3 Formula,Colour,Iosan Green,SFG (discontinued),Formula P3,Iosan Green,"row 42; chart prints ""Ioson Green""; chart prints ""Ioson Green"""
+Warhammer Colour,Layer,Warboss Green,Vallejo,Game Color,Goblin Green,row 43; code 72.030
+Warhammer Colour,Layer,Warboss Green,Vallejo,Model Color,Pastel Green,row 43; code 70.885
+Warhammer Colour,Layer,Warboss Green,Army Painter,Original Warpaints,Goblin Green,row 43
+Vallejo,Game Color,Goblin Green,Vallejo,Model Color,Pastel Green,row 43; code 72.030; code 70.885
+Vallejo,Game Color,Goblin Green,Army Painter,Original Warpaints,Goblin Green,row 43; code 72.030
+Vallejo,Model Color,Pastel Green,Army Painter,Original Warpaints,Goblin Green,row 43; code 70.885
+Warhammer Colour,Layer,Elysian Green,Vallejo,Game Color,Camouflage Green,row 44; code 72.031
+Warhammer Colour,Layer,Elysian Green,Vallejo,Model Color,Olive Green,row 44; code 70.967
+Vallejo,Game Color,Camouflage Green,Vallejo,Model Color,Olive Green,row 44; code 72.031; code 70.967
+Warhammer Colour,Layer,Moot Green,Vallejo,Game Color,Scorpy Green,row 45; code 72.032
+Warhammer Colour,Layer,Moot Green,Vallejo,Model Color,Light Green,row 45; code 70.942
+Warhammer Colour,Layer,Moot Green,P3 Formula,Colour,Necrotite Green,row 45
+Warhammer Colour,Layer,Moot Green,SFG (discontinued),Formula P3,Necrotite Green,row 45
+Vallejo,Game Color,Scorpy Green,Vallejo,Model Color,Light Green,row 45; code 72.032; code 70.942
+Vallejo,Game Color,Scorpy Green,P3 Formula,Colour,Necrotite Green,row 45; code 72.032
+Vallejo,Game Color,Scorpy Green,SFG (discontinued),Formula P3,Necrotite Green,row 45; code 72.032
+Vallejo,Model Color,Light Green,P3 Formula,Colour,Necrotite Green,row 45; code 70.942
+Vallejo,Model Color,Light Green,SFG (discontinued),Formula P3,Necrotite Green,row 45; code 70.942
+P3 Formula,Colour,Necrotite Green,SFG (discontinued),Formula P3,Necrotite Green,row 45
+Warhammer Colour,Base,Castellan Green,Vallejo,Game Color,Cayman Green,row 47; code 72.067
+Warhammer Colour,Base,Castellan Green,Vallejo,Model Color,Olive Grey,row 47; code 70.888
+Vallejo,Game Color,Cayman Green,Vallejo,Model Color,Olive Grey,row 47; code 72.067; code 70.888
+Warhammer Colour,Base,Waaagh! Flesh,Vallejo,Game Color,Heavy Blackgreen,row 48; code 72.147
+Warhammer Colour,Base,Waaagh! Flesh,Vallejo,Model Color,Black Green,row 48; code 70.980
+Vallejo,Game Color,Heavy Blackgreen,Vallejo,Model Color,Black Green,row 48; code 72.147; code 70.980
+Warhammer Colour,Layer,Loren Forest,Vallejo,Game Color,Heavy Green,row 49; code 72.146
+Warhammer Colour,Layer,Loren Forest,Vallejo,Model Color,Luftwaffe Green,row 49; code 70.823
+Warhammer Colour,Layer,Loren Forest,Army Painter,Original Warpaints,Army Green,row 49
+Vallejo,Game Color,Heavy Green,Vallejo,Model Color,Luftwaffe Green,row 49; code 72.146; code 70.823
+Vallejo,Game Color,Heavy Green,Army Painter,Original Warpaints,Army Green,row 49; code 72.146
+Vallejo,Model Color,Luftwaffe Green,Army Painter,Original Warpaints,Army Green,row 49; code 70.823
+Warhammer Colour,Base,Deathworld Forest,Vallejo,Game Color,Heavy Khaki,row 50; code 72.149
+Warhammer Colour,Base,Deathworld Forest,Vallejo,Model Color,Russian Unif. WWII,row 50; code 70.924
+Warhammer Colour,Base,Deathworld Forest,Army Painter,Original Warpaints,Venom Wyrm,row 50
+Vallejo,Game Color,Heavy Khaki,Vallejo,Model Color,Russian Unif. WWII,row 50; code 72.149; code 70.924
+Vallejo,Game Color,Heavy Khaki,Army Painter,Original Warpaints,Venom Wyrm,row 50; code 72.149
+Vallejo,Model Color,Russian Unif. WWII,Army Painter,Original Warpaints,Venom Wyrm,row 50; code 70.924
+Warhammer Colour,Layer,Nurgling Green,Vallejo,Game Color,Dead Flesh,row 52; code 72.035
+Warhammer Colour,Layer,Nurgling Green,Vallejo,Model Color,Green Sky,row 52
+Warhammer Colour,Layer,Nurgling Green,P3 Formula,Colour,Jack Bone,row 52
+Warhammer Colour,Layer,Nurgling Green,SFG (discontinued),Formula P3,'Jack Bone,row 52
+Warhammer Colour,Layer,Nurgling Green,Army Painter,Original Warpaints,Necrotic Flesh,row 52
+Vallejo,Game Color,Dead Flesh,Vallejo,Model Color,Green Sky,row 52; code 72.035
+Vallejo,Game Color,Dead Flesh,P3 Formula,Colour,Jack Bone,row 52; code 72.035
+Vallejo,Game Color,Dead Flesh,SFG (discontinued),Formula P3,'Jack Bone,row 52; code 72.035
+Vallejo,Game Color,Dead Flesh,Army Painter,Original Warpaints,Necrotic Flesh,row 52; code 72.035
+Vallejo,Model Color,Green Sky,P3 Formula,Colour,Jack Bone,row 52
+Vallejo,Model Color,Green Sky,SFG (discontinued),Formula P3,'Jack Bone,row 52
+Vallejo,Model Color,Green Sky,Army Painter,Original Warpaints,Necrotic Flesh,row 52
+P3 Formula,Colour,Jack Bone,SFG (discontinued),Formula P3,'Jack Bone,row 52
+P3 Formula,Colour,Jack Bone,Army Painter,Original Warpaints,Necrotic Flesh,row 52
+SFG (discontinued),Formula P3,'Jack Bone,Army Painter,Original Warpaints,Necrotic Flesh,row 52
+Warhammer Colour,Layer,Ushabti Bone,Vallejo,Game Color,Bone White,row 53; code 72.034
+Warhammer Colour,Layer,Ushabti Bone,Vallejo,Model Color,Buff,row 53; code 70.976
+Warhammer Colour,Layer,Ushabti Bone,SFG (discontinued),Formula P3,Menoth White Base,row 53
+Warhammer Colour,Layer,Ushabti Bone,Army Painter,Original Warpaints,Skeleton Bone,row 53
+Vallejo,Game Color,Bone White,Vallejo,Model Color,Buff,row 53; code 72.034; code 70.976
+Vallejo,Game Color,Bone White,SFG (discontinued),Formula P3,Menoth White Base,row 53; code 72.034
+Vallejo,Game Color,Bone White,Army Painter,Original Warpaints,Skeleton Bone,row 53; code 72.034
+Vallejo,Model Color,Buff,SFG (discontinued),Formula P3,Menoth White Base,row 53; code 70.976
+Vallejo,Model Color,Buff,Army Painter,Original Warpaints,Skeleton Bone,row 53; code 70.976
+SFG (discontinued),Formula P3,Menoth White Base,Army Painter,Original Warpaints,Skeleton Bone,row 53
+Warhammer Colour,Base,Zandri Dust,Vallejo,Game Color,Khaki,row 54; code 72.061
+Warhammer Colour,Base,Zandri Dust,Vallejo,Model Color,Germ. Beige WWII,row 54; code 70.821
+Vallejo,Game Color,Khaki,Vallejo,Model Color,Germ. Beige WWII,row 54; code 72.061; code 70.821
+Warhammer Colour,Layer,Screaming Skull,Vallejo,Model Color,Ivory,row 56; code 70.918
+Warhammer Colour,Layer,Screaming Skull,SFG (discontinued),Formula P3,Menoth White Highlight,row 56
+Vallejo,Model Color,Ivory,SFG (discontinued),Formula P3,Menoth White Highlight,row 56; code 70.918
+Vallejo,Game Color,Bronze Brown,Vallejo,Model Color,Dark Flesh,row 57; code 72.036; code 70.927
+Warhammer Colour,Layer,Tau Light Ochre,Vallejo,Game Color,Filthy Brown,row 58; code 72.037
+Warhammer Colour,Layer,Tau Light Ochre,P3 Formula,Colour,Rucksack Tan,row 58
+Warhammer Colour,Layer,Tau Light Ochre,SFG (discontinued),Formula P3,Rucksack Tan,row 58
+Vallejo,Game Color,Filthy Brown,P3 Formula,Colour,Rucksack Tan,row 58; code 72.037
+Vallejo,Game Color,Filthy Brown,SFG (discontinued),Formula P3,Rucksack Tan,row 58; code 72.037
+P3 Formula,Colour,Rucksack Tan,SFG (discontinued),Formula P3,Rucksack Tan,row 58
+Warhammer Colour,Base,Ratskin Flesh,Vallejo,Game Color,Dwarf Skin,row 59; code 72.041
+Warhammer Colour,Base,Ratskin Flesh,Vallejo,Model Color,Brown Sand,row 59
+Warhammer Colour,Base,Ratskin Flesh,Army Painter,Original Warpaints,Barbarian Flesh,row 59
+Vallejo,Game Color,Dwarf Skin,Vallejo,Model Color,Brown Sand,row 59; code 72.041
+Vallejo,Game Color,Dwarf Skin,Army Painter,Original Warpaints,Barbarian Flesh,row 59; code 72.041
+Vallejo,Model Color,Brown Sand,Army Painter,Original Warpaints,Barbarian Flesh,row 59
+Warhammer Colour,Base,Bugman's Glow,Vallejo,Game Color,Tan,row 60; code 72.066
+Warhammer Colour,Base,Bugman's Glow,P3 Formula,Colour,Khardic Flesh,row 60
+Warhammer Colour,Base,Bugman's Glow,SFG (discontinued),Formula P3,Khardic Flesh,row 60
+Warhammer Colour,Base,Bugman's Glow,Army Painter,Original Warpaints,Tanned Flesh,row 60
+Vallejo,Game Color,Tan,P3 Formula,Colour,Khardic Flesh,row 60; code 72.066
+Vallejo,Game Color,Tan,SFG (discontinued),Formula P3,Khardic Flesh,row 60; code 72.066
+Vallejo,Game Color,Tan,Army Painter,Original Warpaints,Tanned Flesh,row 60; code 72.066
+P3 Formula,Colour,Khardic Flesh,SFG (discontinued),Formula P3,Khardic Flesh,row 60
+P3 Formula,Colour,Khardic Flesh,Army Painter,Original Warpaints,Tanned Flesh,row 60
+SFG (discontinued),Formula P3,Khardic Flesh,Army Painter,Original Warpaints,Tanned Flesh,row 60
+Vallejo,Game Color,Scrofulous Brown,Vallejo,Model Color,Gold Brown,row 61; code 72.038; code 70.877
+Warhammer Colour,Layer,Zamesi Desert,Vallejo,Game Color,Plague Brown,row 62; code 72.039
+Warhammer Colour,Layer,Zamesi Desert,Vallejo,Model Color,Yellow Ochre,row 62; code 70.913
+Warhammer Colour,Layer,Zamesi Desert,SFG (discontinued),Formula P3,Moldy Ochre,row 62
+Vallejo,Game Color,Plague Brown,Vallejo,Model Color,Yellow Ochre,row 62; code 72.039; code 70.913
+Vallejo,Game Color,Plague Brown,SFG (discontinued),Formula P3,Moldy Ochre,row 62; code 72.039
+Vallejo,Model Color,Yellow Ochre,SFG (discontinued),Formula P3,Moldy Ochre,row 62; code 70.913
+Warhammer Colour,Layer,Balor Brown,Vallejo,Game Color,Leather Brown,row 63; code 72.040
+Warhammer Colour,Layer,Balor Brown,Vallejo,Model Color,Brown Sand,row 63; code 70.876
+Vallejo,Game Color,Leather Brown,Vallejo,Model Color,Brown Sand,row 63; code 72.040; code 70.876
+Warhammer Colour,Layer,Balor Brown,Vallejo,Game Color,Heavy Ochre,row 64; code 72.150
+Warhammer Colour,Layer,Balor Brown,Vallejo,Model Color,Ochre Brown,row 64; code 70.856
+Vallejo,Game Color,Heavy Ochre,Vallejo,Model Color,Ochre Brown,row 64; code 72.150; code 70.856
+Warhammer Colour,Layer,Skrag Brown,Vallejo,Game Color,Parasite Brown,row 65; code 72.042
+Warhammer Colour,Layer,Skrag Brown,Vallejo,Model Color,Orange Brown,row 65; code 70.981
+Vallejo,Game Color,Parasite Brown,Vallejo,Model Color,Orange Brown,row 65; code 72.042; code 70.981
+Warhammer Colour,Base,Rhinox Hide,Vallejo,Game Color,Charred Brown,row 66; code 72.045
+Warhammer Colour,Layer,Doombull Brown,Vallejo,Game Color,Dark Flesh Tone,row 67; code 72.044
+Warhammer Colour,Layer,Doombull Brown,Vallejo,Model Color,Mahogany Brown,row 67; code 70.846
+Vallejo,Game Color,Dark Flesh Tone,Vallejo,Model Color,Mahogany Brown,row 67; code 72.044; code 70.846
+Warhammer Colour,Base,Dryad Bark,Army Painter,Original Warpaints,Oak Brown,row 68
+Warhammer Colour,Layer,Gorthor Brown,Army Painter,Original Warpaints,Werewolf Fur,row 69
+Warhammer Colour,Layer,Baneblade Brown,Vallejo,Game Color,Heavy Brown,row 70; code 72.153
+Warhammer Colour,Layer,Baneblade Brown,Vallejo,Model Color,Green Brown,row 70
+Vallejo,Game Color,Heavy Brown,Vallejo,Model Color,Green Brown,row 70; code 72.153
+Warhammer Colour,Base,Mournfang Brown,Vallejo,Game Color,Beasty Brown,row 71; code 72.043
+Warhammer Colour,Base,Mournfang Brown,Vallejo,Model Color,Flat Brown,row 71; code 70.984
+Warhammer Colour,Base,Mournfang Brown,P3 Formula,Colour,Bloodtracker Brown,row 71
+Warhammer Colour,Base,Mournfang Brown,SFG (discontinued),Formula P3,Blood Tracker Brown,row 71
+Vallejo,Game Color,Beasty Brown,Vallejo,Model Color,Flat Brown,row 71; code 72.043; code 70.984
+Vallejo,Game Color,Beasty Brown,P3 Formula,Colour,Bloodtracker Brown,row 71; code 72.043
+Vallejo,Game Color,Beasty Brown,SFG (discontinued),Formula P3,Blood Tracker Brown,row 71; code 72.043
+Vallejo,Model Color,Flat Brown,P3 Formula,Colour,Bloodtracker Brown,row 71; code 70.984
+Vallejo,Model Color,Flat Brown,SFG (discontinued),Formula P3,Blood Tracker Brown,row 71; code 70.984
+P3 Formula,Colour,Bloodtracker Brown,SFG (discontinued),Formula P3,Blood Tracker Brown,row 71
+Warhammer Colour,Base,Mournfang Brown,Vallejo,Game Color,Heavy Sienna,row 72; code 72.154
+Vallejo,Game Color,Heavy Sienna,Vallejo,Model Color,Flat Brown,row 72; code 72.154; code 70.984
+Warhammer Colour,Base,XV-88,Vallejo,Game Color,Terracotta,row 73; code 72.065
+Warhammer Colour,Base,Steel Legion Drab,Vallejo,Game Color,Earth,row 74; code 72.062
+Warhammer Colour,Base,Steel Legion Drab,Vallejo,Model Color,US Field Drab,row 74
+Warhammer Colour,Base,Steel Legion Drab,P3 Formula,Colour,Gun Corps Brown,row 74
+Warhammer Colour,Base,Steel Legion Drab,SFG (discontinued),Formula P3,Gun Corps Brown,row 74
+Warhammer Colour,Base,Steel Legion Drab,Army Painter,Original Warpaints,Leather Brown,row 74
+Vallejo,Game Color,Earth,Vallejo,Model Color,US Field Drab,row 74; code 72.062
+Vallejo,Game Color,Earth,P3 Formula,Colour,Gun Corps Brown,row 74; code 72.062
+Vallejo,Game Color,Earth,SFG (discontinued),Formula P3,Gun Corps Brown,row 74; code 72.062
+Vallejo,Game Color,Earth,Army Painter,Original Warpaints,Leather Brown,row 74; code 72.062
+Vallejo,Model Color,US Field Drab,P3 Formula,Colour,Gun Corps Brown,row 74
+Vallejo,Model Color,US Field Drab,SFG (discontinued),Formula P3,Gun Corps Brown,row 74
+Vallejo,Model Color,US Field Drab,Army Painter,Original Warpaints,Leather Brown,row 74
+P3 Formula,Colour,Gun Corps Brown,SFG (discontinued),Formula P3,Gun Corps Brown,row 74
+P3 Formula,Colour,Gun Corps Brown,Army Painter,Original Warpaints,Leather Brown,row 74
+SFG (discontinued),Formula P3,Gun Corps Brown,Army Painter,Original Warpaints,Leather Brown,row 74
+Warhammer Colour,Layer,Karak Stone,Vallejo,Game Color,Khaki,row 75; code 72.061
+Warhammer Colour,Layer,Karak Stone,Vallejo,Model Color,Germ. Beige WWII,row 75; code 70.821
+Warhammer Colour,Layer,Karak Stone,P3 Formula,Colour,Hammerfall Khaki,row 75
+Warhammer Colour,Layer,Karak Stone,SFG (discontinued),Formula P3,Hammerfall Khaki,row 75
+Vallejo,Game Color,Khaki,P3 Formula,Colour,Hammerfall Khaki,row 75; code 72.061
+Vallejo,Game Color,Khaki,SFG (discontinued),Formula P3,Hammerfall Khaki,row 75; code 72.061
+Vallejo,Model Color,Germ. Beige WWII,P3 Formula,Colour,Hammerfall Khaki,row 75; code 70.821
+Vallejo,Model Color,Germ. Beige WWII,SFG (discontinued),Formula P3,Hammerfall Khaki,row 75; code 70.821
+P3 Formula,Colour,Hammerfall Khaki,SFG (discontinued),Formula P3,Hammerfall Khaki,row 75
+Warhammer Colour,Layer,Ulthuan Grey,Vallejo,Game Color,Ghost Grey,row 76; code 72.046
+Warhammer Colour,Layer,Ulthuan Grey,Vallejo,Model Color,White Grey,row 76; code 70.993
+Vallejo,Game Color,Ghost Grey,Vallejo,Model Color,White Grey,row 76; code 72.046; code 70.993
+Warhammer Colour,Layer,Fenrisian Grey,Vallejo,Game Color,Wolf Grey,row 77; code 72.047
+Warhammer Colour,Layer,Fenrisian Grey,Vallejo,Model Color,Pale Grey Blue,row 77; code 70.907
+Warhammer Colour,Layer,Fenrisian Grey,P3 Formula,Colour,Frostbite,row 77
+Warhammer Colour,Layer,Fenrisian Grey,SFG (discontinued),Formula P3,Frostbite,row 77
+Vallejo,Game Color,Wolf Grey,Vallejo,Model Color,Pale Grey Blue,row 77; code 72.047; code 70.907
+Vallejo,Game Color,Wolf Grey,P3 Formula,Colour,Frostbite,row 77; code 72.047
+Vallejo,Game Color,Wolf Grey,SFG (discontinued),Formula P3,Frostbite,row 77; code 72.047
+Vallejo,Model Color,Pale Grey Blue,P3 Formula,Colour,Frostbite,row 77; code 70.907
+Vallejo,Model Color,Pale Grey Blue,SFG (discontinued),Formula P3,Frostbite,row 77; code 70.907
+P3 Formula,Colour,Frostbite,SFG (discontinued),Formula P3,Frostbite,row 77
+Warhammer Colour,Base,The Fang,Vallejo,Game Color,Sombre Grey,row 78; code 72.048
+Warhammer Colour,Base,The Fang,Vallejo,Model Color,Oxford Blue,row 78; code 70.807
+Warhammer Colour,Base,The Fang,Army Painter,Original Warpaints,Wolf Grey,row 78
+Vallejo,Game Color,Sombre Grey,Vallejo,Model Color,Oxford Blue,row 78; code 72.048; code 70.807
+Vallejo,Game Color,Sombre Grey,Army Painter,Original Warpaints,Wolf Grey,row 78; code 72.048
+Vallejo,Model Color,Oxford Blue,Army Painter,Original Warpaints,Wolf Grey,row 78; code 70.807
+Warhammer Colour,Layer,Administratum Grey,Vallejo,Game Color,Stonewall Grey,row 79; code 72.049
+Warhammer Colour,Layer,Administratum Grey,Vallejo,Model Color,Pale Grey Blue,row 79; code 70.907
+Warhammer Colour,Layer,Administratum Grey,Army Painter,Original Warpaints,Ash Grey,row 79
+Vallejo,Game Color,Stonewall Grey,Vallejo,Model Color,Pale Grey Blue,row 79; code 72.049; code 70.907
+Vallejo,Game Color,Stonewall Grey,Army Painter,Original Warpaints,Ash Grey,row 79; code 72.049
+Vallejo,Model Color,Pale Grey Blue,Army Painter,Original Warpaints,Ash Grey,row 79; code 70.907
+Warhammer Colour,Layer,Dawnstone,Vallejo,Game Color,Neutral Grey,row 80; code 72.050
+Warhammer Colour,Layer,Dawnstone,Vallejo,Model Color,Basalt Grey,row 80; code 70.869
+Warhammer Colour,Layer,Dawnstone,Army Painter,Original Warpaints,Uniform Grey,row 80
+Vallejo,Game Color,Neutral Grey,Vallejo,Model Color,Basalt Grey,row 80; code 72.050; code 70.869
+Vallejo,Game Color,Neutral Grey,Army Painter,Original Warpaints,Uniform Grey,row 80; code 72.050
+Vallejo,Model Color,Basalt Grey,Army Painter,Original Warpaints,Uniform Grey,row 80; code 70.869
+Warhammer Colour,Base,Mechanicus Standard Grey,Vallejo,Model Color,Russian Unif. WWII,row 81; code 70.924
+Warhammer Colour,Base,Mechanicus Standard Grey,P3 Formula,Colour,Greatcoat Grey,row 81
+Warhammer Colour,Base,Mechanicus Standard Grey,SFG (discontinued),Formula P3,Greatcoat Grey,row 81
+Vallejo,Model Color,Russian Unif. WWII,P3 Formula,Colour,Greatcoat Grey,row 81; code 70.924
+Vallejo,Model Color,Russian Unif. WWII,SFG (discontinued),Formula P3,Greatcoat Grey,row 81; code 70.924
+P3 Formula,Colour,Greatcoat Grey,SFG (discontinued),Formula P3,Greatcoat Grey,row 81
+Warhammer Colour,Base,Celestra Grey,Vallejo,Game Color,Heavy Bluegrey,row 82; code 72.144
+Warhammer Colour,Base,Celestra Grey,Vallejo,Model Color,Blue Grey Pale,row 82; code 70.905
+Warhammer Colour,Base,Celestra Grey,P3 Formula,Colour,Underbelly Blue,row 82
+Warhammer Colour,Base,Celestra Grey,SFG (discontinued),Formula P3,Underbelly Blue,row 82
+Vallejo,Game Color,Heavy Bluegrey,Vallejo,Model Color,Blue Grey Pale,row 82; code 72.144; code 70.905
+Vallejo,Game Color,Heavy Bluegrey,P3 Formula,Colour,Underbelly Blue,row 82; code 72.144
+Vallejo,Game Color,Heavy Bluegrey,SFG (discontinued),Formula P3,Underbelly Blue,row 82; code 72.144
+Vallejo,Model Color,Blue Grey Pale,P3 Formula,Colour,Underbelly Blue,row 82; code 70.905
+Vallejo,Model Color,Blue Grey Pale,SFG (discontinued),Formula P3,Underbelly Blue,row 82; code 70.905
+P3 Formula,Colour,Underbelly Blue,SFG (discontinued),Formula P3,Underbelly Blue,row 82
+Warhammer Colour,Base,Abaddon Black,Vallejo,Game Color,Black,row 83; code 72.051
+Warhammer Colour,Base,Abaddon Black,Vallejo,Model Color,Black,row 83; code 70.950
+Warhammer Colour,Base,Abaddon Black,P3 Formula,Colour,Thamar Black,row 83
+Warhammer Colour,Base,Abaddon Black,SFG (discontinued),Formula P3,Thamar Black,row 83
+Warhammer Colour,Base,Abaddon Black,Army Painter,Original Warpaints,Matt Black,row 83
+Vallejo,Game Color,Black,Vallejo,Model Color,Black,row 83; code 72.051; code 70.950
+Vallejo,Game Color,Black,P3 Formula,Colour,Thamar Black,row 83; code 72.051
+Vallejo,Game Color,Black,SFG (discontinued),Formula P3,Thamar Black,row 83; code 72.051
+Vallejo,Game Color,Black,Army Painter,Original Warpaints,Matt Black,row 83; code 72.051
+Vallejo,Model Color,Black,P3 Formula,Colour,Thamar Black,row 83; code 70.950
+Vallejo,Model Color,Black,SFG (discontinued),Formula P3,Thamar Black,row 83; code 70.950
+Vallejo,Model Color,Black,Army Painter,Original Warpaints,Matt Black,row 83; code 70.950
+P3 Formula,Colour,Thamar Black,SFG (discontinued),Formula P3,Thamar Black,row 83
+P3 Formula,Colour,Thamar Black,Army Painter,Original Warpaints,Matt Black,row 83
+SFG (discontinued),Formula P3,Thamar Black,Army Painter,Original Warpaints,Matt Black,row 83
+Warhammer Colour,Base,Corvus Black,Army Painter,Original Warpaints,Necromancer Cloak,row 84
+Warhammer Colour,Layer,Runefang Steel,Vallejo,Game Color Metallic,Silver,row 85; code 72.052
+Warhammer Colour,Layer,Runefang Steel,Vallejo,Model Color,Silver,row 85; code 70.997
+Warhammer Colour,Layer,Runefang Steel,P3 Formula,Metallic,Quick Silver,row 85
+Warhammer Colour,Layer,Runefang Steel,SFG (discontinued),Formula P3,Quick Silver,row 85
+Warhammer Colour,Layer,Runefang Steel,Army Painter,Original Warpaints,Shining Silver,row 85
+Vallejo,Game Color Metallic,Silver,Vallejo,Model Color,Silver,row 85; code 72.052; code 70.997
+Vallejo,Game Color Metallic,Silver,P3 Formula,Metallic,Quick Silver,row 85; code 72.052
+Vallejo,Game Color Metallic,Silver,SFG (discontinued),Formula P3,Quick Silver,row 85; code 72.052
+Vallejo,Game Color Metallic,Silver,Army Painter,Original Warpaints,Shining Silver,row 85; code 72.052
+Vallejo,Model Color,Silver,P3 Formula,Metallic,Quick Silver,row 85; code 70.997
+Vallejo,Model Color,Silver,SFG (discontinued),Formula P3,Quick Silver,row 85; code 70.997
+Vallejo,Model Color,Silver,Army Painter,Original Warpaints,Shining Silver,row 85; code 70.997
+P3 Formula,Metallic,Quick Silver,SFG (discontinued),Formula P3,Quick Silver,row 85
+P3 Formula,Metallic,Quick Silver,Army Painter,Original Warpaints,Shining Silver,row 85
+SFG (discontinued),Formula P3,Quick Silver,Army Painter,Original Warpaints,Shining Silver,row 85
+Warhammer Colour,Layer,Ironbreaker,Vallejo,Game Color Metallic,Chainmail,row 86; code 72.053
+Warhammer Colour,Layer,Ironbreaker,Vallejo,Model Color,Natural Steel,row 86; code 70.864
+Warhammer Colour,Layer,Ironbreaker,P3 Formula,Colour,Cold Steel,row 86
+Warhammer Colour,Layer,Ironbreaker,SFG (discontinued),Formula P3,Cold Steel,row 86
+Warhammer Colour,Layer,Ironbreaker,Army Painter,Original Warpaints,Plate Mail Metal,row 86
+Vallejo,Game Color Metallic,Chainmail,Vallejo,Model Color,Natural Steel,row 86; code 72.053; code 70.864
+Vallejo,Game Color Metallic,Chainmail,P3 Formula,Colour,Cold Steel,row 86; code 72.053
+Vallejo,Game Color Metallic,Chainmail,SFG (discontinued),Formula P3,Cold Steel,row 86; code 72.053
+Vallejo,Game Color Metallic,Chainmail,Army Painter,Original Warpaints,Plate Mail Metal,row 86; code 72.053
+Vallejo,Model Color,Natural Steel,P3 Formula,Colour,Cold Steel,row 86; code 70.864
+Vallejo,Model Color,Natural Steel,SFG (discontinued),Formula P3,Cold Steel,row 86; code 70.864
+Vallejo,Model Color,Natural Steel,Army Painter,Original Warpaints,Plate Mail Metal,row 86; code 70.864
+P3 Formula,Colour,Cold Steel,SFG (discontinued),Formula P3,Cold Steel,row 86
+P3 Formula,Colour,Cold Steel,Army Painter,Original Warpaints,Plate Mail Metal,row 86
+SFG (discontinued),Formula P3,Cold Steel,Army Painter,Original Warpaints,Plate Mail Metal,row 86
+Warhammer Colour,Base,Leadbelcher,Vallejo,Game Color Metallic,Dark Gunmetal,row 87; code 72.054
+Warhammer Colour,Base,Leadbelcher,Vallejo,Model Color,Gunmetal,row 87; code 70.863
+Warhammer Colour,Base,Leadbelcher,P3 Formula,Metallic,Pig Iron,row 87
+Warhammer Colour,Base,Leadbelcher,SFG (discontinued),Formula P3,Pig Iron,row 87
+Vallejo,Game Color Metallic,Dark Gunmetal,Vallejo,Model Color,Gunmetal,row 87; code 72.054; code 70.863
+Vallejo,Game Color Metallic,Dark Gunmetal,P3 Formula,Metallic,Pig Iron,row 87; code 72.054
+Vallejo,Game Color Metallic,Dark Gunmetal,SFG (discontinued),Formula P3,Pig Iron,row 87; code 72.054
+Vallejo,Model Color,Gunmetal,P3 Formula,Metallic,Pig Iron,row 87; code 70.863
+Vallejo,Model Color,Gunmetal,SFG (discontinued),Formula P3,Pig Iron,row 87; code 70.863
+P3 Formula,Metallic,Pig Iron,SFG (discontinued),Formula P3,Pig Iron,row 87
+Warhammer Colour,Layer,Auric Armour Gold,Vallejo,Game Color Metallic,Glorious Gold,row 88; code 72.056
+Warhammer Colour,Layer,Auric Armour Gold,Vallejo,Model Color,Gold,row 88; code 70.996
+Warhammer Colour,Layer,Auric Armour Gold,Army Painter,Original Warpaints,Bright Gold,row 88
+Vallejo,Game Color Metallic,Glorious Gold,Vallejo,Model Color,Gold,row 88; code 72.056; code 70.996
+Vallejo,Game Color Metallic,Glorious Gold,Army Painter,Original Warpaints,Bright Gold,row 88; code 72.056
+Vallejo,Model Color,Gold,Army Painter,Original Warpaints,Bright Gold,row 88; code 70.996
+Warhammer Colour,Layer,Gehenna's Gold,Vallejo,Game Color Metallic,Polished Gold,row 89; code 72.055
+Warhammer Colour,Layer,Gehenna's Gold,Vallejo,Model Color,Old Gold,row 89; code 70.878
+Warhammer Colour,Layer,Gehenna's Gold,P3 Formula,Metallic,Solid Gold,row 89
+Warhammer Colour,Layer,Gehenna's Gold,SFG (discontinued),Formula P3,Solid Gold,row 89
+Warhammer Colour,Layer,Gehenna's Gold,Army Painter,Original Warpaints,Greedy Gold,row 89
+Vallejo,Game Color Metallic,Polished Gold,Vallejo,Model Color,Old Gold,row 89; code 72.055; code 70.878
+Vallejo,Game Color Metallic,Polished Gold,P3 Formula,Metallic,Solid Gold,row 89; code 72.055
+Vallejo,Game Color Metallic,Polished Gold,SFG (discontinued),Formula P3,Solid Gold,row 89; code 72.055
+Vallejo,Game Color Metallic,Polished Gold,Army Painter,Original Warpaints,Greedy Gold,row 89; code 72.055
+Vallejo,Model Color,Old Gold,P3 Formula,Metallic,Solid Gold,row 89; code 70.878
+Vallejo,Model Color,Old Gold,SFG (discontinued),Formula P3,Solid Gold,row 89; code 70.878
+Vallejo,Model Color,Old Gold,Army Painter,Original Warpaints,Greedy Gold,row 89; code 70.878
+P3 Formula,Metallic,Solid Gold,SFG (discontinued),Formula P3,Solid Gold,row 89
+P3 Formula,Metallic,Solid Gold,Army Painter,Original Warpaints,Greedy Gold,row 89
+SFG (discontinued),Formula P3,Solid Gold,Army Painter,Original Warpaints,Greedy Gold,row 89
+Warhammer Colour,Layer,Hashut Copper,Vallejo,Game Color Metallic,Bright Bronze,row 90; code 72.057
+Warhammer Colour,Layer,Hashut Copper,Vallejo,Model Color,Bronze,row 90; code 70.998
+Warhammer Colour,Layer,Hashut Copper,P3 Formula,Metallic,Molten Bronze,row 90
+Warhammer Colour,Layer,Hashut Copper,SFG (discontinued),Formula P3,Molten Bronze,row 90
+Warhammer Colour,Layer,Hashut Copper,Army Painter,Original Warpaints,Weapon Bronze,row 90
+Vallejo,Game Color Metallic,Bright Bronze,Vallejo,Model Color,Bronze,row 90; code 72.057; code 70.998
+Vallejo,Game Color Metallic,Bright Bronze,P3 Formula,Metallic,Molten Bronze,row 90; code 72.057
+Vallejo,Game Color Metallic,Bright Bronze,SFG (discontinued),Formula P3,Molten Bronze,row 90; code 72.057
+Vallejo,Game Color Metallic,Bright Bronze,Army Painter,Original Warpaints,Weapon Bronze,row 90; code 72.057
+Vallejo,Model Color,Bronze,P3 Formula,Metallic,Molten Bronze,row 90; code 70.998
+Vallejo,Model Color,Bronze,SFG (discontinued),Formula P3,Molten Bronze,row 90; code 70.998
+Vallejo,Model Color,Bronze,Army Painter,Original Warpaints,Weapon Bronze,row 90; code 70.998
+P3 Formula,Metallic,Molten Bronze,SFG (discontinued),Formula P3,Molten Bronze,row 90
+P3 Formula,Metallic,Molten Bronze,Army Painter,Original Warpaints,Weapon Bronze,row 90
+SFG (discontinued),Formula P3,Molten Bronze,Army Painter,Original Warpaints,Weapon Bronze,row 90
+Warhammer Colour,Base,Runelord Brass,Vallejo,Game Color Metallic,Brassy Brass,row 91; code 72.058
+Warhammer Colour,Base,Runelord Brass,Vallejo,Model Color,Brass,row 91; code 70.801
+Vallejo,Game Color Metallic,Brassy Brass,Vallejo,Model Color,Brass,row 91; code 72.058; code 70.801
+Warhammer Colour,Layer,Brass Scorpion,Vallejo,Game Color Metallic,Hammered Copper,row 92; code 72.059
+Warhammer Colour,Layer,Brass Scorpion,Vallejo,Model Color,Copper,row 92; code 70.999
+Vallejo,Game Color Metallic,Hammered Copper,Vallejo,Model Color,Copper,row 92; code 72.059; code 70.999
+Warhammer Colour,Base,Warplock Bronze,Vallejo,Game Color Metallic,Tinny Tin,row 93; code 72.060
+Warhammer Colour,Base,Warplock Bronze,P3 Formula,Metallic,Deathless Metal,row 93
+Warhammer Colour,Base,Warplock Bronze,SFG (discontinued),Formula P3,Deathless Metal,row 93
+Vallejo,Game Color Metallic,Tinny Tin,P3 Formula,Metallic,Deathless Metal,row 93; code 72.060
+Vallejo,Game Color Metallic,Tinny Tin,SFG (discontinued),Formula P3,Deathless Metal,row 93; code 72.060
+P3 Formula,Metallic,Deathless Metal,SFG (discontinued),Formula P3,Deathless Metal,row 93
+Warhammer Colour,Layer,Eshin Grey,Army Painter,Original Warpaints,Necromancer Cloak,row 99
+Warhammer Colour,Layer,Skavenblight Dinge,Army Painter,Original Warpaints,Hardened Carapace,row 100
+Warhammer Colour,Layer,Stormvermin Fur,Vallejo,Game Color,Charcoal,row 101; code 72.155
+Warhammer Colour,Layer,Stormvermin Fur,Vallejo,Model Color,German Grey,row 101; code 70.995
+Warhammer Colour,Layer,Stormvermin Fur,P3 Formula,Colour,Bastion Grey,row 101
+Warhammer Colour,Layer,Stormvermin Fur,SFG (discontinued),Formula P3,Bastion Grey,row 101
+Vallejo,Game Color,Charcoal,Vallejo,Model Color,German Grey,row 101; code 72.155; code 70.995
+Vallejo,Game Color,Charcoal,P3 Formula,Colour,Bastion Grey,row 101; code 72.155
+Vallejo,Game Color,Charcoal,SFG (discontinued),Formula P3,Bastion Grey,row 101; code 72.155
+Vallejo,Model Color,German Grey,P3 Formula,Colour,Bastion Grey,row 101; code 70.995
+Vallejo,Model Color,German Grey,SFG (discontinued),Formula P3,Bastion Grey,row 101; code 70.995
+P3 Formula,Colour,Bastion Grey,SFG (discontinued),Formula P3,Bastion Grey,row 101
+Warhammer Colour,Base,Daemonette Hide,Vallejo,Game Color,Heavy Violet,row 103; code 72.142
+Warhammer Colour,Base,Daemonette Hide,Vallejo,Model Color,Violet,row 103; code 70.960
+Vallejo,Game Color,Heavy Violet,Vallejo,Model Color,Violet,row 103; code 72.142; code 70.960
+Warhammer Colour,Base,Averland Sunset,Vallejo,Game Color,Heavy Goldbrown,row 104; code 72.151
+Warhammer Colour,Base,Averland Sunset,Vallejo,Model Color,Gold Brown,row 104; code 70.877
+Warhammer Colour,Base,Averland Sunset,P3 Formula,Colour,Sulfuric Yellow,"row 104; chart prints ""Sulferic yellow"""
+Warhammer Colour,Base,Averland Sunset,SFG (discontinued),Formula P3,Sulfuric Yellow,"row 104; chart prints ""Sulferic yellow"""
+Vallejo,Game Color,Heavy Goldbrown,Vallejo,Model Color,Gold Brown,row 104; code 72.151; code 70.877
+Vallejo,Game Color,Heavy Goldbrown,P3 Formula,Colour,Sulfuric Yellow,"row 104; code 72.151; chart prints ""Sulferic yellow"""
+Vallejo,Game Color,Heavy Goldbrown,SFG (discontinued),Formula P3,Sulfuric Yellow,"row 104; code 72.151; chart prints ""Sulferic yellow"""
+Vallejo,Model Color,Gold Brown,P3 Formula,Colour,Sulfuric Yellow,"row 104; code 70.877; chart prints ""Sulferic yellow"""
+Vallejo,Model Color,Gold Brown,SFG (discontinued),Formula P3,Sulfuric Yellow,"row 104; code 70.877; chart prints ""Sulferic yellow"""
+P3 Formula,Colour,Sulfuric Yellow,SFG (discontinued),Formula P3,Sulfuric Yellow,"row 104; chart prints ""Sulferic yellow""; chart prints ""Sulferic yellow"""
+Warhammer Colour,Layer,Cadian Fleshtone,Vallejo,Game Color,Heavy Skintone,row 105; code 72.140
+Warhammer Colour,Layer,Cadian Fleshtone,Vallejo,Model Color,Brown Rose,row 105
+Vallejo,Game Color,Heavy Skintone,Vallejo,Model Color,Brown Rose,row 105; code 72.140
+Warhammer Colour,Shade,Drakenhof Nightshade,Vallejo,Game Color Wash,Blue,row 106; code 73.207
+Warhammer Colour,Shade,Drakenhof Nightshade,Army Painter,Original Warpaints,Blue Tone,"row 106; chart prints ""Blue Tone Ink"""
+Vallejo,Game Color Wash,Blue,Army Painter,Original Warpaints,Blue Tone,"row 106; code 73.207; chart prints ""Blue Tone Ink"""
+Warhammer Colour,Shade,Carroburg Crimson,Vallejo,Game Color Wash,Red,row 107; code 73.206
+Warhammer Colour,Shade,Carroburg Crimson,Army Painter,Original Warpaints,Red Tone,"row 107; chart prints ""Red Tone Ink"""
+Vallejo,Game Color Wash,Red,Army Painter,Original Warpaints,Red Tone,"row 107; code 73.206; chart prints ""Red Tone Ink"""
+Warhammer Colour,Shade,Nuln Oil,Vallejo,Game Color Wash,Black,row 108; code 73.201
+Warhammer Colour,Shade,Nuln Oil,SFG (discontinued),Formula P3,Armor Wash,row 108
+Warhammer Colour,Shade,Nuln Oil,Army Painter,Original Warpaints,Dark Tone,"row 108; chart prints ""Dark Tone Ink"""
+Vallejo,Game Color Wash,Black,SFG (discontinued),Formula P3,Armor Wash,row 108; code 73.201
+Vallejo,Game Color Wash,Black,Army Painter,Original Warpaints,Dark Tone,"row 108; code 73.201; chart prints ""Dark Tone Ink"""
+SFG (discontinued),Formula P3,Armor Wash,Army Painter,Original Warpaints,Dark Tone,"row 108; chart prints ""Dark Tone Ink"""
+Warhammer Colour,Shade,Agrax Earthshade,Vallejo,Game Color Wash,Umber,row 109; code 73.203
+Warhammer Colour,Shade,Agrax Earthshade,SFG (discontinued),Formula P3,Muddy Wash,row 109
+Warhammer Colour,Shade,Agrax Earthshade,Army Painter,Original Warpaints,Strong Tone,"row 109; chart prints ""Strong Tone Wash"""
+Vallejo,Game Color Wash,Umber,SFG (discontinued),Formula P3,Muddy Wash,row 109; code 73.203
+Vallejo,Game Color Wash,Umber,Army Painter,Original Warpaints,Strong Tone,"row 109; code 73.203; chart prints ""Strong Tone Wash"""
+SFG (discontinued),Formula P3,Muddy Wash,Army Painter,Original Warpaints,Strong Tone,"row 109; chart prints ""Strong Tone Wash"""
+Warhammer Colour,Shade,Seraphim Sepia,Vallejo,Game Color Wash,Sepia,row 110; code 73.200
+Warhammer Colour,Shade,Seraphim Sepia,Army Painter,Original Warpaints,Soft Tone,"row 110; chart prints ""Soft Tone Ink"""
+Vallejo,Game Color Wash,Sepia,Army Painter,Original Warpaints,Soft Tone,"row 110; code 73.200; chart prints ""Soft Tone Ink"""
+Warhammer Colour,Shade,Druchii Violet,Army Painter,Original Warpaints,Purple Tone,"row 111; chart prints ""Purple Tone Ink"""
+Warhammer Colour,Shade,Reikland Fleshshade,Vallejo,Game Color Wash,Flesh,row 112; code 73.204
+Warhammer Colour,Shade,Reikland Fleshshade,Army Painter,Original Warpaints,Flesh Wash,row 112
+Vallejo,Game Color Wash,Flesh,Army Painter,Original Warpaints,Flesh Wash,row 112; code 73.204
+Warhammer Colour,Shade,Biel-Tan Green,Vallejo,Game Color Ink,Green,"row 113; chart prints ""Green Wash"""
+Warhammer Colour,Shade,Biel-Tan Green,Army Painter,Original Warpaints,Green Tone,"row 113; chart prints ""Green Tone Wash"""
+Vallejo,Game Color Ink,Green,Army Painter,Original Warpaints,Green Tone,"row 113; chart prints ""Green Wash""; chart prints ""Green Tone Wash"""
+Warhammer Colour,Shade,Athonian Camoshade,Army Painter,Original Warpaints,Military Shader,"row 114; chart prints ""Military Shade"""
+Warhammer Colour,Layer,Baharroth Blue,P3 Formula,Colour,Arcane Blue,"row 115; chart prints ""Baharroth Blue Edge"""
+Warhammer Colour,Layer,Baharroth Blue,SFG (discontinued),Formula P3,Arcane Blue,"row 115; chart prints ""Baharroth Blue Edge"""
+Warhammer Colour,Layer,Baharroth Blue,Army Painter,Original Warpaints,Toxic Mist,"row 115; chart prints ""Baharroth Blue Edge"""
+P3 Formula,Colour,Arcane Blue,SFG (discontinued),Formula P3,Arcane Blue,row 115
+P3 Formula,Colour,Arcane Blue,Army Painter,Original Warpaints,Toxic Mist,row 115
+SFG (discontinued),Formula P3,Arcane Blue,Army Painter,Original Warpaints,Toxic Mist,row 115
+Warhammer Colour,Layer,Dechala Lilac,Army Painter,Original Warpaints,Oozing Purple,row 120
+Warhammer Colour,Layer,Krieg Khaki,Army Painter,Original Warpaints,Necrotic Flesh,"row 121; chart prints ""Kreig Khaki"""
+Warhammer Colour,Layer,Blue Horror,Army Painter,Original Warpaints,Gorgon Hide,row 122
+Warhammer Colour,Layer,Lugganath Orange,Army Painter,Original Warpaints,Centaur Skin,row 123

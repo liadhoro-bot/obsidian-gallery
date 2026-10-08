@@ -1,0 +1,901 @@
+paint_id,brand,line,name,sku,ours,ours_source,mech9,delta_e
+0a70dcaa-3420-41e3-a8e6-e9deddfd89c8,Vallejo,Model Air,Arctic Blue (Metal.),71.071,#ADA9B3,legacy,#31364A,45.8
+d5c62461-90e4-4f00-8e5b-754132139c77,Vallejo,Model Air,Deep Sky,71.090,#263956,swatch_sample,#41A9DC,42.2
+14f8e66b-8455-4fba-8e60-e02372fae233,Vallejo,Mecha Metallic,Metallic Blue,69.067,#AEA2AD,legacy,#373C4D,42.0
+65170021-f38e-4ac9-b142-285579d70116,Vallejo,Model Air,Copper (Metallic),71.068,#CFBDB0,legacy,#7F4F45,37.2
+1335f7a0-4aa1-4b0c-b9e7-3ba3e5bbf600,Vallejo,Model Air,Black (Metallic),71.073,#C3BFC5,legacy,#57586A,36.7
+6c39c4fc-9116-5a14-973e-a6d070d69d10,Vallejo,Model Color,Smoke Ink,70.939,#6F5A56,legacy,#D3B384,35.2
+a9222402-4f92-44ba-aec8-c369232da1aa,Vallejo,Game Color Metallic,Hammered Copper,72.059,#B59785,legacy,#6C3B31,34.7
+d6c36122-cd1c-4d29-b5da-aa5e3f51e853,Vallejo,Game Color Metallic,Brassy Brass,72.058,#CCA181,legacy,#774934,33.3
+75900bef-e5a3-46d9-95e8-4b1a295bffa0,Vallejo,Model Air,Signal Red (Metal.),71.070,#E3C8CC,legacy,#C94672,32.8
+06380502-bf6b-4130-9794-e9b678b08232,Vallejo,Mecha Metallic,Gunmetal,69.058,#C1C1C0,legacy,#626760,31.0
+cbab2218-5a51-4696-956c-fd771a889ffc,Vallejo,Game Color Wash,Flesh,73.204,#9F6958,swatch_sample,#2E1F1C,30.7
+986ef4be-8e35-4fa6-9d03-afc9bc972c89,Vallejo,Model Air,Rust (Metallic),71.069,#C5B3AA,legacy,#7D5A54,30.5
+2f952bbe-cfe3-4d48-b249-1ad1ade77a86,Vallejo,Game Color Metallic,Glorious Gold,72.056,#E9BE7C,legacy,#8D6330,29.3
+87c5ffc9-1412-4ee6-a9e3-a2c56e82ca01,Vallejo,Mecha Metallic,Copper,69.061,#D1B59D,legacy,#985A37,29.2
+2f594bf4-d335-4f92-a6d3-42eec0ec5c06,Vallejo,Model Air,Gunmetal (Metal.),71.072,#CCCCCD,legacy,#6F737F,28.1
+c34a4e23-ecd3-418d-a50a-0ac7e376a0d7,Vallejo,Game Color Wash,Black,73.201,#63666E,legacy,#121212,27.7
+c050195d-bdec-4990-9c0d-8bf9b75d7825,Vallejo,Model Air,Gold (Metallic),71.066,#D9D0C5,legacy,#907950,27.6
+ccfb9ac3-ff92-4897-a2bd-3e2f804ef601,Vallejo,Game Color Metallic,Bright Bronze,72.057,#D0A371,legacy,#885A47,27.4
+5be188f3-1630-403d-9622-0fffce51b75e,Vallejo,Mecha Metallic,Bronze,69.062,#CAB496,legacy,#776B35,27.2
+44dc0749-83b2-43b7-8588-da6fd45fcd77,Vallejo,Game Color Metallic,Dark Gunmetal,72.054,#AAAEB1,legacy,#636365,26.8
+c8caf118-2af3-4f16-8d93-0bddf3f97ab7,Vallejo,Game Color Metallic,Chainmail,72.053,#C4C8CB,legacy,#71737C,26.7
+f6129544-750b-5ff7-8f18-f43857e77f6a,Vallejo,Model Color,Bronze,70.998,#AD9C8B,legacy,#696536,26.0
+b2ef976e-b0f1-5673-9c96-e43231953e7e,Vallejo,Model Color,Gunmetal,70.863,#A0999B,legacy,#56605F,25.7
+780b5c04-3cd4-4d53-a1ac-6a502693a6cc,Vallejo,Mecha Color,Magenta,69.010,#AA4287,swatch_sample,#C01225,25.6
+d97fc7dd-0da5-5db4-9807-a283a21e9c4b,Vallejo,Model Color,Turquoise,70.966,#0C425B,swatch_sample,#1B8A9E,25.4
+773f12ba-21d0-4d53-91e7-308a5d15dd08,Vallejo,Mecha Metallic,Dark Steel,69.065,#BEBEBE,legacy,#727375,24.2
+8b61c3c8-8698-48b4-9c93-921fccb766a7,Vallejo,Model Air,Bright Brass (Met.),71.067,#D4D1C2,legacy,#918756,24.1
+4fb29f17-043c-454b-97ee-876e39f122bf,Vallejo,Game Color,Turquoise,72.024,#004146,swatch_sample,#2A8697,23.9
+4c492ca4-8c56-4c4b-8490-7fb235965ced,Vallejo,Game Color Wash,Sepia,73.200,#70542A,swatch_sample,#241F1B,23.8
+5bb19301-10ad-4c6c-9e15-1600f192628f,Vallejo,Game Color,Warm Grey,72.148,#806D69,legacy,#9A9569,23.4
+ced9cdcc-36cf-4ea1-9ffe-89f6c34eda68,Vallejo,Mecha Metallic,Metallic Red,69.066,#D0ADAA,legacy,#CA596F,23.4
+a3d88823-21fe-5ea0-929a-af151357927b,Vallejo,Model Color,Oily Steel,70.865,#B4AEAF,legacy,#6C736C,23.2
+a255a180-6154-4573-9c9b-48c34ab6bc32,Vallejo,Game Color Wash,Umber,73.203,#705A48,swatch_sample,#251C17,22.1
+073eee52-4bdd-4b37-a07b-a640d175b544,AK Interactive,Figures Series,Brown Black,AK11418,#634426,legacy,#1A120F,22.0
+e84299cb-5445-4fdc-bf1a-4d3c3ec149dc,Vallejo,Game Color,Foul Green,72.025,#176D53,swatch_sample,#46A884,21.6
+e2127dda-d043-4add-a272-817520ac3ed8,Vallejo,Mecha Metallic,Gold,69.059,#D1C29F,legacy,#AC8424,21.6
+dcf49dc9-66da-448b-8c2c-6c7d01c59e45,Vallejo,Game Color Wash,Violet,73.209,#743586,swatch_sample,#2D2031,21.3
+3383e2bb-838d-54a3-ac90-abdb2ef01365,Vallejo,Model Color,Medium Brown,70.826,#6F5B4B,legacy,#69282C,20.5
+1b6bd8e5-c99e-489a-9b35-e696e2cd06fe,Vallejo,Model Air,Tire Black,71.315,#464946,swatch_sample,#000000,20.4
+79382d57-9214-4b20-bbd5-a94583db78a0,Vallejo,Mecha Metallic,Old Gold,69.060,#D7C6A0,legacy,#9C8448,20.2
+97bb8d6e-8267-4ddb-bfc8-dc97b0d50b57,Vallejo,Game Color,Ultramarine Blue,72.022,#1B224B,swatch_sample,#335696,18.6
+c8bc66f6-edf5-5d38-86cd-b4a54459f6e9,Vallejo,Model Color,Brass,70.801,#B29E8B,legacy,#9E7630,18.5
+4046d8fd-88d8-49cd-a06f-8cf124ee99f6,Vallejo,Mecha Weathering,Rust Texture (Matt),69.821,#926962,legacy,#693229,18.3
+6f71c099-1b25-567c-ad49-e173da5952df,Vallejo,Model Color,German Yellow,70.806,#BCA866,legacy,#DFE96E,18.2
+2d727802-8a80-48f1-b8d6-c8dd3f8904d6,AK Interactive,3GEN Acrylics,Silver X11,AK11209,#96A0A2,legacy,#E0E5E7,18.2
+8ed26360-174e-4298-99c4-0ff29fc8f216,Vallejo,Game Color,Scorpy Green,72.032,#407B34,swatch_sample,#64B04D,18.1
+d3b4ea9d-8525-4bd1-b3a8-3c2228a33d0b,AK Interactive,AFV Series,RAL 7021 Dunkelgrau,AK11316,#4F3C2D,legacy,#171A19,18.0
+459b89ea-f6c4-59cd-9ee7-b408eac4ddfc,Vallejo,Model Color,Dark Sea Green,70.868,#605B5C,legacy,#2A3F40,17.8
+7634aa2a-7c41-59cb-968b-3ac82645ece0,Vallejo,Model Color,Khaki,70.988,#6F5F3B,swatch_sample,#898B59,17.8
+48cdf8b1-d460-41ac-a14e-940c3803dfee,Vallejo,Game Color,Hexed Lichen,72.015,#341A39,swatch_sample,#4E2F8F,17.7
+25c0bbc5-3d0f-54f3-ad3b-1ba5d2cb4294,Vallejo,Model Color,Old Gold,70.878,#B7A38D,legacy,#8B7E47,17.5
+cd86d238-905d-4558-bf53-5203f91667dd,Vallejo,Game Color,Magic Blue,72.021,#103D7E,swatch_sample,#346EBF,17.4
+0b9b3db5-8332-425b-ab3b-6f2d92379665,Vallejo,Game Color,Khaki,72.061,#7B6A51,legacy,#9A9569,17.4
+33cae20d-8c0e-532c-a4d6-b7fd75c08476,Vallejo,Model Color,Silver,70.997,#939291,legacy,#C1CDC9,17.2
+57793abc-9d09-4655-a4da-8947aa4113ba,Vallejo,Game Color,Electric Blue,72.023,#006D88,swatch_sample,#4897BC,17.0
+296dcd08-0ead-4fdb-93c1-6e724b10afe2,Vallejo,Game Color,Charcoal,72.155,#1A1810,swatch_sample,#3B3F4A,17.0
+e359f8fa-f27c-44f8-813b-7a3a20f3cc3a,Vallejo,Model Air,Chrome (Metallic),71.064,#DADAE0,legacy,#9C9DAF,16.8
+85332840-547c-56e1-8a2e-4819d21ee715,Vallejo,Model Color,Gold,70.996,#C0AE98,legacy,#CEB550,16.8
+5574302a-6cd6-42bb-bd4e-c83392458d71,Vallejo,Model Air,IJA Khaki Brown,71.287,#7E715C,legacy,#AB8435,16.8
+ae127e76-ad47-4f82-bf15-4da77c85cb85,Vallejo,Mecha Weathering,Petrol Spills (Gloss),69.817,#483F33,legacy,#151C20,16.8
+96a83221-85ec-475f-8972-772b87a701b5,Vallejo,Mecha Metallic,Steel,69.063,#C5BDB1,legacy,#888A82,16.7
+01bdb7ef-f23c-5d93-8e06-90fb3599b8b0,Vallejo,Model Color,Extra Dark Green,70.896,#2A2A14,swatch_sample,#314C47,16.7
+7585935d-bdf5-4ee6-ac8e-473486fc87f5,Vallejo,Game Color,Sombre Grey,72.048,#373E45,swatch_sample,#586482,16.5
+c3645597-0cb7-5df3-8ba4-efab7d079b88,Vallejo,Model Color,Natural Steel,70.864,#ADA9AB,legacy,#79827D,16.5
+b2111552-839f-46a9-be49-c17141718f4e,AK Interactive,3GEN Acrylics,Astral Beryllium,AK11200,#477470,legacy,#7A9D8E,16.4
+88efafb7-427e-479a-9e5f-b0ab94c6991f,Vallejo,Mecha Weathering,Black Wash,69.518,#3C3C3C,legacy,#000000,16.3
+89b869b8-c68b-4e98-9b00-89f92ce67d6d,Vallejo,Mecha Primer,Black,70.642,#3B3C3C,legacy,#010101,16.1
+22d32423-b9c1-5fe9-8c42-8631ef2acd94,Vallejo,Model Color,Saddle Brown,70.940,#9A796F,legacy,#824D49,16.1
+352f9d18-9fc2-5a23-af44-4b3c24b67bc8,Vallejo,Model Color,Medium Grey,70.987,#93826B,legacy,#899879,16.1
+a97b6f38-e10c-4b12-b044-b8a2bcb143f3,Vallejo,Game Color Metallic,Polished Gold,72.055,#DEC887,legacy,#E9A211,16.0
+e00b184a-1211-4546-8382-935ee3681b7c,Vallejo,Model Air,Silver RLM01 (Met.),71.063,#DADADD,legacy,#A0A3B6,15.9
+31506511-d7af-47ae-973e-05a631d741d0,Vallejo,Model Air,A-14 Steel Grey,71.336,#878D8C,legacy,#526E72,15.9
+13dd7094-2fcb-460b-bf33-4c28e6f8dcdb,Vallejo,Game Color,Jade Green,72.026,#1D6150,legacy,#0E8E76,15.8
+8ec1550e-0ac5-49e2-9c43-add4728c64cf,AK Interactive,Figures Series,Black Uniform Base,AK11407,#3B2321,legacy,#0E0F0E,15.7
+542ce7ff-565f-4dfd-89d6-f1fc74c7f9f4,Vallejo,Game Color,Warlord Purple,72.014,#7D223E,swatch_sample,#AE1F7F,15.5
+fe0a34d5-2ba2-5d32-a10e-39160dd3a4ae,Vallejo,Model Color,Olive Green,70.967,#506338,swatch_sample,#5F882A,15.3
+b797d446-c5fa-4d32-a3fe-208e52c344c2,Vallejo,Game Color,Stonewall Grey,72.049,#766F6C,legacy,#93969C,15.3
+16278601-dcd4-4402-aaba-de7ee7f3299d,Vallejo,Model Air,Steel (Metallic),71.065,#EBEBF0,legacy,#AEB1C4,15.2
+e579a8ca-37fb-4534-ac6f-2202e81f8ba7,AK Interactive,AFV Series,NATO Black,AK11360,#483425,legacy,#1C1C1D,15.2
+b9bb4624-9a08-458d-89a4-f1849105f1b0,Vallejo,Model Air,Aluminium (Metal.),71.062,#DAD9DC,legacy,#9EA4B0,14.8
+fa676d0f-35ad-5058-9287-e0294d93f810,Vallejo,Model Color,Deck Tan,70.986,#9E9989,legacy,#BAC7AD,14.8
+acd4e45c-c081-569b-9915-b480a590a037,Vallejo,Model Color,Dark Grey,70.994,#49464C,legacy,#253938,14.8
+f9c1f27a-6ed9-4493-87a9-eaa3870255cc,Vallejo,Model Air,Steel Blue,71.087,#5C5B64,legacy,#2D5676,14.7
+3f032710-98b3-56f2-8f89-2af613f5c376,Vallejo,Model Color,Fern Green,70.833,#58694A,legacy,#4B883B,14.6
+e8f225e5-d863-5a81-ad53-58ed63041c39,Vallejo,Model Color,US Field Drab,70.873,#91785A,legacy,#65543A,14.6
+42a2b18f-f227-592c-8a50-542b7a011e15,Vallejo,Model Color,Sky Blue,70.961,#75A5B9,legacy,#96DDF9,14.6
+42c2b69c-c860-57b3-b68b-15de69a2e14c,Vallejo,Model Color,German Orange,70.805,#C9796C,legacy,#EF4220,14.5
+fa1d91e3-91a7-451f-8269-2023e26dee31,Vallejo,Model Air,Unders. Blue “Faded”,71.332,#8AB1C6,legacy,#C4D4D1,14.5
+bb1963b9-df23-4513-aecf-e8733577652c,AK Interactive,AFV Series,3B AU/ZB AU,AK11387,#414129,legacy,#181912,14.5
+c6ee7107-43a9-5684-a861-8d40588722cc,Vallejo,Model Color,Pale Brown,70.825,#a08374,legacy,#766257,14.2
+7791a355-8189-542b-b1c0-4e61afd741d2,Vallejo,Model Color,Pastel Green,70.885,#919373,legacy,#9DBD8C,14.1
+6234a8f5-2344-502e-a2af-a0a5212ebfeb,Vallejo,Model Color,Olive Brown,70.889,#574940,legacy,#374142,14.1
+79f619e7-0dbc-4b3e-8308-a786573f818e,Vallejo,Model Air,UK Light Mud,71.284,#857F71,swatch_sample,#72723F,13.9
+623a2e3c-8375-439a-b560-962ec0b39b64,Vallejo,Mecha Color,Light Flesh,69.005,#F8C683,legacy,#F8DAC8,13.9
+d0de3028-a9fd-40a0-ac1a-b10ff9c1f1da,Vallejo,Game Color,Lustful Purple,72.114,#81648C,legacy,#AF76C0,13.6
+2483f1ed-f258-511d-92b9-feef9de1321a,Vallejo,Model Color,London Grey,70.836,#6E6866,legacy,#454E57,13.5
+1b25d155-caf2-5654-950e-3d683471be9d,Vallejo,Model Color,Intermediate Green,70.891,#677A56,legacy,#429346,13.4
+616a7b2c-dbd3-4fc3-8be8-b687e9254d32,Vallejo,Game Color,Plague Brown,72.039,#9C6D38,legacy,#C9861A,13.4
+91747f13-8259-589e-a569-36554071838e,Vallejo,Model Color,Basalt Grey,70.869,#6E6B6E,legacy,#50615B,13.4
+b27c4937-e02b-5c40-8dfc-99d52455d913,Vallejo,Model Color,Pale Blue,70.906,#9FAFB2,legacy,#7FB9AD,13.4
+b1da93d5-e43a-546e-abce-72984757bbbe,Vallejo,Model Color,Royal Purple,70.810,#5E3E56,legacy,#452360,13.3
+d84a1fab-4c7f-4c21-9946-3a3735bfae76,Vallejo,Game Color Metallic,Silver,72.052,#DDE0E0,legacy,#A7ACB0,13.3
+7d67037d-da06-50f5-b4b3-8a480278cd4a,Vallejo,Model Color,Leather Brown,70.871,#6E5A4A,legacy,#433F34,13.3
+975689a6-06f1-569a-8e9a-1314eeff45fd,Vallejo,Model Color,Hull Red,70.985,#724C4C,legacy,#482424,13.2
+2179f45b-0aab-5d29-a7a2-800e7459438d,Vallejo,Model Color,Stone Grey,70.884,#8A7D64,swatch_sample,#8E9778,13.0
+3d4609b6-153d-53e4-94e2-b5f6bc0d39f4,Vallejo,Model Color,Cavalry Brown,70.982,#94594C,legacy,#7E333A,12.9
+3dfc605b-888c-42b1-bcfe-3f6bae34bcd6,Vallejo,Game Color,Scarlet Red,72.012,#571A22,swatch_sample,#971631,12.9
+41a38999-1771-50ae-9716-73bd9ae0fbcc,Vallejo,Model Color,Dark Blue,70.930,#263462,swatch_sample,#215587,12.8
+0936a4d0-490a-4ef7-baf7-2d63934fc4c9,AK Interactive,3GEN Acrylics,Copper XF6,AK11197,#964A19,legacy,#C5631C,12.8
+e2bf1dc0-12e9-5fa7-b5f3-2653264d1874,Vallejo,Model Color,Medium Olive,70.850,#546045,legacy,#2D6A25,12.8
+6e76e201-6cad-4a85-8ac4-f55ef83b91d6,Vallejo,Model Air,6K Russian Brown,71.282,#4D4642,swatch_sample,#6E6553,12.8
+bf7b050f-1279-511a-be90-274b0dceb881,Vallejo,Model Color,US Olive Drab,70.887,#6C664F,legacy,#485A4A,12.7
+a968f0e3-8276-4637-9785-f221f15bbbcd,AK Interactive,3GEN Acrylics,Prussian Blue X3,AK11189,#353841,legacy,#0C0E1A,12.7
+018b21b9-b402-590c-ad4b-9eb4540aba41,Vallejo,Model Color,Burnt Red,70.814,#85514D,legacy,#5D2E34,12.6
+cd16ffca-e138-4334-88f7-887da6c4d4f0,Vallejo,Model Air,Dark Sea Gray,71.053,#696C70,legacy,#444C59,12.6
+1697df74-62f7-4c05-906d-4aea1c2bcd1c,Vallejo,Game Color,Imperial Blue,72.020,#132032,swatch_sample,#344464,12.5
+12edb3a0-d6a5-4c3f-ac83-3f0305c91687,Vallejo,Game Color,Leather Brown,72.040,#4F3412,swatch_sample,#775837,12.5
+03fb20c5-8f61-591d-bd7d-78b09fb0127c,Vallejo,Model Color,Germ. Beige WWII,70.821,#786b52,legacy,#968A64,12.5
+4080353f-a2df-444c-82fc-232f729a77d2,Vallejo,Game Color,Dirty Grey,72.145,#493D20,swatch_sample,#5A5A4B,12.5
+e903957a-2e30-5cf7-b30b-91163b5726f2,Vallejo,Model Color,Light Green Grey,70.971,#b4b5ab,legacy,#AACAB5,12.5
+cefd4a04-862b-5976-af6e-f3431dca64c6,Vallejo,Model Color,Beige Brown,70.875,#8F6F54,legacy,#6E5143,12.4
+af924bd1-1a5b-4c00-ba1b-64129cf12759,Vallejo,Game Color,Steel Grey,72.102,#6E7E89,legacy,#44647F,12.4
+7542b41b-e395-4823-a5b8-75fad7333ec6,Vallejo,Game Color,Sunrise Blue,72.118,#62A3C2,legacy,#73D0EC,12.4
+d62dd211-64b4-55f2-af29-e70d3ce90224,Vallejo,Model Color,Flat Blue,70.962,#3F4975,swatch_sample,#376596,12.3
+3bee144e-b222-4f8e-9648-85b2e1a2a529,Vallejo,Mecha Color,Purple,69.012,#959ED1,swatch_sample,#AB8CBB,12.3
+ede37937-ed7c-4dd3-aeb1-d0eb4fa19fe0,Vallejo,Game Color,Barbarian Skin,72.071,#785A3E,swatch_sample,#997851,12.2
+27543dfb-4035-48e8-99a1-280dc7584eac,Vallejo,Mecha Color,Grey Sand,69.031,#94927D,swatch_sample,#B8A072,11.9
+abe80c87-c5b7-4477-b6e7-40a5d2013684,Vallejo,Game Color,Ghost Green,72.121,#5FA686,legacy,#76CA8A,11.9
+ebf8330a-e27b-5d9f-96dd-b6d2af9c1a64,Vallejo,Model Color,Lime Green,70.827,#7C9434,swatch_sample,#66B63D,11.9
+250e3ae7-de8a-4d94-b992-f7609bdba452,Vallejo,Game Color,Alien Purple,72.076,#53407B,swatch_sample,#665AB2,11.8
+0d3d26d5-828b-418b-a43b-9f5bed3dea3d,Vallejo,Model Air,USAF Olive Drab,71.016,#77715E,legacy,#555241,11.7
+642d65f3-5efc-53ef-b78b-189f5544c980,Vallejo,Model Color,Cam. Olive Green,70.894,#3d3c2f,legacy,#384F45,11.7
+64778abb-9dd4-5adb-be42-6048cfef202a,Vallejo,Model Color,Mahogany Brown,70.846,#88635C,legacy,#7B4140,11.6
+d284f9f8-57e6-544f-a2d7-90fd4f53b4e9,Vallejo,Model Color,Green Yellow,70.881,#6F653D,swatch_sample,#85803C,11.6
+baf508e8-5e4a-55a8-93ab-23fa738e8036,Vallejo,Model Color,Olive Grey,70.888,#555543,legacy,#375148,11.6
+3d95e7e1-6665-4aa6-81e1-04bb7f6d9b8e,Vallejo,Mecha Color,Titan Blue,69.013,#254564,swatch_sample,#4D4E6D,11.5
+38545cdc-b22d-5975-819e-ca0f8c72a52e,Vallejo,Model Color,Blue,70.925,#484261,legacy,#19315F,11.5
+4a79a30a-92d5-508f-9088-51a90170bd8b,Vallejo,Model Color,Violet Red,70.812,#824753,legacy,#672445,11.5
+fabb8cc0-d992-5beb-89fa-e4cbbc27d73c,Vallejo,Model Color,Refractive Green,70.890,#595A49,legacy,#425F40,11.5
+104b7a4b-9286-4236-b729-5df189b8d1fa,Vallejo,Model Air,Sea Grey,71.049,#797D84,legacy,#59616C,11.4
+8e232b2b-4a2f-5ef6-9184-f636fcebe3e3,Vallejo,Model Color,Light Turquoise,70.840,#197A96,legacy,#2997A8,11.4
+da245340-6359-4c91-975a-99f8a89813ad,Vallejo,Model Air,Khaki Brown,71.024,#A08C74,legacy,#826E55,11.4
+5f0ca580-f88e-5614-a20d-726f36772905,Vallejo,Model Color,Buff,70.976,#C4A75C,legacy,#CECA8B,11.4
+ac052f49-908d-4658-a67c-ae23d1497453,Vallejo,Game Color,Desert Yellow,72.063,#876C45,legacy,#898041,11.3
+afa25d37-d773-43db-97fe-256603db89dd,Vallejo,Model Air,Brown Green,71.030,#998062,legacy,#816347,11.3
+7745c309-edff-5ae4-9e5c-70c4a0d01904,Vallejo,Model Color,Green Sky,70.974,#71946F,legacy,#5BB379,11.2
+114d3ec4-b216-48ec-b8a7-c3d98070f8ca,Vallejo,Mecha Color,Deep Green,69.029,#707963,legacy,#717639,11.2
+352c793e-aa92-5479-8d13-566f6878cb0c,Vallejo,Model Color,Dark Prussian Blue,70.899,#382740,swatch_sample,#21293E,11.1
+608eca07-1bb3-4de7-98fa-7a229f8811ed,Vallejo,Model Air,Dark Yellow,71.025,#A48D66,legacy,#867142,11.1
+c3b8b903-eb11-5bd0-8435-91ca83310e9c,Vallejo,Model Color,Red Leather,70.818,#965439,swatch_sample,#8B3A37,11.0
+fc0d8fb9-e6e7-5f5e-90e6-1cb0f8b5686d,Vallejo,Model Color,Violet,70.960,#4F435E,legacy,#422962,11.0
+3e08d72b-3c1c-418f-ac11-079cb4c9f7d4,Vallejo,Model Air,Grey Blue,71.005,#5D6272,legacy,#3C4353,11.0
+45fb9a0e-d475-5637-a004-fd92267c7840,Vallejo,Model Color,Black Grey,70.862,#302722,swatch_sample,#2A3137,11.0
+f961b723-8292-425a-a6ed-91ae56f3b8b1,Vallejo,Model Air,USAF Brown,71.125,#938377,legacy,#7D6759,10.9
+a61f3faf-4596-4043-ac9e-3f6cd15c6aa0,Vallejo,Model Air,Mud Brown,71.037,#947562,legacy,#7E5845,10.9
+0e4196b1-8228-4b3a-a5c0-2a8f01d78d09,Vallejo,Mecha Weathering,Light Grey Wash,69.515,#D2BAAB,legacy,#C8C8C7,10.9
+6609faa9-3d07-4cea-95f9-f42f2cc5d27f,Vallejo,Game Color,Neutral Grey,72.050,#5E5D5A,legacy,#71737C,10.8
+ddacf90a-7004-53e3-ba61-3c713c6ff402,Vallejo,Model Color,Infantry Blue,70.752,#3E3846,legacy,#191829,10.8
+c5937822-1745-568b-af4c-48bfbe56d02d,Vallejo,Model Color,Medium Sea Grey,70.870,#A09E9E,legacy,#7F8F8E,10.7
+8b54cfcc-9f90-44bd-944f-fd1675442cf5,Vallejo,Game Color,Night Blue,72.019,#12101C,swatch_sample,#323242,10.6
+5b6df42d-d90e-59e4-a3c7-24f5cfabcd00,Vallejo,Model Color,Light Green Blue,70.972,#94A29D,legacy,#6C9B93,10.6
+4c6b9feb-bddc-41ce-9505-b0be4f7796d4,Vallejo,Model Air,Flanker Light Gray,71.335,#ADB8B4,legacy,#819E9F,10.6
+0357bb02-0bc4-45e0-bd16-40ae72ee336c,Vallejo,Model Air,IDF/IAF Green,71.126,#8F9682,legacy,#6B8369,10.5
+e5d29c99-ee7a-50ed-92d0-c612b380dd65,Vallejo,Model Color,Copper,70.999,#803528,swatch_sample,#A84A2E,10.5
+3d350389-0540-5b21-899d-94f02858a2df,Vallejo,Model Color,Emerald,70.838,#197662,legacy,#169069,10.5
+fa71b957-e311-5f4c-b5d3-9ddfabbda15f,Vallejo,Model Color,German Uniform,70.920,#576254,legacy,#315C52,10.5
+1aed5abe-a4b5-4c9a-8835-05526883037a,Vallejo,Game Color,Moon Yellow,72.005,#EEC123,legacy,#F4E305,10.4
+3c3fe068-8364-42e3-856d-19726cb85b19,Vallejo,Game Color,Dead Flesh,72.035,#887C48,legacy,#A59A64,10.4
+9b260d34-e465-4f9a-a0bb-666d00cbbae6,Vallejo,Model Air,Medium Gray,71.114,#7D9096,legacy,#5E7889,10.4
+b99fb35d-8254-4d69-9146-35e04824720a,Vallejo,Model Air,Ivory,71.075,#D4C6AC,legacy,#B3A67C,10.4
+fed1682f-9313-4147-a294-3a407db1d2e7,Vallejo,Game Color,Tan,72.066,#7F564A,legacy,#A04B4A,10.2
+a2318e17-291d-49cc-9867-192e47067f5d,Vallejo,Game Color,Athena Skin,72.107,#A74742,manual,#BD634F,10.2
+dea1df72-177b-48f3-a21f-4124f5b5a1ba,Vallejo,Game Color,Dark Green,72.028,#112417,swatch_sample,#303D38,10.1
+0b5a3a41-a920-40a3-857b-325614c9216b,Vallejo,Game Color,Bronze Brown,72.036,#976633,legacy,#BD7841,10.1
+31f9c8b7-6f1e-48f2-b997-3db294a14349,Vallejo,Game Color,Abyssal Turquoise,72.120,#132332,swatch_sample,#21415A,10.1
+0d7ea687-5220-5280-be61-8eb7200d1182,Vallejo,Model Color,Neutral Grey,70.992,#616160,swatch_sample,#5C7176,10.1
+9575ed13-d6b6-5a03-be1e-b70b9f6a2abe,Vallejo,Model Color,White Grey,70.993,#D0C6C5,legacy,#EAECEB,10.1
+75f8b32c-4e8a-5a5a-87f2-da49d019c361,Vallejo,Model Color,Gunship Green,70.895,#606C5A,legacy,#3C6557,10.0
+8684ac01-8ef1-5da9-9f57-f6d237c9c2c6,Vallejo,Model Color,Park Green Flat,70.969,#3B725A,legacy,#15895C,9.9
+2997267e-ed8f-564f-b578-7c662625fbdb,Vallejo,Model Color,Ochre Brown,70.856,#B68951,legacy,#A26D29,9.9
+f73a54ed-0eb6-5480-b21f-eae815ae4a43,Vallejo,Model Color,Russian Unif. WWII,70.924,#555336,legacy,#57674D,9.9
+2ab3d40e-8765-4966-a2e9-970876ea6a59,Vallejo,Model Air,Olive Grey,71.096,#626859,swatch_sample,#5F5B58,9.9
+6de20885-c759-58b1-8edd-10b41a103acf,Vallejo,Model Color,Military Green,70.975,#535445,legacy,#3A5244,9.9
+2025263a-da99-565f-abec-f1a34d4cc0c3,Vallejo,Model Color,Amaranth Red,70.829,#D2614A,legacy,#CD342F,9.8
+ba7a5e34-f938-503f-ae2f-8f898ba6005f,Vallejo,Model Color,Bronze Green,70.897,#485141,legacy,#304E4C,9.8
+fa454629-47dc-5430-b50c-0dabbb4e1726,Vallejo,Model Color,Medium Grey Blue,70.772,#9AB6B0,legacy,#719B93,9.8
+4ad41a4e-710a-4b46-9527-47aa44b71676,Vallejo,Model Air,Bronze Green,71.250,#706E64,legacy,#545648,9.8
+f469ab67-1bea-4d57-860c-b1158e6fd88f,Vallejo,Game Color,Squid Pink,72.013,#B96F93,legacy,#CD6FBE,9.7
+f8c41c5f-f321-5bcc-8118-29ba48352a34,Vallejo,Model Color,Oxford Blue,70.807,#564C6B,legacy,#343D5A,9.7
+cb3210c8-9126-59ee-b1a0-4b0f0eb36b8f,Vallejo,Model Color,Dark Blue Grey,70.867,#5A5A5C,legacy,#414D49,9.7
+85ed59ef-8816-40ce-b61f-c01876adcf9c,Vallejo,Mecha Primer,Ivory,70.643,#C8C5AD,legacy,#F2EFD2,9.7
+8ca7371e-5b67-4701-b79a-f967e66a70a4,Vallejo,Model Air,Medium Yellow,71.002,#F7C449,legacy,#FAA70D,9.6
+109a39d3-54c7-4e2a-97af-c6262e3a5928,Vallejo,Game Color,Goblin Green,72.030,#445029,swatch_sample,#5B6C41,9.6
+d773f192-8ba2-486a-9a25-b9310d4e9aef,Vallejo,Model Air,Brown Grey,71.248,#7C776D,legacy,#62615F,9.6
+cda4a51f-2d28-4e72-8dc0-b9409064f9c3,Vallejo,Game Color,Charred Brown,72.045,#271A16,swatch_sample,#403637,9.5
+e4a15ec5-89fd-5cc5-8ade-6eb78db11e22,Vallejo,Model Color,Cam. Black Brown,70.822,#413435,legacy,#502F26,9.5
+a271cc8b-ad24-48b7-9a0a-facce5c98d2a,Vallejo,Model Air,Hemp,71.023,#8D866F,legacy,#727061,9.5
+8a1d33fe-8ca2-4d47-9b28-ce92111dd3ca,Vallejo,Model Air,Sand Yellow,71.028,#B29E85,legacy,#948367,9.5
+0f4506e6-93de-4902-a297-43abf37011a5,Vallejo,Mecha Color,Medium Grey,69.038,#6B6D6C,legacy,#818487,9.4
+14a6329d-e2ac-5260-9482-b10dcbc66edb,Vallejo,Model Color,Pink,70.958,#B14E7C,swatch_sample,#D75B97,9.3
+a674ba8b-cea7-49f4-8e45-c2a45d22bb4d,Vallejo,Game Color,Wolf Grey,72.047,#8DA1A5,legacy,#A4BACA,9.2
+e84ef568-b8c3-4e05-9f01-2c395c1d50a5,Vallejo,Mecha Color,Electric Blue,69.020,#1E5891,swatch_sample,#0270B1,9.2
+23447492-eb65-5d2c-9388-82a127537e2a,Vallejo,Model Color,Ice Yellow,70.858,#ECD183,legacy,#FFED6F,9.2
+053efe00-8922-5ef2-a65c-5787025b3433,Vallejo,Model Color,Cam. Dark Green,70.979,#263123,legacy,#2C4541,9.2
+b07c2493-a4df-43ac-805a-a27d6cb49018,Vallejo,Model Air,German Grey,71.268,#494C45,swatch_sample,#2E3226,9.2
+38c5bc9a-a6d4-4ed6-9633-2ab77fdbfa0a,Vallejo,Model Air,Orange Rust,71.130,#C67A51,legacy,#C25B30,9.1
+ce5d347d-fe4f-431a-9487-24533ced3e11,Vallejo,Game Color,Parasite Brown,72.042,#794E31,legacy,#99471D,9.1
+37019c3f-aec2-5f18-9ed5-d8a1c72ab65b,Vallejo,Model Color,Canvas,70.763,#605336,legacy,#423A1C,9.1
+fc023768-4960-4da3-aab6-95f701e2b629,Vallejo,Game Color,Earth,72.062,#563D24,swatch_sample,#6B5741,9.0
+c5b0022d-7b71-4893-9ba4-097917b60eb6,Vallejo,Game Color,Toxic Yellow,72.109,#D3B74E,legacy,#DDD446,9.0
+e0e01c97-55cd-44a2-ba85-9ac371a83341,Vallejo,Mecha Color,Yellow Ochre,69.032,#E58F3C,swatch_sample,#EAA431,9.0
+feb50664-f77f-5ed0-ab7b-c5494a7fa8e2,Vallejo,Model Color,Grey Green,70.866,#595655,legacy,#44504E,9.0
+6f59002f-0260-5293-a6e9-955c8ea55c7c,Vallejo,Model Color,Field Blue,70.964,#61686F,legacy,#436370,8.9
+71294ba8-cf8e-4278-ad47-b8519dcedbb0,Vallejo,Model Air,Pale Blue Grey,71.046,#A4A9A9,legacy,#8A94A0,8.9
+57b0a960-eb4e-4c2f-b9e8-2bfdbfd44926,Vallejo,Model Air,USAF Tan,71.348,#B89A79,legacy,#A77F5C,8.9
+340a7d59-c826-4c99-8b56-edf3f6ad2fd3,Vallejo,Mecha Weathering,Light Rust Wash,69.505,#F09B55,legacy,#EB7919,8.9
+542e86e1-a554-43ab-b9c7-e4a652c95ca1,Vallejo,Game Color,Dark Flesh Tone,72.044,#411F14,swatch_sample,#523634,8.8
+a6f21253-eb18-436f-976e-1beecf9a6846,Vallejo,Mecha Color,Phantom Grey,69.040,#3F4748,legacy,#535761,8.8
+b217b014-fb90-54ca-a1fa-d764ea2e293c,Vallejo,Model Color,Yellow Green,70.954,#C2C33B,legacy,#CDE418,8.8
+4c2e6665-f9c6-42b0-b59a-ea8b616512fe,Vallejo,Model Air,Fluorescent Red,71.082,#DC7863,legacy,#F24F4A,8.8
+7928c8fc-f606-58ec-85e8-a23925517451,Vallejo,Model Color,US Dark Green,70.893,#5D5C4B,legacy,#50624C,8.7
+46e9f497-c4aa-4ec3-969e-7fc937ae56d4,Vallejo,Model Air,Light Grey RLM63,71.260,#80827A,legacy,#6B6F60,8.7
+88a951ca-bce4-40da-8b4f-3e2e79b3b84a,Vallejo,Game Color,Pale Flesh,72.003,#CEA485,legacy,#E9AD9A,8.6
+81409a57-aa49-416c-b685-99df57fe4158,Vallejo,Model Air,BS Dark Earth,71.323,#7D715D,legacy,#6C5B41,8.6
+70e7bbe4-1c85-596b-b4ab-a4dd475e5d2b,Vallejo,Model Color,Green Grey,70.886,#66634F,swatch_sample,#7A7653,8.6
+38e719de-52ed-5f74-b477-cb063485e1d2,Vallejo,Model Color,Ivory,70.918,#EEE7DA,legacy,#F2F3D3,8.6
+6e12bc17-69be-4fbf-b839-7329039ea45e,Vallejo,Mecha Color,Light Grey,69.036,#83A0A3,swatch_sample,#969DA2,8.6
+9cf53feb-57a5-458d-9574-c4811cd1c400,Vallejo,Model Air,Sand,71.112,#A1938F,legacy,#927B75,8.6
+e989b524-56bd-40fc-a903-c63e7d6775aa,Vallejo,Model Air,Light Green RLM25,71.267,#618580,legacy,#477767,8.6
+c25562da-a9ad-57bb-96e1-8272e3b8829b,Vallejo,Model Color,Gold Brown,70.877,#CB9951,legacy,#B38025,8.5
+bc166cdd-7f7e-5351-9892-45d804bd01ad,Vallejo,Model Color,Prussian Blue,70.965,#38415D,swatch_sample,#2D4E6D,8.5
+951f7da2-dc0f-5704-a795-51750df2ffb5,Vallejo,Model Color,Flat Brown,70.984,#7F554D,legacy,#6B3D3D,8.5
+3332d53a-58ce-51aa-bde2-2979e61dd333,Vallejo,Model Color,Old Wood,70.761,#957F64,legacy,#7B6C57,8.5
+27adf65e-9075-4630-abbc-eb2d3c71c86c,Vallejo,Model Air,Khaki Green Num. 3,71.330,#594E43,legacy,#615E4B,8.5
+be1e75af-ec5d-4cec-98e2-3d152821364c,Vallejo,Model Air,Grey Violet RLM75,71.259,#777879,legacy,#616362,8.4
+645f2f88-44ee-58df-9f3b-62ccf5a94b38,Vallejo,Model Color,Luftwaffe Green,70.823,#4C543C,legacy,#4B643A,8.4
+ecf13f80-c593-5faf-94bb-6dc1938a3278,Vallejo,Model Color,Sky Grey,70.989,#9D9D9F,legacy,#B0B6B2,8.4
+8f5f1176-6479-5931-b70e-4a00a36b2545,Vallejo,Model Color,Magenta,70.945,#A0496C,legacy,#A32151,8.3
+d7d643d6-b0b2-4e21-b5a3-bc03893b971d,Vallejo,Model Air,Light Gray,71.050,#989CA0,legacy,#808998,8.3
+dd23ccad-964a-497a-9606-910e4691c0c9,Vallejo,Model Air,Grey RLM02,71.044,#868375,legacy,#6D7367,8.3
+33a1be49-4df3-5914-930e-5bd062bb3991,Vallejo,Model Color,Desert Yellow,70.977,#C59B5B,legacy,#A68840,8.3
+67f16a96-d2b3-4757-ad43-5d247facb132,Vallejo,Game Color,Bile Green,72.122,#B4C020,legacy,#C2E11C,8.2
+04f3002a-425a-5a73-8b26-22a19b436961,Vallejo,Model Color,German Tank Crew,70.759,#645E50,legacy,#4A483C,8.2
+749a41e9-f563-5d72-a690-731287ba2701,Vallejo,Model Color,BC Dark Brown,70.768,#856A51,legacy,#6C553F,8.2
+2477ac17-2d8e-564a-9feb-20ad3c1bd886,Vallejo,Model Color,Dark Sea Blue,70.898,#272D39,swatch_sample,#273B44,8.2
+2db12371-db4d-49b9-a9bd-aefed91180fc,AK Interactive,3GEN Acrylics,Bronze,AK11196,#947D16,legacy,#926D23,8.2
+cbfa7a8d-7a50-4f42-8a0d-b562f1c526d2,Vallejo,Mecha Color,White Grey,69.002,#CDCBBE,legacy,#F0ECE4,8.2
+db0890f7-20f8-48df-85fb-bf42bd9a0c7b,Vallejo,Model Air,IJA Chrome Yellow,71.135,#D9A42D,legacy,#F49D0F,8.1
+364b55d0-6217-4a32-8a30-ac00e7a2a7ec,Vallejo,Mecha Color,Grey Z,69.039,#67787A,swatch_sample,#7A7B7E,8.0
+3d5afb1a-3607-4a21-8afb-7c7eb2f40396,Vallejo,Game Color,Royal Purple,72.016,#3D3046,legacy,#403D63,7.9
+4abdb203-4858-443c-9a46-2c22b1295162,AK Interactive,3GEN Acrylics,Brass,AK11194,#96671C,legacy,#B37624,7.9
+b2e45384-8eb1-474f-a494-4b6f62fd4ce1,Vallejo,Model Air,Ivory RLM05,71.106,#C4AB78,legacy,#B9AE5E,7.9
+19850955-f67c-5662-ab19-90305b1e64a9,Vallejo,Model Color,Orange Ochre,70.824,#B18D4A,legacy,#977B4B,7.9
+f5ade761-4f3d-4fc4-8cfe-8b124f9ada49,Vallejo,Model Air,IDF Sand Grey 73,71.141,#B6A996,legacy,#9D967C,7.9
+d69b6836-c210-4f37-82d3-d403040468db,Vallejo,Mecha Color,Pure Black,69.042,#222121,legacy,#000000,7.8
+a0ac9da5-4d60-548f-9b38-b0e7c6ae1d15,Vallejo,Model Color,English Uniform,70.921,#806841,legacy,#695429,7.8
+c04192e8-a500-5d70-b605-b8e94b828547,Vallejo,Model Color,Green Ochre,70.914,#B49654,legacy,#A2855B,7.8
+b66e18b2-18fa-433d-92b3-d417c6a161b4,Vallejo,Model Air,Grey Green,71.340,#8F938F,legacy,#787E7A,7.8
+68c4eaf3-a4c4-4e88-9166-d44adc0e06de,Vallejo,Game Color,Black,72.051,#221F1C,legacy,#000000,7.7
+33dfae71-680e-5e67-bcd8-73b43a971b0f,Vallejo,Model Color,Blue Violet,70.811,#58477E,swatch_sample,#754C9B,7.6
+d3f53d09-e2d6-43d8-96ae-9db09cb34d3a,Vallejo,Model Air,Skin Tone,71.076,#F1C89F,legacy,#F9B47B,7.6
+92dadf45-7230-459f-8d82-791055f2b5db,Vallejo,Mecha Color,Turquoise,69.023,#22B1A9,swatch_sample,#009B9D,7.6
+a9c0385a-56e6-578d-a124-107de728253e,Vallejo,Model Color,Flat Earth,70.983,#684529,swatch_sample,#7B5934,7.5
+3b457cf4-fb37-5aff-a26d-53ba47e95cff,Vallejo,Model Color,Basic Skin Tone,70.815,#EDBBA0,legacy,#F9AD7B,7.5
+9dcbf0cf-4753-4d5b-8db5-d4ee917ed649,Vallejo,Model Air,Dark Green RLM71,71.015,#524A30,swatch_sample,#47443B,7.5
+1fd5eaa6-b6cc-4c67-9f7c-96c5773c736e,AK Interactive,3GEN Acrylics,Burnt Umber XF-51,AK11111,#45301D,legacy,#2B2012,7.5
+8b227837-fa4b-4e74-ac55-a60ebd739868,Vallejo,Model Air,Light Brown,71.027,#B69B78,legacy,#A18462,7.5
+fb76cac1-9f7b-4740-bf82-cfa7a92dd232,Vallejo,Model Air,Cement Grey,71.045,#9C9F8F,legacy,#828E84,7.5
+dd7ccea4-a7fd-4ffb-87f1-c293f5f48d90,AK Interactive,3GEN Acrylics,Aluminium XF16,AK11207,#ACACAC,legacy,#C8C8C8,7.4
+0afa3766-f7ee-5649-91ab-e330907b5f17,Vallejo,Model Color,Gloss Black,70.861,#241e20,legacy,#0B0A08,7.4
+82945eed-b766-5684-84fb-079697d129b6,Vallejo,Model Color,German Grey,70.995,#2E2E2C,swatch_sample,#1E2C2C,7.4
+388c9e8a-d1af-4e6c-9377-89f3a526ae94,Vallejo,Game Color,Scarlet Blood,72.106,#BC3833,legacy,#A42E38,7.3
+023f33de-c939-5b68-9551-51e0b3e3c866,Vallejo,Model Color,Black Green,70.980,#3B4D40,legacy,#20403B,7.3
+5ec1e918-3bfa-500c-98e0-6fa71c2d1b05,Vallejo,Model Color,Military Yellow,70.764,#9E8640,legacy,#8A732F,7.3
+74dae547-c2b9-5052-aed2-6a53815b9d13,Vallejo,Model Color,Brown Rose,70.803,#AB7672,legacy,#C9756A,7.3
+2b41d12e-fc91-4929-9ae5-ded33c0921e5,Vallejo,Mecha Color,Blue,69.019,#1C558F,swatch_sample,#446899,7.3
+1e3948fe-a083-4153-a56e-41c31003e29e,Vallejo,Model Air,Cam. Med. Brown,71.038,#635142,legacy,#4C4437,7.3
+b599c243-c430-483c-93a5-4ddcfa0a0361,Vallejo,Model Air,US Sand,71.138,#9D9178,legacy,#887D69,7.3
+759f614a-b314-4afa-b994-f0dcedf00d35,Vallejo,Model Air,7K Russian Tan,71.283,#877F6F,legacy,#787157,7.3
+66d43084-d226-4ee6-bc68-31a7da9f1c33,Vallejo,Game Color,Scurvy Green,72.027,#194C3E,legacy,#2D5250,7.2
+bd0cc2ae-e010-4e46-8df8-3c4eb0be186e,Vallejo,Game Color,Bone White,72.034,#D3CBA9,swatch_sample,#C9B686,7.2
+08c1daaf-0754-4394-b98a-902bd5b03fb9,Vallejo,Model Air,Dark Brown RLM61,71.042,#4B403B,swatch_sample,#3F3D42,7.2
+3f0d89e8-0e42-5f10-8d17-1107465921c5,Vallejo,Model Color,Black,70.950,#231d1d,legacy,#25282F,7.2
+3916e137-e5a4-5933-a3bc-fa7ef71d9b89,Vallejo,Model Color,Pale Sand,70.837,#E5CBA1,legacy,#CABE8C,7.2
+c090e10c-8de0-5cf3-830e-94d8ac57b9cf,Vallejo,Model Color,Bright Orange,70.851,#E46E38,legacy,#F2502A,7.2
+5096a112-6042-42fa-bb07-168fad1ec62a,Vallejo,Model Air,US Interior Yellow,71.107,#D2B46F,legacy,#C09C48,7.2
+dbb435b7-3fed-4fa9-9771-aeda9119b4f7,Vallejo,Mecha Color,Grey,69.037,#7898A0,swatch_sample,#8B97A0,7.2
+ed9da0fc-b258-4a12-be47-d999f438fbaf,AK Interactive,Figures Series,Russian Blue Base,AK11432,#212835,legacy,#0F131A,7.2
+a9ab03aa-efe7-45ac-ac4a-d3ebc830d6f0,Vallejo,Model Air,Russian AF Grey N.3,71.339,#9DA3A2,legacy,#858E8D,7.1
+24f2f50e-0bf5-4b35-9965-020b9bd25add,Vallejo,Game Color,Sun Yellow,72.006,#F4A51D,legacy,#F79210,7.0
+864d4d80-70f2-4a96-856c-bbcf0ceec31b,Vallejo,Model Air,Orange,71.083,#E96646,legacy,#EB3F27,7.0
+1fa0ee92-7c17-5c4d-a72a-de13970e80e9,Vallejo,Model Color,Middle Stone,70.882,#A99455,legacy,#93924F,7.0
+35c70fbb-3fab-4a18-a362-3f8b2a9e451a,Vallejo,Model Air,Camouflage Brown,71.117,#B39A7F,legacy,#A28565,7.0
+ae6496c9-a3fa-5d2e-863d-6ca142c1594b,Vallejo,Model Color,Mustard Brown,70.769,#AB835B,legacy,#977150,7.0
+c40e5c15-41dd-50fa-b017-eaf04ced82c1,Vallejo,Model Color,Dark Red,70.946,#81433B,legacy,#973A42,7.0
+2cab296c-6b5b-5a44-a498-69385712b28d,Vallejo,Model Color,Light Yellow,70.949,#F6D75F,legacy,#F9EA45,6.9
+38cd3f24-d6b6-4078-b556-ae5b5a2000b0,AK Interactive,3GEN Acrylics,Gold,AK11191,#B38B35,legacy,#A87718,6.9
+9432c937-a642-4a2c-9076-b71af0d9c7a9,Vallejo,Mecha Color,Dark Red,69.011,#8C2B3F,swatch_sample,#90262B,6.9
+a91ad2fe-3d7a-5d44-807b-92ef16b77790,Vallejo,Model Color,Yellow Olive,70.892,#383B31,swatch_sample,#25352B,6.9
+4fb89bb0-2d5b-5dcc-9017-1b6650177994,Vallejo,Model Color,Clear Orange,70.956,#CC4725,swatch_sample,#F04126,6.9
+10984e0a-8b2e-48b3-a5d7-27d451b1d5e4,Vallejo,Model Air,Loam Beige,71.245,#AB9C7E,legacy,#988864,6.9
+65aa4dc2-05d6-5f16-aeef-fb49c159fd43,Vallejo,Model Color,Orange Brown,70.981,#B4764E,legacy,#B0623B,6.8
+f9acc17b-3f3d-4fa3-a73e-a8297223b7c7,Vallejo,Mecha Color,Chipping Brown,69.035,#4B3C32,legacy,#484342,6.8
+2f0879a9-83a1-4dd8-91dd-932800b1b848,Vallejo,Game Color,Rosy Flesh,72.100,#E18776,legacy,#EF7D7F,6.8
+a79e6357-4962-47a0-b505-c36c1f7861e0,Vallejo,Model Air,Camouflage Grey,71.118,#88765B,swatch_sample,#777161,6.8
+2b430189-b72c-5fe2-beae-dc5a57be2d18,Vallejo,Model Color,Luftwaffe Uniform,70.816,#45414d,legacy,#383F49,6.8
+a938d9a5-5624-5176-b2b1-b8618fb17d4d,Vallejo,Model Color,Black Red,70.859,#552F2B,swatch_sample,#582A35,6.8
+1349d9b3-8975-4083-a809-8a2fd7844f61,Vallejo,Model Air,Faded P.R.U. Blue,71.109,#556F78,swatch_sample,#466071,6.8
+1a26418f-feb2-45d5-b393-871ef81b0578,Vallejo,Game Color,Camouflage Green,72.031,#6F6128,swatch_sample,#7C7339,6.7
+1f6ddc6c-2534-5c4c-8840-898fd8e9e3e4,Vallejo,Model Color,Pale Grey Blue,70.907,#B3BCBB,legacy,#BED1CB,6.7
+a5924e24-6f89-4f9d-9b1b-4056875922b1,Vallejo,Model Air,Light Blue RLM78,71.101,#8D9C9E,legacy,#749091,6.7
+0ee1acd2-d90b-44b2-91c1-3036d33b1ec2,Vallejo,Game Color,Bloody Red,72.010,#A82322,swatch_sample,#BF1134,6.6
+322f7553-5372-4a5d-8f39-5be268fc0004,Vallejo,Model Air,Yellow Ochre,71.033,#D19A4F,legacy,#D4872B,6.6
+cb0a45f0-cb97-4c4a-aacb-9366d217c0ef,Vallejo,Game Color,Cayman Green,72.067,#554D31,legacy,#4F5140,6.6
+da7396e6-cb12-56a6-8a7c-a41d63142ee4,Vallejo,Model Color,Off-White,70.820,#F5EFEC,legacy,#EFEDDE,6.6
+94721569-5cbd-4f45-85cd-9dd5265883d2,Vallejo,Mecha Color,Light Blue,69.016,#5792BF,swatch_sample,#6C8BBB,6.6
+353b62e6-f211-4010-ad8e-5e02deff43e7,Vallejo,Model Air,USAF Medium Gray,71.275,#94949A,legacy,#828385,6.6
+48de9f2b-295e-5d21-a205-bec7c91686b6,Vallejo,Model Color,Purple,70.959,#674660,legacy,#7A3F6B,6.5
+ba008082-a782-580b-bb0a-0d3bca20f786,Vallejo,Model Color,Blue Green,70.808,#198B98,legacy,#359594,6.5
+bd8d8ab5-f8da-48a6-b1ac-58be47fedc5a,Vallejo,Mecha Color,Titan Dark Blue,69.022,#2C3638,legacy,#40464B,6.5
+2a0ecaf0-5d9b-57b9-979a-5aed1d35ca7e,Vallejo,Model Color,Lemon Yellow,70.952,#EBD727,legacy,#FFF309,6.5
+f9fdff1a-ac4b-5487-9795-e78bdb558987,Vallejo,Model Color,Scarlet,70.817,#CA5343,legacy,#D72A2C,6.4
+80dc538c-ba51-4dad-b48e-90ba9b4a1a3f,Vallejo,Mecha Primer,Grey,70.641,#B6C5C5,legacy,#C5C6C7,6.4
+defbed8c-1795-46a5-acd4-6dc8088496ee,Vallejo,Model Air,US Desert Sand,71.140,#AB9585,legacy,#9C8273,6.4
+a2de5e7a-9cbd-4482-8919-c474aafd0702,Vallejo,Model Air,Black Grey RLM66,71.055,#515657,swatch_sample,#464A53,6.4
+7dab9577-d4ea-5246-aaab-d05427ca150e,Vallejo,Model Color,Azure,70.902,#656E95,legacy,#6978B3,6.4
+1d14d5c7-7e6b-4d0e-95fc-d86f6a3cb4e9,Vallejo,Model Air,Yellow Brown,71.246,#A6977E,legacy,#978674,6.4
+f314d92b-f57e-53bf-99cb-e28e55f34104,Vallejo,Model Color,Japan. Unif. WWII,70.923,#9f812a,legacy,#8D7F3E,6.3
+79c6a8bb-09b6-4b4d-98e6-ceb8aa8e369c,Vallejo,Model Air,Black Green RLM70,71.021,#454C48,swatch_sample,#3A3F42,6.3
+c8392daa-8710-5aec-8e10-0b8418c55345,Vallejo,Model Color,Old Rose,70.944,#C37A79,legacy,#D66873,6.3
+0d556525-dd57-5284-98cc-50b830522dae,Vallejo,Model Color,Light Grey,70.990,#9EA1A2,legacy,#909790,6.3
+3583099a-2341-40aa-b594-b9415b5315c1,AK Interactive,AFV Series,S.C.C. No.2 Brown,AK11385,#7E502A,legacy,#704127,6.3
+d2ac2db6-e452-4ada-b8b3-9c6e1a1b7b8b,Vallejo,Model Air,Cockpit E.G.“Faded”,71.331,#439886,legacy,#448678,6.3
+a33b4724-cc4b-4eda-860e-f5dbc7249abd,Vallejo,Model Air,Dark Green,71.012,#575743,swatch_sample,#525750,6.2
+114f064a-8a97-4487-88a4-4f27e27f8cd2,Vallejo,Game Color,Gorgon Brown,72.124,#3E2317,swatch_sample,#4D2925,6.2
+bd68dbda-a29b-4aee-ae0c-cceee93c62d1,Vallejo,Mecha Color,Stone Grey,69.024,#8DAEAB,swatch_sample,#A1B1B1,6.2
+4bba4c0d-bbe0-5e2c-92d8-1ed060180ee6,Vallejo,Model Color,Blue Grey Pale,70.905,#909394,legacy,#9AA3A0,6.1
+88a61f71-2166-41f1-b2cc-2f5ead57d74c,Vallejo,Model Air,Off-White,71.270,#DEC6B1,legacy,#E8D8BE,6.1
+db7d2fe3-62ed-551c-b1f4-df17216eb699,Vallejo,Model Color,Salmon Rose,70.835,#E59E8C,legacy,#F68D78,6.1
+fb260e8d-62fa-5eaa-97fa-156a7c777783,Vallejo,Model Color,Tan Earth,70.874,#987658,swatch_sample,#926C59,6.1
+03beac8c-05f3-59e1-9f84-8519ff6c9cd8,Vallejo,Model Color,Sand Yellow,70.916,#CFAE5F,legacy,#D1BE62,6.1
+406d60aa-59d1-4510-a691-2264a9c08eba,Vallejo,Model Air,Yellow RLM04,71.078,#E1A645,legacy,#E69522,6.1
+5dc42639-6b04-4dd9-8500-1fc8a68809a6,Vallejo,Model Air,Light Gull Gray,71.121,#B1B4B1,legacy,#9CA39C,6.1
+903692fb-bcc0-4b98-99cb-69ef80cb08c2,Vallejo,Model Air,IDF Sinai Grey 82,71.142,#7B7468,swatch_sample,#6B6A66,6.1
+462839ca-ece6-4ad8-a09a-e24f7436c940,Vallejo,Game Color,Midnight Purple,72.116,#3A2D45,legacy,#251B31,6.0
+7bcee48f-c425-59f1-9bf8-fb3f55f0054b,Vallejo,Model Color,Cork Brown,70.843,#AC7E5F,legacy,#9D6F57,6.0
+c36c4e57-f416-4b3d-acef-aa6cd02bb6a6,Vallejo,Model Air,Beige,71.074,#D8C092,legacy,#D9B770,6.0
+165d898b-3616-4216-a88b-9350d2eceab8,Vallejo,Model Air,Dark Gray,71.110,#575B5E,swatch_sample,#4B5360,6.0
+ea3d8583-c7d4-5db2-ac08-bee4a34f0a22,Vallejo,Model Color,Dark Sand,70.847,#BE9F6F,legacy,#CDAE6B,5.9
+cf2a5d65-e0f5-5f10-b767-21278eb5e986,Vallejo,Model Color,Green Brown,70.879,#927E44,legacy,#86734B,5.9
+492e8c93-ae7b-4511-a073-98506ede7a21,AK Interactive,Figures Series,Denison Tan Base,AK11413,#916C45,legacy,#815D3B,5.9
+332130c8-7d0f-4940-a7c7-cebc7601180c,Vallejo,Model Air,Light Rust,71.129,#926045,swatch_sample,#82523E,5.8
+f53f8a00-efb5-4907-b75a-caa034092c18,AK Interactive,AFV Series,WWI French Milky Coffee,AK11302,#9B7C4E,legacy,#8A6E43,5.8
+b808c5af-4182-445c-ab73-239982c8f77b,AK Interactive,Figures Series,Red Brown,AK11434,#7A4230,legacy,#6C342C,5.8
+0dad5910-5e1b-49ca-b131-fd30f8d7bcb8,Vallejo,Model Air,Camou. Grey Green,71.116,#7E6C50,legacy,#6C6048,5.7
+9a37e608-bb74-4117-b51e-1993aac3332e,AK Interactive,Figures Series,Field Drab,AK11435,#7E5937,legacy,#6E4A2F,5.7
+b8037570-6b90-539f-9743-621f9758ff20,Vallejo,Model Color,Silver Grey,70.883,#DDD7D0,legacy,#D9DBCD,5.7
+b49605e0-a1f1-4796-a4ed-edf300ed94e1,Vallejo,Mecha Color,Green,69.026,#8F9883,legacy,#A4A792,5.7
+675705a5-b29f-486f-8585-fec9c0571c75,Vallejo,Model Air,Green RLM62,71.104,#5D6046,swatch_sample,#4D5645,5.7
+0967a3ac-6187-4511-9ddd-de32952bb41a,AK Interactive,AFV Series,MERDC Sand (FS30277),AK11343,#876F49,legacy,#76613E,5.7
+00976b8f-ccef-4238-b5d5-1f45e4be02b2,AK Interactive,Figures Series,Waffen Brown,AK11417,#634426,legacy,#533621,5.6
+de70ebbf-015b-479b-8a0a-ba96bffe5bdc,Vallejo,Model Air,Signal Blue,71.091,#293441,swatch_sample,#2F2F39,5.6
+1db47327-6f7b-4dcb-8877-8463455d2b11,Vallejo,Model Air,US Light Green,71.137,#6A6743,swatch_sample,#585D3D,5.6
+cb9d51a0-1456-5d39-9b8e-13dd82cf72ae,Vallejo,Model Color,Flat Red,70.957,#AE403D,legacy,#A62633,5.6
+f6fcc0f0-f0d3-4185-aaff-f28dc166c125,Vallejo,Mecha Color,Green Blue,69.027,#749173,legacy,#899F7D,5.6
+8808256f-7b7b-430c-bff0-4e92eb95db14,Vallejo,Model Air,Interior Green,71.010,#686042,swatch_sample,#56543B,5.6
+34ea34ef-dfc9-4493-8471-e6a205bb5794,AK Interactive,AFV Series,RAL 7027 Grau,AK11317,#716447,legacy,#5F573D,5.6
+c4654412-06f9-4afe-bcf6-3242a2444858,Vallejo,Model Air,UK Light Stone,71.143,#B4A27E,legacy,#AC9762,5.6
+b704864e-cc5d-47fc-bd45-9a83b9297e3c,AK Interactive,AFV Series,RAL 8031 F9 Sandbraun,AK11326,#8E6634,legacy,#7E582E,5.6
+ffb8aa1f-4cdf-462c-aceb-ceb3e0efb579,AK Interactive,AFV Series,RAL 8000 Gelbbraun,AK11327,#84693A,legacy,#735B32,5.6
+2e891f82-0014-4f26-8b1e-d396952fbe43,AK Interactive,AFV Series,Nº8 Earth Red (FS30117),AK11338,#6D3C25,legacy,#5F2F22,5.6
+d8853e04-619f-47f9-8a88-a829414cd45b,AK Interactive,Figures Series,Splittermuster Base,AK11414,#736B45,legacy,#615F3C,5.6
+e3176842-3f31-4c6a-b80a-e2786726bd10,AK Interactive,Figures Series,Base Flesh,AK11401,#814B2F,legacy,#733D2A,5.6
+f7771fed-2b02-42e7-beb1-5732704c55fc,AK Interactive,3GEN Acrylics,Gun Metal X10,AK11212,#4A4A47,legacy,#5B5956,5.5
+0491a80b-e0b2-474e-8a71-cb23f53d77bc,AK Interactive,3GEN Acrylics,Russian Green,AK11159,#352E16,legacy,#292A17,5.5
+d7e6dfb1-a53c-4b0a-8a3f-30749d140601,Vallejo,Mecha Color,Grey Green,69.014,#598286,swatch_sample,#6C8388,5.5
+41de0473-c6f9-4ca9-b8ed-27679c989ffe,Vallejo,Model Air,Rust,71.080,#765850,swatch_sample,#664A47,5.5
+bd6b962a-a54f-44cd-bf76-3ee8ae342188,Vallejo,Model Air,IJA Earth Brown,71.136,#7C664F,swatch_sample,#6A5B48,5.5
+46dd096c-4e56-4c80-9a62-468521705eb9,AK Interactive,AFV Series,Nº13 Desert Sand (FS30279),AK11340,#A78462,legacy,#987554,5.5
+912ff3a0-cfb0-43c5-a991-511cf2077836,AK Interactive,AFV Series,IDF Early Sand Yellow,AK11354,#917E4B,legacy,#7F7341,5.5
+70aac8d7-0cff-48a9-abf1-778ec6c8c0b7,AK Interactive,AFV Series,IDF Sand Grey 1970s-1980s,AK11353,#75643B,legacy,#635733,5.5
+b822aa99-75f4-4a37-b1bc-06d1a23a14fd,AK Interactive,AFV Series,British Desert Pink ZI,AK11382,#F0905F,legacy,#F47D52,5.5
+312c6d38-18e2-47d3-9a3d-8d5ca4c18e94,Vallejo,Model Air,Sand Brown,71.034,#976B55,swatch_sample,#895E4D,5.4
+7d30b231-66d6-4dbf-820a-66a4d880deef,Vallejo,Model Air,NATO Brown,71.249,#5F5047,swatch_sample,#4E433F,5.4
+0d3897a7-a51e-58a5-b581-57ee7b1a9d63,Vallejo,Model Color,Sunset Red,70.802,#BD415E,legacy,#BF215E,5.4
+b4323f47-e493-4dce-8f81-8edf45278896,Vallejo,Model Air,Golden Brown,71.032,#876541,swatch_sample,#77583B,5.4
+34ca8155-947a-4d21-8c9e-b883f01a306e,AK Interactive,AFV Series,RAL 7008 Graugrün,AK11313,#827135,legacy,#70662F,5.4
+af41dd7c-19fd-421b-918d-376e87144a2c,Vallejo,Model Air,US Desert Arm. 686,71.122,#AF9B81,legacy,#9C8C73,5.4
+035ca958-04a1-4353-9483-238b483eb558,AK Interactive,AFV Series,RAL 6040 F9 Helloliv,AK11323,#66582F,legacy,#544B29,5.4
+a99abc2c-0156-4abf-9d8d-a3e7b32a8637,AK Interactive,AFV Series,RAL 8012 Rotbraun,AK11328,#6C2213,legacy,#621A19,5.4
+cacfef46-d5e1-4f39-b5f1-cf56c6ad7119,Vallejo,Mecha Color,Pink,69.006,#E09077,legacy,#CF8476,5.4
+a126b920-0a2e-4272-8a5e-17a32ab7851a,AK Interactive,Figures Series,British Uniform Base,AK11437,#70522E,legacy,#604428,5.4
+ddeb0afb-7aa4-4a85-a40d-bf94693fde4b,AK Interactive,Figures Series,British Uniform Lights,AK11438,#8D692A,legacy,#7D5C26,5.4
+7692611b-b22d-4bf3-8bb9-10870c433438,Vallejo,Model Air,Brown RLM26,71.105,#884338,swatch_sample,#7B3533,5.3
+af05322d-f913-40ee-a302-f3dee2211fc6,Vallejo,Model Air,Concrete,71.131,#797165,swatch_sample,#69665D,5.3
+3a61ba18-4e89-5413-bb6f-e470a2727a02,Vallejo,Model Color,Chocolate Brown,70.872,#5A433D,swatch_sample,#574940,5.3
+5ec8297c-a31b-4ed9-a450-437199c791b5,AK Interactive,AFV Series,Nº6 Earth Yellow (FS30257),AK11337,#A67435,legacy,#98672F,5.3
+ce5c599d-bdab-4810-96b2-d2d57e707f3f,AK Interactive,AFV Series,Field Drab (FS30118),AK11344,#58411D,legacy,#48341A,5.3
+a42343d2-97cd-42e2-a814-bfc2ec0e7bbb,AK Interactive,AFV Series,British Light Mud,AK11383,#827D49,legacy,#707441,5.3
+81531ae3-d594-4b42-a0b2-d6fc476fdeef,AK Interactive,Figures Series,Grey Blue,AK11426,#737878,legacy,#636D6E,5.3
+684e7e2d-30d1-5bb4-b936-f2e6416912ae,Vallejo,Model Color,Light Orange,70.911,#F18A3E,legacy,#F5751A,5.2
+5228ecc7-5448-48d2-827d-cc5db422b9af,Vallejo,Model Air,US Field Drab,71.139,#6D5C45,swatch_sample,#5C4F3C,5.2
+b2880ee6-a594-4c45-8269-1918319c6a38,Vallejo,Model Air,Fire Red,71.084,#873F32,swatch_sample,#7B312E,5.2
+ac836234-fc92-4949-9cf9-d5e99631ffa8,Vallejo,Game Color,Nocturnal Red,72.111,#330D17,swatch_sample,#491724,5.2
+9314198a-0ff9-40bb-9abe-f7084b414192,Vallejo,Mecha Color,Blue Grey,69.015,#6293A6,swatch_sample,#688797,5.2
+101559c4-dacb-4fdc-8524-16ab2fb75c55,AK Interactive,AFV Series,Russian Sand 7K,AK11370,#85632C,legacy,#755627,5.2
+66d3fb01-2974-4376-a423-4228c1a781e7,Vallejo,Mecha Weathering,Fuel Stains (Gloss),69.814,#A2702C,legacy,#9F6216,5.2
+ec3c51cd-76eb-538b-a383-87e38ee72d59,Vallejo,Model Color,Deep Yellow,70.915,#F0CE1A,legacy,#FEE30D,5.1
+3bc3b649-e09f-4841-aeb2-7e71b1a32f0b,Vallejo,Model Air,Russian Green 4BO,71.017,#575546,swatch_sample,#474A3F,5.1
+52992815-d062-5c2e-851e-a30292a369a5,Vallejo,Model Color,Desert Brown,70.767,#B69267,legacy,#A8835C,5.1
+c1f0ac0b-6719-5be8-8829-9b41cfd5c8ec,Vallejo,Model Color,Deep Sky Blue,70.844,#65A5CC,legacy,#22A8DD,5.1
+ad196414-72e2-572b-afcc-eb8d31414d9f,Vallejo,Model Color,Sunny Skin Tone,70.845,#DB9559,legacy,#EFA358,5.1
+5b166162-ebf1-4078-ab40-b15018d5949b,Vallejo,Mecha Color,Dark Grey Green,69.041,#414D4F,swatch_sample,#4F5250,5.1
+d74695a7-0d46-46a0-92c2-5a0a187303ab,Vallejo,Model Air,Dark Grey RLM42,71.123,#555658,swatch_sample,#474A51,5.1
+6aad1fc2-df03-57b5-8b6f-3c19fd4b970e,Vallejo,Model Color,Pastel Blue,70.901,#66798D,legacy,#61839C,5.1
+568055ea-03b3-5924-afcc-f073319db1b2,Vallejo,Model Color,Light Brown,70.929,#AD7048,legacy,#B86845,5.1
+6a078ab4-0ec2-57bd-b360-af402c02b902,Vallejo,Model Color,Dark Yellow,70.978,#A69B53,legacy,#938E4A,5.1
+9a5850a2-0103-4658-8134-e1989b6cb22f,AK Interactive,Figures Series,Canvas Tone,AK11436,#514928,legacy,#413D24,5.1
+bbc13818-04f7-4c3a-8809-f02f1209e9fe,Vallejo,Model Air,Aged White,71.132,#D6C9B0,legacy,#DDCAA0,5.1
+2803f039-c0f0-4863-998f-624a8b0e43df,AK Interactive,AFV Series,Nº1 Light Green (FS34151),AK11335,#5E6120,legacy,#4C591F,5.1
+e6ad947c-c7ac-5a28-bc5b-e66ab637e066,Vallejo,Model Color,Cream White,70.766,#E9DED3,legacy,#D9CABB,5.0
+94ec3148-2149-4cc7-8115-dd98b6549e75,Vallejo,Model Air,US Olive Drab,71.043,#5C5347,swatch_sample,#4C483F,5.0
+1618de6b-b597-4b1a-ad78-67a55326617e,Vallejo,Model Air,Medium Olive,71.092,#545646,legacy,#444A3E,5.0
+1b175296-8a21-48fa-af3d-64e3a7c42c1a,Vallejo,Model Air,IJA Olive Green,71.286,#524A30,swatch_sample,#534D3F,5.0
+3425b291-7a47-40cb-b4cc-d43d0ccadd5c,Vallejo,Model Air,N. 41 Dk Olive Drab,71.316,#524A30,legacy,#534D3F,5.0
+a01f9104-dcbf-437c-87e8-e8acb420b9ef,Vallejo,Model Air,Grey Blue RLM84,71.103,#A2A49B,legacy,#929C91,5.0
+518c38af-3331-42c4-94b8-8dbffbb58a8e,AK Interactive,AFV Series,Slate No.34,AK11375,#4E4C2D,legacy,#3E4128,5.0
+d91f16f2-51cd-4bdf-9275-1f9d041ff300,AK Interactive,AFV Series,7028 Dunkelgelb (Initial),AK11318,#998952,legacy,#887E47,5.0
+0759e3b0-07cc-45af-abca-3ab51c15025a,AK Interactive,AFV Series,RAL 8020 Braun,AK11331,#AD8555,legacy,#9F7749,5.0
+6bc882a9-1260-4a23-956c-a1ce67b10e5f,AK Interactive,AFV Series,Nº5 Earth Brown (FS30099),AK11336,#4F3927,legacy,#402C20,5.0
+a7d9af53-7ad8-4908-bc53-77c6072158a5,Vallejo,Model Air,Dark Slate Grey,71.309,#575743,swatch_sample,#5D5F54,5.0
+56783506-3c82-422f-91a7-0a51f9f6d9ed,Vallejo,Model Air,IJN Ash Grey,71.311,#8D8B7D,legacy,#89816C,5.0
+514d88ac-6789-437e-860a-8cd65d0d975e,AK Interactive,AFV Series,Khaki green No.3,AK11373,#514331,legacy,#403628,5.0
+9eae103a-3b39-4072-8bf5-cc4356341d20,Vallejo,Mecha Weathering,Dark Rust Wash,69.507,#E66E25,legacy,#E05A10,5.0
+f1e16e93-802a-4c1a-8618-470348fb615c,Vallejo,Game Color,Sick Green,72.029,#506945,legacy,#446B50,4.9
+edba3fdd-37db-4256-b190-acf4362863f3,Vallejo,Game Color,Beasty Brown,72.043,#654B31,legacy,#694B3A,4.9
+0dfd0154-d7e2-49bc-bdab-601ebecf6a5c,Vallejo,Model Air,Dark Earth,71.029,#625745,swatch_sample,#534D41,4.9
+c1dbe03b-6532-4f53-9de6-2f7d8c79a738,Vallejo,Model Air,Middle Stone,71.031,#9A7E51,swatch_sample,#8A7349,4.9
+52b9ee8b-546b-4664-af81-148d9b1d9a39,Vallejo,Model Air,Mahogany,71.036,#4D3D37,swatch_sample,#3F3130,4.9
+dd28ce61-3292-4860-8ada-f461bb17ea64,AK Interactive,Figures Series,Ocher Khaki,AK11422,#A3853B,legacy,#927A33,4.9
+a5b49ab5-d48f-4868-9571-14f8ac9e976e,AK Interactive,Figures Series,Field Grey Base #1 (Green uniform),AK11425,#423D24,legacy,#333220,4.9
+d0c288e4-f3fe-4997-a959-8ff886a7114e,Vallejo,Model Air,US Earth Yellow,71.291,#B59573,legacy,#BA915D,4.9
+9553aca8-6633-5e6f-a9ef-d7b58b6dd975,Vallejo,Model Color,Light Flesh,70.928,#F3DBC3,legacy,#FEEBCD,4.9
+a28e79bd-1281-4786-948d-9f455bc54d3c,Vallejo,Model Air,Neutral Gray,71.051,#72797E,swatch_sample,#65717D,4.9
+f9fffa65-7fb4-4fe8-9253-5c0b431e66f9,Vallejo,Model Air,Anthracite Grey,71.052,#515356,swatch_sample,#424951,4.9
+6fe45555-85fa-4e47-a6a6-9382e154c12e,Vallejo,Model Air,Light Green Chrom.,71.006,#616946,legacy,#50613F,4.8
+e8f90776-5373-49bf-8b91-6537c84cbf46,Vallejo,Mecha Color,Olive Green,69.028,#647856,legacy,#606E45,4.8
+97949e6c-3330-4f75-b3b6-133b3769b763,Vallejo,Model Air,Hull Red,71.039,#483733,swatch_sample,#3D3532,4.8
+e7007c91-adff-5c15-ab61-64973eccdb72,Vallejo,Model Color,Iraqi Sand,70.819,#C0A06F,legacy,#AE9763,4.8
+93d53634-7fa3-4afe-88f3-9b463afcf14a,Vallejo,Model Air,IDF Blue,71.113,#537689,swatch_sample,#53728E,4.8
+d92b8688-335a-53ec-8cfc-7d6c59e77ef0,Vallejo,Model Color,Beige,70.917,#E8CF94,legacy,#D5C47F,4.8
+2c894f48-35cb-4406-9fd1-74caf35bfdc7,AK Interactive,AFV Series,Russian Dark Brown 6K,AK11369,#392E16,legacy,#2C2415,4.8
+3bbde988-3f38-4ed8-8ec7-464c1827a4c1,AK Interactive,Figures Series,Waffen Red Brown,AK11419,#4C2E24,legacy,#3E221E,4.8
+5f00969a-83d4-4bc7-8dd5-bcde8d4a24d4,AK Interactive,AFV Series,NATO Brown,AK11359,#483425,legacy,#3A281F,4.8
+82554433-6b91-4b1a-b8ec-2da2343638b1,AK Interactive,Figures Series,Russian Uniform Base,AK11430,#585E22,legacy,#475520,4.8
+a3c5d926-c82d-459d-add6-97754051cdba,Vallejo,Mecha Color,Red,69.008,#BB3D31,legacy,#BC4042,4.7
+2f1297ad-74da-4369-8d41-547a8f94b086,AK Interactive,Figures Series,Dark Shadow Flesh,AK11405,#5B2B25,legacy,#4D2021,4.7
+0f44257d-4d8b-4557-9800-2c863e225ec4,Vallejo,Model Air,Pale Green,71.095,#728455,swatch_sample,#64825C,4.7
+561725f3-7dda-570e-9c08-006aa857bd72,Vallejo,Model Color,Red,70.926,#8C3C3A,legacy,#8E2A36,4.7
+48506e49-6997-413c-b76c-7d8005c3b3c6,Vallejo,Mecha Color,Off-White,69.003,#E5DFC9,legacy,#EDEBDF,4.7
+e4c739c2-7ddc-4ed8-b073-f505e9993972,Vallejo,Model Air,Dark Green RLM83,71.011,#525147,swatch_sample,#43463F,4.7
+7c8ce791-b6a1-4495-be81-f1dd1d080372,Vallejo,Model Air,Pale Blue,71.008,#7E9497,legacy,#6B9096,4.7
+3fb8dbc1-9023-5fc9-87af-fb375503058f,Vallejo,Model Color,Grey Blue,70.943,#5A6E84,swatch_sample,#466A8A,4.7
+24f9e55f-3d4d-57cc-ae1a-d926b31d6367,Vallejo,Model Color,Dark Vermilion,70.947,#BE423D,legacy,#C0232E,4.7
+1360e3d9-8365-464a-963e-006202555467,Vallejo,Model Air,Yellow Olive,71.013,#474944,swatch_sample,#393D3C,4.7
+6ffc4e52-84da-4ca4-9e58-f76255eec97b,AK Interactive,AFV Series,RAL 6003 Olivgrün opt.1,AK11309,#4E5322,legacy,#3E4A20,4.7
+b80e4fc2-1ac9-499d-ba27-7546946c79e4,AK Interactive,AFV Series,RAL 7017 Dunkelbraun,AK11315,#4F3C2D,legacy,#3F2F24,4.7
+4e0c6d1a-3ee8-5dea-8016-2bdc63fb1a1d,Vallejo,Model Color,Golden Yellow,70.948,#F8B447,legacy,#F6BE43,4.6
+63ebf60e-55f9-4c2d-b2af-4e9cbb4bc33e,Vallejo,Game Color,Gory Red,72.011,#6F2E2E,legacy,#6A2F38,4.6
+89896b8a-e051-411d-8f12-bf2671f064ab,Vallejo,Model Air,Med. Gunship Gray,71.097,#5D6068,legacy,#525969,4.6
+5b8a8b38-c463-42ab-ba38-7da801ffb8db,Vallejo,Mecha Color,Light Green,69.025,#BACDBC,swatch_sample,#C4CBBC,4.6
+5c8b2ccf-9ab5-47cc-9db5-a8db6981c4e2,Vallejo,Model Air,Green Zinc Chrom.,71.094,#58623C,legacy,#485937,4.6
+f0fc5590-6b5f-4ca8-90db-368ba2fb1c62,Vallejo,Model Air,Wood,71.077,#A9743B,swatch_sample,#9D6937,4.6
+8a1efa00-4cdf-4055-9e0e-c278a3d7466e,Vallejo,Model Air,Green Brown,71.020,#4E4D43,swatch_sample,#44433F,4.6
+752c3f2c-6db5-4166-a7d7-48dd6753e585,AK Interactive,AFV Series,S.C.C. No.15 Olive Drab,AK11386,#414129,legacy,#333523,4.6
+af50d3fe-4a12-44ab-8796-ace754518f18,Vallejo,Model Air,USAF Green,71.124,#505D5D,swatch_sample,#415151,4.6
+6859d559-89dc-4e2d-a494-08fea654b931,AK Interactive,AFV Series,CARC Tan 686A (FS33446),AK11349,#B79362,legacy,#A98554,4.6
+bd41f1d3-04d2-40a2-8446-73080a07fc65,Vallejo,Model Air,Interior Grey Green,71.305,#9BA497,legacy,#96A28A,4.6
+9e9cde6d-f269-4725-b891-6382eb1a4f57,Vallejo,Game Color,Angel Green,72.123,#223822,swatch_sample,#1A2F22,4.5
+003a902b-2d29-4e14-80ea-ca4e73764eaf,Vallejo,Mecha Color,Dark Blue,69.021,#2F5B76,swatch_sample,#3E5A77,4.5
+35903cfb-0d3f-47a7-8d9b-a6c98d5c5afa,AK Interactive,3GEN Acrylics,Natural Steel XF56,AK11210,#A2A39C,legacy,#B2B1AC,4.5
+c3a883e1-bb1f-5377-9d0c-124b7700642d,Vallejo,Model Color,Deep Green,70.970,#336248,legacy,#206843,4.5
+3a58cc2e-7a99-4d13-b982-4038cddbc41a,AK Interactive,AFV Series,Cremeweiss,AK11333,#E8DDAD,legacy,#E0DA98,4.5
+e7e107c6-e57c-4ae7-a4fd-8aec14e95235,AK Interactive,AFV Series,Silver Grey No.28,AK11374,#99945D,legacy,#888D53,4.5
+be16fc0f-320b-4532-ada8-3a2d2cb23d68,AK Interactive,Figures Series,Light Green Uniform,AK11428,#555F2C,legacy,#455729,4.5
+38253cff-d591-44fb-bd62-bc45307fe6d8,Vallejo,Model Air,Olive Green,71.007,#373B3A,swatch_sample,#2B3033,4.4
+43769e08-0fa3-4352-9d3d-6e6444f14876,Vallejo,Mecha Color,Deep Blue,69.018,#29A2CC,swatch_sample,#0C95C4,4.4
+88e95bf2-6eef-476b-a311-d346b4b9081b,AK Interactive,AFV Series,S.C.C. No.1A Very Dark Brown,AK11384,#402E21,legacy,#32231B,4.4
+1aabc3e5-adca-4c26-a7d1-18e6e50ddb30,Vallejo,Mecha Weathering,Desert Dust Wash,69.522,#C9B284,legacy,#D8BC7F,4.4
+e27f96b0-ccb0-42fc-9a29-52cdbeb724d2,Vallejo,Model Air,Insignia White,71.279,#DAD5C5,legacy,#E3E3D9,4.3
+37d0def1-d079-4688-b083-77fdf08b0170,AK Interactive,Figures Series,Field Grey Base #2 (Grey Uniform),AK11423,#414436,legacy,#34382E,4.3
+f5428f12-a38f-414d-8df7-240dbc123405,Vallejo,Model Air,White Grey,71.119,#D2CDC1,legacy,#D0D1BF,4.3
+a3b14fcf-db55-4495-a051-ba0a37770143,Vallejo,Model Air,Camou. Dark Green,71.019,#4F514B,legacy,#414642,4.3
+d20ca09a-56cd-428b-b416-be4fb94b1774,Vallejo,Model Air,Gunship Green,71.014,#4D5947,swatch_sample,#465A4F,4.3
+6baa668c-7182-4e71-b473-06523be8d375,Vallejo,Model Air,NATO Green,71.093,#555B50,swatch_sample,#475148,4.3
+ba15046d-e913-4096-a050-b46043a25e2c,Vallejo,Game Color,Orange Fire,72.008,#EC6C37,legacy,#F05720,4.2
+bdce0e55-217f-45f8-9b7c-26f6f7462ffc,Vallejo,Model Air,Panzer Dark Grey,71.056,#47484A,legacy,#3A3D42,4.2
+f93c34b4-0629-4d4a-8e71-ee28ed5feb4c,Vallejo,Mecha Color,Sky Blue,69.017,#60CEEC,swatch_sample,#7BCAEC,4.2
+343bef8e-31d5-49e6-96f8-2c36a6228b74,AK Interactive,AFV Series,RAL 8017 Rotbraun,AK11330,#3B261D,legacy,#2F1C18,4.2
+1036dd36-f2e9-40c2-803c-8247a2527e9f,Vallejo,Mecha Metallic,Light Steel,69.064,#D1D1D1,legacy,#CFD6D3,4.1
+07580b5b-f3c5-5bc2-8fb5-c33a1c359a56,Vallejo,Model Color,Yellow Ochre,70.913,#C69C53,legacy,#BE903A,4.1
+22c18fc2-1851-41d7-b936-2ec4ee0d2d58,AK Interactive,Figures Series,Green Uniform Base,AK11427,#2F381F,legacy,#242E1C,4.1
+36c50696-be8d-45ad-97bc-c8d8f6ad2f53,AK Interactive,Figures Series,Highlight Flesh,AK11403,#FBD0A4,legacy,#FBC38F,4.1
+5bc7a476-9379-56f6-9e69-d2b72a6f36f4,Vallejo,Model Color,Vermilion,70.909,#CB443D,legacy,#D4272B,4.0
+1c4cf7d7-5085-40fd-a9a5-1965570610ff,Vallejo,Model Air,USAF Light Blue,71.111,#556978,swatch_sample,#4E647B,4.0
+0309e897-f961-432a-8ebd-e005e21d3ee9,Vallejo,Model Air,Black Green,71.018,#494F51,swatch_sample,#3C454A,4.0
+087b8ffe-8464-436f-9c52-81ccf52cd32d,AK Interactive,AFV Series,Dark Green (FS34102),AK11342,#333C1E,legacy,#28321B,4.0
+41b89e76-5d51-4ee5-8931-173c0b99ae9b,Vallejo,Model Air,Black,71.057,#323132,swatch_sample,#26272B,3.9
+ea9d4a09-1280-458e-a290-98f151a2db4b,Vallejo,Model Air,Light Green RLM82,71.022,#4D5241,swatch_sample,#404839,3.9
+19c32dbe-755a-4730-b742-be483c5b63e3,AK Interactive,AFV Series,RAL 1039 F9 Sandbeige,AK11325,#BC9C61,legacy,#AF9053,3.9
+441d8390-b0ae-4d8f-9bf6-6803ef1eba18,Vallejo,Mecha Color,SZ Red,69.009,#A03836,legacy,#B43738,3.9
+4501d0b2-29cf-502a-bbdb-888b36abe9c8,Vallejo,Model Color,Flat Yellow,70.953,#F6C340,legacy,#FCCB19,3.9
+92c1d815-2c59-4114-b648-187e687afc91,Vallejo,Mecha Color,Yellow,69.004,#E9AF3B,legacy,#E9A401,3.9
+16da7618-5d1c-5b19-92a2-585732065828,Vallejo,Model Color,Dark Sea Grey,70.991,#7D7C7C,legacy,#747673,3.9
+ba656152-aa11-4101-a5e7-934346e15cec,Vallejo,Model Air,Dark Grey Blue,71.054,#4B4E55,swatch_sample,#3E454F,3.9
+b1896d11-2145-4c9c-865a-38e3c3532a5c,Vallejo,Model Air,Dark Ghost Gray,71.120,#8C98A0,swatch_sample,#7F919F,3.9
+3606a5c5-2f94-495c-be8b-39cafa30acf6,Vallejo,Model Air,Ferrari Red,71.085,#B0372C,swatch_sample,#AB2F31,3.8
+6ae2a55a-d94d-5e89-9240-3fc3a753c82e,Vallejo,Model Color,Violet Grey,70.773,#5b5a59,legacy,#525756,3.8
+fdd4bf78-554b-5f99-a72b-9c47e486cb56,Vallejo,Model Color,Ger. Fieldgrey WWII,70.830,#57523a,legacy,#525041,3.8
+63f81a55-e0f3-43f3-b462-c436680293c7,Vallejo,Model Air,Grey,71.047,#575B62,swatch_sample,#4D5562,3.8
+ec741b6f-76e2-5f33-899a-d39e96c370e6,Vallejo,Model Color,Burnt Umber,70.941,#624F42,legacy,#5C4942,3.8
+2bb9933d-e060-4e33-a23e-534134dcce37,AK Interactive,AFV Series,Russian Green 4BO,AK11368,#3E4C28,legacy,#324325,3.8
+1b8495b7-ea57-41f1-a7d6-99959b42d723,AK Interactive,AFV Series,WWI French Artillery Grey,AK11303,#535D6C,legacy,#485365,3.8
+e261ef15-1de7-4e2b-9171-1b9f109173d5,AK Interactive,AFV Series,Forest Green (FS34079),AK11346,#2B351B,legacy,#212C19,3.8
+fe71b547-31c9-4df8-898b-07411838d58d,Vallejo,Model Air,Light Sea Blue,71.089,#2BA1CD,legacy,#41A9DC,3.7
+46f1ff5c-9f0e-5bd8-81fd-543cb5b700ea,Vallejo,Model Color,Flat Flesh,70.955,#CD9564,legacy,#D7A068,3.7
+8be272ab-b8fd-4da8-99af-18aeb4f8547a,AK Interactive,AFV Series,WWI French Green 1,AK11305,#363F2B,legacy,#2A3525,3.7
+f6c4dd83-1ec6-4bb5-bb6c-e96e006f11b2,Vallejo,Model Air,IJA Midouri Green,71.134,#424C3F,swatch_sample,#364238,3.7
+118cfc6c-5172-458e-9bab-36de19423c56,Vallejo,Mecha Primer,Sand,70.644,#CEB993,legacy,#DAC495,3.6
+4ec373b6-d5ad-4dcb-ab43-7f68429d6df4,Vallejo,Model Air,IJA Light Grey Green,71.321,#AFB2A1,legacy,#A5AA93,3.6
+b044d1ab-f278-45f3-8922-422e88528a53,Vallejo,Model Air,IJA Dark Green,71.285,#575546,swatch_sample,#52543F,3.6
+52a88dd8-040d-45db-9607-84964089a910,Vallejo,Model Air,IAF Sand,71.327,#C5BAA6,legacy,#C4B29A,3.6
+18ced116-cc7a-4840-9df6-a5640ccd3b77,Vallejo,Model Air,French Blue,71.088,#294671,swatch_sample,#304E84,3.5
+f9d70538-aecb-4b82-9e85-577ac73f3ac3,Vallejo,Model Air,Light Blue RLM76,71.257,#99A7A4,legacy,#96ABA4,3.5
+f4334e86-12af-4f49-8399-5075f80a99b0,Vallejo,Model Air,Blue Grey,71.115,#484C54,swatch_sample,#3C434D,3.5
+6cb13fac-97b7-4264-8c3c-e2a7e8121ae4,Vallejo,Model Air,USA Flat Brown,71.026,#8A6848,legacy,#7F6044,3.5
+45531376-8a7e-4dc0-8b6e-21f1aad2013f,AK Interactive,AFV Series,NATO Green,AK11358,#2B3E25,legacy,#223522,3.5
+30d3f977-0963-422e-b62d-35afd8c70abc,Vallejo,Model Air,Burnt Umber,71.040,#40332C,swatch_sample,#3C352F,3.4
+3eb99315-3ae5-558b-a843-c0bd5e8a4d76,Vallejo,Model Color,Cold White,70.919,#f6f5fa,legacy,#FFFFFF,3.3
+04c86e0e-f323-5eb8-b99d-4d9a9b171b6c,Vallejo,Model Color,Carmine Red,70.908,#A83836,legacy,#B5252F,3.3
+794d61f7-38db-4891-832d-e9379d0e5097,AK Interactive,AFV Series,Portland Stone No.64,AK11378,#E5C38A,legacy,#DFB976,3.3
+eff9a1f3-7d60-512f-84be-8a504d9a3551,Vallejo,Model Color,Brown Sand,70.876,#9E7358,legacy,#A47058,3.2
+f15a7db3-6d70-40f8-bc00-19f5cf37ff39,Vallejo,Game Color,Elfic Blue,72.117,#4C5A76,legacy,#4A6081,3.2
+c0a49b2f-44c2-5622-b044-1a1c4fc57e7b,Vallejo,Model Color,Andrea Blue,70.841,#2685B9,legacy,#0E8BCD,3.2
+3d3ca221-d4b1-4c7b-88e8-47ffa92c6958,Vallejo,Model Air,Engine Gray,71.048,#545C68,swatch_sample,#4B535E,3.2
+c603e487-56cf-461e-bb4f-8ba58529a1bc,AK Interactive,AFV Series,Mustard Yellow,AK11366,#C9982D,legacy,#BF8E29,3.2
+dc07197b-092b-44d4-b938-dcaff863d1d3,AK Interactive,Figures Series,Medium Green,AK11412,#293C1F,legacy,#21341D,3.2
+9a6a0242-1e51-49b0-bcff-4eba95a09cf0,Vallejo,Game Color,Hot Orange,72.009,#DF4B33,legacy,#F1402D,3.0
+20d1ccb3-d3cf-5ede-bc6a-0aa8862a48f3,Vallejo,Model Color,Grey Brown,70.762,#5B4922,swatch_sample,#534724,3.0
+c141632e-e5e9-4ceb-b53f-9b5a0d59c10b,Vallejo,Model Air,USAAF Light Gray,71.296,#B2B1A8,legacy,#BCBCB2,3.0
+91342401-bfde-4aef-bccc-190975af1b2c,Vallejo,Model Air,USN Sea Blue,71.295,#45474E,swatch_sample,#43484C,3.0
+bd094fda-2d93-4781-86b8-343baaf46fc9,Vallejo,Model Air,Sky Blue,71.306,#C9D5D3,legacy,#C2D6D7,3.0
+8e170e10-73e9-4878-8d69-e115df7fa84a,Vallejo,Mecha Weathering,Brown Eng. Soot (Matt),69.818,#562D1C,legacy,#603520,3.0
+6c8d9bdd-400e-513b-a48e-19938c97b804,Vallejo,Model Color,Beige Red,70.804,#C3835B,legacy,#C1885B,2.9
+10132f5d-1a0a-4223-905c-0bfd932343a6,Vallejo,Model Air,Green RLM73,71.256,#474E48,swatch_sample,#444D4C,2.9
+35f613a8-a88f-4c88-81bc-a4c2ff806e8e,Vallejo,Mecha Color,Sand Yellow,69.033,#EAB85E,legacy,#E4B86F,2.9
+c6d4b342-9e37-40c3-866a-64000ccc99fc,Vallejo,Model Air,Sand Beige,71.244,#C0AB8C,legacy,#B5A48A,2.9
+17fe81c6-4735-4900-aa1d-84d09b760c9b,Vallejo,Model Air,Armour Brown,71.041,#453C39,swatch_sample,#423839,2.9
+ac6ff1ea-f179-4367-9010-69eeb8be8150,AK Interactive,AFV Series,Light Stone No.61,AK11377,#CFA344,legacy,#C5993A,2.9
+60332bf4-072e-4378-860c-692c45b48258,Vallejo,Model Air,Red RLM23,71.003,#C82517,swatch_sample,#CB2624,2.8
+cccb9453-4262-43c2-8e08-a61f9ddaa04d,Vallejo,Model Air,Green RLM72,71.263,#484742,swatch_sample,#474948,2.8
+2ebf33a0-df75-5fbc-80f7-348754bb2f51,Vallejo,Model Color,Medium Blue,70.963,#295C86,legacy,#23628B,2.8
+d8a3e0d3-4282-4bb5-9d1d-ea80d78d1c93,Vallejo,Game Color,Scrofulous Brown,72.038,#BB722D,legacy,#B26C2D,2.7
+5e3daa03-55a3-4c36-aaab-10496915d972,Vallejo,Model Air,AMT-12 Dark Grey,71.308,#474A51,swatch_sample,#43484C,2.7
+d9ef8bfd-fd13-4433-a4be-0b5cb81d2442,Vallejo,Model Air,Dk Mediterr. Blue,71.313,#293850,legacy,#1F3751,2.7
+c37df5a9-c0c2-46f8-9035-f8d50ffae509,Vallejo,Model Air,Flanker Blue,71.337,#9AB0B7,legacy,#91AEB4,2.7
+a258c074-8864-43d9-a6c6-ffe9723b4f28,Vallejo,Model Air,Camou. Pale Brown,71.035,#705948,legacy,#6B594D,2.6
+34b1d2e1-d44d-402c-a3ff-2e9fe4156768,Vallejo,Mecha Color,Orange,69.007,#E7643B,legacy,#E9602B,2.6
+aa36a894-ffb3-458b-8f62-2b5f3dfaf65c,Vallejo,Model Air,Eau de Nil “D.E.G.”,71.009,#AABA82,legacy,#B5C28D,2.6
+0d1fb7bb-af82-4bee-9996-5ba61364176b,AK Interactive,AFV Series,RAL 6007 Grün,AK11308,#416231,legacy,#375D30,2.6
+8b28c943-cf6e-49e2-b30f-c10c4a1f7efe,Vallejo,Game Color,Elf Skin Tone,72.004,#CF926B,legacy,#DA9267,2.5
+3a7e9f04-3a5f-4f74-b0c6-41bebe7f81a0,Vallejo,Model Air,Light Olive,71.247,#6A624B,swatch_sample,#685F4D,2.5
+41c92c91-54b6-4070-9b0f-269a7fde0353,Vallejo,Model Air,Olive Green RLM80,71.265,#4C5141,swatch_sample,#4C4F3A,2.4
+70afffb2-3f0f-41c5-8dd0-236af129896c,Vallejo,Model Air,Intermediate Blue,71.299,#5E6B77,swatch_sample,#5E707E,2.4
+3f714e7e-0a17-494a-8869-f7fdc77715a2,Vallejo,Model Air,IJA Grey Green,71.326,#B2AD9B,legacy,#BBB39E,2.4
+1d117f4f-c5ab-40fa-92ba-ca2817d3b667,Vallejo,Mecha Weathering,Oiled Earth Wash,69.521,#685B52,legacy,#6E5C51,2.4
+9add7eb2-0cd6-4d1a-8f7d-b6cc26b1b81b,Vallejo,Game Color,Gold Yellow,72.007,#EC8927,legacy,#F68514,2.3
+01cfcfd0-2274-5f50-9a7a-21caf4135ebf,Vallejo,Model Color,Med. Flesh Tone,70.860,#b17a3f,legacy,#B97A37,2.2
+890f146e-add3-4eeb-8ddc-c70c58086a35,AK Interactive,3GEN Acrylics,Rubber Black,AK11027,#302C20,legacy,#29261A,2.1
+f9734a6b-1eec-45f4-bbce-602a603ff4ea,Vallejo,Model Air,Dark Blue RLM24,71.266,#364A63,swatch_sample,#2E4861,2.1
+e7608e77-9311-4920-8148-bc97e87eeba5,Vallejo,Model Air,US Dark Green,71.289,#5A5A49,swatch_sample,#575944,2.1
+33a64f73-0624-49dd-970a-da2096e9c94a,Vallejo,Model Air,JGSD Brown 3606,71.297,#6B6159,swatch_sample,#70665C,2.1
+929ab3ce-fc15-48ad-952a-3212fffa6ea4,Vallejo,Model Air,AMT-11 Blue Grey,71.304,#5D6068,swatch_sample,#5A616B,2.0
+14e43c9a-f039-49d1-a2d1-e0012a99b666,Vallejo,Model Air,US Forest Green,71.294,#565648,swatch_sample,#54544A,2.0
+d9130f0a-3dc2-45dd-a8f6-b57084b35236,Vallejo,Model Air,UK Azure Blue,71.108,#718CB0,swatch_sample,#6A87AF,2.0
+702f0569-4223-4146-8d13-933f07e17ec4,Vallejo,Model Air,White,71.001,#F9FBF9,legacy,#FFFFFF,1.9
+af6ea492-f299-478e-996d-79a0e5b84b0d,Vallejo,Model Air,Brown Violet RLM81,71.264,#685D4D,swatch_sample,#635A49,1.9
+6c842dcd-9e5d-4de4-ae0d-68ca6a4a397c,Vallejo,Model Air,Light Blue RLM65,71.255,#8C9B98,legacy,#899D9C,1.9
+58363edc-5753-4165-ab41-a2ca25fd824b,Vallejo,Model Air,US Loam,71.292,#54564D,swatch_sample,#565751,1.9
+0bbe5ad1-d98a-41a2-846c-42881186ae1f,Vallejo,Mecha Color,Brown,69.034,#766049,swatch_sample,#7B654D,1.9
+b97fb959-fafe-471b-982d-0760dee8df68,Vallejo,Model Air,BS Dark Green,71.324,#484836,swatch_sample,#444631,1.9
+5550a611-6f5d-445b-b7f2-fee88978b9fd,Vallejo,Model Air,Grey Green RLM74,71.258,#545652,swatch_sample,#535554,1.8
+97b703a3-4337-47c5-aef2-8fc307462c39,Vallejo,Model Air,IJN Dk Black Green,71.325,#474944,legacy,#434542,1.8
+b659f9d3-f9b4-40c1-b17f-a0937b08b143,Vallejo,Model Air,Aggressor Gray,71.274,#7C7E83,swatch_sample,#7B7C7E,1.8
+669d1f8c-9d8a-4b9b-8e5b-17dad42fc614,Vallejo,Model Air,NATO Black,71.251,#333234,swatch_sample,#2F3034,1.8
+9d6e34ba-78ab-4a31-b257-1ecbfa3b6094,Vallejo,Model Air,M495 Light Gray,71.298,#A29E90,legacy,#9C998A,1.8
+89f846c2-a6f7-4a1e-855c-62484b0a832f,Vallejo,Model Air,US Earth Brown,71.290,#60554B,swatch_sample,#65594D,1.7
+93cbe8c7-69fa-4f11-a5d8-d0c3815a47d4,Vallejo,Model Air,Ocean Gray,71.273,#6E7783,swatch_sample,#6D767F,1.7
+e1fd0ed3-7364-491d-aa14-700de8977883,AK Interactive,3GEN Acrylics,Oxford,AK11188,#353841,legacy,#353A42,1.6
+f9e50dfc-602c-4a7d-bb20-a4d7d47acacd,Vallejo,Model Air,AMT-4 Cam. Green,71.301,#686042,legacy,#635C3F,1.6
+8734b39b-9420-446e-8002-a83bea5238c1,Vallejo,Model Air,US Earth Red,71.293,#7E6251,swatch_sample,#7B604D,1.5
+c06774d4-cc35-47d7-a98b-2f35ad4e4fe2,Vallejo,Model Air,Sand Yellow RLM79,71.278,#977751,swatch_sample,#97744E,1.4
+8a8f7a4e-2dff-4a27-a9c4-c01d286eaa97,Vallejo,Model Air,Glossy Sea Blue,71.300,#272E35,swatch_sample,#232C35,1.4
+f10cc25f-0ca8-4b72-b090-89b206d73aad,Vallejo,Model Air,Blue,71.004,#354268,swatch_sample,#303F68,1.3
+d37717b5-1046-41e2-8e06-945639b35d1b,AK Interactive,3GEN Acrylics,Ash Grey,AK11024,#424138,legacy,#42433A,1.3
+be13fe70-a8b4-49c4-8241-30dd40ac5f92,Vallejo,Model Air,BS Med. Sea Grey,71.307,#838B8D,legacy,#7F898B,1.3
+c957c7d6-72ba-4f86-b1cc-4969e67a1239,Vallejo,Model Air,Camouflage Gray,71.280,#6D6E6C,swatch_sample,#6A6C69,1.3
+5350dd4f-3ece-4dfb-be76-c65b37b68f32,Vallejo,Model Air,IJN Black Green,71.322,#424C3F,swatch_sample,#3E493B,1.3
+9b8b3500-ab58-5723-bba7-97dcc3d8c1b0,Vallejo,Model Color,Light Mud,70.760,#79765E,legacy,#797861,1.2
+a4504d33-f856-44f0-a48d-259badd97fb2,Vallejo,Model Air,Dark Gull Gray,71.277,#828383,swatch_sample,#818284,1.2
+0dc11a35-fd0f-44d2-ae3b-ad781b1df135,AK Interactive,3GEN Acrylics,English Grey,AK11020,#6D6D65,legacy,#706E65,1.2
+8ad0bc76-241a-4a03-94dc-710c9f8d7677,Vallejo,Model Air,Light Blue,71.328,#CBCDC1,legacy,#C6C9BE,1.2
+ceebf3b1-87f7-4de6-82ab-b961e50a8ed2,AK Interactive,3GEN Acrylics,Blue Violet,AK11070,#886CA4,legacy,#896FA5,1.1
+49defb28-cefd-4bd0-851d-1acaf4236909,Vallejo,Model Air,Sky Type S,71.302,#A3A590,legacy,#A2A48C,1.1
+c3cec28e-56b0-4adb-9d5c-032ab5d5e443,Vallejo,Model Air,AII SV. Gol Lt Blue,71.317,#7AC7DB,legacy,#7CC5D6,1.1
+c5d36ec4-2b16-4392-a996-f3906794b833,AK Interactive,3GEN Acrylics,Blue-Green,AK11169,#338477,legacy,#388678,1.0
+12cd1101-193d-48d0-9e52-1c7044d67602,AK Interactive,AIR Series,RLM 66 (1938),AK11819,#363D40,legacy,#363E40,1.0
+2bcc62c0-d97c-4a3d-b5c1-06fb90acb623,AK Interactive,3GEN Acrylics,Basalt Grey,AK11021,#5C615C,legacy,#5E625E,1.0
+5de52b06-238a-41ac-aee3-b094f7fd5b5f,AK Interactive,3GEN Acrylics,(Chipping) XF-10,AK11113,#301F11,legacy,#302011,1.0
+740071c4-75b7-46ef-b176-aa73a78009ce,Vallejo,Model Air,Ger. Yellow Brown,71.272,#86704D,legacy,#846E49,1.0
+e4b89367-0d4d-49f6-91d9-080bf8e8da08,Vallejo,Model Air,Seaplane Gray,71.314,#585958,swatch_sample,#555756,1.0
+bb68976e-2095-40f4-90fc-259d4f86a762,AK Interactive,3GEN Acrylics,Dark Sea Grey,AK11015,#7B7873,legacy,#7B7973,1.0
+4434f726-c9f6-49c4-9a84-2b2e4f73adea,AK Interactive,AIR Series,Extra Dark Sea Grey BS381C/640,AK11850,#4F555E,legacy,#4F565E,1.0
+ef910396-6830-4776-8a05-c88f6f2d02a0,AK Interactive,AIR Series,RLM 72,AK11823,#464642,legacy,#464742,1.0
+e9c04977-0c37-461f-858d-95aa997f48a8,AK Interactive,3GEN Acrylics,Grey-Brown,AK11125,#6F5B3A,legacy,#705B3C,1.0
+94c9d6ba-1351-4652-8f29-da85bf230871,AK Interactive,3GEN Acrylics,Mud Brown,AK11120,#6F5330,legacy,#725532,0.9
+0adfb6e4-9d3c-4a2f-8169-4effa6de4f15,AK Interactive,3GEN Acrylics,Oily Steel,AK11211,#A39F8B,legacy,#A6A28E,0.9
+da6f70bb-1939-4537-a3b5-41abcb320ed1,AK Interactive,AIR Series,Medium Sea Grey BS381C/637,AK11843,#818B92,legacy,#818C92,0.9
+51226e45-4e3c-4ca6-9976-e4c4a3d7a196,AK Interactive,3GEN Acrylics,Dark Green-Grey,AK11133,#394D3C,legacy,#3C4F3D,0.9
+bca09ee6-6d0f-4fb3-95e1-1626f7ccea8a,AK Interactive,3GEN Acrylics,Black Green,AK11160,#162014,legacy,#182116,0.9
+1f224f96-c301-4405-8666-a17a7e4d4f88,AK Interactive,AIR Series,Neutral Grey 43,AK11862,#6C6C68,legacy,#6C6D68,0.9
+9cd47e5f-533c-4081-833a-d56c5342955a,AK Interactive,AIR Series,Gunship Grey FS 36118,AK11881,#5E616B,legacy,#5E626B,0.9
+1c4bd346-bc28-454d-83fe-eee575141c9a,AK Interactive,AIR Series,RAF Dark Camouflage Grey BS381C/629,AK11855,#71797E,legacy,#72797F,0.9
+0e043eb6-8ce3-496d-b5ca-f8199cc56a74,Vallejo,Model Air,AMT-1 Lt. Grey. Brown,71.320,#968B7F,legacy,#958B81,0.9
+aee34a66-63e2-4d52-a2cd-dfcc89f483aa,AK Interactive,AIR Series,AMT-11 Blue-Grey,AK11917,#465A60,legacy,#475A61,0.8
+c7750d33-5465-4643-9560-e73a10a8c97f,AK Interactive,3GEN Acrylics,Gunship Green,AK11150,#465234,legacy,#475435,0.8
+4226f93d-2e24-4f47-904c-9587e5393de0,AK Interactive,3GEN Acrylics,Ducat Blue,AK11177,#3A889F,legacy,#3A88A1,0.8
+6028c233-4926-417f-8264-c6d7c7ea8f36,Vallejo,Model Air,USAF Light Gray,71.276,#C2C5C1,legacy,#C3C5C2,0.8
+f8045b15-dbe9-4a6f-9efd-a186ca33ae68,AK Interactive,3GEN Acrylics,White Grey,AK11003,#F5F4EE,legacy,#F5F5EE,0.8
+ce2ab115-76f7-4cfc-b389-8fd8c928a4fa,AK Interactive,3GEN Acrylics,Grey-Green,AK11016,#7F7F64,legacy,#818166,0.8
+6d93bf98-156b-5bd2-acd5-68694c037bd7,Vallejo,Model Color,Dark Flesh,70.927,#D99F53,legacy,#D59D52,0.8
+cb683c51-9c61-4ebe-87fe-d372cd9ba0c0,AK Interactive,3GEN Acrylics,Dark Grey,AK11022,#494945,legacy,#4B4A45,0.8
+dd9a40e5-3a41-481c-a894-57b5baacffa1,AK Interactive,AIR Series,M-485 Blue-Grey,AK11865,#71858A,legacy,#72858B,0.8
+ac364d16-3299-4983-91ac-ddcea1fe74bf,AK Interactive,AIR Series,RLM 73,AK11824,#424841,legacy,#424941,0.8
+441c7f08-4719-4b49-b193-e2a998320747,AK Interactive,3GEN Acrylics,Magenta,AK11067,#B1325D,legacy,#B23460,0.7
+b2e86f97-746f-4f98-8999-46be1504457e,AK Interactive,3GEN Acrylics,Off White,AK11002,#ECEBE1,legacy,#EDEBE2,0.7
+ec499da4-1a84-44ee-af01-28faae115102,AK Interactive,3GEN Acrylics,Emerald,AK11144,#096142,legacy,#066343,0.7
+c80568b3-91aa-4b54-b048-bd0261365bd0,AK Interactive,3GEN Acrylics,Green-Grey,AK11132,#DEE4BC,legacy,#E0E5BF,0.7
+58c6465a-b0c6-4cf9-bb70-2858494c0e03,AK Interactive,3GEN Acrylics,Command Green,AK11155,#2F2E17,legacy,#302E18,0.7
+33b3c91a-9b2d-490b-9e5f-70b0a5e33065,AK Interactive,3GEN Acrylics,Reflective Green,AK11158,#352E16,legacy,#352F17,0.7
+28c4db4d-fa24-443e-b13c-d2a34c677b5f,AK Interactive,3GEN Acrylics,Extra Dark Green,AK11153,#223028,legacy,#22312A,0.7
+4437ea82-750d-4e26-ae8c-0ce9b1ec3372,AK Interactive,3GEN Acrylics,Dirty Red,AK11095,#7E1910,legacy,#7F1C10,0.7
+da1a5547-90ff-4571-ad36-548369113b49,AK Interactive,3GEN Acrylics,Deep Blue,AK11182,#184066,legacy,#1D4167,0.7
+3f584852-f8e4-4293-87c2-89c3b3552cf3,AK Interactive,3GEN Acrylics,Purple X-16,AK11073,#594550,legacy,#5B4650,0.7
+68cf7d5d-c612-4b66-9534-499a5427bb64,AK Interactive,3GEN Acrylics,Sky Blue,AK11175,#86C2CB,legacy,#8AC4CC,0.7
+a53c846c-5431-4ad9-9a7d-0981ea541751,AK Interactive,3GEN Acrylics,Green Sky,AK11134,#88B082,legacy,#8BB284,0.7
+73ee81b1-85fc-4469-9955-4424ac4c5460,AK Interactive,3GEN Acrylics,Medium Sand,AK11034,#CA9933,legacy,#CD9A32,0.7
+93fec8ba-8ecc-4031-a779-f3143195020d,AK Interactive,3GEN Acrylics,Dark Rust XF-68,AK11107,#522510,legacy,#532711,0.7
+d8c4987f-3313-45e4-8270-dedb2b19ed8c,AK Interactive,3GEN Acrylics,Pale Grey,AK11013,#AEAFB4,legacy,#AEB0B6,0.7
+a25ed265-759d-46aa-b6cb-f4c7dfbe795a,AK Interactive,3GEN Acrylics,German Grey,AK11025,#38372F,legacy,#383830,0.7
+80f3644f-9548-4db8-8ac7-2742cdedbf2f,AK Interactive,AIR Series,RLM 81 Version 2,AK11836,#464D3E,legacy,#474D3F,0.7
+487bc883-5750-4b01-85f8-b16508f3e251,AK Interactive,AIR Series,IJA #7 Ohryuko Nana Go Shoku (Olive Brown),AK11901,#50492A,legacy,#504A2A,0.7
+5176b5fb-b2fe-4dd8-a6c3-b40d8901db57,Vallejo,Model Air,AMT-7 Greyish Blue,71.318,#638C9D,swatch_sample,#618C9F,0.7
+d6967d69-79bb-4741-b6ed-202915537ba5,AK Interactive,AIR Series,IJN D2 Green Black,AK11894,#253730,legacy,#263731,0.7
+d2dbfb70-1310-4887-8ba2-af7688d7ef58,AK Interactive,3GEN Acrylics,Deep Brown,AK11102,#854A28,legacy,#874B2A,0.6
+0bc98bea-dd8e-4ad5-a9a3-0eabcdcc7acf,AK Interactive,AIR Series,RLM 70,AK11821,#464941,legacy,#474A41,0.6
+ae1e73fa-4c67-4a0a-ab67-05583e72b290,AK Interactive,3GEN Acrylics,Carmine X-7,AK11091,#B93D24,legacy,#B83F24,0.6
+fc649309-7223-4766-916a-7ee9efee63a0,AK Interactive,3GEN Acrylics,Brown Rose,AK11063,#D88362,legacy,#D98563,0.6
+d1a49f74-2150-49e0-bf3e-3b87675c3697,AK Interactive,3GEN Acrylics,Aquatic Turquoise,AK11170,#016456,legacy,#006558,0.6
+b32593f2-6606-46de-ae0f-ae0895d569b4,AK Interactive,3GEN Acrylics,Dark Sand,AK11033,#E6BC56,legacy,#E5BD58,0.6
+72dc14b1-9b05-489c-b4c7-63ad7bf18a63,AK Interactive,3GEN Acrylics,Black Red,AK11098,#41261D,legacy,#43281F,0.6
+469046ce-c2dc-44ab-b8c3-18a5134bf8c0,AK Interactive,3GEN Acrylics,Smoke Black,AK11028,#2B2B20,legacy,#2C2C22,0.6
+ce0535f1-3ec1-4fa7-8bad-b159b0d0f4af,AK Interactive,3GEN Acrylics,Neutral Grey,AK11018,#676E69,legacy,#686F69,0.6
+3318f36f-bcf6-4684-8a02-d5c6ec3e4f54,AK Interactive,AIR Series,IJN J3 Hai-iro (Grey),AK11891,#909287,legacy,#909388,0.6
+44ab2161-c773-4005-8ab2-f19978db41fa,AK Interactive,3GEN Acrylics,Leather Brown,AK11110,#45301D,legacy,#45311E,0.6
+ee0b58d5-1463-478c-868f-8fc693422e1a,AK Interactive,3GEN Acrylics,Middle Stone,AK11124,#8A7029,legacy,#8C7129,0.6
+5ec82033-1846-43cf-984b-1aa5e1e960a3,AK Interactive,AIR Series,Dark Olive Drab 41,AK11860,#525041,legacy,#535041,0.6
+bc986cdb-e053-4b13-b37b-ad10fa1835db,AK Interactive,3GEN Acrylics,US Dark Green,AK11157,#423917,legacy,#433918,0.6
+88748639-8ee0-4b24-a1bd-50ce5e41bfb9,Vallejo,Mecha Color,Dark Green,69.030,#515243,legacy,#525345,0.6
+5ef1bc41-25cc-492d-9729-e2b4a80c6612,AK Interactive,3GEN Acrylics,Intermediate Blue,AK11163,#676966,legacy,#676A67,0.6
+6aa4e2a4-b05e-45c0-90d7-74cc418b1b91,AK Interactive,3GEN Acrylics,Dark Blue-Grey,AK11164,#4A5D53,legacy,#4C5E54,0.6
+31a9a27b-04b0-40ae-b62b-24d0a952acb1,AK Interactive,3GEN Acrylics,Spectrum Blue,AK11162,#B3BDBD,legacy,#B3BEBF,0.6
+af99b4f0-40be-4c35-b976-d3e4682f7045,AK Interactive,3GEN Acrylics,Blue-Grey,AK11011,#C6CFCD,legacy,#C7D0CD,0.6
+5aca9e29-9d87-4e4d-9a4b-d981468e99a1,AK Interactive,3GEN Acrylics,Medium Grey,AK11010,#B6B9A1,legacy,#B7B9A2,0.6
+a44a929a-f0fc-40a8-9a40-fbfdb346f385,AK Interactive,3GEN Acrylics,Clear Orange,AK11218,#EA5D0A,legacy,#EB5F0A,0.6
+866624f5-dca5-4745-8c96-be4275c060e7,AK Interactive,AIR Series,Aggressor Blue FS 35109,AK11877,#3A6C6F,legacy,#3B6C70,0.6
+1a288370-bea6-42af-8cb1-b437ef41ece2,AK Interactive,3GEN Acrylics,Prussian Blue XF8,AK11186,#102A38,legacy,#132B38,0.6
+bb10a9df-c905-4ba7-8de8-104702c86578,AK Interactive,3GEN Acrylics,Turquoise,AK11171,#00494C,legacy,#034B4E,0.6
+21182ad6-979a-40d8-9337-8fc2e66f228e,AK Interactive,3GEN Acrylics,Orange Brown,AK11101,#B1571C,legacy,#B2591F,0.6
+0cf80954-e3c7-41e2-bc1d-6f47e689879b,AK Interactive,3GEN Acrylics,Hull Red,AK11108,#331B0F,legacy,#351C10,0.6
+28943c56-ca34-40cd-8000-f2890a6df367,AK Interactive,3GEN Acrylics,Deck Tan XF-55,AK11114,#CDC4AF,legacy,#CFC5B0,0.6
+6b0f2310-3024-4c7a-8e05-9cf369f40245,AK Interactive,3GEN Acrylics,Sky Grey,AK11012,#B9B9B5,legacy,#BABAB7,0.6
+bac5bd11-f1e0-47b0-9c4a-81e51c1d8c55,AK Interactive,3GEN Acrylics,Graphite,AK11019,#6D6E60,legacy,#6D6F61,0.6
+f5037c06-04e8-435e-8d00-f0a2ca997bb6,AK Interactive,AIR Series,PC12,AK11810,#40372D,legacy,#40372E,0.6
+6f5ac768-503d-422b-94ca-7a108ad6bc01,AK Interactive,AIR Series,RAF Dark Green,AK11840,#56564D,legacy,#57574D,0.6
+b0f99a75-cab7-4a03-b5a5-13f0fe3bc146,AK Interactive,AIR Series,RLM 61,AK11814,#56524E,legacy,#57524E,0.6
+330f0a16-3f14-462d-82b7-790a8676dff4,AK Interactive,AIR Series,RLM 78 (1942),AK11831,#879D97,legacy,#889D98,0.6
+8fc26b62-f881-4480-b02d-1cbf718df347,AK Interactive,AIR Series,Dark Ghost Grey FS 36320,AK11887,#86939C,legacy,#87949C,0.6
+31f3bf91-6ae5-4100-9f23-329c8bbd4081,AK Interactive,AIR Series,Dull Dark Green FS 34092,AK11873,#495852,legacy,#4A5952,0.6
+43daa66e-4fd5-4c49-ba66-7f9efed2d241,AK Interactive,AIR Series,RLM 74,AK11825,#5B5A54,legacy,#5B5A55,0.6
+f293493a-e894-4506-8cb9-0c1b4a5c6f26,AK Interactive,AIR Series,RLM 63,AK11816,#7D7A6A,legacy,#7E7B6A,0.6
+507de4d8-4757-4ee7-8c5b-40964f7d7305,AK Interactive,AIR Series,Medium Grey FS 36270,AK11886,#84888B,legacy,#84898C,0.6
+9d9ccd89-191d-410b-b95a-3d5fd2bd2631,AK Interactive,AIR Series,Dark Gull Grey FS 36231,AK11884,#808486,legacy,#808487,0.6
+2f511613-e08f-45ce-bd91-f6b337ef7440,AK Interactive,AIR Series,RLM 79 (1942),AK11833,#9C704E,legacy,#9C714E,0.6
+52aab019-9043-46f1-ad75-644037d89fbb,Vallejo,Model Air,3B Russian Green,71.281,#484946,swatch_sample,#474946,0.6
+0188a522-c4eb-49d6-9e5d-5fa01c0b99dc,AK Interactive,AIR Series,RAF Dark Sea Grey BS381C/638,AK11851,#696C70,legacy,#696C71,0.6
+7a8c2d89-9d3b-4ec2-8df3-008598167c48,AK Interactive,AIR Series,A-18f Light Grey-Blue,AK11912,#85A49A,legacy,#85A59A,0.6
+72ef2f52-bd0b-4c4b-b4c6-1c22f84b2c0d,AK Interactive,3GEN Acrylics,Matt Red,AK11092,#B4321A,legacy,#B4321C,0.5
+9ed17cae-7dd6-41e7-890c-da5af04b62c2,AK Interactive,3GEN Acrylics,Cork XF-52,AK11119,#A17547,legacy,#A27649,0.5
+4b317a95-81cd-4588-8fa3-1f409c627fbe,AK Interactive,3GEN Acrylics,Black,AK11029,#10100A,legacy,#12120C,0.5
+978d0204-4a2c-46f0-984e-7e1872dd24ca,AK Interactive,3GEN Acrylics,British Khaki,AK11127,#674D1E,legacy,#674D20,0.5
+9f4c316d-ff7e-426c-b7ca-c20bd37f51ba,AK Interactive,3GEN Acrylics,Japanese Brown,AK11123,#956D1A,legacy,#966E1D,0.5
+f6d49da3-69fb-4a07-b2c8-b74ff5aab5d3,AK Interactive,3GEN Acrylics,Bordeaux Red,AK11094,#A13B2F,legacy,#A33B30,0.5
+62466595-b7fe-4147-9795-50d8241bf756,AK Interactive,3GEN Acrylics,Burnt Red XF-9,AK11097,#533124,legacy,#533125,0.5
+ff31bccc-5109-40fc-9b37-3447bac8c33c,AK Interactive,3GEN Acrylics,Dark Brown XF-64,AK11109,#533916,legacy,#533A17,0.5
+55971e93-0bba-45f3-847e-6786e5d2a9fe,AK Interactive,3GEN Acrylics,Light Earth,AK11115,#CFB57D,legacy,#D0B57E,0.5
+c10fdd30-728e-4f2f-b266-661aa7ea663b,AK Interactive,3GEN Acrylics,German Field Grey,AK11154,#413D24,legacy,#423E24,0.5
+f7623237-f206-4dbe-96fb-7a0f167e1ff1,AK Interactive,3GEN Acrylics,Golden Olive,AK11139,#747B26,legacy,#747C28,0.5
+e13b4472-6208-4811-9f5d-1ed44ef46e47,AK Interactive,3GEN Acrylics,Golden Brown,AK11117,#AC7613,legacy,#AE7713,0.5
+5b969303-086b-4a34-95e0-c4de83903aa5,AK Interactive,3GEN Acrylics,Silver Grey,AK11006,#E3D7B7,legacy,#E5D9B9,0.5
+41de4fc4-dd9c-4619-ac40-ab760ac5c944,AK Interactive,3GEN Acrylics,Camouflage Green,AK11156,#4D411C,legacy,#4E411C,0.5
+d44610be-3ca8-42c8-abf0-4eb28af540b8,AK Interactive,AIR Series,RLM 80,AK11834,#575645,legacy,#585745,0.5
+ccf7b12a-3a2f-40e4-8cbb-e34232fb3ff8,AK Interactive,3GEN Acrylics,Cadmium Red,AK11085,#E9582C,legacy,#E8592F,0.5
+307c2803-a467-42ae-bcf3-3b179013e93d,AK Interactive,3GEN Acrylics,Ivory,AK11004,#F2EDC5,legacy,#F3EDC6,0.5
+1f56a5b2-8545-4d72-aeaa-91850ea90fa4,AK Interactive,3GEN Acrylics,Dark Blue,AK11181,#1D2D4B,legacy,#1E2E4B,0.5
+6d69a676-e569-4cc9-bddb-6eaa19b01657,AK Interactive,3GEN Acrylics,Grey-Blue,AK11165,#5E6772,legacy,#5F6772,0.5
+066c07dc-96b3-4e5c-af6b-b3fdd9ba4669,AK Interactive,AIR Series,Air Superiority Blue FS 35450,AK11879,#89AFC3,legacy,#8AB0C3,0.5
+e35d205f-dbb5-48cf-beb7-8868dac5f371,AK Interactive,AIR Series,A-21m Light Yellowish Brown,AK11914,#8F8661,legacy,#8F8762,0.5
+1bb7e2ea-422e-4e46-b63a-f73e4ad79e7a,AK Interactive,AIR Series,RLM 02 RLM-Grau (1938),AK11811,#969381,legacy,#979481,0.5
+c7a66575-4430-431c-890b-cb88d16fc3ba,AK Interactive,3GEN Acrylics,Sea Grey,AK11014,#9F9A81,legacy,#A09B81,0.5
+ebad76a7-dc45-4525-800c-2061908cc0f9,AK Interactive,AIR Series,Light Aircraft Grey BS381C/627,AK11853,#B0B1AA,legacy,#B1B2AA,0.5
+e1bc98f4-3e47-4f51-948c-e13a4013f063,AK Interactive,AIR Series,RLM 81 Version 1,AK11835,#575645,legacy,#585745,0.5
+b0e129cb-2385-443a-a2c6-2e1ec37c997c,AK Interactive,AIR Series,F-15 Dark Grey (Mod Eagle) FS 36176,AK11883,#6E7982,legacy,#6F7982,0.5
+cb73c87b-7d25-4da0-abca-832df3b5d68a,AK Interactive,AIR Series,Light Grey FS 36495,AK11889,#C4C7C6,legacy,#C4C8C7,0.5
+384ccacf-02ea-434e-ae65-9b8418c90e63,AK Interactive,AIR Series,IJN J3 SP (Amber Grey),AK11892,#948F75,legacy,#958F75,0.5
+347bdb20-37e5-4ee2-aa97-aced463cc72f,AK Interactive,AIR Series,Sand FS 33531,AK11869,#C5B49E,legacy,#C6B49E,0.5
+c2daeff1-60a0-4f55-93d1-4e01bb43dbc4,AK Interactive,AIR Series,PC10 Late,AK11809,#3C422C,legacy,#3D422C,0.5
+6aa90636-7017-411f-95ad-3d3beeaa8812,AK Interactive,AIR Series,AE-9/AII Light Grey,AK11908,#D3D4CD,legacy,#D4D5CD,0.5
+30b3810d-eab3-4f93-aab3-89cf11a8c3cb,Vallejo,Game Color,Dead White,72.001,#FDFDFD,legacy,#FFFFFF,0.4
+ab14619b-b0f3-4a94-b560-8938a76d9e69,AK Interactive,3GEN Acrylics,Pale Yellow,AK11038,#FEDD57,legacy,#FEDD5B,0.4
+dc72fdab-0c44-426b-99da-fedb317083c7,AK Interactive,3GEN Acrylics,Yellow,AK11042,#EF9114,legacy,#F09219,0.4
+aa85a7d4-9c59-48b6-96d1-9dcd7f4cf9ac,AK Interactive,3GEN Acrylics,Imperial Blue,AK11180,#21274E,legacy,#22274F,0.4
+a64fbb5d-8f1f-4557-92bd-81f47289ba94,AK Interactive,3GEN Acrylics,Green,AK11149,#516E32,legacy,#516F32,0.4
+53d58cc0-92fb-4d65-95b2-f3e84ee41083,AK Interactive,3GEN Acrylics,Olive Green,AK11147,#4B6024,legacy,#4B6125,0.4
+c04b99fb-a276-4297-93b2-b6b8d5f1cb0a,AK Interactive,3GEN Acrylics,Flesh Tone,AK11054,#C8812F,legacy,#C9822F,0.4
+cf18de89-36e2-40e0-bead-f1fb08707cbd,AK Interactive,AIR Series,RLM 75,AK11826,#6F6E6C,legacy,#706F6D,0.4
+14678136-2af4-4da4-86c8-4ed20344b022,AK Interactive,AIR Series,RAF Dark Earth,AK11841,#71563B,legacy,#72573C,0.4
+14b88563-efc4-4924-9ab8-a1f39894de03,AK Interactive,AIR Series,RAF Middle Stone,AK11846,#A47D39,legacy,#A57E39,0.4
+6edc6d4b-f162-4839-9234-e79b7389b442,AK Interactive,3GEN Acrylics,Burn Orange X-6,AK11079,#DB5E2F,legacy,#DC5F2F,0.4
+eaacf111-d025-485b-b3e5-c2b6be3b6b44,AK Interactive,3GEN Acrylics,Medium Rust,AK11103,#9D4B2F,legacy,#9E4B30,0.4
+35e111aa-b825-42d2-b06a-22a37c8064f8,AK Interactive,3GEN Acrylics,Grimy Grey,AK11008,#DFC999,legacy,#DFC898,0.4
+521c2ded-a8a5-4736-b6d3-bb2106628c44,AK Interactive,3GEN Acrylics,Grim Brown,AK11112,#1D150D,legacy,#1E160E,0.4
+cc8f5d2b-beea-484b-abd3-6f30a6f6cef3,AK Interactive,3GEN Acrylics,Salmon,AK11061,#F4A075,legacy,#F5A175,0.4
+15e647ae-7215-4b95-89f1-51262631bd54,AK Interactive,3GEN Acrylics,Deep Sky Blue,AK11176,#69B5C6,legacy,#69B5C7,0.4
+f63d6822-ed8c-46df-9cfc-9458de43ba1b,AK Interactive,3GEN Acrylics,Mahogany Brown,AK11106,#622B0E,legacy,#622C10,0.4
+63c3ce3a-202e-4f6e-af97-61f1eecb6c97,Vallejo,Model Air,UK BSC 64 Port. Stone,71.288,#CCBE95,legacy,#CCBD94,0.4
+92c9fef0-4568-4845-a524-3777d76a20fd,AK Interactive,3GEN Acrylics,Green-Brown,AK11126,#6F5922,legacy,#705A22,0.4
+8010ab5f-e726-4896-9c0b-d0746cafce0b,AK Interactive,3GEN Acrylics,Dark Sea Blue XF17,AK11190,#0C1814,legacy,#0E1915,0.4
+bafaa131-f703-4bbc-9ce4-f800b5155997,AK Interactive,AIR Series,RAF PRU Blue BS381C/636,AK11852,#546B76,legacy,#556B76,0.4
+9067b6c9-43dd-47f4-88e6-79b3c5249c80,AK Interactive,3GEN Acrylics,French Blue,AK11166,#535653,legacy,#545754,0.4
+599ee18b-b2b8-463f-86d5-d5825d476780,AK Interactive,3GEN Acrylics,Tan Yellow,AK11116,#D29746,legacy,#D29847,0.4
+84b1ccad-de61-4245-a09a-e62dbb626061,AK Interactive,3GEN Acrylics,Light Brown,AK11100,#CF8039,legacy,#CF8139,0.4
+0345e735-4219-4023-b782-9bb7ba691223,AK Interactive,3GEN Acrylics,Clear Blue,AK11214,#212D56,legacy,#212E57,0.4
+ceb8b296-ce8c-4885-af52-5c46ef703d77,AK Interactive,3GEN Acrylics,Brick Red,AK11093,#9E4428,legacy,#9E452A,0.4
+27b0bbc1-c524-4b3e-bc7a-61c34fdc5696,AK Interactive,3GEN Acrylics,Lemon Yellow,AK11047,#FFE11A,legacy,#FFE221,0.4
+20b3e750-619b-416e-882f-9e459ff5110d,AK Interactive,AIR Series,WWI German Dark Green,AK11803,#344630,legacy,#344731,0.4
+335c3ed7-7b2b-4790-97a9-f8ab05f5adf9,AK Interactive,AIR Series,USMC Green FS 34095,AK11874,#575C1F,legacy,#585C1F,0.4
+d076f6ba-02a6-4d6f-8dd5-ae34f1b9e99d,AK Interactive,AIR Series,RLM 82,AK11838,#4F5C4A,legacy,#4F5C4B,0.4
+76905239-7d28-4d5a-a5e7-c1778ab3b6dd,AK Interactive,3GEN Acrylics,Flesh,AK11051,#EEC17F,legacy,#EEC280,0.4
+75ab5d79-b0b0-424a-bca5-1fb2c488e8bb,AK Interactive,AIR Series,Have Glass Grey FS 36170,AK11882,#6F6E6C,legacy,#706F6D,0.4
+42f1c14f-c3e4-42ba-be10-6f4c2a5bf217,AK Interactive,AIR Series,AMT-7 Light Blue,AK11916,#6790A3,legacy,#6790A4,0.4
+98046974-8c9d-471e-a38c-f5dee493e602,AK Interactive,AIR Series,RAF Sky / FS 34424,AK11844,#B3B79F,legacy,#B3B7A0,0.4
+a743fa0a-8f94-4478-b57b-f4a687989195,AK Interactive,AIR Series,#1 Hairyokushoku (Grey-Green),AK11899,#A7A895,legacy,#A7A896,0.4
+9299f0ca-d4bd-4816-9b78-9ab69a807931,AK Interactive,AIR Series,Duck Egg Blue FS 35622,AK11880,#C4D0C5,legacy,#C4D0C6,0.4
+a79ba8bf-a8ec-485a-b8f5-5174b94d4598,AK Interactive,AIR Series,A-14 Interior Steel Grey,AK11911,#647376,legacy,#657376,0.4
+592318b5-b9fb-4ed8-9321-23d8044da947,AK Interactive,AIR Series,AII Green,AK11909,#303E1E,legacy,#313F1E,0.4
+3116b962-d80a-43b7-bd72-6d96762856c2,AK Interactive,AIR Series,A-19f Grass Green,AK11913,#52643C,legacy,#53653D,0.4
+1b82513c-b4cd-4355-807f-9486dac77b7f,AK Interactive,3GEN Acrylics,Golden Yellow,AK11041,#F8B14C,legacy,#F9B14C,0.3
+333346ac-e2f7-4dbc-9ec4-231080563c60,AK Interactive,3GEN Acrylics,Light Orange,AK11077,#EF7A3B,legacy,#EF7B3D,0.3
+32112684-3f0f-468d-afa4-2d14d9e0b6ff,Vallejo,Model Air,Red,71.269,#A03E35,swatch_sample,#9F3D34,0.3
+9246d103-f140-4230-ab42-d41b5132a9a6,AK Interactive,AIR Series,RLM 76 Version 2,AK11828,#ACBCBC,legacy,#ADBDBD,0.3
+09d36c94-a607-4219-9a14-b8745b162f53,AK Interactive,3GEN Acrylics,Dark Flesh,AK11056,#ECA538,legacy,#EDA538,0.3
+8ce1d8f5-6f5a-4052-99dd-cfe7afd325d3,AK Interactive,3GEN Acrylics,Alga Green,AK11152,#555F21,legacy,#565F21,0.3
+52f9b7b8-0004-4e62-b76d-73cd5f589365,AK Interactive,3GEN Acrylics,Yellow,AK11049,#EEE422,legacy,#EEE428,0.3
+2a218162-af53-43b8-8d94-295628f8c0f6,AK Interactive,3GEN Acrylics,Fluorescent Orange,AK11081,#E9551F,legacy,#EA561F,0.3
+edc92213-a67e-4b87-8d93-e15922811897,AK Interactive,3GEN Acrylics,Magenta,AK11068,#E94E69,legacy,#EA4E6A,0.3
+751f564c-7430-4f73-86e7-fa83c7c56026,AK Interactive,3GEN Acrylics,Yellow,AK11039,#ECD13A,legacy,#ECD23B,0.3
+ae71166c-916f-478f-ab93-71797589c589,AK Interactive,3GEN Acrylics,Violet Red,AK11075,#573436,legacy,#583436,0.3
+1d5ac51f-740b-403f-bd22-05be6049db80,Vallejo,Model Air,German Red Brown,71.271,#68433A,swatch_sample,#674239,0.3
+2e3ec9fa-0220-4615-9708-b3e288a6d1a4,AK Interactive,3GEN Acrylics,Skin Tone,AK11052,#F8B57B,legacy,#F8B57C,0.3
+efa914f1-9bb6-4a23-a8e4-37ca487f5b57,AK Interactive,3GEN Acrylics,Scarlet Red,AK11087,#CE3B27,legacy,#CF3B28,0.3
+5126dd8a-93f9-4b9e-afb8-3922ec93b51a,AK Interactive,3GEN Acrylics,Lime Green,AK11137,#829E28,legacy,#839F29,0.3
+9893fc5b-1327-4fd5-9d91-34ed1985c20c,AK Interactive,3GEN Acrylics,Amaranth Red,AK11086,#D04E26,legacy,#D04F28,0.3
+a8a4e531-2bb1-4dc5-ad6e-4f88188ba88b,AK Interactive,3GEN Acrylics,Pale Sand,AK11032,#F0D681,legacy,#F0D782,0.3
+ba9ad340-6a51-49c9-aca1-e0aac4d03ae6,AK Interactive,3GEN Acrylics,Ultramarine,AK11179,#233775,legacy,#243776,0.3
+359de38e-580e-4875-8768-c3595171413c,AK Interactive,3GEN Acrylics,Olive Green,AK11148,#3E5120,legacy,#3F5120,0.3
+118aed9e-8a04-4a1d-9230-a4d53b9038af,AK Interactive,3GEN Acrylics,Ice Yellow,AK11036,#FFEF8E,legacy,#FFF08E,0.3
+4c5fec85-ebb0-4205-bc8d-f141b5806165,AK Interactive,3GEN Acrylics,Saddle Brown XF-79,AK11104,#693B2C,legacy,#6A3B2C,0.3
+28996400-5569-4eb3-a7aa-aabe81720c01,AK Interactive,AIR Series,RAF Azure Blue,AK11845,#7C9DC4,legacy,#7D9DC4,0.3
+dd71b8e6-3fac-431e-8ad3-7c4c191b4b2b,AK Interactive,3GEN Acrylics,Ochre,AK11118,#C6942E,legacy,#C7952E,0.3
+abfd3f5a-a9fa-496a-b539-01667207baa1,AK Interactive,3GEN Acrylics,Deep Yellow,AK11045,#FDC500,legacy,#FDC608,0.3
+8bc6a6e4-67c0-426f-90a3-df3622cb4034,AK Interactive,3GEN Acrylics,Sand Yellow,AK11035,#E8BC37,legacy,#E9BD3A,0.3
+304d6fda-40a6-404b-9182-e7a86e4e0a82,AK Interactive,3GEN Acrylics,Beige,AK11030,#E2B948,legacy,#E1B949,0.3
+51ea9975-b276-4b5d-8e5a-ffcb60aabfbc,AK Interactive,3GEN Acrylics,Clear Red,AK11213,#C61617,legacy,#C71618,0.3
+bd0c7cae-a371-45bd-8b9f-77eb75569e43,AK Interactive,3GEN Acrylics,Clear Yellow,AK11217,#F39405,legacy,#F4950C,0.3
+314b020a-7fea-4a59-81e7-478fdc369e5c,AK Interactive,3GEN Acrylics,Clear Smoke,AK11215,#754E22,legacy,#754E23,0.3
+b86cbbfd-14d2-4f87-afdf-faab2e38e3a8,AK Interactive,3GEN Acrylics,Old Rose X-17,AK11062,#F2947C,legacy,#F3957D,0.3
+0916bf5e-f776-456e-9d7d-49d2d289bdb4,AK Interactive,3GEN Acrylics,Yellow,AK11044,#FAB611,legacy,#FAB718,0.3
+da4c5d5c-e1fc-487d-a989-6f5b2b2fa305,AK Interactive,AIR Series,AII Light Blue,AK11910,#7CA2AD,legacy,#7DA3AE,0.3
+4f8bc9b2-eb83-401a-bc3a-50fc378d32f2,AK Interactive,3GEN Acrylics,Medium Blue X13,AK11184,#173948,legacy,#183A49,0.3
+5ec8c69b-36b8-4c6f-ad1d-b626fde0fd19,AK Interactive,3GEN Acrylics,Buff,AK11031,#D1AC5C,legacy,#D2AD5D,0.3
+41d5b216-77c2-4e07-a2f3-59362310da80,AK Interactive,3GEN Acrylics,Yellow Green,AK11138,#ABA215,legacy,#ACA316,0.3
+8bcb77f7-048e-48d1-8776-eb259db5d070,AK Interactive,3GEN Acrylics,Warm Grey,AK11009,#B4A889,legacy,#B4A88A,0.3
+34cf2e86-5251-4ff7-b214-d691d837276d,AK Interactive,AIR Series,RLM 04,AK11813,#F0A60D,legacy,#F1A60D,0.3
+e194e0db-eb84-4b86-b53b-eec63e698c9f,AK Interactive,3GEN Acrylics,White,AK11005,#E4EDCC,legacy,#E5EECC,0.3
+e5486c81-7a72-4b43-9a0f-519cd5b05209,AK Interactive,3GEN Acrylics,Lead Grey,AK11023,#454741,legacy,#464842,0.3
+2307c683-cefc-4292-afa2-fdf79601658e,AK Interactive,AIR Series,Light Gull Grey FS 16440,AK11866,#AEAEA4,legacy,#AFAFA5,0.3
+564c5af1-f900-439d-8860-0fb8705ebd94,AK Interactive,3GEN Acrylics,Flesh,AK11058,#B9A260,legacy,#BAA361,0.3
+37bf59c4-f3c9-42bf-9a2f-27dcbf6e9a7f,AK Interactive,AIR Series,RLM 65 (1941),AK11818,#93A097,legacy,#94A198,0.3
+ab09ab85-1c05-4def-9e7a-99c0f894b50b,AK Interactive,AIR Series,AMT-4 (A-24m) Green,AK11915,#425222,legacy,#425223,0.3
+2965156d-8501-4aa3-86ba-d6fc2b4ece2a,AK Interactive,AIR Series,RAF Sky Grey,AK11848,#A0A4A3,legacy,#A1A5A4,0.3
+b7bcfbd2-9a37-4432-8f8d-d7b54e165d00,AK Interactive,3GEN Acrylics,Light Green,AK11141,#599231,legacy,#5A9231,0.2
+87b25993-d498-4638-823f-0f9e6d3445b5,AK Interactive,3GEN Acrylics,Skin Tone,AK11055,#F6A653,legacy,#F6A654,0.2
+d589997e-e6ff-4484-8c2f-ab749be0df2a,AK Interactive,3GEN Acrylics,Ruby,AK11084,#CF4847,legacy,#CF4948,0.2
+a2c41e22-53f5-40d7-a69d-fa85861df82f,AK Interactive,3GEN Acrylics,Light Flesh,AK11050,#FDDDB3,legacy,#FEDEB4,0.2
+8bf55669-2829-4591-bf7d-5fe2f2f347fe,AK Interactive,3GEN Acrylics,Vermillion,AK11090,#C54D33,legacy,#C64D33,0.2
+86eb3cdf-1ab1-4591-be71-10ee51a16925,AK Interactive,3GEN Acrylics,Laser Yellow,AK11048,#EFE538,legacy,#F0E639,0.2
+88beb32f-899c-4bfc-a5f7-c35d607df4c4,AK Interactive,3GEN Acrylics,Deep Green,AK11142,#1D632C,legacy,#1D632D,0.2
+c62630f6-d2c9-4f35-a3fe-db6dbc109042,AK Interactive,AIR Series,Radome Tan FS 33613,AK11870,#E4C6A0,legacy,#E5C7A1,0.2
+f81dfd20-0569-4f8e-ac40-311d06af7e10,AK Interactive,AIR Series,Zinc Chromate Yellow,AK11858,#E1D10F,legacy,#E2D10F,0.2
+80b664a7-446b-453c-935e-b9fba117d843,AK Interactive,3GEN Acrylics,Fluorescent Blue,AK11178,#004063,legacy,#014063,0.1
+4aad99a8-ac7e-42c5-a2e5-ccea15a65f4e,AK Interactive,3GEN Acrylics,Blood Red,AK11089,#C6241C,legacy,#C6251C,0.1
+4058ec48-5b0b-4c01-934a-1359465d399d,AK Interactive,3GEN Acrylics,Dirty Yellow,AK11043,#EDA81B,legacy,#EDA81C,0.1
+c50c70f9-d72d-5ab7-9965-bbcba69f2e0c,Vallejo,Model Color,White,70.951,#ffffff,legacy,#FFFFFF,0.0
+0f4f3bed-b8cc-4876-a1cc-6d59fa719c50,Vallejo,Mecha Color,Pure White,69.001,#FFFFFF,legacy,#FFFFFF,0.0
+59a55d42-a0d3-46db-af36-b8b69c346a17,AK Interactive,3GEN Acrylics,White,AK11001,#FFFFFF,legacy,#FFFFFF,0.0
+bfe5dc3f-4e07-40fc-ae15-8a2e90468651,Vallejo,Mecha Primer,White,70.640,#FFFFFF,legacy,#FFFFFF,0.0
+56dafe17-c3cb-4ee7-8e2e-330ee8f72238,Vallejo,Game Color,White Primer,72.002,#FFFFFF,community_chart,#FFFFFF,0.0
+a91c176b-2e54-4da0-b1a6-1eb4833c13f8,AK Interactive,3GEN Acrylics,Beige Red,AK11064,#DE935A,legacy,#DE935A,0.0
+0d892e6f-2092-4b11-a46c-96dd3ccd166d,AK Interactive,3GEN Acrylics,Intense Pink,AK11065,#EB748F,legacy,#EB748F,0.0
+dd75d19c-be2d-4640-ba3b-7df3352b2038,Vallejo,Model Color,Light Green,70.942,#19A84E,community_chart,#19A84E,0.0
+a89bfbb8-a71d-42e3-bee3-0a2ca1fa6fa6,Vallejo,Game Color,Dwarf Skin,72.041,#D3805F,community_chart,#D3805F,0.0
+05472d81-016d-4f1c-aaca-7c7ae2bdec0e,Vallejo,Game Color,Heavy Skintone,72.140,#936C5B,community_chart,#936C5B,0.0
+4d718b4e-0a7d-40ad-9127-bb22631b489e,Vallejo,Game Color,Heavy Red,72.141,#832A3A,community_chart,#832A3A,0.0
+4e03f57b-1051-453b-9ebd-5397e9ddab97,Vallejo,Game Color,Heavy Violet,72.142,#453C6E,community_chart,#453C6E,0.0
+2ad275da-8330-4993-a80d-6d5b651e5c9f,AK Interactive,3GEN Acrylics,Lilac,AK11071,#656073,legacy,#656073,0.0
+731e4b4d-a14d-4290-80e3-4daaf9a44912,Vallejo,Game Color,Heavy Blue,72.143,#3F577C,community_chart,#3F577C,0.0
+a6d8de69-b734-4a0f-83a1-c6c61f3ac22c,Vallejo,Game Color,Heavy Bluegrey,72.144,#3C513E,community_chart,#3C513E,0.0
+0ab6dc08-27c8-4a24-873b-ffb65f0e26b8,Vallejo,Game Color,Heavy Green,72.146,#3D4941,community_chart,#3D4941,0.0
+840445d7-6715-4d72-a292-4728e00e0a95,Vallejo,Game Color,Heavy Blackgreen,72.147,#36423F,community_chart,#36423F,0.0
+ac0f3be5-b9f5-4341-8681-3d04b544096f,Vallejo,Game Color,Heavy Khaki,72.149,#83764A,community_chart,#83764A,0.0
+ea22e900-d915-490b-a4c7-cd2efe7cc3c7,Vallejo,Game Color,Heavy Ochre,72.150,#A36C26,community_chart,#A36C26,0.0
+a3b10414-a50d-4306-afaa-dede3e70f873,Vallejo,Game Color,Heavy Goldbrown,72.151,#A97A3F,community_chart,#A97A3F,0.0
+276247ea-bdb0-4f1f-a9ae-15991248cf39,Vallejo,Game Color,Heavy Brown,72.153,#6D5B49,community_chart,#6D5B49,0.0
+b4928ee3-a219-4a67-836c-abe8efe97474,Vallejo,Game Color,Heavy Sienna,72.154,#533C38,community_chart,#533C38,0.0
+be99f883-3a24-4d17-8b7c-e910a3e3fbb4,Vallejo,Model Color Auxiliary,Satin Varnish,70.522,#FFFFFF,legacy,#FFFFFF,0.0
+a5a066a4-737f-4c53-9048-0bb6f6d873f1,AK Interactive,AIR Series,Light Ghost Grey FS 36375,AK11888,#9DA6AB,legacy,#9DA6AB,0.0
+6ca48251-be41-40c4-a25f-6a0b595fb202,Vallejo,Model Color,Yellow Fluo,70.730,#E7ED35,community_chart,#E7ED35,0.0
+d9baefa6-ec6f-4fd1-9ba7-e69e4b8e9801,Vallejo,Model Color,Orange Fluo,70.733,#F2531B,community_chart,#F2531B,0.0
+621b8469-10cf-41f7-b325-340bb3a42183,Vallejo,Model Color,Magenta Fluo,70.735,#EF259D,community_chart,#EF259D,0.0
+2f22747d-09e9-446c-9cee-46f5da26bfb5,Vallejo,Model Color,Blue Fluo,70.736,#1573BB,community_chart,#1573BB,0.0
+bc97ca6e-a0a4-4330-a2ca-36f874865a26,Vallejo,Model Color,Verdigris Glaze,70.832,#89D0C8,community_chart,#89D0C8,0.0
+8a872e54-b101-497a-b87d-0d2ce2710826,Vallejo,Model Color,Natural Woodgrain,70.834,#F0D530,community_chart,#F0D530,0.0
+2a18c0dc-1874-45bd-b603-ae28f90eedce,Vallejo,Model Color,Ultramarine,70.839,#3D55AB,community_chart,#3D55AB,0.0
+2f2ab95c-2f0b-40ef-914b-4c6240350e25,Vallejo,Model Color,Gloss White,70.842,#FFFFFF,community_chart,#FFFFFF,0.0
+c67fc673-5d6c-45bb-9023-c0fd604e17b5,AK Interactive,3GEN Acrylics,Deep Orange,AK11080,#EB6025,legacy,#EB6025,0.0
+4e754ed9-d3e5-4284-ae67-2bc6178067ef,Vallejo,Model Color,Golden Olive,70.857,#69922C,community_chart,#69922C,0.0
+78826e8e-550a-4f45-92b7-d6b9f1b40d79,AK Interactive,3GEN Acrylics,Tan Earth,AK11121,#7D5B33,legacy,#7D5B33,0.0
+65b65f04-173f-40f7-a901-13d760587e7d,AK Interactive,AIR Series,RLM 62,AK11815,#676A4F,legacy,#676A4F,0.0
+b3ad85dc-c812-46a1-9b75-29291300deeb,AK Interactive,3GEN Acrylics,Faded Green,AK11135,#7C8972,legacy,#7C8972,0.0
+dd0717c7-04e9-4fde-a41a-e6497bbbab44,Vallejo,Model Color,French Mirage Blue,70.900,#55737D,community_chart,#55737D,0.0
+90ef5de8-ce4d-4940-80d9-4b4ccb4b9b4a,Vallejo,Model Color,Intermediate Blue,70.903,#57787F,community_chart,#57787F,0.0
+e81568fc-eaf7-411f-a41b-c3b159dd3194,AK Interactive,3GEN Acrylics,Pale Blue,AK11161,#B5C4B7,legacy,#B5C4B7,0.0
+94c8ba81-a239-4671-9da5-5a6a9287c71b,Vallejo,Model Color,Orange Red,70.910,#E43C21,community_chart,#E43C21,0.0
+a9918690-290a-440c-acb7-2e5b14aab077,Vallejo,Model Color,Tan Yellow,70.912,#AA8A4D,community_chart,#AA8A4D,0.0
+ccd7f7ba-4e50-4130-b654-728ff2407c5a,AK Interactive,3GEN Acrylics,Green Ochre,AK11122,#A68236,legacy,#A68236,0.0
+564b23de-8fda-4052-abfc-0f364d83868f,AK Interactive,AIR Series,Green FS 34258,AK11876,#80825B,legacy,#80825B,0.0
+79f0ee7f-2c86-477b-a89c-3d9b3222ab07,Vallejo,Model Color,Transparent Red,70.934,#EB8763,community_chart,#EB8763,0.0
+928c2fda-b6db-46f7-91cd-43b3e7c2f595,Vallejo,Model Color,Transparent Orange,70.935,#ECB99E,community_chart,#ECB99E,0.0
+7267358f-9c34-45f5-a607-bc975d98ff28,Vallejo,Model Color,Transparent Green,70.936,#DDE3BD,community_chart,#DDE3BD,0.0
+979098b9-ef56-43ac-98fc-c51269736d31,AK Interactive,3GEN Acrylics,Clear Green,AK11216,#029939,legacy,#029939,0.0
+1445ebab-2474-4b6e-ad96-28a2d90ae55b,Vallejo,Model Color,Transparent Yellow,70.937,#F2E670,community_chart,#F2E670,0.0
+63157def-5eeb-4837-834b-f67782091c7c,Vallejo,Model Color,Transparent Blue,70.938,#31385E,community_chart,#31385E,0.0
+192d8cf2-0a6b-49ff-a6d3-e583cd748138,AK Interactive,3GEN Acrylics,Radiant Flesh,AK11053,#F8B058,legacy,#F8B058,0.0
+4e2eca1b-673a-4004-8071-f5b095f31b9f,AK Interactive,AIR Series,IJN D1 Deep Green Black,AK11893,#2A362C,legacy,#2A362C,0.0
+7fd57eb7-d0a0-48b0-b8c3-6c77988af0d3,AK Interactive,3GEN Acrylics,Dark Green,AK11146,#24461F,legacy,#24461F,0.0
+405b45ad-dbff-455d-92ef-badf3396e19f,Vallejo,Model Color,Light Sea Grey,70.973,#91B5B3,community_chart,#91B5B3,0.0
+3a09f605-5f8e-4c0d-a2ad-f0e6826499c5,AK Interactive,AIR Series,Aggressor Grey FS 36251,AK11885,#828385,legacy,#828385,0.0
+bfb507cd-1614-45bf-a180-97fe75103968,AK Interactive,AIR Series,RLM 71,AK11822,#514F43,legacy,#514F43,0.0
+b268de7f-13ac-431c-a82b-44ceb2fc169c,AK Interactive,AIR Series,RLM 76 Late War Variation,AK11829,#C1C19D,legacy,#C1C19D,0.0
+3163a7a6-be7f-4086-92bc-b0ee5eee16d4,AK Interactive,AIR Series,RAF Ocean Grey,AK11842,#5D686A,legacy,#5D686A,0.0
+446fd8ac-ed70-47a3-b69f-2238f6cd292b,AK Interactive,AIR Series,Insignia White FS 17875,AK11868,#E6E8DB,legacy,#E6E8DB,0.0
+55b298c9-dd0f-4069-972d-4d981a98faa9,AK Interactive,AIR Series,Camouflage Grey FS 36622,AK11890,#C2C0B3,legacy,#C2C0B3,0.0
+0e6b5878-41f9-4d6e-9f6e-22b269ea43ed,AK Interactive,AIR Series,Deep Sea Blue,AK11864,#37464D,legacy,#37464D,0.0
+5768a2fd-7aba-4c4d-b035-ec98db143c6a,AK Interactive,AIR Series,RAF Cockpit Grey-Green,AK11847,#738168,legacy,#738168,0.0
+08995ac2-2856-4026-b77b-900869194bd1,AK Interactive,AIR Series,AMT-12 Dark Grey,AK11918,#2B3638,legacy,#2B3638,0.0
+8e979ce4-233f-4359-bf72-4845471545be,AK Interactive,AIR Series,RAF Dark Slate Grey,AK11849,#5F5D51,legacy,#5F5D51,0.0
+b0aadf39-539e-4608-8f48-55ef1dd54f5a,AK Interactive,AIR Series,WWI German Grey-Green Primer,AK11808,#B7C4AA,legacy,#B7C4AA,0.0
+ba33807d-7831-4cf9-99f7-64e5aa64fe9b,AK Interactive,AIR Series,ADC Grey FS 16473,AK11867,#9FAAA6,legacy,#9FAAA6,0.0
+99a8698e-3cf3-41c5-86a7-b80e268429b0,AK Interactive,AIR Series,IJN/IJA Aotake,AK11898,#0B5E73,legacy,#0C5E73,0.0

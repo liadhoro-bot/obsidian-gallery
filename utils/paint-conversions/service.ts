@@ -77,6 +77,13 @@ export type ConversionSourceMetadata = {
   notes?: string | null
   reliability_score?: number
   imported_by?: string | null
+  // Append rows to an existing source instead of registering a new one.
+  existing_source_id?: string
+}
+
+// Official manufacturer charts outrank community-compiled cross-references.
+export function connectionTypeForSource(sourceType: string | null | undefined) {
+  return sourceType === 'community_chart' ? 'community_equivalent' : 'official_conversion'
 }
 
 export type ImportConversionCsvResult = {
@@ -349,6 +356,50 @@ async function selectPaintById(
   return (data ?? null) as PaintCatalogMatchRow | null
 }
 
+const catalogLineExists = new Map<string, Promise<boolean>>()
+
+// Airbrush, spray and drybrush versions of a brush paint. When a chart names a
+// paint without a line, the brush paint is the one it means.
+const FORMAT_VARIANT_LINE = /\b(air|spray|dry)\b/
+
+function isFormatVariant(paint: PaintCatalogMatchRow) {
+  return FORMAT_VARIANT_LINE.test(paint.normalized_line ?? '')
+}
+
+function preferBrushPaints(rows: PaintCatalogMatchRow[]) {
+  const brush = rows.filter((paint) => !isFormatVariant(paint))
+  return brush.length > 0 ? brush : rows
+}
+
+// Whether the catalog carries this brand's range at all. Charts reference old
+// or regional ranges we don't stock (TAP Original Warpaints, Vallejo Hobby
+// Paint); those names must not fall through to a same-named paint elsewhere.
+function hasCatalogLine(
+  supabase: PaintConversionDbClient,
+  normalizedBrand: string,
+  normalizedLine: string
+) {
+  const key = `${normalizedBrand}|${normalizedLine}`
+
+  if (!catalogLineExists.has(key)) {
+    catalogLineExists.set(
+      key,
+      (async () => {
+        const { count, error } = await supabase
+          .from('paint_catalog')
+          .select('id', { count: 'exact', head: true })
+          .eq('normalized_brand', normalizedBrand)
+          .eq('normalized_line', normalizedLine)
+
+        if (error) throw error
+        return (count ?? 0) > 0
+      })()
+    )
+  }
+
+  return catalogLineExists.get(key)!
+}
+
 export async function findPaintMatch(
   supabase: PaintConversionDbClient,
   input: PaintMatchInput
@@ -410,6 +461,23 @@ export async function findPaintMatch(
     }
   }
 
+  // A chart row that names a line we don't carry has no safe match: falling
+  // back to brand-wide name matching is how "Original Warpaints / Dorado Skin"
+  // used to land on the different Fanatic Dorado Skin.
+  const lineKnown =
+    normalizedBrand && normalizedLine
+      ? await hasCatalogLine(supabase, normalizedBrand, normalizedLine)
+      : false
+
+  if (normalizedBrand && normalizedLine && !lineKnown) {
+    return {
+      paint: null,
+      confidence: 0,
+      reason: 'range not in catalog',
+      needs_review: true,
+    }
+  }
+
   if (normalizedBrand && normalizedLine && normalizedName) {
     const { data, error } = await supabase
       .from('paint_catalog')
@@ -434,7 +502,7 @@ export async function findPaintMatch(
   }
 
   if (normalizedBrand && normalizedName) {
-    const { data, error } = await supabase
+    let brandNameQuery = supabase
       .from('paint_catalog')
       .select(
         'id, brand, line, name, sku, normalized_brand, normalized_line, normalized_name, finish_type, is_conversion_matchable'
@@ -442,12 +510,20 @@ export async function findPaintMatch(
       .eq('is_conversion_matchable', true)
       .eq('normalized_brand', normalizedBrand)
       .eq('normalized_name', normalizedName)
-      .limit(3)
+
+    if (lineKnown) brandNameQuery = brandNameQuery.eq('normalized_line', normalizedLine)
+
+    const { data, error } = await brandNameQuery.limit(10)
 
     if (error) throw error
-    if ((data ?? []).length === 1) {
+
+    const rows = lineKnown
+      ? ((data ?? []) as PaintCatalogMatchRow[])
+      : preferBrushPaints((data ?? []) as PaintCatalogMatchRow[])
+
+    if (rows.length === 1) {
       return {
-        paint: data![0] as PaintCatalogMatchRow,
+        paint: rows[0],
         confidence: 0.9,
         reason: 'exact normalized brand name match',
         needs_review: false,
@@ -456,14 +532,19 @@ export async function findPaintMatch(
   }
 
   if (normalizedBrand && normalizedName) {
-    const { data, error } = await supabase
+    let fuzzyQuery = supabase
       .from('paint_catalog')
       .select(
         'id, brand, line, name, sku, normalized_brand, normalized_line, normalized_name, finish_type, is_conversion_matchable'
       )
       .eq('is_conversion_matchable', true)
       .eq('normalized_brand', normalizedBrand)
-      .limit(250)
+
+    if (lineKnown) fuzzyQuery = fuzzyQuery.eq('normalized_line', normalizedLine)
+
+    // The old .limit(250) silently fuzzy-matched against an arbitrary slice of
+    // large brands (Vallejo has 1,300+ paints).
+    const { data, error } = await fuzzyQuery.range(0, 4999)
 
     if (error) throw error
 
@@ -473,7 +554,11 @@ export async function findPaintMatch(
         score: similarityRatio(normalizedName, paint.normalized_name ?? normalizePaintName(paint.name ?? '')),
       }))
       .filter((candidate) => candidate.score >= FUZZY_MATCH_CONFIDENCE)
-      .sort((a, b) => b.score - a.score)
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          Number(isFormatVariant(a.paint)) - Number(isFormatVariant(b.paint))
+      )
 
     if (candidates[0]) {
       const confidence = Math.min(0.86, candidates[0].score)
@@ -534,7 +619,13 @@ export async function importConversionCsv(
   rows: ParsedConversionCsvRow[],
   sourceMetadata: ConversionSourceMetadata
 ): Promise<ImportConversionCsvResult> {
-  const { data: source, error: sourceError } = await supabase
+  const { data: source, error: sourceError } = sourceMetadata.existing_source_id
+    ? await supabase
+        .from('paint_conversion_sources')
+        .select('id, reliability_score, name, source_type')
+        .eq('id', sourceMetadata.existing_source_id)
+        .single()
+    : await supabase
     .from('paint_conversion_sources')
     .insert({
       name: sourceMetadata.name,
@@ -546,7 +637,7 @@ export async function importConversionCsv(
       reliability_score: sourceMetadata.reliability_score ?? 1,
       imported_by: sourceMetadata.imported_by ?? null,
     })
-    .select('id, reliability_score, name')
+    .select('id, reliability_score, name, source_type')
     .single()
 
   if (sourceError) throw sourceError
@@ -603,11 +694,12 @@ export async function importConversionCsv(
     if (!sourceMatch.paint || !targetMatch.paint) continue
     if (sourceMatch.paint.id === targetMatch.paint.id) continue
 
-    const confidence =
-      (source.reliability_score ?? 1) *
-      Math.min(sourceMatch.confidence, targetMatch.confidence)
+    const matchConfidence = Math.min(sourceMatch.confidence, targetMatch.confidence)
+    const confidence = (source.reliability_score ?? 1) * matchConfidence
+    // Review is about whether the paint names matched safely; a less
+    // authoritative source lowers confidence_score, not the review flag.
     const needsReview =
-      sourceMatch.needs_review || targetMatch.needs_review || confidenceNeedsReview(confidence)
+      sourceMatch.needs_review || targetMatch.needs_review || confidenceNeedsReview(matchConfidence)
 
     for (const [from, to] of [
       [sourceMatch.paint.id, targetMatch.paint.id],
@@ -618,7 +710,7 @@ export async function importConversionCsv(
         target_paint_id: to,
         source_id: source.id,
         raw_row_id: rawRow.id,
-        connection_type: 'official_conversion',
+        connection_type: connectionTypeForSource(source.source_type),
         confidence_score: Math.max(0, Math.min(1, confidence)),
         reason: source.name,
         needs_review: needsReview,
@@ -660,7 +752,8 @@ export async function rematchConversionRawRows(
       source:paint_conversion_sources (
         id,
         name,
-        reliability_score
+        reliability_score,
+        source_type
       )
     `
     )
@@ -688,8 +781,8 @@ export async function rematchConversionRawRows(
       id: string
       source_id: string
       source:
-        | { id: string; name: string; reliability_score: number | null }
-        | Array<{ id: string; name: string; reliability_score: number | null }>
+        | { id: string; name: string; reliability_score: number | null; source_type: string | null }
+        | Array<{ id: string; name: string; reliability_score: number | null; source_type: string | null }>
         | null
     }
   >) {
@@ -728,10 +821,10 @@ export async function rematchConversionRawRows(
     if (sourceMatch.paint.id === targetMatch.paint.id) continue
 
     const reliability = sourceRecord?.reliability_score ?? 1
-    const confidence =
-      reliability * Math.min(sourceMatch.confidence, targetMatch.confidence)
+    const matchConfidence = Math.min(sourceMatch.confidence, targetMatch.confidence)
+    const confidence = reliability * matchConfidence
     const needsReview =
-      sourceMatch.needs_review || targetMatch.needs_review || confidenceNeedsReview(confidence)
+      sourceMatch.needs_review || targetMatch.needs_review || confidenceNeedsReview(matchConfidence)
 
     for (const [from, to] of [
       [sourceMatch.paint.id, targetMatch.paint.id],
@@ -742,7 +835,7 @@ export async function rematchConversionRawRows(
         target_paint_id: to,
         source_id: row.source_id,
         raw_row_id: row.id,
-        connection_type: 'official_conversion',
+        connection_type: connectionTypeForSource(sourceRecord?.source_type),
         confidence_score: Math.max(0, Math.min(1, confidence)),
         reason: sourceRecord?.name ?? 'conversion chart',
         needs_review: needsReview,

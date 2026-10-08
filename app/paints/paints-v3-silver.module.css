@@ -631,6 +631,87 @@
   white-space: nowrap;
 }
 
+/* Parchment in both states; more specific than the info pane's brass
+   [aria-pressed="true"] rule. Pressed reads as pushed in, not brass. */
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-v3-paints-indicator="show-equivalents"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-v3-paints-indicator="show-equivalents"][aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-banner"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  color: var(--og-text-primary);
+  box-shadow: var(--og-shadow-contact);
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-banner"] > span:nth-child(2) > span:first-child {
+  color: color-mix(in srgb, var(--og-status-warning) 80%, var(--og-ink-800));
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-banner"] > span:nth-child(2) > span:last-child {
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 0.85rem;
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-banner"] > span:nth-child(2) > span:last-child span {
+  color: var(--og-text-secondary);
+  font-family: var(--og-font-ui);
+  font-size: 0.7rem;
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-banner"] button {
+  border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-walnut-control);
+  color: var(--og-paper-50);
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-status"] {
+  border: var(--og-border-width) dashed color-mix(in srgb, var(--og-brass-700) 54%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  box-shadow: var(--og-shadow-contact);
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-status"] p {
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-weight: 600;
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-status"] button {
+  border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
+  color: var(--og-text-primary);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-v3-paints-indicator="equivalent-badge"] {
+  background-color: color-mix(in srgb, var(--og-walnut-950) 82%, transparent);
+  color: var(--og-paper-50);
+  font-family: var(--og-font-mono);
+  letter-spacing: 0;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-card"] [data-v3-paints-indicator="equivalent-badge"] {
+  color: color-mix(in srgb, var(--og-status-warning) 80%, var(--og-ink-800));
+  font-family: var(--og-font-mono);
+}
+
 .paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
   border-radius: var(--og-radius-l);

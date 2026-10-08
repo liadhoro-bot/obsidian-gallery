@@ -33,7 +33,7 @@ export type PaintsV3Payload = {
   }
 }
 
-type CatalogPaintRow = {
+export type CatalogPaintRow = {
   id: string
   brand: string | null
   line: string | null
@@ -55,7 +55,7 @@ type CustomPaintRow = {
   color_hex: string | null
 }
 
-type OwnershipRow = {
+export type OwnershipRow = {
   paint_catalog_id: string
   is_owned: boolean | null
   is_wishlist: boolean | null
@@ -116,7 +116,7 @@ type PaintsV3PayloadOptions = {
   libraryLimit?: number
 }
 
-const catalogPaintFields = [
+export const catalogPaintFields = [
   'id',
   'brand',
   'line',
@@ -161,7 +161,7 @@ export function getPaintSwatchImageUrl(value: string | null | undefined) {
   return swatchUrl
 }
 
-function toCatalogPaint(
+export function toCatalogPaint(
   paint: CatalogPaintRow,
   ownershipByPaintId: Map<string, OwnershipRow>,
   includeSwatchImages: boolean

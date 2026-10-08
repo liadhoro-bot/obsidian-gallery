@@ -86,3 +86,62 @@ export function deltaEToSimilarityScore(distance: number) {
 
   return Math.max(0, Math.min(1, 1 - distance / 35))
 }
+
+const RADIANS = Math.PI / 180
+
+// CIEDE2000 colour difference. Unlike CIE76 (deltaE above) it tracks
+// perceived difference evenly across hue and lightness, so a fixed
+// threshold means roughly the same "how close does it look" everywhere.
+// lightnessWeight is the standard kL factor: 2 discounts lightness, which suits
+// transparent paints whose swatches vary in strength from brand to brand.
+export function deltaE2000(labA: LabColor, labB: LabColor, lightnessWeight = 1) {
+  const c1 = Math.hypot(labA.a, labA.b)
+  const c2 = Math.hypot(labB.a, labB.b)
+  const meanC = (c1 + c2) / 2
+  const g = 0.5 * (1 - Math.sqrt(meanC ** 7 / (meanC ** 7 + 25 ** 7)))
+  const a1 = labA.a * (1 + g)
+  const a2 = labB.a * (1 + g)
+  const cp1 = Math.hypot(a1, labA.b)
+  const cp2 = Math.hypot(a2, labB.b)
+  const hp1 = cp1 === 0 ? 0 : (Math.atan2(labA.b, a1) / RADIANS + 360) % 360
+  const hp2 = cp2 === 0 ? 0 : (Math.atan2(labB.b, a2) / RADIANS + 360) % 360
+
+  const deltaL = labB.l - labA.l
+  const deltaC = cp2 - cp1
+  let deltaHue = 0
+  if (cp1 * cp2 !== 0) {
+    deltaHue = hp2 - hp1
+    if (deltaHue > 180) deltaHue -= 360
+    else if (deltaHue < -180) deltaHue += 360
+  }
+  const deltaH = 2 * Math.sqrt(cp1 * cp2) * Math.sin((deltaHue / 2) * RADIANS)
+
+  const meanL = (labA.l + labB.l) / 2
+  const meanCp = (cp1 + cp2) / 2
+  let meanH = hp1 + hp2
+  if (cp1 * cp2 !== 0) {
+    if (Math.abs(hp1 - hp2) > 180) meanH += hp1 + hp2 < 360 ? 360 : -360
+    meanH /= 2
+  }
+
+  const t =
+    1 -
+    0.17 * Math.cos((meanH - 30) * RADIANS) +
+    0.24 * Math.cos(2 * meanH * RADIANS) +
+    0.32 * Math.cos((3 * meanH + 6) * RADIANS) -
+    0.2 * Math.cos((4 * meanH - 63) * RADIANS)
+  const sl = 1 + (0.015 * (meanL - 50) ** 2) / Math.sqrt(20 + (meanL - 50) ** 2)
+  const sc = 1 + 0.045 * meanCp
+  const sh = 1 + 0.015 * meanCp * t
+  const rt =
+    -2 *
+    Math.sqrt(meanCp ** 7 / (meanCp ** 7 + 25 ** 7)) *
+    Math.sin(60 * Math.exp(-(((meanH - 275) / 25) ** 2)) * RADIANS)
+
+  return Math.sqrt(
+    (deltaL / (lightnessWeight * sl)) ** 2 +
+      (deltaC / sc) ** 2 +
+      (deltaH / sh) ** 2 +
+      rt * (deltaC / sc) * (deltaH / sh)
+  )
+}
