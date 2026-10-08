@@ -1020,7 +1020,6 @@ export default function PaintsV3Preview({
     setSelectedPaintId(null)
   }
 
-
   function clearPaintFilters() {
     setQuery('')
     setBrandFilter('all')
@@ -1080,81 +1079,6 @@ export default function PaintsV3Preview({
     filtersBeforeEquivalentsRef.current = null
     setEquivalentsView(null)
     setVisibleCount(pageSize)
-
-    if (!previous) {
-      clearPaintFilters()
-      setSortMode('name-asc')
-      return
-    }
-
-    setQuery(previous.query)
-    setBrandFilter(previous.brandFilter)
-    setLineFilter(previous.lineFilter)
-    setOwnershipFilter(previous.ownershipFilter)
-    setColorGroupFilter(previous.colorGroupFilter)
-    setMatchColor(previous.matchColor)
-    setSortMode(previous.sortMode)
-  }
-
-  function clearPaintFilters() {
-    setQuery('')
-    setBrandFilter('all')
-    setLineFilter('all')
-    setOwnershipFilter('all')
-    setColorGroupFilter('all')
-    setMatchColor('')
-  }
-
-  async function showEquivalents(source: PaintRecord) {
-    if (!equivalentsView) {
-      filtersBeforeEquivalentsRef.current = {
-        query,
-        brandFilter,
-        lineFilter,
-        ownershipFilter,
-        colorGroupFilter,
-        matchColor,
-        sortMode,
-      }
-    }
-    clearPaintFilters()
-    setIsFilterOpen(false)
-    setIsSortOpen(false)
-    setSortMode('match')
-    setPageIndex(0)
-    setEquivalentsView({ source, status: 'loading', paints: [], matches: {} })
-
-    // Ignore a response that arrives after the user moved on to another paint.
-    const settle = (next: Omit<PaintEquivalentsView, 'source'>) =>
-      setEquivalentsView((current) =>
-        current?.source.id === source.id ? { source, ...next } : current
-      )
-
-    try {
-      const response = await fetch(
-        `/api/paints/v3-equivalents?paintId=${encodeURIComponent(source.id)}`
-      )
-      if (!response.ok) throw new Error('Failed to load equivalents.')
-
-      const result = (await response.json()) as {
-        paints?: PaintRecord[]
-        matches?: Record<string, PaintEquivalentMatch>
-      }
-      settle({
-        status: 'ready',
-        paints: result.paints ?? [],
-        matches: result.matches ?? {},
-      })
-    } catch {
-      settle({ status: 'error', paints: [], matches: {} })
-    }
-  }
-
-  function exitEquivalents() {
-    const previous = filtersBeforeEquivalentsRef.current
-    filtersBeforeEquivalentsRef.current = null
-    setEquivalentsView(null)
-    setPageIndex(0)
 
     if (!previous) {
       clearPaintFilters()
