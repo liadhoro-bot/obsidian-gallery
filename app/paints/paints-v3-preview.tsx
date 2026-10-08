@@ -1617,7 +1617,9 @@ export default function PaintsV3Preview({
         {equivalentsView ? (
           <EquivalentsBanner
             count={filteredPaints.length}
+            isSourceSelected={selectedPaintId === equivalentsView.source.id}
             onExit={exitEquivalents}
+            onSelectSource={() => setSelectedPaintId(equivalentsView.source.id)}
             source={equivalentsView.source}
             status={equivalentsView.status}
           />
@@ -2265,12 +2267,16 @@ function PaintInfoPanel({
 
 function EquivalentsBanner({
   count,
+  isSourceSelected,
   onExit,
+  onSelectSource,
   source,
   status,
 }: {
   count: number
+  isSourceSelected: boolean
   onExit: () => void
+  onSelectSource: () => void
   source: PaintRecord
   status: PaintEquivalentsView['status']
 }) {
@@ -2280,27 +2286,38 @@ function EquivalentsBanner({
       data-v3-paints-indicator="equivalents-banner"
       aria-live="polite"
     >
-      <span
-        aria-hidden="true"
-        className="h-8 w-8 shrink-0 rounded-[6px] border border-white/15"
-        style={{ backgroundColor: source.color }}
-      />
-      <span className="min-w-0 flex-1">
-        <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-cyan-300">
-          Equivalents for
-        </span>
-        <span className="block truncate text-xs font-black text-white">
-          {source.name}
-          <span className="font-semibold text-white/40">
-            {' '}
-            · {source.brand}
-            {status === 'ready' ? ` · ${count} shown` : ''}
+      {/* Tapping the source brings it back to the info pane after browsing equivalents. */}
+      <button
+        type="button"
+        onClick={onSelectSource}
+        aria-pressed={isSourceSelected}
+        aria-label={`Show ${source.name} in the info pane`}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        data-v3-paints-indicator="equivalents-source"
+      >
+        <span
+          aria-hidden="true"
+          className="h-8 w-8 shrink-0 rounded-[6px] border border-white/15"
+          style={{ backgroundColor: source.color }}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-cyan-300">
+            Equivalents for
+          </span>
+          <span className="block truncate text-xs font-black text-white">
+            {source.name}
+            <span className="font-semibold text-white/40">
+              {' '}
+              · {source.brand}
+              {status === 'ready' ? ` · ${count} shown` : ''}
+            </span>
           </span>
         </span>
-      </span>
+      </button>
       <button
         type="button"
         onClick={onExit}
+        data-v3-paints-indicator="equivalents-back"
         className="shrink-0 rounded-full border border-white/12 px-3 py-1 text-[10px] font-black text-white/62 transition hover:border-cyan-300/45 hover:text-cyan-200"
       >
         Back to paints

@@ -662,23 +662,33 @@
   box-shadow: var(--og-shadow-contact);
 }
 
-.paintsSilver [data-v3-paints-indicator="equivalents-banner"] > span:nth-child(2) > span:first-child {
+.paintsSilver [data-v3-paints-indicator="equivalents-source"] > span:nth-child(2) > span:first-child {
   color: color-mix(in srgb, var(--og-status-warning) 80%, var(--og-ink-800));
 }
 
-.paintsSilver [data-v3-paints-indicator="equivalents-banner"] > span:nth-child(2) > span:last-child {
+.paintsSilver [data-v3-paints-indicator="equivalents-source"] > span:nth-child(2) > span:last-child {
   color: var(--og-text-primary);
   font-family: var(--og-font-display);
   font-size: 0.85rem;
 }
 
-.paintsSilver [data-v3-paints-indicator="equivalents-banner"] > span:nth-child(2) > span:last-child span {
+.paintsSilver [data-v3-paints-indicator="equivalents-source"] > span:nth-child(2) > span:last-child span {
   color: var(--og-text-secondary);
   font-family: var(--og-font-ui);
   font-size: 0.7rem;
 }
 
-.paintsSilver [data-v3-paints-indicator="equivalents-banner"] button {
+.paintsSilver [data-v3-paints-indicator="equivalents-source"] {
+  border-radius: var(--og-radius-s);
+  cursor: pointer;
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-source"]:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--og-brass-500) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.paintsSilver [data-v3-paints-indicator="equivalents-back"] {
   border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
   background-color: var(--og-walnut-950);
   background-image: var(--og-material-walnut-control);
