@@ -45,7 +45,10 @@ export type EquivalentChartEdge = {
 export type PaintEquivalent = {
   paintId: string
   tier: EquivalentTier
+  group: EquivalentGroup
   deltaE: number | null
+  // Percent similar (100 − 3·ΔE00); null when there is no colour comparison.
+  similarity: number | null
   reason: string
   rank: number
 }
@@ -66,7 +69,12 @@ const EXACT_DELTA_E = 2.5
 const CLOSE_DELTA_E = 5
 const NEAR_DELTA_E = 10
 const MIN_RESULTS = 6
-const MAX_RESULTS = 24
+// No product limit on how many 85%+ colour matches are listed (users page and
+// filter them); this only stops crowded darks and greys returning hundreds.
+const MAX_RESULTS = 150
+// Colour matches that lead the list, and the chart-based block that follows them.
+const LEAD_SIMILAR_RESULTS = 6
+const CHART_BLOCK_RESULTS = 6
 
 const METAL_WORDS =
   /\b(metallic|metal|gold|silver|bronze|brass|steel|chrome|gunmetal|mithril|alumini?um|pewter|platinum)\b/
@@ -207,7 +215,7 @@ export function findPaintEquivalents({
   const sourceFamily = classifyPaintFamily(source)
   const sourceLab = trustedLab(source)
   const lightnessWeight = familyLightnessWeight(sourceFamily)
-  const results = new Map<string, Omit<PaintEquivalent, 'rank'> & { score: number }>()
+  const results = new Map<string, Omit<PaintEquivalent, 'rank' | 'group' | 'similarity'> & { score: number }>()
 
   const TIER_SCORE = { chart: -1000, community: -500, linked: -250 } as const
   // Each extra independent path pulls a linked paint up within its tier.
@@ -314,21 +322,73 @@ export function findPaintEquivalents({
     }
   }
 
-  const ranked = [...results.values()].sort((a, b) => a.score - b.score)
-  // Always keep chart, exact, close and contextual matches (up to the cap);
-  // "near" colours only fill the list up to the minimum.
-  const strong = ranked.filter((match) => match.tier !== 'near')
-  const near = ranked.filter((match) => match.tier === 'near')
+  // Display order: close colour matches first (whatever else vouches for
+  // them), then official charts, community cross-references, second-degree
+  // links and same-use products. Weaker colour matches only fill the list up
+  // to the minimum.
+  const withGroup = [...results.values()].map((match) => ({ ...match, group: groupOf(match) }))
+  const ranked = withGroup.sort(
+    (a, b) =>
+      GROUP_ORDER[a.group] - GROUP_ORDER[b.group] ||
+      (a.group === 'similar' || a.group === 'colour'
+        ? (a.deltaE ?? Infinity) - (b.deltaE ?? Infinity)
+        : a.score - b.score)
+  )
+  // A rounded picture: the best 6 colour matches, then up to 6 chart-based
+  // matches (official, community, related), then the rest of the 85%+ colour
+  // matches, then any remaining chart-based and same-use matches.
+  const similar = ranked.filter((match) => match.group === 'similar')
+  const chartBased = ranked.filter((match) => ['official', 'community', 'related'].includes(match.group))
+  const contextual = ranked.filter((match) => match.group === 'contextual')
+  const strong = [
+    ...similar.slice(0, LEAD_SIMILAR_RESULTS),
+    ...chartBased.slice(0, CHART_BLOCK_RESULTS),
+    ...similar.slice(LEAD_SIMILAR_RESULTS),
+    ...chartBased.slice(CHART_BLOCK_RESULTS),
+    ...contextual,
+  ]
+  const weak = ranked.filter((match) => match.group === 'colour')
   const selected = [
     ...strong.slice(0, MAX_RESULTS),
-    ...near.slice(0, Math.max(0, MIN_RESULTS - strong.length)),
+    ...weak.slice(0, Math.max(0, MIN_RESULTS - strong.length)),
   ]
 
   return selected.map((match, index) => ({
     paintId: match.paintId,
     tier: match.tier,
+    group: match.group,
     deltaE: match.deltaE,
+    similarity: match.deltaE === null ? null : similarityPercent(match.deltaE),
     reason: match.reason,
     rank: index,
   }))
+}
+
+// "X% similar" shown to users: 100 − 3·ΔE00, so ΔE 1 (barely visible) is 97%,
+// ΔE 2 is 94%, ΔE 5 (clearly different, same colour family) is 85%.
+export function similarityPercent(deltaE: number) {
+  return Math.max(0, Math.min(100, Math.round(100 - 3 * deltaE)))
+}
+
+// Colour matches at or above 85% similar lead the list.
+export const SIMILAR_CUTOFF_DELTA_E = 5
+
+export type EquivalentGroup = 'similar' | 'official' | 'community' | 'related' | 'contextual' | 'colour'
+
+const GROUP_ORDER: Record<EquivalentGroup, number> = {
+  similar: 0,
+  official: 1,
+  community: 2,
+  related: 3,
+  contextual: 4,
+  colour: 5,
+}
+
+function groupOf(match: { tier: EquivalentTier; deltaE: number | null }): EquivalentGroup {
+  if (match.tier === 'contextual') return 'contextual'
+  if (match.deltaE !== null && match.deltaE <= SIMILAR_CUTOFF_DELTA_E) return 'similar'
+  if (match.tier === 'chart') return 'official'
+  if (match.tier === 'community') return 'community'
+  if (match.tier === 'linked') return 'related'
+  return 'colour'
 }

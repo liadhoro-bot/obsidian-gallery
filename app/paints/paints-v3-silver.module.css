@@ -15,7 +15,8 @@
   max-width: var(--og-workbench-compact-max-width);
   margin-inline: auto;
   gap: 10px;
-  padding: 12px 14px calc(138px + env(safe-area-inset-bottom));
+  /* Clears the fixed info pane and bottom nav so the last row and "Load more" can scroll fully into view. */
+  padding: 12px 14px calc(200px + env(safe-area-inset-bottom));
 }
 
 .paintsSilver [data-v3-paints-indicator="app-header"] {
@@ -331,7 +332,6 @@
 }
 
 .paintsSilver [data-v3-paints-indicator="actions-toolbar"] button,
-.paintsSilver [data-v3-paints-indicator="pagination-rail"] button,
 .paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) button,
 .paintsSilver [data-v3-paints-indicator="paint-info-panel"] button {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
@@ -571,18 +571,22 @@
   font-weight: 600;
 }
 
-.paintsSilver [data-v3-paints-indicator="pagination-rail"] {
-  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 82%, var(--og-ink-950));
-  border-radius: var(--og-radius-round);
-  background-color: var(--og-walnut-950);
-  background-image: var(--og-material-dark-inset);
-  color: var(--og-paper-100);
-  box-shadow: var(--og-shadow-pressed), var(--og-shadow-contact);
+.paintsSilver [data-v3-paints-indicator="load-more"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: var(--og-shadow-constructed-card);
 }
 
-.paintsSilver [data-v3-paints-indicator="pagination-rail"] span {
-  color: var(--og-paper-200);
-  font-family: var(--og-font-mono);
+.paintsSilver [data-v3-paints-indicator="load-more"] span {
+  color: var(--og-text-secondary);
+  font-family: var(--og-font-ui);
+  font-size: 0.72rem;
 }
 
 .paintsSilver [data-v3-paints-indicator="paint-info-panel"] {

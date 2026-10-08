@@ -33,7 +33,10 @@ type PaintOwnershipState = Pick<PaintRecord, 'owned' | 'wish'>
 type PaintSortMode = 'name-asc' | 'name-desc' | 'brand-asc' | 'line-asc' | 'match'
 type PaintEquivalentMatch = {
   tier: 'chart' | 'community' | 'linked' | 'exact' | 'close' | 'near' | 'contextual'
+  // Display bucket: similar (>= 85%), official, community, related, contextual, colour (< 85%).
+  group: 'similar' | 'official' | 'community' | 'related' | 'contextual' | 'colour'
   deltaE: number | null
+  similarity: number | null
   reason: string
   rank: number
 }
@@ -270,7 +273,8 @@ const fallbackPaints: PaintRecord[] = [
   },
 ]
 
-const pageSize = 9
+// Continuous list: 12 cards (4 rows of 3) at a time, "Load more" adds 12.
+const pageSize = 12
 const colorMatchLimit = 24
 const defaultMatchColor = '#17c9d2'
 const paintExportOptions: {
@@ -326,29 +330,32 @@ const matchSortOption: { value: PaintSortMode; label: string } = {
   label: 'Best match',
 }
 
-// Badges explaining why each equivalent matched ("Chart", "ΔE 2.1"). Kept for
-// later, hidden from users for now.
-const SHOW_EQUIVALENT_BADGES = false
+// Pills on each equivalent: "94% similar", "Official chart", "Community".
+const SHOW_EQUIVALENT_BADGES = true
 
 // User-facing reason in the info pane. The API's reason names the source
 // chart; users only need to know what kind of match it is.
 function describeEquivalent(match: PaintEquivalentMatch | undefined) {
   if (!match) return undefined
-  if (match.tier === 'chart' || match.tier === 'community') {
-    return 'Listed as an equivalent in paint conversion charts.'
+  if (match.group === 'similar' || match.group === 'colour') {
+    return match.similarity === null ? 'Colour match.' : `${match.similarity}% similar colour.`
   }
-  if (match.tier === 'linked') return 'Related through its conversion-chart equivalents.'
-  if (match.tier === 'contextual') return 'Same type of product, used for the same job.'
-  return 'Close colour match.'
+  if (match.group === 'official') return 'Listed as an equivalent on an official conversion chart.'
+  if (match.group === 'community') return 'Listed as an equivalent in community conversion charts.'
+  if (match.group === 'related') return 'Related through its conversion-chart equivalents.'
+  return 'Same type of product, used for the same job.'
 }
 
 function getEquivalentLabel(match: PaintEquivalentMatch | undefined) {
   if (!match) return undefined
-  if (match.tier === 'chart') return 'Chart'
-  if (match.tier === 'community') return 'Cross-ref'
-  if (match.tier === 'linked') return 'Linked'
-  if (match.tier === 'contextual') return 'Same use'
-  return match.deltaE === null ? undefined : `ΔE ${match.deltaE.toFixed(1)}`
+  if ((match.group === 'similar' || match.group === 'colour') && match.similarity !== null) {
+    return `${match.similarity}% similar`
+  }
+  if (match.group === 'official') return 'Official chart'
+  if (match.group === 'community') return 'Community'
+  if (match.group === 'related') return 'Related'
+  if (match.group === 'contextual') return 'Same use'
+  return undefined
 }
 
 function getPaintColorGroup(hex: string) {
@@ -673,7 +680,7 @@ export default function PaintsV3Preview({
   const [ownershipFilter, setOwnershipFilter] = useState('all')
   const [colorGroupFilter, setColorGroupFilter] = useState('all')
   const [matchColor, setMatchColor] = useState('')
-  const [pageIndex, setPageIndex] = useState(0)
+  const [visibleCount, setVisibleCount] = useState(pageSize)
   const [paintStateOverrides, setPaintStateOverrides] = useState<
     Record<string, PaintOwnershipState>
   >({})
@@ -993,12 +1000,8 @@ export default function PaintsV3Preview({
     sortMode,
   ])
 
-  const pageCount = Math.max(1, Math.ceil(filteredPaints.length / pageSize))
-  const normalizedPageIndex = Math.min(pageIndex, pageCount - 1)
-  const visiblePaints = filteredPaints.slice(
-    normalizedPageIndex * pageSize,
-    normalizedPageIndex * pageSize + pageSize
-  )
+  const visiblePaints = filteredPaints.slice(0, visibleCount)
+  const remainingCount = filteredPaints.length - visiblePaints.length
   const selectedPaint = selectedPaintId
     ? allPaints.find((paint) => paint.id === selectedPaintId) ??
       equivalentPaints.find((paint) => paint.id === selectedPaintId) ??
@@ -1013,16 +1016,84 @@ export default function PaintsV3Preview({
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
 
   function resetPaintListState() {
-    setPageIndex(0)
+    setVisibleCount(pageSize)
     setSelectedPaintId(null)
   }
 
-  function showPreviousPage() {
-    setPageIndex((current) => (current === 0 ? pageCount - 1 : current - 1))
+
+  function clearPaintFilters() {
+    setQuery('')
+    setBrandFilter('all')
+    setLineFilter('all')
+    setOwnershipFilter('all')
+    setColorGroupFilter('all')
+    setMatchColor('')
   }
 
-  function showNextPage() {
-    setPageIndex((current) => (current + 1 >= pageCount ? 0 : current + 1))
+  async function showEquivalents(source: PaintRecord) {
+    if (!equivalentsView) {
+      filtersBeforeEquivalentsRef.current = {
+        query,
+        brandFilter,
+        lineFilter,
+        ownershipFilter,
+        colorGroupFilter,
+        matchColor,
+        sortMode,
+      }
+    }
+    clearPaintFilters()
+    setIsFilterOpen(false)
+    setIsSortOpen(false)
+    setSortMode('match')
+    setVisibleCount(pageSize)
+    setEquivalentsView({ source, status: 'loading', paints: [], matches: {} })
+
+    // Ignore a response that arrives after the user moved on to another paint.
+    const settle = (next: Omit<PaintEquivalentsView, 'source'>) =>
+      setEquivalentsView((current) =>
+        current?.source.id === source.id ? { source, ...next } : current
+      )
+
+    try {
+      const response = await fetch(
+        `/api/paints/v3-equivalents?paintId=${encodeURIComponent(source.id)}`
+      )
+      if (!response.ok) throw new Error('Failed to load equivalents.')
+
+      const result = (await response.json()) as {
+        paints?: PaintRecord[]
+        matches?: Record<string, PaintEquivalentMatch>
+      }
+      settle({
+        status: 'ready',
+        paints: result.paints ?? [],
+        matches: result.matches ?? {},
+      })
+    } catch {
+      settle({ status: 'error', paints: [], matches: {} })
+    }
+  }
+
+  function exitEquivalents() {
+    const previous = filtersBeforeEquivalentsRef.current
+    filtersBeforeEquivalentsRef.current = null
+    setEquivalentsView(null)
+    setVisibleCount(pageSize)
+
+    if (!previous) {
+      clearPaintFilters()
+      setSortMode('name-asc')
+      return
+    }
+
+    setQuery(previous.query)
+    setBrandFilter(previous.brandFilter)
+    setLineFilter(previous.lineFilter)
+    setOwnershipFilter(previous.ownershipFilter)
+    setColorGroupFilter(previous.colorGroupFilter)
+    setMatchColor(previous.matchColor)
+    setSortMode(previous.sortMode)
   }
 
   function clearPaintFilters() {
@@ -1628,7 +1699,7 @@ export default function PaintsV3Preview({
           />
         ) : null}
 
-        <section className="relative pr-8">
+        <section className="relative">
           {equivalentsView && equivalentsView.status !== 'ready' ? (
             <div
               className="rounded-[8px] border border-dashed border-white/10 bg-[#111821] p-6 text-center"
@@ -1708,30 +1779,19 @@ export default function PaintsV3Preview({
             </div>
           )}
 
-          <div
-            className="absolute bottom-0 right-0 top-0 flex w-6 flex-col items-center justify-between rounded-full border border-white/10 bg-[#111821]/92 py-2"
-            data-v3-paints-indicator="pagination-rail"
-          >
+          {remainingCount > 0 && !(equivalentsView && equivalentsView.status !== 'ready') ? (
             <button
               type="button"
-              aria-label="Previous paints"
-              onClick={showPreviousPage}
-              className="grid h-8 w-5 place-items-center text-white/42 transition hover:text-cyan-300"
+              onClick={() => setVisibleCount((current) => current + pageSize)}
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border text-xs font-black transition"
+              data-v3-paints-indicator="load-more"
             >
-              ^
+              Load more
+              <span className="font-semibold opacity-70">
+                {visiblePaints.length} of {filteredPaints.length}
+              </span>
             </button>
-            <span className="text-[10px] font-black text-white/30">
-              {normalizedPageIndex + 1}/{pageCount}
-            </span>
-            <button
-              type="button"
-              aria-label="Next paints"
-              onClick={showNextPage}
-              className="grid h-8 w-5 place-items-center text-white/42 transition hover:text-cyan-300"
-            >
-              v
-            </button>
-          </div>
+          ) : null}
         </section>
       </div>
 
