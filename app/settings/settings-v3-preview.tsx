@@ -4,7 +4,9 @@ import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useState } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
-import { logout } from './settings-actions'
+import AvatarUploadInput from './avatar-upload-input'
+import SettingsProfileEditor from './settings-profile-editor'
+import { logout, updateAvatar } from './settings-actions'
 import styles from '../settings-support-silver.module.css'
 
 type StartupPage = 'dashboard' | 'guides' | 'projects' | 'paints' | 'community'
@@ -210,22 +212,24 @@ function AccountCard({ user }: { user: SettingsV3User }) {
       </div>
       <div className={styles.previewSectionBody}>
         <div className={styles.previewAccountGrid}>
-          <div className={styles.previewAvatar}>
-            <Image
-              src={user.avatarUrl || '/curator/the-curator.png'}
-              alt={user.avatarUrl ? user.displayName : ''}
-              fill
-              sizes="96px"
-              className="object-cover"
-            />
-            <button
-              type="button"
-              aria-label="Edit avatar"
-              className={styles.avatarEditControl}
-            >
-              <SvgIcon name="edit" />
-            </button>
-          </div>
+          <form action={updateAvatar}>
+            <div className={styles.previewAvatar}>
+              <Image
+                src={user.avatarUrl || '/curator/the-curator.png'}
+                alt={user.avatarUrl ? user.displayName : ''}
+                fill
+                sizes="96px"
+                className="object-cover"
+              />
+              <label
+                aria-label="Edit avatar"
+                className={styles.avatarEditControl}
+              >
+                <SvgIcon name="edit" />
+                <AvatarUploadInput />
+              </label>
+            </div>
+          </form>
 
           <div className="min-w-0 self-center">
             <h3 className={`${styles.previewName} truncate`}>
@@ -244,12 +248,11 @@ function AccountCard({ user }: { user: SettingsV3User }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          className={styles.walnutButton}
-        >
-          Edit Profile
-        </button>
+        <SettingsProfileEditor
+          buttonClassName={styles.walnutButton}
+          email={user.email}
+          username={user.username || 'No username yet'}
+        />
       </div>
     </section>
   )

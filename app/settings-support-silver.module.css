@@ -716,6 +716,7 @@
   inset-inline-end: 4px;
   width: 32px;
   height: 32px;
+  cursor: pointer;
 }
 
 .previewName {

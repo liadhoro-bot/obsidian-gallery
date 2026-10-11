@@ -14,9 +14,11 @@ const initialState: UpdateProfileState = {
 }
 
 export default function SettingsProfileEditor({
+  buttonClassName,
   email,
   username,
 }: {
+  buttonClassName?: string
   email: string
   username: string
 }) {
@@ -33,7 +35,7 @@ export default function SettingsProfileEditor({
       <button
         type="button"
         onClick={() => setIsEditing(true)}
-        className={styles.editButton}
+        className={buttonClassName || styles.editButton}
       >
         Edit Profile
       </button>
