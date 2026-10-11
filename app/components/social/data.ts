@@ -19,7 +19,7 @@ export async function getRecipeSocialState(
 ): Promise<SocialState> {
   const [
     { count: likeCount },
-    { count: saveCount },
+    saveCountResult,
     likedResult,
     savedResult,
     reportedResult,
@@ -28,10 +28,9 @@ export async function getRecipeSocialState(
       .from('recipe_likes')
       .select('recipe_id', { count: 'exact', head: true })
       .eq('recipe_id', recipeId),
-    supabase
-      .from('saved_recipes')
-      .select('recipe_id', { count: 'exact', head: true })
-      .eq('recipe_id', recipeId),
+    // RLS hides other users' saved_recipes rows, so a row count would only
+    // ever see the viewer's own save; use the aggregate-only RPC instead.
+    supabase.rpc('recipe_save_counts', { recipe_ids: [recipeId] }),
     userId
       ? supabase
           .from('recipe_likes')
@@ -58,9 +57,11 @@ export async function getRecipeSocialState(
       : Promise.resolve({ data: null }),
   ])
 
+  const saveCountRows = (saveCountResult.data ?? []) as { save_count: number }[]
+
   return {
     likeCount: countValue(likeCount),
-    saveCount: countValue(saveCount),
+    saveCount: Number(saveCountRows[0]?.save_count) || 0,
     viewerHasLiked: Boolean(likedResult.data),
     viewerHasSaved: Boolean(savedResult.data),
     viewerHasReported: Boolean(reportedResult.data),

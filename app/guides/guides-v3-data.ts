@@ -425,8 +425,10 @@ async function loadRecipeSocialCounts(
   const [likeRows, saveRows, viewerLikeRows, viewerSaveRows] = await Promise.all([
     selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
       supabase.from('recipe_likes').select('recipe_id').in('recipe_id', batch)),
-    selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
-      supabase.from('saved_recipes').select('recipe_id').in('recipe_id', batch)),
+    // RLS hides other users' saved_recipes rows, so totals come from an
+    // aggregate-only RPC rather than counting rows client-side.
+    selectInBatches<{ recipe_id: string; save_count: number }>(recipeIds, (batch) =>
+      supabase.rpc('recipe_save_counts', { recipe_ids: batch })),
     selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
       supabase.from('recipe_likes').select('recipe_id').eq('user_id', userId).in('recipe_id', batch)),
     selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
@@ -447,7 +449,7 @@ async function loadRecipeSocialCounts(
     ensure(row.recipe_id).likeCount += 1
   }
   for (const row of saveRows) {
-    ensure(row.recipe_id).saveCount += 1
+    ensure(row.recipe_id).saveCount = Number(row.save_count) || 0
   }
   for (const row of viewerLikeRows) {
     ensure(row.recipe_id).viewerHasLiked = true
