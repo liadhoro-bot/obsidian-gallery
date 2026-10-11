@@ -248,6 +248,25 @@ function isGuidePublic(guide: GuideRow) {
   return memberRecipesOf(guide).some((recipe) => recipe.is_public === true)
 }
 
+// Publishing a user-composed guide flips its decks to public, and the
+// `recipes_ensure_guide` trigger then gives each of those decks its own
+// auto-guide. Listing both would show the same content twice, so an
+// auto-guide is dropped whenever a composed guide in the same list already
+// covers one of its decks. A deck published on its own has only its
+// auto-guide and still appears once.
+function withoutRedundantAutoGuides(guides: GuideRow[]) {
+  const composedDeckIds = new Set(
+    guides
+      .filter((guide) => !guide.is_auto)
+      .flatMap((guide) => (guide.guide_decks ?? []).map((deck) => deck.recipe_id))
+  )
+  return guides.filter(
+    (guide) =>
+      !guide.is_auto ||
+      !(guide.guide_decks ?? []).some((deck) => composedDeckIds.has(deck.recipe_id))
+  )
+}
+
 async function loadRecipeImages(
   supabase: Awaited<ReturnType<typeof createClient>>,
   recipes: RecipeRow[]
@@ -564,8 +583,8 @@ export const getGuidesV3Payload = cache(async (
   const savedRecipeIds = new Set(savedRows.map((row) => row.recipe_id))
   const ownedRecipeIds = new Set(myRecipes.map((recipe) => recipe.id))
 
-  const publicGuides = ((publicGuidesResult.data ?? []) as GuideRow[]).filter(
-    isGuidePublic
+  const publicGuides = withoutRedundantAutoGuides(
+    ((publicGuidesResult.data ?? []) as GuideRow[]).filter(isGuidePublic)
   )
   const ownedGuides = ((myGuidesResult.data ?? []) as GuideRow[]).filter(
     (guide) => guide.user_id === userId
@@ -605,10 +624,10 @@ export const getGuidesV3Payload = cache(async (
   )
 
   const ownedGuideIds = new Set(ownedGuides.map((guide) => guide.id))
-  const myGuides = [
+  const myGuides = withoutRedundantAutoGuides([
     ...ownedGuides,
     ...savedGuides.filter((guide) => !ownedGuideIds.has(guide.id)),
-  ]
+  ])
 
   // Decks are only the viewer's own creations. Saving someone else's public
   // deck saves it as a guide (every public deck has an auto guide), so it
@@ -720,6 +739,7 @@ export const getGuidesV3Payload = cache(async (
 export async function getCreatorPublicGuides(creatorId: string, viewerId: string) {
   const supabase = await createClient()
   const result: GuidesV3GuideFile[] = []
+  const listedGuides: GuideRow[] = []
   const pageSize = 100
 
   for (let offset = 0; ; offset += pageSize) {
@@ -734,6 +754,7 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
 
     const rows = (data ?? []) as GuideRow[]
     const publicGuides = rows.filter(isGuidePublic)
+    listedGuides.push(...publicGuides)
     const recipesByGuideId = new Map<string, RecipeRow[]>()
     for (const guide of publicGuides) {
       const recipes = memberRecipesOf(guide)
@@ -762,6 +783,9 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
       const primaryRecipe = memberRecipes.find((recipe) => recipe.is_public) ?? memberRecipes[0]
       result.push(toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, viewerId))
     }
-    if (rows.length < pageSize) return result
+    if (rows.length < pageSize) {
+      const keptIds = new Set(withoutRedundantAutoGuides(listedGuides).map((guide) => guide.id))
+      return result.filter((guide) => keptIds.has(guide.id))
+    }
   }
 }
