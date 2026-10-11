@@ -124,7 +124,6 @@ type RecipeStepPaintRow = {
 }
 
 const deckLimit = 36
-const publicDeckLimit = 36
 const fallbackImage = '/onboarding/pains/tough-choices.jpeg'
 const accents = [
   '#d8bd83',
@@ -268,6 +267,49 @@ function withoutRedundantAutoGuides(guides: GuideRow[]) {
   )
 }
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+// Runs an `.in(column, ids)` lookup in batches. Discover now loads every
+// public guide, so a single request could carry hundreds of ids (too long a
+// URL) and return more rows than PostgREST's per-request cap.
+const inQueryBatchSize = 50
+
+async function selectInBatches<Row>(
+  ids: string[],
+  query: (batch: string[]) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>
+): Promise<Row[]> {
+  const rows: Row[] = []
+  for (let start = 0; start < ids.length; start += inQueryBatchSize) {
+    const { data, error } = await query(ids.slice(start, start + inQueryBatchSize))
+    if (error) throw new Error(error.message)
+    rows.push(...(data ?? []))
+  }
+  return rows
+}
+
+// Discover lists every public guide. Only fetching the newest N rows hid
+// older guides entirely, and N shrank further once private drafts and
+// redundant auto-guides were filtered out of it, so page through them all.
+const publicGuidePageSize = 100
+const maxPublicGuideRows = 2000
+
+async function loadAllVisibleGuideRows(supabase: SupabaseClient) {
+  const rows: GuideRow[] = []
+  for (let offset = 0; offset < maxPublicGuideRows; offset += publicGuidePageSize) {
+    const { data, error } = await selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
+      .from('guides')
+      .select(selection)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(offset, offset + publicGuidePageSize - 1)
+      .returns<GuideRow[]>())
+    if (error) return { data: null, error }
+    rows.push(...((data ?? []) as GuideRow[]))
+    if ((data ?? []).length < publicGuidePageSize) break
+  }
+  return { data: rows, error: null }
+}
+
 async function loadRecipeImages(
   supabase: Awaited<ReturnType<typeof createClient>>,
   recipes: RecipeRow[]
@@ -278,17 +320,18 @@ async function loadRecipeImages(
 
   if (missingImageIds.length === 0) return new Map<string, string>()
 
-  const { data, error } = await supabase
-    .from('image_assets')
-    .select('entity_id, image_url')
-    .eq('entity_type', 'recipe')
-    .in('entity_id', missingImageIds)
-    .order('created_at', { ascending: false })
-
-  if (error) throw new Error(error.message)
+  const data = await selectInBatches<{ entity_id: string; image_url: string }>(
+    missingImageIds,
+    (batch) => supabase
+      .from('image_assets')
+      .select('entity_id, image_url')
+      .eq('entity_type', 'recipe')
+      .in('entity_id', batch)
+      .order('created_at', { ascending: false })
+  )
 
   const imageByRecipeId = new Map<string, string>()
-  for (const image of data ?? []) {
+  for (const image of data) {
     if (!imageByRecipeId.has(image.entity_id)) {
       imageByRecipeId.set(image.entity_id, image.image_url)
     }
@@ -305,14 +348,9 @@ async function loadRecipeStats(
     return new Map<string, { cards: number; paints: number }>()
   }
 
-  const { data: steps, error: stepsError } = await supabase
-    .from('recipe_steps')
-    .select('id, recipe_id')
-    .in('recipe_id', recipeIds)
-
-  if (stepsError) throw new Error(stepsError.message)
-
-  const stepRows = (steps ?? []) as RecipeStepRow[]
+  const stepRows = await selectInBatches<RecipeStepRow>(recipeIds, (batch) =>
+    supabase.from('recipe_steps').select('id, recipe_id').in('recipe_id', batch)
+  )
   const stepToRecipeId = new Map(stepRows.map((step) => [step.id, step.recipe_id]))
   const statsByRecipeId = new Map<string, { cards: number; paintIds: Set<string> }>()
 
@@ -334,17 +372,14 @@ async function loadRecipeStats(
   }
 
   const stepIds = stepRows.map((step) => step.id)
-  const { data: stepPaints, error: stepPaintsError } =
-    stepIds.length > 0
-      ? await supabase
-          .from('recipe_step_paints')
-          .select('recipe_step_id, paint_catalog_id, custom_paint_id')
-          .in('recipe_step_id', stepIds)
-      : { data: [], error: null }
+  const stepPaints = await selectInBatches<RecipeStepPaintRow>(stepIds, (batch) =>
+    supabase
+      .from('recipe_step_paints')
+      .select('recipe_step_id, paint_catalog_id, custom_paint_id')
+      .in('recipe_step_id', batch)
+  )
 
-  if (stepPaintsError) throw new Error(stepPaintsError.message)
-
-  for (const link of (stepPaints ?? []) as RecipeStepPaintRow[]) {
+  for (const link of stepPaints) {
     const recipeId = stepToRecipeId.get(link.recipe_step_id)
     if (!recipeId) continue
 
@@ -386,26 +421,17 @@ async function loadRecipeSocialCounts(
     return new Map<string, ReturnType<typeof emptyState>>()
   }
 
-  const [likeRowsResult, saveRowsResult, viewerLikeRowsResult, viewerSaveRowsResult] =
-    await Promise.all([
-      supabase.from('recipe_likes').select('recipe_id').in('recipe_id', recipeIds),
-      supabase.from('saved_recipes').select('recipe_id').in('recipe_id', recipeIds),
-      supabase
-        .from('recipe_likes')
-        .select('recipe_id')
-        .eq('user_id', userId)
-        .in('recipe_id', recipeIds),
-      supabase
-        .from('saved_recipes')
-        .select('recipe_id')
-        .eq('user_id', userId)
-        .in('recipe_id', recipeIds),
-    ])
-
-  if (likeRowsResult.error) throw new Error(likeRowsResult.error.message)
-  if (saveRowsResult.error) throw new Error(saveRowsResult.error.message)
-  if (viewerLikeRowsResult.error) throw new Error(viewerLikeRowsResult.error.message)
-  if (viewerSaveRowsResult.error) throw new Error(viewerSaveRowsResult.error.message)
+  type RecipeIdRow = { recipe_id: string }
+  const [likeRows, saveRows, viewerLikeRows, viewerSaveRows] = await Promise.all([
+    selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
+      supabase.from('recipe_likes').select('recipe_id').in('recipe_id', batch)),
+    selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
+      supabase.from('saved_recipes').select('recipe_id').in('recipe_id', batch)),
+    selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
+      supabase.from('recipe_likes').select('recipe_id').eq('user_id', userId).in('recipe_id', batch)),
+    selectInBatches<RecipeIdRow>(recipeIds, (batch) =>
+      supabase.from('saved_recipes').select('recipe_id').eq('user_id', userId).in('recipe_id', batch)),
+  ])
 
   const countsByRecipeId = new Map<string, ReturnType<typeof emptyState>>()
   function ensure(recipeId: string) {
@@ -417,16 +443,16 @@ async function loadRecipeSocialCounts(
     return entry
   }
 
-  for (const row of (likeRowsResult.data ?? []) as { recipe_id: string }[]) {
+  for (const row of likeRows) {
     ensure(row.recipe_id).likeCount += 1
   }
-  for (const row of (saveRowsResult.data ?? []) as { recipe_id: string }[]) {
+  for (const row of saveRows) {
     ensure(row.recipe_id).saveCount += 1
   }
-  for (const row of (viewerLikeRowsResult.data ?? []) as { recipe_id: string }[]) {
+  for (const row of viewerLikeRows) {
     ensure(row.recipe_id).viewerHasLiked = true
   }
-  for (const row of (viewerSaveRowsResult.data ?? []) as { recipe_id: string }[]) {
+  for (const row of viewerSaveRows) {
     ensure(row.recipe_id).viewerHasSaved = true
   }
 
@@ -556,11 +582,7 @@ export const getGuidesV3Payload = cache(async (
       // with at least one public deck, plus my own (possibly private)
       // guides" - the isGuidePublic() filter below removes the latter.
       tab === 'library' || tab === 'all'
-        ? selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
-          .from('guides')
-          .select(selection)
-          .order('created_at', { ascending: false })
-          .limit(publicDeckLimit).returns<GuideRow[]>())
+        ? loadAllVisibleGuideRows(supabase)
         : Promise.resolve({ data: [] as GuideRow[], error: null }),
       // My Guides: guides I own (draft/private/public alike, per RLS's
       // "own" clause).
