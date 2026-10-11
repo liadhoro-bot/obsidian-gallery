@@ -2,6 +2,7 @@ import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
+import { createSharedReadClient } from './shared-read-client'
 
 export type GuidesV3GuideFile = {
   id: string
@@ -789,3 +790,44 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
     }
   }
 }
+
+// One public guide for the logged-out share route (/s/guides/[id]). Reads
+// bypass RLS (see createSharedReadClient), so the isGuidePublic and
+// is_public member filters below are the only thing keeping private guides
+// and decks out. No viewer social state - visitors can't like or save.
+export const getSharedGuideFile = cache(async (guideId: string) => {
+  const supabase = createSharedReadClient()
+  const { data, error } = await selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
+    .from('guides')
+    .select(selection)
+    .eq('id', guideId)
+    .maybeSingle()
+    .returns<GuideRow | null>())
+
+  // An invalid uuid surfaces as 22P02; treat it like a missing guide.
+  if (error && error.code !== '22P02') throw new Error(error.message)
+  const guide = data as GuideRow | null
+  if (!guide || !isGuidePublic(guide)) return null
+
+  const memberRecipes = [...(guide.guide_decks ?? [])]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((guideDeck) => firstValue(guideDeck.recipes))
+    .filter((recipe): recipe is RecipeRow => recipe?.is_public === true)
+  if (!memberRecipes.length) return null
+
+  const recipeIds = memberRecipes.map((recipe) => recipe.id)
+  const [statsByRecipeId, imageByRecipeId] = await Promise.all([
+    loadRecipeStats(supabase, recipeIds),
+    loadRecipeImages(supabase, memberRecipes),
+  ])
+  const socialByRecipeId = new Map<string, { likeCount: number; saveCount: number; viewerHasLiked: boolean; viewerHasSaved: boolean }>()
+  const memberDecks = memberRecipes.map((recipe) =>
+    toDeck({ recipe, imageByRecipeId, statsByRecipeId, socialByRecipeId, userId: '', saved: false })
+  )
+
+  return {
+    guide: toGuideFile(guide, memberDecks, memberRecipes[0], socialByRecipeId, ''),
+    decks: memberDecks,
+    coverImageUrl: guide.image_url || memberRecipes[0].image_url || imageByRecipeId.get(memberRecipes[0].id) || null,
+  }
+})

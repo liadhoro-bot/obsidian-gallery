@@ -113,7 +113,7 @@ export default async function GuideDetailPage({
       <DeckShareMenu
         cards={cards}
         fileBaseName={guide.title}
-        sharePath={`/guides/${guide.id}`}
+        sharePath={`/s/guides/${guide.id}`}
       />
     </>} /></main>
   }

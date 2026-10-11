@@ -3,10 +3,12 @@ import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { loadRecipeSteps } from './load-recipe-steps'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
+import { createSharedReadClient } from './shared-read-client'
 import { getRecipeSocialState } from '../components/social/data'
 import {
   getGuideDeckThumbnail,
   getGuidesV3Payload,
+  getSharedGuideFile,
   type GuidesV3Deck,
   type GuidesV3GuideFile,
 } from './guides-v3-data'
@@ -287,9 +289,16 @@ async function loadRecipeImage(
   return data?.image_url ?? null
 }
 
+type DetailClient = Awaited<ReturnType<typeof createClient>>
+
 export const getGuidesV3DeckDetail = cache(
-  async (deckId: string, userId: string) => {
-    const supabase = await createClient()
+  async (deckId: string, userId: string) => loadDeckDetail(await createClient(), deckId, userId)
+)
+
+// userId is null for a logged-out visitor on the share route: public decks
+// only, read through the service-role client (see getSharedGuideDetail).
+async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: string | null) {
+  {
 
     const { data: recipe, error: recipeError } = await selectDifficultyCompatible(
       'id, name, description, image_url, is_public, difficulty, cover_position, cover_focal_x, cover_focal_y, user_id, created_at',
@@ -297,7 +306,7 @@ export const getGuidesV3DeckDetail = cache(
         .from('recipes')
         .select(selection)
         .eq('id', deckId)
-        .or(`user_id.eq.${userId},is_public.eq.true`)
+        .or(userId ? `user_id.eq.${userId},is_public.eq.true` : 'is_public.eq.true')
         .maybeSingle()
         .returns<RecipeRow | null>()
     )
@@ -406,7 +415,7 @@ export const getGuidesV3DeckDetail = cache(
       .map((id) => id.slice('catalog:'.length))
 
     const { data: ownershipRows, error: ownershipError } =
-      catalogPaintIds.length > 0
+      userId && catalogPaintIds.length > 0
         ? await supabase
             .from('user_paint_ownership')
             .select('paint_catalog_id, is_owned, is_wishlist')
@@ -504,8 +513,9 @@ export const getGuidesV3DeckDetail = cache(
       ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public deck',
       steps: normalizedSteps,
       paintList: paints,
-      guideId: wrappedGuide?.id ?? null,
-      guideTitle: wrappedGuide
+      // A logged-out read bypasses RLS, so the wrapping guide may be private.
+      guideId: userId ? wrappedGuide?.id ?? null : null,
+      guideTitle: userId && wrappedGuide
         ? clean(wrappedGuide.title, `${clean(typedRecipe.name, 'Untitled Deck')} Guide`)
         : null,
       likeCount: socialState.likeCount,
@@ -515,7 +525,7 @@ export const getGuidesV3DeckDetail = cache(
       createdAt: typedRecipe.created_at ?? '',
     } satisfies GuidesV3DeckDetail
   }
-)
+}
 
 export const getGuidesV3GuideDetail = cache(
   async (guideId: string, userId: string) => {
@@ -554,3 +564,34 @@ export const getGuidesV3GuideDetail = cache(
     } satisfies GuidesV3GuideDetail
   }
 )
+
+// The logged-out share route's counterpart to getGuidesV3GuideDetail: the
+// same guide shape plus every member deck's full detail, without needing a
+// viewer's library payload. Reads bypass RLS (see createSharedReadClient);
+// getSharedGuideFile and loadDeckDetail(null) restrict to public decks.
+export const getSharedGuideDetail = cache(async (guideId: string) => {
+  const shared = await getSharedGuideFile(guideId)
+  if (!shared) return null
+
+  const supabase = createSharedReadClient()
+  const [{ data: layout, error: layoutError }, deckDetails] = await Promise.all([
+    supabase.from('guides').select('card_layout').eq('id', guideId).maybeSingle(),
+    Promise.all(shared.decks.map(deck => loadDeckDetail(supabase, deck.id, null))),
+  ])
+  if (layoutError && layoutError.code !== '42703' && layoutError.code !== 'PGRST204') throw new Error(layoutError.message)
+
+  const cardLayout = parseGuideCardLayout(layout?.card_layout)
+  const details = deckDetails.filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
+  const visibleCards = resolveGuideCards(details, cardLayout).filter(card => !card.hidden)
+
+  return {
+    guide: {
+      ...shared.guide,
+      cards: visibleCards.length,
+      cardLayout,
+      decksList: shared.decks.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id).length })),
+    } satisfies GuidesV3GuideDetail,
+    deckDetails: details,
+    coverImageUrl: shared.coverImageUrl,
+  }
+})

@@ -131,6 +131,7 @@ export default async function proxy(request: NextRequest) {
     pathname === '/settings/terms' ||
     pathname === '/contests/dice-roll' ||
     pathname === '/guides' ||
+    pathname.startsWith('/s/') ||
     pathname.startsWith('/guides/') ||
     pathname === '/recipes' ||
     pathname.startsWith('/recipes/') ||

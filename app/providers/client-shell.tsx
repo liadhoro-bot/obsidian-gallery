@@ -32,10 +32,12 @@ export default function ClientShell({
     !pathname.startsWith('/support') &&
     !pathname.startsWith('/settings/terms') &&
     !pathname.startsWith('/guides/decks') &&
+    !pathname.startsWith('/s/') &&
     !pathname.startsWith('/subscribe') &&
     !pathname.startsWith('/payment-success') &&
     !pathname.startsWith('/trial')
   const showInstallPrompt =
+    !pathname.startsWith('/s/') &&
     !pathname.startsWith('/auth') &&
     !pathname.startsWith('/login') &&
     !pathname.startsWith('/onboarding') &&
