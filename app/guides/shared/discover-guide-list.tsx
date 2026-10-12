@@ -7,6 +7,8 @@ import type { ReactNode } from 'react'
 import type { GuidesV3Creator, GuidesV3GuideFile } from '../guides-v3-data'
 import GuideSocialActions from './guide-social-actions'
 
+type GuideCardSummaryGuide = Pick<GuidesV3GuideFile, 'id' | 'title' | 'subtitle' | 'image' | 'creator'>
+
 export function CompactGuideCard({ guide }: { guide: GuidesV3GuideFile }) {
   return <article data-v3-guides-indicator="compact-guide-card" className="overflow-hidden rounded-[12px] border px-3 py-3 shadow-sm">
     <GuideCardSummary guide={guide} href={`/guides/${guide.id}?preview=1&view=1`} featureGuideTarget="guides.tabs.library" />
@@ -30,7 +32,7 @@ export function GuideCardSummary({
   onClick,
   featureGuideTarget,
 }: {
-  guide: GuidesV3GuideFile
+  guide: GuideCardSummaryGuide
   href?: string
   onClick?: () => void
   featureGuideTarget?: string

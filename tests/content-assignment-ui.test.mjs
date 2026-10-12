@@ -22,6 +22,7 @@ test('save controls offer saved-library and project/unit assignment paths', () =
 test('project and both unit details surfaces render the shared assignment card', () => {
   const project = read('../app/projects/[id]/project-details-tab.tsx')
   const card = read('../app/guides/shared/assigned-content-card.tsx')
+  const discoverCards = read('../app/guides/shared/discover-guide-list.tsx')
   const currentUnit = read('../app/units/[id]/unit-v3-preview.tsx')
   const legacyUnit = read('../app/units/[id]/unit-detail-client.tsx')
 
@@ -34,8 +35,10 @@ test('project and both unit details surfaces render the shared assignment card',
   assert.match(card, /aria-label=\{expanded \? 'Hide assigned guides' : 'Show assigned guides'\}/)
   assert.match(card, /expanded \? 'Hide' : 'Show'/)
   assert.match(card, /guidesStyles\.guidesSilver/)
+  assert.match(card, /guidesStyles\.embeddedGuideList/)
+  assert.match(card, /<GuideCardSummary guide=\{item\}/)
   assert.match(card, /data-v3-guides-indicator="guide-card"/)
-  assert.match(card, /grid-cols-\[76px_minmax\(0,1fr\)\]/)
+  assert.match(discoverCards, /grid-cols-\[76px_minmax\(0,1fr\)\]/)
   assert.match(card, /data-v3-guides-indicator="list-card-actions"/)
   assert.match(card, /<ViewCardsLink/)
   assert.match(card, /<GuideSocialActions/)

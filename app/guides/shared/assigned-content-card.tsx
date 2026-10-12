@@ -15,6 +15,7 @@ import editorStyles from '../decks/[id]/deck-editor-client.module.css'
 import guidesStyles from '../guides-v3-silver.module.css'
 import ViewCardsLink from './view-cards-link'
 import GuideSocialActions from './guide-social-actions'
+import { GuideCardSummary } from './discover-guide-list'
 
 export default function AssignedContentCard({ targetType, targetId }: { targetType: AssignmentTargetType; targetId: string }) {
   const isProject = targetType === 'project'
@@ -71,21 +72,10 @@ export default function AssignedContentCard({ targetType, targetId }: { targetTy
           <button type="button" onClick={() => setExpanded((current) => !current)} aria-expanded={expanded} aria-label={expanded ? 'Hide assigned guides' : 'Show assigned guides'} className={`${editorStyles.editButton} !min-h-9 !min-w-0 !px-3`}><span aria-hidden="true">{expanded ? '▴' : '▾'}</span>{expanded ? 'Hide' : 'Show'}</button>
         </div>
       </div>
-      {expanded ? <div className={`${guidesStyles.guidesSilver} grid gap-3 border-t p-3 ${isProject ? 'border-black/10' : 'border-white/[0.06]'}`}>
+      {expanded ? <div className={`${guidesStyles.guidesSilver} ${guidesStyles.embeddedGuideList} grid gap-3 border-t p-3 ${isProject ? 'border-black/10' : 'border-white/[0.06]'}`}>
         {assigned.map((item) => (
           <article key={`${item.type}:${item.id}`} className="relative overflow-hidden rounded-[12px] border border-white/[0.055] bg-[#111821] p-3 shadow-[0_8px_22px_rgba(0,0,0,0.18)] transition hover:border-cyan-300/45" data-v3-guides-indicator="guide-card" data-feature-guide-target="guides.tabs.guides">
-            <Link href={item.type === 'guide' ? `/guides/${item.id}?preview=1&view=1` : `/guides/decks/${item.id}?preview=1`} className="block w-full text-left transition">
-              <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-3">
-                <div className="relative h-[76px] w-[76px] overflow-hidden rounded-[9px] bg-black">
-                  <Image unoptimized src={item.image} alt="" fill sizes="76px" className="object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/42" />
-                </div>
-                <div className="flex h-[76px] min-w-0 flex-col overflow-hidden">
-                  <h2 className="break-words font-serif text-base font-black leading-tight text-white">{item.title}</h2>
-                  <p className="mt-1 line-clamp-3 text-xs font-semibold leading-[1.3] text-white/52">{item.subtitle}</p>
-                </div>
-              </div>
-            </Link>
+            <GuideCardSummary guide={item} href={item.type === 'guide' ? `/guides/${item.id}?preview=1&view=1` : `/guides/decks/${item.id}?preview=1`} featureGuideTarget="guides.tabs.guides" />
             <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-black/10 pt-2" data-v3-guides-indicator="list-card-actions">
               <ViewCardsLink href={item.type === 'guide' ? `/guides/${item.id}?preview=1&view=1` : `/guides/decks/${item.id}?preview=1`} title={item.title} />
               <span className="h-6 w-px shrink-0 bg-black/12" aria-hidden="true" />

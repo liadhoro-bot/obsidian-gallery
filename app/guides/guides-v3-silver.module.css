@@ -1063,3 +1063,10 @@
 
 .guidesSilver [data-v3-guides-indicator="guide-grid-name"] { white-space: normal; overflow: visible; overflow-wrap: anywhere; -webkit-line-clamp: unset; }
 .guidesSilver [data-v3-guides-indicator="compact-guide-card"] a:focus-visible { outline: 2px solid var(--og-brass-500); outline-offset: 3px; }
+
+/* The full Guides surface owns a viewport-height shell. Embedded guide lists
+   reuse its card tokens without inheriting that page-level sizing contract. */
+.guidesSilver.embeddedGuideList {
+  min-height: 0;
+  align-content: start;
+}

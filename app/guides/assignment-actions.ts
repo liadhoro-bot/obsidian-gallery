@@ -30,6 +30,11 @@ export type AssignableContent = {
   viewerHasLiked: boolean
   viewerHasSaved: boolean
   isOwner: boolean
+  creator?: {
+    username: string
+    avatar: string | null
+    href: string
+  }
 }
 
 async function session() {
@@ -161,7 +166,7 @@ export async function getTargetAssignmentLibrary(
     ].map((deck) => [deck.id, deck])
   )
   const choices: AssignableContent[] = [
-    ...Array.from(guideMap.values()).map((guide) => ({ id: guide.id, type: 'guide' as const, title: guide.title, subtitle: guide.subtitle, image: guide.image, cards: guide.cards, paints: guide.palette.length, assigned: selected.has(`guide:${guide.id}`), recipeId: guide.deckId ?? '', likeCount: guide.likeCount, saveCount: guide.saveCount, viewerHasLiked: guide.viewerHasLiked, viewerHasSaved: guide.viewerHasSaved, isOwner: guide.isOwner })),
+    ...Array.from(guideMap.values()).map((guide) => ({ id: guide.id, type: 'guide' as const, title: guide.title, subtitle: guide.subtitle, image: guide.image, cards: guide.cards, paints: guide.palette.length, assigned: selected.has(`guide:${guide.id}`), recipeId: guide.deckId ?? '', likeCount: guide.likeCount, saveCount: guide.saveCount, viewerHasLiked: guide.viewerHasLiked, viewerHasSaved: guide.viewerHasSaved, isOwner: guide.isOwner, creator: guide.creator })),
     ...Array.from(deckMap.values()).map((deck) => ({ id: deck.id, type: 'deck' as const, title: deck.title, subtitle: deck.description || deck.category, image: deck.image, cards: deck.cards, paints: deck.paints, assigned: selected.has(`deck:${deck.id}`), recipeId: deck.id, likeCount: deck.likeCount ?? 0, saveCount: deck.saveCount ?? 0, viewerHasLiked: deck.viewerHasLiked ?? false, viewerHasSaved: deck.viewerHasSaved ?? false, isOwner: deck.isOwner })),
   ]
   return { choices, assigned: choices.filter((choice) => choice.assigned) }
