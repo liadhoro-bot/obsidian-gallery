@@ -1,0 +1,239 @@
+ref,name,standard,current,why
+RC001,Flat Black,RAL 9005 (Modern RAL 840 HR),RC804,name match 1.00
+RC002,Cream White,RAL 9001 (Modern RAL 840 HR),RC807,name match 1.00
+RC003,White Grey,RAL 9002 (Modern RAL 840 HR),RC809,name match 1.00
+RC004,Flat White,RAL 9003 (Modern RAL 840 HR),RC806,name match 1.00
+RC005,Signal Red,RAL 3020 (Modern RAL 840 HR),RC811,name match 1.00
+RC006,Red,RAL 3000 (Modern RAL 840 HR),RC810,name match 1.00
+RC007,Yellow,RAL 1003 (Modern RAL 840 HR),RC814,name match 1.00
+RC008,Maize Yellow,RAL 1006 (Modern RAL 840 HR),RC813,name match 1.00
+RC009,Orange,RAL 2004 (Modern RAL 840 HR),RC812,name match 1.00
+RC010,Pure Blue,RAL 5005 (Modern RAL 840 HR),RC818,name match 1.00
+RC011,Blue,RAL 5001 (Modern RAL 840 HR),RC817,name match 1.00
+RC012,Pure Green,RAL 6037 (Modern RAL 840 HR),,no current paint
+RC013,Off White,,RC808,name match 1.00
+RC014,Buff,,RC815,name match 1.00
+RC015,Gun Metal (Metallic),,RC819,name match 1.00
+RC016,Ochre,,,no current paint
+RC017,Pale Blue,,RC816,name match 1.00
+RC018,Pale Sand,,,no current paint
+RC019,Deck Tan,,,no current paint
+RC020,Aluminium (Metallic),,RC820,name match 1.00
+RC021,Pale Grey,,,no current paint
+RC022,Rubber Black,,RC805,name match 1.00
+RC023,Olive Drab No.9 / No.22,,RC883,name match 0.80
+RC024,Olive Drab Faded,,RC884,name match 1.00
+RC025,Dark Olive Drab No.31,,,no current paint
+RC026,Olive Drab,FS 34087,RC901,name match 1.00
+RC027,Forest Green,FS 34079,RC900,name match 1.00
+RC028,Interior Green,FS 34151,RC906,name match 1.00
+RC029,No.5 Earth Brown,FS 30099,RC892,name match 0.75
+RC030,No.6 Earth Yellow,FS 30257,RC981,name match 0.75
+RC031,No.8 Earth Red,FS 30117,RC893,name match 0.75
+RC032,Desert Sand,FS 30279,RC897,name match 1.00
+RC033,Khaki Green No.3,,,no current paint
+RC034,S.C.C. 1A Brown,,RC873,name match 0.67
+RC035,S.C.C. 2 Brown,,RC874,name match 1.00
+RC036,S.C.C. 14 Blue Black,,,no current paint
+RC037,S.C.C. 15 Olive Drab,,RC875,name match 1.00
+RC038,BSC No.28 Silver Grey,,RC866,name match 1.00
+RC039,BSC No.34 Slate,,RC867,name match 1.00
+RC040,BSC No.61 Light Stone,,RC868,name match 1.00
+RC041,BSC No.64 Portland Stone,,RC869,name match 1.00
+RC042,British Dark Olive Green PFI,,RC870,name match 1.00
+RC043,British Desert Pink ZI,,RC871,name match 1.00
+RC044,British Light Mud,,RC872,name match 1.00
+RC045,BSC No.49 Light Purple Brown,,,no current paint
+RC046,Elfenbein – Ivory,RAL 1001,RC851,name match 0.60
+RC047,Olivgrün – Olive Green,RAL 6003,RC852,name match 1.00
+RC048,Feldgray – Field Grey,RAL 6006,,no current paint
+RC049,Grün – Green,RAL 6007,,no current paint
+RC050,Dunkelgrün – Dark Green,RAL 6009,,no current paint
+RC051,Marinegrau – Navy Grey,RAL 7002,,no current paint
+RC052,Grau – Grey,RAL 7003,,no current paint
+RC053,Graugrün – Grey Green,RAL 7008,RC853,name match 1.00
+RC054,Hellgrau – Light Grey,RAL 7009,RC854,name match 0.67
+RC055,Blaugrau – Blue Grey,RAL 7016,,no current paint
+RC056,Dunkelbraun – Dark Brown,RAL 7017,RC855,name match 1.00
+RC057,Dunkelgrau – Dark Grey,RAL 7021,RC856,name match 1.00
+RC058,Grau – Grey,RAL 7027,RC857,name match 1.00
+RC059,Dunkelgelb nach Muster,,,no current paint
+RC060,Dunkelgelb – Dark Yellow,RAL 7028,RC859,name match 1.00
+RC065,Braun – Brown,RAL 8010,,no current paint
+RC066,Rot (Rotbraun) – Red (Red Brown),RAL 8013,RC863,name match 1.00
+RC067,Rot (Rotbraun) – Red (Red Brown),RAL 8012,RC862,name match 1.00
+RC068,Rotbraun – Red Brown,RAL 8017,RC864,name match 1.00
+RC069,Braun – Brown,RAL 8020,RC865,name match 1.00
+RC070,Common Protective ZO,,,no current paint
+RC071,Black 6RP,,,no current paint
+RC072,Protective K,,,no current paint
+RC073,Protective 4BO,,RC876,manual
+RC074,Dark Brown 6K,,,no current paint
+RC075,Sand 7K,,,no current paint
+RC076,Protective Green 1920s – 1930s,,,no current paint
+RC077,ZB AU Basic Protector,,,no current paint
+RC078,APC Interior Green,FS 24533,,no current paint
+RC079,CARC Tan 686A,FS 33446,RC885,name match 1.00
+RC080,NATO Green,RAL 6031-F9,RC886,name match 0.67
+RC081,NATO Brown,RAL 8027-F9,RC887,name match 0.67
+RC082,NATO Black,RAL 9021-F9,RC888,name match 0.67
+RC083,Green,FS 34102,RC905,name match 1.00
+RC084,Sand,FS 30277,RC896,name match 1.00
+RC085,Field Drab,FS 30118,RC894,name match 1.00
+RC086,Gelboliv Initial,RAL 6014,,no current paint
+RC087,Gelboliv Late,RAL 6014 (Modern RAL 840 HR),,no current paint
+RC088,Sandbeige,RAL 1039-F9,,no current paint
+RC089,Graubeige – Grey Beige,RAL 1040-F9,,no current paint
+RC090,Helloliv – Light Olive,RAL 6040-F9,,no current paint
+RC091,Tarngrau – Camo Grey,RAL 7050-F9,,no current paint
+RC092,Sandbraun – Sand Brown,RAL 8031-F9,,no current paint
+RC093,British Sand Yellow,,,no current paint
+RC094,IDF Modern Grey,,RC882,name match 1.00
+RC095,IDF Sand Grey 1970s-1980s,,RC881,name match 1.00
+RC096,IDF Early Sand Yellow,,RC880,name match 1.00
+RC097,UAE Dull Sand,,,no current paint
+RC098,Russian Modern Green,,RC877,name match 1.00
+RC099,Russian Greyish Yellow,,RC878,name match 1.00
+RC100,Russian Grey Green,,RC879,name match 1.00
+RC101,Egyptian Desert Sand,,,no current paint
+RC102,Syrian Rep. Guard Desert Yellow,,,no current paint
+RC103,Libyan Army Desert Grey,,,no current paint
+RC104,Iraqi Army Desert Sand,,,no current paint
+RC105,Spanish Green,,,no current paint
+RC206,Russian Cockpit Torquise,,RC980,manual
+RC207,Leuchtorange – Luminous Orange,RAL 2005 (Modern RAL 840 HR),,no current paint
+RC208,Graublau – Grey Blue,RAL 5008 (Modern RAL 840 HR),,no current paint
+RC209,Olive Green / USMC Green,RAL 6003 (Modern RAL 840 HR) / FS 34095,RC903,name match 0.60
+RC210,Silbergrau – Silver Grey,RAL 7001 (Modern RAL 840 HR),,no current paint
+RC211,Grüngrau – Green Grey,RAL 7009 (Modern RAL 840 HR),,no current paint
+RC212,Basaltgrau – Basalt Grey,RAL 7012 (Modern RAL 840 HR),,no current paint
+RC213,Steingrau – Stone Grey,RAL 7030 (Modern RAL 840 HR),,no current paint
+RC214,Lichtgrau – Light Grey,RAL 7035 (Modern RAL 840 HR),,no current paint
+RC215,Staubgrau – Dusty Grey,RAL 7037 (Modern RAL 840 HR),,no current paint
+RC216,Quarzgrau – Quartz Grey,RAL 7039 (Modern RAL 840 HR),,no current paint
+RC217,Seidengrau – Silk Grey,RAL 7044 (Modern RAL 840 HR),,no current paint
+RC218,Olivbraun – Olive Brown,RAL 8008 (Modern RAL 840 HR),,no current paint
+RC219,MNO 2036 Smalt Khaki Avion,RAL 6013 (Modern RAL 840 HR),,no current paint
+RC220,Light Gull Grey,FS 16440,RC889,name match 1.00
+RC221,ADC Grey,FS 16473,RC890,name match 1.00
+RC222,Insignia White,FS 17875,RC891,name match 1.00
+RC223,Tan,FS 20400,,no current paint
+RC229,US Army Helo Drab,FS 34031,RC899,name match 1.00
+RC230,Dull Dark Green,FS 34092,RC902,name match 1.00
+RC231,Field Green,FS 34097,RC904,name match 1.00
+RC232,Pale Green,FS 34227,RC907,name match 1.00
+RC233,Green,FS 34258,,no current paint
+RC234,Aggressor Blue,FS 35109,,no current paint
+RC235,Intermediate Blue,FS 35164,RC908,name match 1.00
+RC236,Blue,FS 35190,,no current paint
+RC237,Medium Grey,FS 35237,RC909,name match 0.75
+RC238,Light Blue,FS 35414,,manual
+RC239,Air Superiority Blue,FS 35450,RC910,name match 1.00
+RC240,Light Sky Blue,FS 35526,,manual
+RC241,Duck Egg Blue,FS 35622,RC911,name match 1.00
+RC242,Dark Eggplant Grey,FS 36076,,no current paint
+RC243,Grey,FS 36081,RC912,name match 1.00
+RC244,Medium Gunship Grey,FS 36118,RC913,name match 1.00
+RC245,Have Glass Grey,FS 36170,RC914,name match 1.00
+RC246,F-15 Dark Grey (Mod Eagle),FS 36176,RC915,name match 1.00
+RC247,Dark Gull Grey,FS 36231,RC916,name match 1.00
+RC248,Aggressor Grey,FS 36251,RC917,name match 1.00
+RC249,Medium Grey,FS 36270,RC918,name match 1.00
+RC250,Light Sea Grey,FS 36307,,no current paint
+RC251,Dark Ghost Grey,FS 36320,RC919,name match 1.00
+RC252,Light Ghost Grey,FS 36375,RC920,name match 1.00
+RC253,Light Grey,FS 36495,RC921,name match 1.00
+RC254,Camouflage Grey,FS 36622,RC922,name match 1.00
+RC255,M-485 Light Grey,,,manual
+RC256,M-485 Blue-Grey,FS 35189,,ambiguous
+RC257,Sea Blue,FS 35042,RC924,name match 0.67
+RC258,Dark Sea Blue,FS 35045,RC925,name match 0.75
+RC259,Dark Olive Drab 41,FS 33070,RC926,name match 0.80
+RC260,Medium Green 42,,RC927,name match 1.00
+RC261,Neutral Grey 43,,RC928,name match 1.00
+RC262,US Interior Yellow Green,,RC929,name match 1.00
+RC263,Zinc Chromate Yellow,,RC930,name match 1.00
+RC264,Bronze Green,,RC931,name match 1.00
+RC265,RLM 02 RLM-Grau (1938),,RC932,name match 1.00
+RC266,RLM 02 RLM-Grau (1941),,RC933,name match 1.00
+RC267,RLM 04,,RC934,name match 1.00
+RC268,RLM 61,,,no current paint
+RC269,RLM 62,,,no current paint
+RC270,RLM 63,,,no current paint
+RC271,RLM 65 (1938),,RC935,name match 1.00
+RC272,RLM 65 (1941),,RC936,name match 1.00
+RC273,RLM 66 (1941),,RC938,name match 1.00
+RC274,RLM 70,,RC939,name match 1.00
+RC275,RLM 71,,RC940,name match 1.00
+RC276,RLM 72,,,no current paint
+RC277,RLM 73,,,no current paint
+RC278,RLM 74,,RC941,name match 1.00
+RC279,RLM 75,,RC942,name match 1.00
+RC280,RLM 78 (1941),,,ambiguous
+RC281,RLM 78 (1942),,,ambiguous
+RC282,RLM 79 (1941),,,ambiguous
+RC283,RLM 79 (1942),,,ambiguous
+RC284,RLM 80,,RC948,name match 1.00
+RC285,RAF Sky Grey,FS 26373,RC959,name match 1.00
+RC286,RAF Dark Green,BS381C/241,RC960,name match 0.75
+RC287,RAF Dark Earth,,RC961,name match 1.00
+RC288,RAF Ocean Grey,,RC962,name match 1.00
+RC293,RAF Cockpit Grey-Green,,RC967,name match 1.00
+RC294,RAF Dark Slate Grey,,RC968,name match 1.00
+RC295,RAF Extra Dark Sea Grey,BS381C/640,RC969,name match 1.00
+RC296,RAF Dark Sea Grey,BS381C/638,RC970,name match 1.00
+RC297,RAF PRU Blue,BS381C/636,RC971,name match 1.00
+RC298,RAF Light Aircraft Grey,BS381C/627,RC972,name match 1.00
+RC299,RAF Camouflage (Barley) Grey,BS381C/626,RC973,name match 0.80
+RC300,RAF Dark Camouflage Grey,BS381C/629,,no current paint
+RC301,RAF Camouflage Beige (Hemp),BS381C/389,,no current paint
+RC302,IJN J3 Hai-Iro (Grey),,RC952,name match 1.00
+RC303,IJN J3 SP (Amber Grey),,RC953,name match 1.00
+RC304,IJN D1 Deep Green Black,,RC954,name match 1.00
+RC305,IJN D2 Green Black,,RC955,name match 1.00
+RC306,IJN M3(M) Mitsubishi Interior Green,,RC956,name match 1.00
+RC307,IJN M3(N) Nakajima Interior Green,,RC957,name match 1.00
+RC308,AE-9 / AII Light Grey,,,no current paint
+RC309,AII Protective (Green),,,no current paint
+RC310,AII Light Blue,,,manual
+RC311,A-18f Light Blue,,,manual
+RC312,A-19f Green,,,no current paint
+RC313,AMT-1 Light Brown,,RC974,name match 1.00
+RC314,A-21m Light Yellowish Brown,,,no current paint
+RC315,AMT-4 / A-24m Green,,RC975,name match 1.00
+RC316,AMT-7 Light Blue,,RC976,name match 1.00
+RC317,AMT-11 Blue Grey,,RC977,name match 1.00
+RC318,AMT-12 Dark Grey,,RC978,name match 1.00
+RC319,A-14 Interior Steel Grey,,RC979,name match 1.00
+RC320,RLM 76 Version 1,,RC943,name match 1.00
+RC321,RLM 76 Version 2,,RC944,name match 1.00
+RC322,RLM 76 Late War Variation,,RC945,name match 1.00
+RC323,RLM 81 Version 1,,,no current paint
+RC324,RLM 81 Version 2,,,no current paint
+RC325,RLM 81 Version 3,,RC950,name match 1.00
+RC326,RLM 82,,RC951,name match 1.00
+RC327,RLM 83,,,no current paint
+RC328,IJAAF #1 Hairyokushoku (Grey Green),,,no current paint
+RC329,IJAAF #3 Hairanshoku (Grey Indigo),,,no current paint
+RC330,IJAAF #7 Ohryoku Nana Go Shoku (Olive Brown),,,no current paint
+RC331,IJAAF #21 Midori Iro (Green),,,no current paint
+RC332,IJAAF #27 Ao Midori Iro (Blue Green),,,no current paint
+RC333,IJAAF #29 Ki Midori Iro (Yellow Green),,,no current paint
+RC334,IJAAF #30 Karekusa Iro (Dry Grass Colour),,,no current paint
+RC335,IJAAF #31 Cha Kasshoku (Tea Colour),,,no current paint
+RC336,MiG-25/MiG-31 Grey,,,no current paint
+RC337,MiG-29 Light Grey,,,no current paint
+RC338,MiG-29 Grey Green,,,no current paint
+RC339,RLM 66 (1938),,RC937,name match 1.00
+RC340,Kenttävihreä – Olive Green,FS 34096,,no current paint
+RC341,Schwarzgrau – Black Grey,RAL 7021 (Modern RAL 840 HR),,no current paint
+RC342,Dark Green,FS 34064,,no current paint
+RC500,Flat Varnish,,RC801,name match 1.00
+RC501,Satin Varnish,,RC802,name match 1.00
+RC502,Gloss Varnish,,RC803,name match 1.00
+RC503,Clear Red,,RC821,name match 1.00
+RC504,Clear Blue,,RC822,name match 1.00
+RC505,Clear Green,,RC823,name match 1.00
+RC506,Clear Orange,,RC824,name match 1.00
+RC507,Clear Yellow,,RC825,name match 1.00
+RC508,Clear Smoke,,RC826,name match 1.00

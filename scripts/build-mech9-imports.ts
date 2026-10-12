@@ -92,7 +92,8 @@ const METAL = /\b(metal|metallic|silver|gold|bronze|copper|brass|steel|chrome|gu
 const WASH = /\b(wash|shade)\b/i
 function guessType(name: string, line: string) {
   if (/air/i.test(line)) return METAL.test(name) ? 'metallic' : 'airbrush acrylic'
-  if (/\b(varnish|primer|medium|thinner)\b/i.test(name)) return 'auxiliary'
+  // "Medium" alone is a product; "Medium Gunship Grey" is a colour.
+  if (/\b(varnish|primer|thinner)\b/i.test(name) || /\bmedium\b(?!\s+(?!matte?\b|\d)[a-z])/i.test(name)) return 'auxiliary'
   if (METAL.test(name) && !/\b(grey|gray|green|blue)$/i.test(name)) return 'metallic'
   if (WASH.test(name)) return 'wash'
   return 'acrylic'

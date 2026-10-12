@@ -129,7 +129,10 @@ export function classifyPaintFamily(paint: EquivalentCatalogPaint): PaintFamily 
   if (type === 'primer' || /\bprimer\b/.test(line) || /\bprimer\b/.test(name)) return 'primer'
   if (
     type === 'auxiliary' ||
-    /\b(medium|thinner|retarder|flow improver|reducer|cleaner|glaze)\b/.test(name)
+    /\b(thinner|retarder|flow improver|reducer|cleaner|glaze)\b/.test(name) ||
+    // "Glaze Medium", "Medium 17ml", "Master Medium Matt" — but not colours
+    // such as "Medium Sea Grey" or "IJN Medium Brown".
+    /\bmedium\b(?!\s+(?!matte?\b|\d)[a-z])/.test(name)
   ) {
     return 'medium'
   }

@@ -1,0 +1,146 @@
+source_brand,source_line,source_code,source_name,target_brand,target_line,target_code,target_name,delta_e,notes
+AK Interactive,Real Colors,RC804,Flat Black RAL 9005,Vallejo,Model Air,71.057,Black,12.6,AK Real Color chart RC001; Vallejo 71.057; current RC804
+AK Interactive,Real Colors,RC804,Flat Black RAL 9005,Tamiya,Acrylic Paint,XF-1,Flat Black,12.7,AK Real Color chart RC001; Tamiya XF-1; current RC804
+AK Interactive,Real Colors,RC807,Cream White RAL 9001,Vallejo,Model Air,71.270,Off-White,12.6,AK Real Color chart RC002; Vallejo 71.270; current RC807
+AK Interactive,Real Colors,RC809,White Grey RAL 9002,Vallejo,Model Air,71.119,White Grey,8.1,AK Real Color chart RC003; Vallejo 71.119; current RC809
+AK Interactive,Real Colors,RC806,Flat White RAL 9003,Vallejo,Model Air,71.001,White,1.6,AK Real Color chart RC004; Vallejo 71.001; current RC806
+AK Interactive,Real Colors,RC806,Flat White RAL 9003,Tamiya,Acrylic Paint,XF-2,Flat White,0.8,AK Real Color chart RC004; Tamiya XF-2; current RC806
+AK Interactive,Real Colors,RC811,Signal Red RAL 3020,Vallejo,Model Air,71.003,Red RLM23,6.3,AK Real Color chart RC005; Vallejo 71.003; current RC811
+AK Interactive,Real Colors,RC810,Red RAL 3000,Vallejo,Model Air,71.269,Red,8.1,AK Real Color chart RC006; Vallejo 71.269; current RC810
+AK Interactive,Real Colors,RC810,Red RAL 3000,Tamiya,Acrylic Paint,XF-7,Flat Red,22.6,AK Real Color chart RC006; Tamiya XF-7; current RC810
+AK Interactive,Real Colors,RC814,Yellow RAL 1003,Vallejo,Model Air,71.135,IJA Chrome Yellow,5.5,AK Real Color chart RC007; Vallejo 71.135; current RC814
+AK Interactive,Real Colors,RC814,Yellow RAL 1003,Tamiya,Acrylic Paint,X-8,Lemon Yellow,18.7,AK Real Color chart RC007; Tamiya X-8; current RC814
+AK Interactive,Real Colors,RC813,Maize Yellow RAL 1006,Vallejo,Model Air,71.033,Yellow Ochre,6.6,AK Real Color chart RC008; Vallejo 71.033; current RC813
+AK Interactive,Real Colors,RC812,Orange RAL 2004,Vallejo,Model Air,71.083,Orange,8.3,AK Real Color chart RC009; Vallejo 71.083; current RC812
+AK Interactive,Real Colors,RC812,Orange RAL 2004,Tamiya,Acrylic Paint,X-6,Orange,14.6,AK Real Color chart RC009; Tamiya X-6; current RC812
+AK Interactive,Real Colors,RC818,Pure Blue RAL 5005,Vallejo,Model Color,70.930,Dark Blue,13.2,AK Real Color chart RC010; Vallejo 70.930; current RC818
+AK Interactive,Real Colors,RC815,Buff,Tamiya,Acrylic Paint,XF-57,Buff,17.3,AK Real Color chart RC014; Tamiya XF-57; current RC815
+AK Interactive,Real Colors,RC819,Gun Metal,Vallejo,Model Air,71.073,Black (Metallic),47.8,AK Real Color chart RC015; Vallejo 71.073; current RC819
+AK Interactive,Real Colors,RC819,Gun Metal,Tamiya,Acrylic Paint,X-10,Gun Metal,6.6,AK Real Color chart RC015; Tamiya X-10; current RC819
+AK Interactive,Real Colors,RC820,Aluminium,Vallejo,Model Air,71.062,Aluminium (Metal.),12.3,AK Real Color chart RC020; Vallejo 71.062; current RC820
+AK Interactive,Real Colors,RC820,Aluminium,Tamiya,Acrylic Paint,XF-16,Flat Aluminum,9.0,AK Real Color chart RC020; Tamiya XF-16; current RC820
+AK Interactive,Real Colors,RC805,Rubber Black,Vallejo,Model Air,71.315,Tire Black,8.1,AK Real Color chart RC022; Vallejo 71.315; current RC805
+AK Interactive,Real Colors,RC805,Rubber Black,Tamiya,Acrylic Paint,XF-85,Rubber Black,23.1,AK Real Color chart RC022; Tamiya XF-85; current RC805
+AK Interactive,Real Colors,RC901,Olive Drab FS 34087,Vallejo,Model Air,71.043,US Olive Drab,4.5,AK Real Color chart RC026; Vallejo 71.043; current RC901
+AK Interactive,Real Colors,RC900,Forest Green FS 34079,Vallejo,Model Air,71.294,US Forest Green,1.3,AK Real Color chart RC027; Vallejo 71.294; current RC900
+AK Interactive,Real Colors,RC900,Forest Green FS 34079,Tamiya,Acrylic Paint,XF-65,Field Grey,18.6,AK Real Color chart RC027; Tamiya XF-65; current RC900
+AK Interactive,Real Colors,RC906,Interior Green FS 34151,Vallejo,Model Air,71.137,US Light Green,2.0,AK Real Color chart RC028; Vallejo 71.137; current RC906
+AK Interactive,Real Colors,RC892,Earth Brown FS 30099,Vallejo,Model Air,71.290,US Earth Brown,3.0,AK Real Color chart RC029; Vallejo 71.290; current RC892
+AK Interactive,Real Colors,RC981,Earth Yellow FS 30257,Vallejo,Model Air,71.291,US Earth Yellow,5.0,AK Real Color chart RC030; Vallejo 71.291; current RC981
+AK Interactive,Real Colors,RC893,Earth Red FS 30117,Vallejo,Model Air,71.293,US Earth Red,2.2,AK Real Color chart RC031; Vallejo 71.293; current RC893
+AK Interactive,Real Colors,RC897,Desert Sand FS 30279,Vallejo,Model Air,71.140,US Desert Sand,1.7,AK Real Color chart RC032; Vallejo 71.140; current RC897
+AK Interactive,Real Colors,RC873,S.C.C. No.1A Very Dark Brown,Vallejo,Model Air,71.039,Hull Red,3.3,AK Real Color chart RC034; Vallejo 71.039; current RC873
+AK Interactive,Real Colors,RC874,S.C.C. No.2 Brown,Vallejo,Model Air,71.038,Cam. Med. Brown,2.3,AK Real Color chart RC035; Vallejo 71.038; current RC874
+AK Interactive,Real Colors,RC875,S.C.C. No.15 Olive Drab,Vallejo,Model Air,71.016,USAF Olive Drab,11.7,AK Real Color chart RC037; Vallejo 71.016; current RC875
+AK Interactive,Real Colors,RC866,Silver Grey No.28 (BS381),Vallejo,Model Air,71.401,UK BSC28 Silver Grey,11.6,AK Real Color chart RC038; Vallejo 71.401; current RC866
+AK Interactive,Real Colors,RC867,Slate No.34 (BS381),Vallejo,Model Air,71.012,Dark Green,3.4,AK Real Color chart RC039; Vallejo 71.012; current RC867
+AK Interactive,Real Colors,RC868,Light Stone No.61 (BS381),Vallejo,Model Air,71.143,UK Light Stone,6.7,AK Real Color chart RC040; Vallejo 71.143; current RC868
+AK Interactive,Real Colors,RC869,Portland Stone No.64 (BS381),Vallejo,Model Air,71.288,UK BSC 64 Port. Stone,1.3,AK Real Color chart RC041; Vallejo 71.288; current RC869
+AK Interactive,Real Colors,RC871,British Desert Pink ZI,Vallejo,Model Air,71.400,UK Desert Pink,,AK Real Color chart RC043; Vallejo 71.400; current RC871
+AK Interactive,Real Colors,RC872,British Light Mud,Vallejo,Model Air,71.284,UK Light Mud,14.1,AK Real Color chart RC044; Vallejo 71.284; current RC872
+AK Interactive,Real Colors,RC851,Elfenbein-Ivory RAL 1001 (Interior Color),Vallejo,Model Air,71.075,Ivory,8.7,AK Real Color chart RC046; Vallejo 71.075; current RC851
+AK Interactive,Real Colors,RC852,Olivgrün-Olive Green RAL 6003,Vallejo,Model Air,71.092,Medium Olive,3.6,AK Real Color chart RC047; Vallejo 71.092; current RC852
+AK Interactive,Real Colors,RC853,Graugrün-Grey Green RAL 7008,Vallejo,Model Air,71.116,Camou. Grey Green,4.4,AK Real Color chart RC053; Vallejo 71.116; current RC853
+AK Interactive,Real Colors,RC856,Dunkelgrau-Dark Grey RAL 7021,Vallejo,Model Air,71.056,Panzer Dark Grey,2.9,AK Real Color chart RC057; Vallejo 71.056; current RC856
+AK Interactive,Real Colors,RC856,Dunkelgrau-Dark Grey RAL 7021,Tamiya,Acrylic Paint,XF-63,German Grey,5.0,AK Real Color chart RC057; Tamiya XF-63; current RC856
+AK Interactive,Real Colors,RC857,Grau-Grey RAL 7027,Vallejo,Model Air,71.118,Camouflage Grey,12.5,AK Real Color chart RC058; Vallejo 71.118; current RC857
+AK Interactive,Real Colors,RC859,Dunkelgelb-Dark Yellow RAL 7028,Vallejo,Model Air,71.025,Dark Yellow,3.1,AK Real Color chart RC060; Vallejo 71.025; current RC859
+AK Interactive,Real Colors,RC859,Dunkelgelb-Dark Yellow RAL 7028,Tamiya,Acrylic Paint,XF-60,Dark Yellow,19.5,AK Real Color chart RC060; Tamiya XF-60; current RC859
+AK Interactive,Real Colors,RC862,Rot (Rotbraun)-Red (Red Brown) RAL 8012,Vallejo,Model Air,71.271,German Red Brown,2.0,AK Real Color chart RC067; Vallejo 71.271; current RC862
+AK Interactive,Real Colors,RC864,Rotbraun-Red Brown RAL 8017,Vallejo,Model Air,71.041,Armour Brown,5.0,AK Real Color chart RC068; Vallejo 71.041; current RC864
+AK Interactive,Real Colors,RC864,Rotbraun-Red Brown RAL 8017,Tamiya,Acrylic Paint,XF-9,Hull Red,19.2,AK Real Color chart RC068; Tamiya XF-9; current RC864
+AK Interactive,Real Colors,RC865,Braun-Brown RAL 8020,Vallejo,Model Air,71.117,Camouflage Brown,5.0,AK Real Color chart RC069; Vallejo 71.117; current RC865
+AK Interactive,Real Colors,RC876,Russian Green Protective 4BO,Vallejo,Model Air,71.017,Russian Green 4BO,7.8,AK Real Color chart RC073; Vallejo 71.017; current RC876
+AK Interactive,Real Colors,RC885,CARC Tan 686A FS 33446,Vallejo,Model Air,71.122,US Desert Arm. 686,1.9,AK Real Color chart RC079; Vallejo 71.122; current RC885
+AK Interactive,Real Colors,RC886,NATO Green,Vallejo,Model Air,71.250,Bronze Green,11.1,AK Real Color chart RC080; Vallejo 71.250; current RC886
+AK Interactive,Real Colors,RC886,NATO Green,Tamiya,Acrylic Paint,XF-67,NATO Green,16.5,AK Real Color chart RC080; Tamiya XF-67; current RC886
+AK Interactive,Real Colors,RC887,NATO Brown,Vallejo,Model Air,71.249,NATO Brown,5.2,AK Real Color chart RC081; Vallejo 71.249; current RC887
+AK Interactive,Real Colors,RC887,NATO Brown,Tamiya,Acrylic Paint,XF-68,NATO Brown,15.2,AK Real Color chart RC081; Tamiya XF-68; current RC887
+AK Interactive,Real Colors,RC888,NATO Black,Vallejo,Model Air,71.251,NATO Black,4.1,AK Real Color chart RC082; Vallejo 71.251; current RC888
+AK Interactive,Real Colors,RC888,NATO Black,Tamiya,Acrylic Paint,XF-69,NATO Black,7.6,AK Real Color chart RC082; Tamiya XF-69; current RC888
+AK Interactive,Real Colors,RC905,Green FS 34102,Vallejo,Model Air,71.289,US Dark Green,1.6,AK Real Color chart RC083; Vallejo 71.289; current RC905
+AK Interactive,Real Colors,RC896,Sand FS 30277,Vallejo,Model Air,71.138,US Sand,2.7,AK Real Color chart RC084; Vallejo 71.138; current RC896
+AK Interactive,Real Colors,RC894,Field Drab FS 30118,Vallejo,Model Air,71.139,US Field Drab,1.5,AK Real Color chart RC085; Vallejo 71.139; current RC894
+AK Interactive,Real Colors,RC881,IDF Sand Grey 1970s-1980s,Vallejo,Model Air,71.142,IDF Sinai Grey 82,10.6,AK Real Color chart RC095; Vallejo 71.142; current RC881
+AK Interactive,Real Colors,RC880,IDF Early Sand Yellow,Vallejo,Model Air,71.141,IDF Sand Grey 73,10.2,AK Real Color chart RC096; Vallejo 71.141; current RC880
+AK Interactive,Real Colors,RC980,Russian Cockpit Turquoise,Vallejo,Model Air,71.331,Cockpit E.G.“Faded”,6.8,AK Real Color chart RC206; Vallejo 71.331; current RC980
+AK Interactive,Real Colors,RC889,Light Gull Grey FS 16440,Vallejo,Model Air,71.121,Light Gull Gray,3.5,AK Real Color chart RC220; Vallejo 71.121; current RC889
+AK Interactive,Real Colors,RC890,ADC Grey FS 16473,Vallejo,Model Air,71.335,Flanker Light Gray,4.0,AK Real Color chart RC221; Vallejo 71.335; current RC890
+AK Interactive,Real Colors,RC891,Insignia White FS 17875,Vallejo,Model Air,71.279,Insignia White,5.3,AK Real Color chart RC222; Vallejo 71.279; current RC891
+AK Interactive,Real Colors,RC902,Dull Dark Green FS 34092,Vallejo,Model Air,71.124,USAF Green,4.3,AK Real Color chart RC230; Vallejo 71.124; current RC902
+AK Interactive,Real Colors,RC902,Dull Dark Green FS 34092,Tamiya,Acrylic Paint,XF-26,Deep Green,15.8,AK Real Color chart RC230; Tamiya XF-26; current RC902
+AK Interactive,Real Colors,RC907,Pale Green FS 34227,Vallejo,Model Air,71.126,IDF/IAF Green,6.6,AK Real Color chart RC232; Vallejo 71.126; current RC907
+AK Interactive,Real Colors,RC908,Intermediate Blue FS 35164,Vallejo,Model Air,71.299,Intermediate Blue,3.9,AK Real Color chart RC235; Vallejo 71.299; current RC908
+AK Interactive,Real Colors,RC909,Medium Blue Grey FS 35237,Vallejo,Model Air,71.114,Medium Gray,3.6,AK Real Color chart RC237; Vallejo 71.114; current RC909
+AK Interactive,Real Colors,RC910,Air Superiority Blue FS 35450,Vallejo,Model Air,71.332,Unders. Blue “Faded”,0.8,AK Real Color chart RC239; Vallejo 71.332; current RC910
+AK Interactive,Real Colors,RC911,Duck Egg Blue FS 35622,Vallejo,Model Air,71.328,Light Blue,4.0,AK Real Color chart RC241; Vallejo 71.328; current RC911
+AK Interactive,Real Colors,RC912,Grey FS 36081,Vallejo,Model Air,71.314,Seaplane Gray,2.2,AK Real Color chart RC243; Vallejo 71.314; current RC912
+AK Interactive,Real Colors,RC913,Medium Gunship Grey FS 36118,Vallejo,Model Air,71.097,Med. Gunship Gray,1.8,AK Real Color chart RC244; Vallejo 71.097; current RC913
+AK Interactive,Real Colors,RC915,F-15 Dark Grey (Mod Eagle) FS 36176,Vallejo,Model Air,71.273,Ocean Gray,2.0,AK Real Color chart RC246; Vallejo 71.273; current RC915
+AK Interactive,Real Colors,RC916,Dark Gull Grey FS 36231,Vallejo,Model Air,71.277,Dark Gull Gray,2.0,AK Real Color chart RC247; Vallejo 71.277; current RC916
+AK Interactive,Real Colors,RC917,Aggressor Grey FS 36251,Vallejo,Model Air,71.274,Aggressor Gray,4.2,AK Real Color chart RC248; Vallejo 71.274; current RC917
+AK Interactive,Real Colors,RC918,Medium Grey FS 36270,Vallejo,Model Air,71.275,USAF Medium Gray,5.5,AK Real Color chart RC249; Vallejo 71.275; current RC918
+AK Interactive,Real Colors,RC919,Dark Ghost Grey FS 36320,Vallejo,Model Air,71.120,Dark Ghost Gray,1.4,AK Real Color chart RC251; Vallejo 71.120; current RC919
+AK Interactive,Real Colors,RC920,Light Ghost Grey FS 36375,Vallejo,Primers,70.615,USN Light Ghost Grey,2.7,AK Real Color chart RC252; Vallejo 70.615; current RC920
+AK Interactive,Real Colors,RC921,Light Grey FS 36495,Vallejo,Model Air,71.276,USAF Light Gray,1.7,AK Real Color chart RC253; Vallejo 71.276; current RC921
+AK Interactive,Real Colors,RC922,Camouflage Grey FS 36622,Vallejo,Model Air,71.296,USAAF Light Gray,4.3,AK Real Color chart RC254; Vallejo 71.296; current RC922
+AK Interactive,Real Colors,RC924,Sea Blue,Vallejo,Model Air,71.295,USN Sea Blue,4.9,AK Real Color chart RC257; Vallejo 71.295; current RC924
+AK Interactive,Real Colors,RC924,Sea Blue,Tamiya,Acrylic Paint,XF-17,Sea Blue,5.6,AK Real Color chart RC257; Tamiya XF-17; current RC924
+AK Interactive,Real Colors,RC925,Dark Sea Blue,Vallejo,Model Air,71.300,Glossy Sea Blue,8.2,AK Real Color chart RC258; Vallejo 71.300; current RC925
+AK Interactive,Real Colors,RC926,Dark Olive Drab 41,Vallejo,Model Air,71.316,N. 41 Dk Olive Drab,5.4,AK Real Color chart RC259; Vallejo 71.316; current RC926
+AK Interactive,Real Colors,RC926,Dark Olive Drab 41,Tamiya,Acrylic Paint,XF-62,Olive Drab,14.0,AK Real Color chart RC259; Tamiya XF-62; current RC926
+AK Interactive,Real Colors,RC928,Neutral Grey 43,Vallejo,Model Air,71.051,Neutral Gray,4.7,AK Real Color chart RC261; Vallejo 71.051; current RC928
+AK Interactive,Real Colors,RC930,Zinc Chromate Yellow,Vallejo,Model Air,71.107,US Interior Yellow,8.9,AK Real Color chart RC263; Vallejo 71.107; current RC930
+AK Interactive,Real Colors,RC932,RLM 02 RLM-Grau (1938),Vallejo,Model Air,71.044,Grey RLM02,6.7,AK Real Color chart RC265; Vallejo 71.044; current RC932
+AK Interactive,Real Colors,RC932,RLM 02 RLM-Grau (1938),Tamiya,Acrylic Paint,XF-20,Medium Grey,6.7,AK Real Color chart RC265; Tamiya XF-20; current RC932
+AK Interactive,Real Colors,RC934,RLM 04,Vallejo,Model Air,71.078,Yellow RLM04,5.2,AK Real Color chart RC267; Vallejo 71.078; current RC934
+AK Interactive,Real Colors,RC936,RLM 65 (1941),Vallejo,Model Air,71.255,Light Blue RLM65,2.8,AK Real Color chart RC272; Vallejo 71.255; current RC936
+AK Interactive,Real Colors,RC936,RLM 65 (1941),Tamiya,Acrylic Paint,XF-23,Light Blue,8.8,AK Real Color chart RC272; Tamiya XF-23; current RC936
+AK Interactive,Real Colors,RC939,RLM 70,Vallejo,Model Air,71.021,Black Green RLM70,3.2,AK Real Color chart RC274; Vallejo 71.021; current RC939
+AK Interactive,Real Colors,RC939,RLM 70,Tamiya,Acrylic Paint,XF-27,Black Green,18.7,AK Real Color chart RC274; Tamiya XF-27; current RC939
+AK Interactive,Real Colors,RC940,RLM 71,Vallejo,Model Air,71.015,Dark Green RLM71,6.2,AK Real Color chart RC275; Vallejo 71.015; current RC940
+AK Interactive,Real Colors,RC941,RLM 74,Vallejo,Model Air,71.258,Grey Green RLM74,3.6,AK Real Color chart RC278; Vallejo 71.258; current RC941
+AK Interactive,Real Colors,RC942,RLM 75,Vallejo,Model Air,71.259,Grey Violet RLM75,4.6,AK Real Color chart RC279; Vallejo 71.259; current RC942
+AK Interactive,Real Colors,RC948,RLM 80,Vallejo,Model Air,71.265,Olive Green RLM80,3.4,AK Real Color chart RC284; Vallejo 71.265; current RC948
+AK Interactive,Real Colors,RC959,RAF Sky Grey / FS 26373,Vallejo,Model Air,71.339,Russian AF Grey N.3,1.6,AK Real Color chart RC285; Vallejo 71.339; current RC959
+AK Interactive,Real Colors,RC960,RAF Dark Green,Vallejo,Model Air,71.324,BS Dark Green,4.3,AK Real Color chart RC286; Vallejo 71.324; current RC960
+AK Interactive,Real Colors,RC960,RAF Dark Green,Tamiya,Acrylic Paint,XF-81,Dark Green 2 (RAF),12.5,AK Real Color chart RC286; Tamiya XF-81; current RC960
+AK Interactive,Real Colors,RC961,RAF Dark Earth,Vallejo,Model Air,71.323,BS Dark Earth,14.2,AK Real Color chart RC287; Vallejo 71.323; current RC961
+AK Interactive,Real Colors,RC962,RAF Ocean Grey,Vallejo,Model Air,71.273,Ocean Gray,7.2,AK Real Color chart RC288; Vallejo 71.273; current RC962
+AK Interactive,Real Colors,RC962,RAF Ocean Grey,Tamiya,Acrylic Paint,XF-82,Ocean Gray 2 (RAF),12.7,AK Real Color chart RC288; Tamiya XF-82; current RC962
+AK Interactive,Real Colors,RC967,RAF Cockpit Grey-Green,Vallejo,Model Air,71.305,Interior Grey Green,5.3,AK Real Color chart RC293; Vallejo 71.305; current RC967
+AK Interactive,Real Colors,RC967,RAF Cockpit Grey-Green,Tamiya,Acrylic Paint,XF-71,Cockpit Green (IJN),11.5,AK Real Color chart RC293; Tamiya XF-71; current RC967
+AK Interactive,Real Colors,RC968,RAF Dark Slate Grey,Vallejo,Model Air,71.309,Dark Slate Grey,5.1,AK Real Color chart RC294; Vallejo 71.309; current RC968
+AK Interactive,Real Colors,RC969,RAF Extra Dark Sea Grey BS381C/640,Vallejo,Model Air,71.110,Dark Gray,4.4,AK Real Color chart RC295; Vallejo 71.110; current RC969
+AK Interactive,Real Colors,RC969,RAF Extra Dark Sea Grey BS381C/640,Tamiya,Acrylic Paint,XF-54,Dark Sea Grey,5.0,AK Real Color chart RC295; Tamiya XF-54; current RC969
+AK Interactive,Real Colors,RC970,RAF Dark Sea Grey BS381C/638,Vallejo,Model Air,71.405,BS Dark Sea Grey,,AK Real Color chart RC296; Vallejo 71.405; current RC970
+AK Interactive,Real Colors,RC970,RAF Dark Sea Grey BS381C/638,Tamiya,Acrylic Paint,XF-77,IJN Gray (Sasebo Arsenal),2.1,AK Real Color chart RC296; Tamiya XF-77; current RC970
+AK Interactive,Real Colors,RC971,RAF PRU Blue BS381C/636,Vallejo,Model Air,71.109,Faded P.R.U. Blue,2.4,AK Real Color chart RC297; Vallejo 71.109; current RC971
+AK Interactive,Real Colors,RC971,RAF PRU Blue BS381C/636,Tamiya,Acrylic Paint,XF-18,Medium Blue,6.4,AK Real Color chart RC297; Tamiya XF-18; current RC971
+AK Interactive,Real Colors,RC973,RAF Barley Grey BS381C/626,Tamiya,Acrylic Paint,XF-80,Royal Light Gray,12.3,AK Real Color chart RC299; Tamiya XF-80; current RC973
+AK Interactive,Real Colors,RC953,IJN J3 SP (Amber Grey),Vallejo,Model Air,71.311,IJN Ash Grey,16.3,AK Real Color chart RC303; Vallejo 71.311; current RC953
+AK Interactive,Real Colors,RC954,IJN D1 Deep Green Black,Vallejo,Model Air,71.325,IJN Dk Black Green,3.8,AK Real Color chart RC304; Vallejo 71.325; current RC954
+AK Interactive,Real Colors,RC954,IJN D1 Deep Green Black,Tamiya,Acrylic Paint,XF-11,J. N. Green,16.6,AK Real Color chart RC304; Tamiya XF-11; current RC954
+AK Interactive,Real Colors,RC955,IJN D2 Green Black,Vallejo,Model Air,71.322,IJN Black Green,2.4,AK Real Color chart RC305; Vallejo 71.322; current RC955
+AK Interactive,Real Colors,RC974,AMT-1 Light Brown,Vallejo,Model Air,71.320,AMT-1 Lt. Grey. Brown,10.0,AK Real Color chart RC313; Vallejo 71.320; current RC974
+AK Interactive,Real Colors,RC975,AMT-4 / A-24m Green,Vallejo,Model Air,71.301,AMT-4 Cam. Green,3.6,AK Real Color chart RC315; Vallejo 71.301; current RC975
+AK Interactive,Real Colors,RC976,AMT-7 Light Blue,Vallejo,Model Air,71.318,AMT-7 Greyish Blue,2.3,AK Real Color chart RC316; Vallejo 71.318; current RC976
+AK Interactive,Real Colors,RC977,AMT-11 Blue Grey,Vallejo,Model Air,71.304,AMT-11 Blue Grey,6.8,AK Real Color chart RC317; Vallejo 71.304; current RC977
+AK Interactive,Real Colors,RC978,AMT-12 Dark Grey,Vallejo,Model Air,71.308,AMT-12 Dark Grey,10.8,AK Real Color chart RC318; Vallejo 71.308; current RC978
+AK Interactive,Real Colors,RC979,A-14 Interior Steel Grey,Vallejo,Model Air,71.336,A-14 Steel Grey,9.2,AK Real Color chart RC319; Vallejo 71.336; current RC979
+AK Interactive,Real Colors,RC944,RLM 76 Version 2,Vallejo,Model Air,71.257,Light Blue RLM76,6.4,AK Real Color chart RC321; Vallejo 71.257; current RC944
+AK Interactive,Real Colors,RC945,RLM 76 Late War Variation,Vallejo,Model Air,71.103,Grey Blue RLM84,11.9,AK Real Color chart RC322; Vallejo 71.103; current RC945
+AK Interactive,Real Colors,RC951,RLM 82,Vallejo,Model Air,71.022,Light Green RLM82,4.8,AK Real Color chart RC326; Vallejo 71.022; current RC951
+AK Interactive,Real Colors,RC937,RLM 66 (1938),Vallejo,Model Air,71.055,Black Grey RLM66,4.2,AK Real Color chart RC339; Vallejo 71.055; current RC937
+AK Interactive,Real Colors,RC937,RLM 66 (1938),Tamiya,Acrylic Paint,XF-24,Dark Grey,5.7,AK Real Color chart RC339; Tamiya XF-24; current RC937
+AK Interactive,Real Colors,RC801,Flat Varnish,Vallejo,Model Color Auxiliary,70.520,Matt Varnish,,AK Real Color chart RC500; Vallejo 70.520; current RC801
+AK Interactive,Real Colors,RC801,Flat Varnish,Tamiya,Acrylic Paint,XF-86,Flat Clear,,AK Real Color chart RC500; Tamiya XF-86; current RC801
+AK Interactive,Real Colors,RC802,Satin Varnish,Vallejo,Model Color Auxiliary,70.522,Satin Varnish,20.7,AK Real Color chart RC501; Vallejo 70.522; current RC802
+AK Interactive,Real Colors,RC803,Gloss Varnish,Vallejo,Model Color Auxiliary,70.510,Glossy Varnish,,AK Real Color chart RC502; Vallejo 70.510; current RC803
+AK Interactive,Real Colors,RC803,Gloss Varnish,Tamiya,Acrylic Paint,X-22,Clear,,AK Real Color chart RC502; Tamiya X-22; current RC803
+AK Interactive,Real Colors,RC821,Clear Red,Tamiya,Acrylic Paint,X-27,Clear Red,25.3,AK Real Color chart RC503; Tamiya X-27; current RC821
+AK Interactive,Real Colors,RC822,Clear Blue,Tamiya,Acrylic Paint,X-23,Clear Blue,16.4,AK Real Color chart RC504; Tamiya X-23; current RC822
+AK Interactive,Real Colors,RC823,Clear Green,Tamiya,Acrylic Paint,X-25,Clear Green,15.1,AK Real Color chart RC505; Tamiya X-25; current RC823
+AK Interactive,Real Colors,RC824,Clear Orange,Tamiya,Acrylic Paint,X-26,Clear Orange,15.6,AK Real Color chart RC506; Tamiya X-26; current RC824
+AK Interactive,Real Colors,RC825,Clear Yellow,Tamiya,Acrylic Paint,X-24,Clear Yellow,15.5,AK Real Color chart RC507; Tamiya X-24; current RC825
+AK Interactive,Real Colors,RC826,Clear Smoke,Tamiya,Acrylic Paint,X-19,Smoke,12.7,AK Real Color chart RC508; Tamiya X-19; current RC826

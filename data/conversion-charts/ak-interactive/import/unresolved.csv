@@ -1,0 +1,104 @@
+chart,ref,column,value,reason
+3gen,AK11001,Old Citadel,Skull White,discontinued Citadel name (not imported)
+3gen,AK11010,Old Citadel,Fortress Grey,discontinued Citadel name (not imported)
+3gen,AK11021,Old Citadel,Coldex Grey,discontinued Citadel name (not imported)
+3gen,AK11025,Old Citadel,Charadon Granite,discontinued Citadel name (not imported)
+3gen,AK11029,Old Citadel,Chaos Black,discontinued Citadel name (not imported)
+3gen,AK11031,Old Citadel,Bleached Bone,discontinued Citadel name (not imported)
+3gen,AK11041,Old Citadel,Golden Yellow,discontinued Citadel name (not imported)
+3gen,AK11044,Old Citadel,Sunburst Yellow,discontinued Citadel name (not imported)
+3gen,AK11045,Old Citadel,Sunburst Yellow,discontinued Citadel name (not imported)
+3gen,AK11047,Old Citadel,Bad Moon Yellow,discontinued Citadel name (not imported)
+3gen,AK11053,Old Citadel,Elf Flesh,discontinued Citadel name (not imported)
+3gen,AK11064,Old Citadel,Vomit Brown,discontinued Citadel name (not imported)
+3gen,AK11065,Old Citadel,Tentacle pink,discontinued Citadel name (not imported)
+3gen,AK11067,Old Citadel,Warlock Purple,discontinued Citadel name (not imported)
+3gen,AK11070,Old Citadel,Liche Purple,discontinued Citadel name (not imported)
+3gen,AK11077,Old Citadel,Fiery Orange,discontinued Citadel name (not imported)
+3gen,AK11079,Old Citadel,Macharius Solar Orange,discontinued Citadel name (not imported)
+3gen,AK11087,Old Citadel,Blazing Orange,discontinued Citadel name (not imported)
+3gen,AK11089,Old Citadel,Blood Red,discontinued Citadel name (not imported)
+3gen,AK11091,Old Citadel,Scan Red,discontinued Citadel name (not imported)
+3gen,AK11095,Old Citadel,Mechrite Red,discontinued Citadel name (not imported)
+3gen,AK11101,Old Citadel,Vermin Brown,discontinued Citadel name (not imported)
+3gen,AK11106,Old Citadel,Dark Flesh,discontinued Citadel name (not imported)
+3gen,AK11112,Old Citadel,Scorched Brown,discontinued Citadel name (not imported)
+3gen,AK11117,Old Citadel,Lyanden Darksun,discontinued Citadel name (not imported)
+3gen,AK11118,Old Citadel,Bubonic Brown,discontinued Citadel name (not imported)
+3gen,AK11119,Old Citadel,Tallarn Flesh,discontinued Citadel name (not imported)
+3gen,AK11123,Old Citadel,Desert Yellow,discontinued Citadel name (not imported)
+3gen,AK11124,Old Citadel,Gretching Green,discontinued Citadel name (not imported)
+3gen,AK11127,Old Citadel,Graveyard Earth,discontinued Citadel name (not imported)
+3gen,AK11141,Old Citadel,Scorpion Green,discontinued Citadel name (not imported)
+3gen,AK11142,Old Citadel,Vile Green,discontinued Citadel name (not imported)
+3gen,AK11143,,,"skipped: Citadel cells printed one row above their Vallejo cells (AK11144 has the Vallejo codes, no Citadel)"
+3gen,AK11144,,,skipped: Citadel cells printed one row above their Vallejo cells
+3gen,AK11147,Old Citadel,Goblin Green,discontinued Citadel name (not imported)
+3gen,AK11149,Old Citadel,Dark Angels Green,discontinued Citadel name (not imported)
+3gen,AK11160,Old Citadel,Orkhide Shade,discontinued Citadel name (not imported)
+3gen,AK11170,Old Citadel,Hawk Turquoise,discontinued Citadel name (not imported)
+3gen,AK11176,Old Citadel,Ice Blue,discontinued Citadel name (not imported)
+3gen,AK11179,Old Citadel,Ultramarines Blue,discontinued Citadel name (not imported)
+3gen,AK11182,Old Citadel,Enchanted Blue,discontinued Citadel name (not imported)
+3gen,AK11186,Old Citadel,Mordian Blue,discontinued Citadel name (not imported)
+3gen,AK11188,Old Citadel,Shadow Grey,discontinued Citadel name (not imported)
+3gen,AK11189,Old Citadel,Regal Blue,discontinued Citadel name (not imported)
+3gen,AK11196,Old Citadel,Dwarft Bronze,discontinued Citadel name (not imported)
+3gen,AK11209,Old Citadel,Mithril Silver,discontinued Citadel name (not imported)
+3gen,AK11211,Old Citadel,Chainmail,discontinued Citadel name (not imported)
+3gen,AK11212,Old Citadel,Boltgun Metal,discontinued Citadel name (not imported)
+3gen,AK11363,,,skipped: paired with 71.064 Chrome for a desert sand colour
+3gen,AK11405,Old Citadel,Red Gore,discontinued Citadel name (not imported)
+3gen,AK11417,Old Citadel,Bestial Brown,discontinued Citadel name (not imported)
+3gen,AK11425,Old Citadel,Catachan Green,discontinued Citadel name (not imported)
+real-color,RC018,,Pale Sand,old Real Color code has no current paint
+real-color,RC019,,Deck Tan,old Real Color code has no current paint
+real-color,RC033,,Khaki Green No.3,old Real Color code has no current paint
+real-color,RC045,,BSC No.49 Light Purple Brown,old Real Color code has no current paint
+real-color,RC048,,Feldgray – Field Grey,old Real Color code has no current paint
+real-color,RC049,,Grün – Green,old Real Color code has no current paint
+real-color,RC055,,Blaugrau – Blue Grey,old Real Color code has no current paint
+real-color,RC065,,Braun – Brown,old Real Color code has no current paint
+real-color,RC074,,Dark Brown 6K,old Real Color code has no current paint
+real-color,RC075,,Sand 7K,old Real Color code has no current paint
+real-color,RC077,,ZB AU Basic Protector,old Real Color code has no current paint
+real-color,RC078,,APC Interior Green,old Real Color code has no current paint
+real-color,RC088,,Sandbeige,old Real Color code has no current paint
+real-color,RC089,,Graubeige – Grey Beige,old Real Color code has no current paint
+real-color,RC090,,Helloliv – Light Olive,old Real Color code has no current paint
+real-color,RC091,,Tarngrau – Camo Grey,old Real Color code has no current paint
+real-color,RC092,,Sandbraun – Sand Brown,old Real Color code has no current paint
+real-color,RC207,,Leuchtorange – Luminous Orange,old Real Color code has no current paint
+real-color,RC208,,Graublau – Grey Blue,old Real Color code has no current paint
+real-color,RC211,,Grüngrau – Green Grey,old Real Color code has no current paint
+real-color,RC212,,Basaltgrau – Basalt Grey,old Real Color code has no current paint
+real-color,RC218,,Olivbraun – Olive Brown,old Real Color code has no current paint
+real-color,RC223,,Tan,old Real Color code has no current paint
+real-color,RC233,,Green,old Real Color code has no current paint
+real-color,RC234,,Aggressor Blue,old Real Color code has no current paint
+real-color,RC236,,Blue,old Real Color code has no current paint
+real-color,RC238,,Light Blue,old Real Color code has no current paint
+real-color,RC240,,Light Sky Blue,old Real Color code has no current paint
+real-color,RC242,,Dark Eggplant Grey,old Real Color code has no current paint
+real-color,RC255,,M-485 Light Grey,old Real Color code has no current paint
+real-color,RC256,,M-485 Blue-Grey,old Real Color code has no current paint
+real-color,RC268,,RLM 61,old Real Color code has no current paint
+real-color,RC269,,RLM 62,old Real Color code has no current paint
+real-color,RC270,,RLM 63,old Real Color code has no current paint
+real-color,RC276,,RLM 72,old Real Color code has no current paint
+real-color,RC277,,RLM 73,old Real Color code has no current paint
+real-color,RC281,,RLM 78 (1942),old Real Color code has no current paint
+real-color,RC283,,RLM 79 (1942),old Real Color code has no current paint
+real-color,RC301,,RAF Camouflage Beige (Hemp),old Real Color code has no current paint
+real-color,RC308,,AE-9 / AII Light Grey,old Real Color code has no current paint
+real-color,RC309,,AII Protective (Green),old Real Color code has no current paint
+real-color,RC310,,AII Light Blue,old Real Color code has no current paint
+real-color,RC311,,A-18f Light Blue,old Real Color code has no current paint
+real-color,RC312,,A-19f Green,old Real Color code has no current paint
+real-color,RC314,,A-21m Light Yellowish Brown,old Real Color code has no current paint
+real-color,RC323,,RLM 81 Version 1,old Real Color code has no current paint
+real-color,RC324,,RLM 81 Version 2,old Real Color code has no current paint
+real-color,RC328,,IJAAF #1 Hairyokushoku (Grey Green),old Real Color code has no current paint
+real-color,RC330,,IJAAF #7 Ohryoku Nana Go Shoku (Olive Brown),old Real Color code has no current paint
+real-color,RC338,,MiG-29 Grey Green,old Real Color code has no current paint
+AK Real Color chart RC222,RC891,Acrylic Paint,X-1,"skipped: colours far apart (ΔE 88.4), likely misprint"
