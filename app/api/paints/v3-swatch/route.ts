@@ -1,8 +1,4 @@
-// Frankfurt project, plus the retired Tokyo project during the region migration.
-const allowedSupabaseHosts = new Set([
-  'vwshzvxsitiwyayawcvr.supabase.co',
-  'ckzrvjisesooqcmmtvwl.supabase.co',
-])
+const allowedSupabaseHost = 'vwshzvxsitiwyayawcvr.supabase.co'
 const allowedSupabasePathPrefixes = [
   '/storage/v1/render/image/public/',
   '/storage/v1/object/public/',
@@ -36,7 +32,7 @@ function getAllowedSwatchUrl(request: Request) {
 
   if (
     swatchUrl.protocol !== 'https:' ||
-    !allowedSupabaseHosts.has(swatchUrl.hostname) ||
+    swatchUrl.hostname !== allowedSupabaseHost ||
     !allowedSupabasePathPrefixes.some((prefix) =>
       swatchUrl.pathname.startsWith(prefix)
     )

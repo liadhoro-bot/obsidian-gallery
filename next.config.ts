@@ -18,14 +18,17 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/webp'],
     minimumCacheTTL: 60 * 60 * 24,
-    // Frankfurt project, plus the retired Tokyo project during the region migration.
     remotePatterns: [
-      ...['vwshzvxsitiwyayawcvr.supabase.co', 'ckzrvjisesooqcmmtvwl.supabase.co'].flatMap(
-        (hostname) => [
-          { protocol: 'https' as const, hostname, pathname: '/storage/v1/object/**' },
-          { protocol: 'https' as const, hostname, pathname: '/storage/v1/render/image/**' },
-        ]
-      ),
+      {
+        protocol: 'https',
+        hostname: 'vwshzvxsitiwyayawcvr.supabase.co',
+        pathname: '/storage/v1/object/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'vwshzvxsitiwyayawcvr.supabase.co',
+        pathname: '/storage/v1/render/image/**',
+      },
     ],
     // This local API route proxies a single already-allow-listed Supabase
     // image (it validates its own `src` param server-side), so next/image

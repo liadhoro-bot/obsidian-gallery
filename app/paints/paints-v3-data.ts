@@ -148,10 +148,7 @@ export function getPaintSwatchImageUrl(value: string | null | undefined) {
 
   try {
     const parsedUrl = new URL(swatchUrl)
-    if (
-      parsedUrl.hostname === 'vwshzvxsitiwyayawcvr.supabase.co' ||
-      parsedUrl.hostname === 'ckzrvjisesooqcmmtvwl.supabase.co'
-    ) {
+    if (parsedUrl.hostname === 'vwshzvxsitiwyayawcvr.supabase.co') {
       return `/api/paints/v3-swatch?src=${encodeURIComponent(swatchUrl)}`
     }
   } catch {
