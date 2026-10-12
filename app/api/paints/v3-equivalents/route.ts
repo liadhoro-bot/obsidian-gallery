@@ -6,6 +6,7 @@ import {
   type OwnershipRow,
 } from '../../../paints/paints-v3-data'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
+import { captureServerEvent } from '../../../../utils/analytics/server'
 import {
   classifyPaintFamily,
   findPaintEquivalents,
@@ -76,6 +77,7 @@ function getCatalog(supabase: Awaited<ReturnType<typeof createClient>>) {
 }
 
 export async function GET(request: Request) {
+  const startedAt = Date.now()
   const paintId = new URL(request.url).searchParams.get('paintId')
 
   if (!paintId || paintId.startsWith('custom-')) {
@@ -177,10 +179,33 @@ export async function GET(request: Request) {
     .filter((paint) => paint !== undefined)
     .map((paint) => toCatalogPaint(paint, ownershipByPaintId, false))
 
+  const family = classifyPaintFamily(source)
+  const groupCount = (group: string) => matches.filter((match) => match.group === group).length
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'paint_equivalents_viewed',
+    properties: {
+      paint_id: source.id,
+      paint_brand: source.brand,
+      paint_line: source.line,
+      paint_name: source.name,
+      family,
+      match_count: matches.length,
+      similar_count: groupCount('similar'),
+      official_count: groupCount('official'),
+      community_count: groupCount('community'),
+      related_count: groupCount('related'),
+      contextual_count: groupCount('contextual'),
+      // How often an equivalent is already on the user's shelf.
+      owned_match_count: paints.filter((paint) => paint.owned).length,
+      duration_ms: Date.now() - startedAt,
+    },
+  })
+
   return NextResponse.json(
     {
       sourceId: source.id,
-      family: classifyPaintFamily(source),
+      family,
       paints,
       matches: Object.fromEntries(matches.map((match) => [match.paintId, match])),
     },

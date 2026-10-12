@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import { capturePostHog } from '../../utils/analytics/client'
 import styles from './paints-v3-silver.module.css'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type { PaintsV3Payload } from './paints-v3-data'
@@ -1095,6 +1096,23 @@ export default function PaintsV3Preview({
     setSortMode(previous.sortMode)
   }
 
+  function selectGridPaint(paint: PaintRecord) {
+    setSelectedPaintId(paint.id)
+    const match = equivalentsView?.matches[paint.id]
+    if (!equivalentsView || !match || paint.id === selectedPaintId) return
+    void capturePostHog('paint_equivalent_selected', {
+      source_paint_id: equivalentsView.source.id,
+      source_brand: equivalentsView.source.brand,
+      paint_id: paint.id,
+      paint_brand: paint.brand,
+      group: match.group,
+      tier: match.tier,
+      rank: match.rank,
+      similarity: match.similarity,
+      owned: paint.owned,
+    })
+  }
+
   function handleTabChange(nextTab: 'owned' | 'library') {
     if (equivalentsView) exitEquivalents()
     setActiveTab(nextTab)
@@ -1673,7 +1691,7 @@ export default function PaintsV3Preview({
                     paint={paint}
                     isSelected={paint.id === selectedPaintId}
                     showRealSwatch={showRealSwatches}
-                    onSelect={() => setSelectedPaintId(paint.id)}
+                    onSelect={() => selectGridPaint(paint)}
                   />
                 ) : (
                   <PaintCard
@@ -1686,7 +1704,7 @@ export default function PaintsV3Preview({
                     paint={paint}
                     isSelected={paint.id === selectedPaintId}
                     showRealSwatch={showRealSwatches}
-                    onSelect={() => setSelectedPaintId(paint.id)}
+                    onSelect={() => selectGridPaint(paint)}
                   />
                 )
               ))}
