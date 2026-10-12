@@ -4,6 +4,7 @@ import { createClient, getSessionUser } from '../../utils/supabase/server'
 import SettingsProfileCard from './settings-profile-card'
 import SettingsSupportSection from './settings-support-section'
 import SettingsSessionSection from './settings-session-section'
+import SettingsPreferencesSection from './settings-preferences-section'
 import SettingsV3Preview from './settings-v3-preview'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import {
@@ -11,6 +12,7 @@ import {
   SettingsCardSkeleton,
 } from './settings-skeletons'
 import styles from '../settings-support-silver.module.css'
+import { getStartupPage } from '../../lib/startup-page'
 
 type SettingsPageProps = {
   searchParams?: Promise<{
@@ -58,6 +60,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           email: user.email ?? '',
           avatarUrl: profile?.avatar_url ?? null,
           username: profile?.username ?? null,
+          startupPage: getStartupPage(user.user_metadata?.startup_page),
         }}
       />
     )
@@ -69,6 +72,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <Suspense fallback={<SettingsProfileSkeleton />}>
           <SettingsProfileCard />
         </Suspense>
+
+        <SettingsPreferencesSection
+          initialStartupPage={getStartupPage(user.user_metadata?.startup_page)}
+        />
 
         <Suspense fallback={<SettingsCardSkeleton />}>
           <SettingsSupportSection />

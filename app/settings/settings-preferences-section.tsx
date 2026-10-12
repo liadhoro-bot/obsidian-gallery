@@ -1,34 +1,87 @@
-export default async function SettingsPreferencesSection() {
+'use client'
+
+import { useState, useTransition, type CSSProperties } from 'react'
+import type { StartupPage } from '../../lib/startup-page'
+import { updateStartupPage } from './settings-actions'
+import styles from '../settings-support-silver.module.css'
+
+const startupPages: Array<{ id: StartupPage; label: string; icon: string }> = [
+  { id: 'dashboard', label: 'Dashboard', icon: '/icons/nav/dashboard-active.svg' },
+  { id: 'projects', label: 'Projects', icon: '/icons/nav/projects-active.svg' },
+  { id: 'paints', label: 'Paints', icon: '/icons/nav/vault-active.svg' },
+  { id: 'guides', label: 'Guides', icon: '/icons/nav/recipes-active.svg' },
+  { id: 'community', label: 'Community', icon: '/icons/nav/community-active.svg' },
+]
+
+export default function SettingsPreferencesSection({
+  initialStartupPage,
+}: {
+  initialStartupPage: StartupPage
+}) {
+  const [startupPage, setStartupPage] = useState(initialStartupPage)
+  const [error, setError] = useState<string | null>(null)
+  const [isSaving, startSaving] = useTransition()
+
+  function chooseStartupPage(nextPage: StartupPage) {
+    if (nextPage === startupPage || isSaving) return
+
+    const previousPage = startupPage
+    setStartupPage(nextPage)
+    setError(null)
+
+    startSaving(async () => {
+      const result = await updateStartupPage(nextPage)
+
+      if (result.error) {
+        setStartupPage(previousPage)
+        setError(result.error)
+      }
+    })
+  }
+
+  const activeLabel = startupPages.find((page) => page.id === startupPage)?.label
+
   return (
-    <section className="rounded-3xl border border-white/5 bg-white/[0.04] p-5">
-      <h2 className="mb-4 flex items-center gap-3 text-base font-bold">
-        <span className="text-orange-400">☷</span>
-        App Preferences
+    <section className={styles.card}>
+      <h2 className={styles.sectionTitle}>
+        <span className={styles.sectionIcon}>⌂</span>
+        Startup Page
       </h2>
 
-      <div className="flex items-center justify-between py-3">
-        <span className="text-sm font-semibold text-slate-200">Dark Mode</span>
+      <p className={styles.description}>
+        Choose the page the installed app opens first.
+      </p>
 
-        <button
-          type="button"
-          className="relative h-7 w-12 rounded-full bg-cyan-400"
-          title="Theme toggle placeholder"
-        >
-          <span className="absolute right-1 top-1 h-5 w-5 rounded-full bg-slate-900" />
-        </button>
+      <div className={styles.toggleGrid} aria-label="Startup page">
+        {startupPages.map((page) => (
+          <button
+            key={page.id}
+            type="button"
+            onClick={() => chooseStartupPage(page.id)}
+            aria-pressed={startupPage === page.id}
+            disabled={isSaving}
+            className={[
+              styles.toggleItem,
+              startupPage === page.id ? styles.toggleItemActive : '',
+            ].join(' ')}
+          >
+            <span
+              className={styles.startupNavIcon}
+              style={{ '--startup-nav-icon': `url(${page.icon})` } as CSSProperties}
+              aria-hidden="true"
+            />
+            <span className="block w-full truncate text-center">{page.label}</span>
+          </button>
+        ))}
       </div>
 
-      <div className="flex items-center justify-between py-3">
-        <span className="text-sm font-semibold text-slate-200">Language</span>
-        <span className="text-sm text-slate-400">English</span>
-      </div>
-
-      <div className="flex items-center justify-between py-3">
-        <span className="text-sm font-semibold text-slate-200">
-          Units of Measure
-        </span>
-        <span className="text-sm text-slate-400">Metric</span>
-      </div>
+      <p className={styles.startupStatus} role="status" aria-live="polite">
+        {error
+          ? error
+          : isSaving
+            ? 'Saving startup page…'
+            : `${activeLabel} will open first.`}
+      </p>
     </section>
   )
 }

@@ -5,6 +5,48 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { headers } from 'next/headers'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
+import { isStartupPage, type StartupPage } from '../../lib/startup-page'
+
+export type UpdateStartupPageResult = {
+  error: string | null
+}
+
+export async function updateStartupPage(
+  startupPage: StartupPage
+): Promise<UpdateStartupPageResult> {
+  if (!isStartupPage(startupPage)) {
+    return { error: 'Choose a valid startup page.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Please sign in again before changing your startup page.' }
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      ...user.user_metadata,
+      startup_page: startupPage,
+    },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'startup_page_updated',
+    properties: { startup_page: startupPage },
+  })
+
+  revalidatePath('/settings')
+  return { error: null }
+}
 
 export async function logout() {
   const supabase = await createClient()

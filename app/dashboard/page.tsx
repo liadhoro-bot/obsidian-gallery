@@ -20,6 +20,7 @@ import DashboardQuickActions from './dashboard-quick-actions'
 import DashboardHobbyBadges from './dashboard-hobby-badges'
 import DashboardAchievements from './dashboard-achievements'
 import type { DashboardFeatureGuide } from './feature-guide-types'
+import { getStartupPage, getStartupPath } from '../../lib/startup-page'
 
 import {
   BenchUnitsSkeleton,
@@ -32,6 +33,7 @@ type DashboardPageProps = {
   searchParams?: Promise<{
     golden?: string
     preview?: string
+    source?: string
     tab?: string
   }>
 }
@@ -164,9 +166,18 @@ export default async function DashboardPage({
   perf.mark('auth/session fetch')
 
   if (!user) {
+    const nextPath = resolvedSearchParams?.source === 'pwa'
+      ? `/dashboard?${new URLSearchParams({
+          source: 'pwa',
+          ...(isPreview ? { preview: '1' } : {}),
+        }).toString()}`
+      : isPreview
+        ? '/dashboard?preview=1'
+        : null
+
     redirect(
-      isPreview
-        ? '/login?next=%2Fdashboard%3Fpreview%3D1&preview=1'
+      nextPath
+        ? `/login?next=${encodeURIComponent(nextPath)}${isPreview ? '&preview=1' : ''}`
         : '/login'
     )
   }
@@ -183,6 +194,14 @@ export default async function DashboardPage({
         reason: onboarding.reason,
       })
     )
+  }
+
+  if (resolvedSearchParams?.source === 'pwa') {
+    const startupPage = getStartupPage(user.user_metadata?.startup_page)
+
+    if (startupPage !== 'dashboard') {
+      redirect(getStartupPath(startupPage, isPreview))
+    }
   }
 
   if (isPreview) {

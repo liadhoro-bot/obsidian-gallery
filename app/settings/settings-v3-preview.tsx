@@ -2,33 +2,33 @@
 
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import AvatarUploadInput from './avatar-upload-input'
 import SettingsProfileEditor from './settings-profile-editor'
-import { logout, updateAvatar } from './settings-actions'
+import { logout, updateAvatar, updateStartupPage } from './settings-actions'
 import styles from '../settings-support-silver.module.css'
+import type { StartupPage } from '../../lib/startup-page'
 
-type StartupPage = 'dashboard' | 'guides' | 'projects' | 'paints' | 'community'
 type SettingsV3User = {
   avatarUrl: string | null
   createdAt: string | null
   displayName: string
   email: string
   username: string | null
+  startupPage: StartupPage
 }
 
 const startupPages: Array<{
   id: StartupPage
   label: string
-  href: string
   icon: string
 }> = [
-  { id: 'dashboard', label: 'Dashboard', href: '/dashboard?preview=1', icon: 'grid' },
-  { id: 'projects', label: 'Projects', href: '/projects?preview=1', icon: 'tool' },
-  { id: 'paints', label: 'Paints', href: '/paints?preview=1', icon: 'paint' },
-  { id: 'guides', label: 'Guides', href: '/guides?preview=1', icon: 'book' },
-  { id: 'community', label: 'Community', href: '/community?preview=1', icon: 'group' },
+  { id: 'dashboard', label: 'Dashboard', icon: '/icons/nav/dashboard-active.svg' },
+  { id: 'projects', label: 'Projects', icon: '/icons/nav/projects-active.svg' },
+  { id: 'paints', label: 'Paints', icon: '/icons/nav/vault-active.svg' },
+  { id: 'guides', label: 'Guides', icon: '/icons/nav/recipes-active.svg' },
+  { id: 'community', label: 'Community', icon: '/icons/nav/community-active.svg' },
 ]
 
 const settingsRows = [
@@ -60,7 +60,26 @@ const settingsRows = [
 
 export default function SettingsV3Preview({ user }: { user: SettingsV3User }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [startupPage, setStartupPage] = useState<StartupPage>('guides')
+  const [startupPage, setStartupPage] = useState<StartupPage>(user.startupPage)
+  const [startupPageError, setStartupPageError] = useState<string | null>(null)
+  const [isSavingStartupPage, startSavingStartupPage] = useTransition()
+
+  function chooseStartupPage(nextPage: StartupPage) {
+    if (nextPage === startupPage || isSavingStartupPage) return
+
+    const previousPage = startupPage
+    setStartupPage(nextPage)
+    setStartupPageError(null)
+
+    startSavingStartupPage(async () => {
+      const result = await updateStartupPage(nextPage)
+
+      if (result.error) {
+        setStartupPage(previousPage)
+        setStartupPageError(result.error)
+      }
+    })
+  }
 
   return (
     <main className={styles.root}>
@@ -105,8 +124,9 @@ export default function SettingsV3Preview({ user }: { user: SettingsV3User }) {
                 <button
                   key={page.id}
                   type="button"
-                  onClick={() => setStartupPage(page.id)}
+                  onClick={() => chooseStartupPage(page.id)}
                   aria-pressed={startupPage === page.id}
+                  disabled={isSavingStartupPage}
                   className={[
                     styles.toggleItem,
                     startupPage === page.id
@@ -114,13 +134,20 @@ export default function SettingsV3Preview({ user }: { user: SettingsV3User }) {
                       : '',
                   ].join(' ')}
                 >
-                  <NavMiniIcon name={page.icon} />
+                  <NavMiniIcon icon={page.icon} />
                   <span className="block w-full truncate text-center">
                     {page.label}
                   </span>
                 </button>
               ))}
             </div>
+            <p className={styles.startupStatus} role="status" aria-live="polite">
+              {startupPageError
+                ? startupPageError
+                : isSavingStartupPage
+                  ? 'Saving startup page…'
+                  : `${startupPages.find((page) => page.id === startupPage)?.label} will open first.`}
+            </p>
           </div>
 
           <div className={styles.previewRows}>
@@ -345,11 +372,13 @@ function IconBadge({ name }: { name: string }) {
   )
 }
 
-function NavMiniIcon({ name }: { name: string }) {
+function NavMiniIcon({ icon }: { icon: string }) {
   return (
-    <span className="grid h-5 w-5 place-items-center">
-      <SvgIcon name={name} />
-    </span>
+    <span
+      className={styles.startupNavIcon}
+      style={{ '--startup-nav-icon': `url(${icon})` } as React.CSSProperties}
+      aria-hidden="true"
+    />
   )
 }
 
