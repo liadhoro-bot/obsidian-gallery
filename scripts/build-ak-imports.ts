@@ -157,7 +157,7 @@ async function main() {
   const realColors = readCsv(path.join(AK, 'real-colors-catalog.csv'))
   const tamiya = readCsv(path.join(ROOT, 'data', 'conversion-charts', 'tamiya', 'acrylic-catalog.csv'))
   const haveSku = new Set(catalog.map((p) => `${p.brand}|${p.sku}`))
-  const newPaints = [
+  const candidates: Row[] = [
     ...realColors.map((p) => ({ ...p, hex_source: 'manufacturer', source: p.product_url })),
     ...tamiya.map((p) => ({ ...p, hex_source: p.hex ? 'manufacturer' : '', source: p.product_url })),
     ...VALLEJO_ADDITIONS.map((p) => ({
@@ -170,7 +170,8 @@ async function main() {
       swatch_file: '',
       source: 'mech9 Vallejo tables; referenced by AK Interactive charts',
     })),
-  ].filter((p) => !haveSku.has(`${p.brand}|${p.sku}`))
+  ]
+  const newPaints = candidates.filter((p) => !haveSku.has(`${p.brand}|${p.sku}`))
   fs.writeFileSync(
     path.join(OUT, 'new-paints.csv'),
     csv(newPaints, ['brand', 'line', 'sku', 'name', 'hex', 'hex_source', 'paint_type', 'finish', 'finish_type', 'swatch_file', 'source'])
