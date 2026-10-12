@@ -114,7 +114,7 @@ export default function SaveAssignmentAction({
         className={buttonClass}
       >
         <BookmarkIcon filled={saved} size={compact ? 13 : 16} />
-        {typeof count === 'number' ? <span>{count}</span> : null}
+        {typeof count === 'number' ? <span className="tabular-nums" style={{ color: 'inherit' }}>{count}</span> : null}
       </button>
 
       {open && typeof document !== 'undefined' ? createPortal(

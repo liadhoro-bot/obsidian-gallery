@@ -117,7 +117,7 @@ export default function GuideSocialActions({
         }`}
       >
         <HeartIcon filled={liked} size={iconSize} />
-        <span style={{ color: 'inherit' }}>{likes}</span>
+        <span className="tabular-nums" style={{ color: 'inherit' }}>{likes}</span>
       </button>
       <SaveAssignmentAction
         contentType={assignContentType}

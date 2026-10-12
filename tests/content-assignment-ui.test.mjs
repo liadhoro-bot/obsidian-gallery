@@ -17,6 +17,8 @@ test('save controls offer saved-library and project/unit assignment paths', () =
   assert.match(action, /projectStyles\.dialogPanel/)
   assert.match(social, /<SaveAssignmentAction/)
   assert.match(hero, /<SaveAssignmentAction/)
+  assert.match(action, /className="tabular-nums" style=\{\{ color: 'inherit' \}\}/)
+  assert.match(social, /className="tabular-nums" style=\{\{ color: 'inherit' \}\}/)
 })
 
 test('project and both unit details surfaces render the shared assignment card', () => {
