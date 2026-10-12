@@ -1,6 +1,7 @@
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
+import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { createSharedReadClient } from './shared-read-client'
 
@@ -36,6 +37,16 @@ export type GuidesV3GuideFile = {
   viewerHasSaved: boolean
   createdAt: string
   tags?: string[]
+  // Public creator identity, shown on Discover cards. Only the username and
+  // avatar are exposed - display_name can hold a real name.
+  creator?: GuidesV3Creator
+}
+
+export type GuidesV3Creator = {
+  username: string
+  avatar: string | null
+  // The creator page listing all of their public guides.
+  href: string
 }
 
 export type GuidesV3Deck = {
@@ -233,7 +244,11 @@ function formatSubtitle(recipe: RecipeRow, sourceLabel: string) {
 // re-asserts it in application code so an owner's own private/draft guides
 // (visible to them via RLS's "own" clause) never leak into a public listing.
 function memberRecipesOf(guide: GuideRow): RecipeRow[] {
-  return (guide.guide_decks ?? [])
+  // PostgREST doesn't order embedded rows, so sort explicitly: the first
+  // member is the deck a guide's likes/saves are keyed to, and an unstable
+  // order showed a multi-deck guide's counts for an arbitrary member.
+  return [...(guide.guide_decks ?? [])]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
     .map((guideDeck) => firstValue(guideDeck.recipes))
     .filter((recipe): recipe is RecipeRow => Boolean(recipe))
 }
@@ -308,6 +323,29 @@ async function loadAllVisibleGuideRows(supabase: SupabaseClient) {
     if ((data ?? []).length < publicGuidePageSize) break
   }
   return { data: rows, error: null }
+}
+
+// Profiles are private under RLS, so read just the public username and
+// avatar for the creators of guides the viewer can already see.
+async function loadGuideCreators(userIds: string[]) {
+  const creatorsById = new Map<string, GuidesV3Creator>()
+  const ids = Array.from(new Set(userIds))
+  if (ids.length === 0) return creatorsById
+
+  const service = createServiceRoleClient()
+  const rows = await selectInBatches<{ id: string; username: string | null; avatar_url: string | null }>(
+    ids,
+    (batch) => service.from('profiles').select('id, username, avatar_url').in('id', batch)
+  )
+  for (const row of rows) {
+    if (!row.username) continue
+    creatorsById.set(row.id, {
+      username: row.username,
+      avatar: getSupabaseImageUrl(row.avatar_url, { width: 64, height: 64, quality: 60, resize: 'cover' }),
+      href: `/guides/creators/${row.id}`,
+    })
+  }
+  return creatorsById
 }
 
 async function loadRecipeImages(
@@ -682,10 +720,14 @@ export const getGuidesV3Payload = cache(async (
   )
 
   const allRecipeIdsForStats = allRecipesForStats.map((recipe) => recipe.id)
-  const [statsByRecipeId, imageByRecipeId, socialByRecipeId] = await Promise.all([
+  const [statsByRecipeId, imageByRecipeId, socialByRecipeId, creatorsById] = await Promise.all([
     loadRecipeStats(supabase, allRecipeIdsForStats),
     loadRecipeImages(supabase, allRecipesForStats),
     loadRecipeSocialCounts(supabase, allRecipeIdsForStats, userId),
+    loadGuideCreators([
+      ...publicGuides.map((guide) => guide.user_id),
+      ...myGuides.filter((guide) => guide.user_id !== userId).map((guide) => guide.user_id),
+    ]),
   ])
 
   const decks = deckRecipes.map((recipe) =>
@@ -717,7 +759,7 @@ export const getGuidesV3Payload = cache(async (
   const libraryDeckById = new Map(libraryDecks.map((deck) => [deck.id, deck]))
 
   const libraryGuides = publicGuides
-    .map((guide) => {
+    .map((guide): GuidesV3GuideFile | null => {
       const recipes = publicRecipesByGuideId.get(guide.id)
       if (!recipes?.length) return null
       const memberDecks = recipes
@@ -725,12 +767,15 @@ export const getGuidesV3Payload = cache(async (
         .filter((deck): deck is GuidesV3Deck => Boolean(deck))
       if (!memberDecks.length) return null
       const primaryRecipe = recipes.find((recipe) => recipe.is_public) ?? recipes[0]
-      return toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId)
+      return {
+        ...toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId),
+        creator: creatorsById.get(guide.user_id),
+      }
     })
     .filter((guide): guide is GuidesV3GuideFile => Boolean(guide))
 
   const guideFiles = myGuides
-    .map((guide) => {
+    .map((guide): GuidesV3GuideFile | null => {
       const recipes = myGuideRecipesByGuideId.get(guide.id)
       if (!recipes?.length) return null
       const memberDecks = recipes.map((recipe) =>
@@ -744,7 +789,11 @@ export const getGuidesV3Payload = cache(async (
         })
       )
       const primaryRecipe = recipes.find((recipe) => recipe.is_public) ?? recipes[0]
-      return toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId)
+      return {
+        ...toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId),
+        // Saved guides from other creators show who made them.
+        creator: guide.user_id === userId ? undefined : creatorsById.get(guide.user_id),
+      }
     })
     .filter((guide): guide is GuidesV3GuideFile => Boolean(guide))
 

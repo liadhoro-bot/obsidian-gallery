@@ -24,7 +24,7 @@ import DeckEditorClient, {
   type DeckEditorInitialCard,
   type DeckEditorSavePayload,
 } from './decks/[id]/deck-editor-client'
-import { CompactGuideCard, LibrarySection } from './shared/discover-guide-list'
+import { CompactGuideCard, GuideCardSummary, LibrarySection } from './shared/discover-guide-list'
 import GuideSocialActions from './shared/guide-social-actions'
 
 type GuideTab = 'guides' | 'decks' | 'library'
@@ -3892,41 +3892,15 @@ function GuideFileCard({
   guide: GuideFile
   onOpenDraft: (guide: GuideFile) => void
 }) {
-  const className = 'block w-full text-left transition'
-
-  const content = (
-    <>
-      <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-3">
-        <div className="relative h-[76px] w-[76px] overflow-hidden rounded-[9px] bg-black">
-          <Image unoptimized
-            src={guide.image}
-            alt=""
-            fill
-            sizes="76px"
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/42" />
-        </div>
-        <div className="flex h-[76px] min-w-0 flex-col overflow-hidden">
-          <h2 className="break-words font-serif text-base font-black leading-tight text-white">
-            {guide.title}
-          </h2>
-          <p className="mt-1 line-clamp-3 text-xs font-semibold leading-[1.3] text-white/52">
-            {guide.subtitle}
-          </p>
-        </div>
-      </div>
-    </>
-  )
-
-  const primary = guide.draft ? (
-    <button type="button" onClick={() => onOpenDraft(guide)} className={className}>
-      {content}
-    </button>
-  ) : (
-    <Link href={`/guides/${guide.id}?preview=1&view=1`} className={className}>
-      {content}
-    </Link>
+  // Same body as Discover cards, so titles get the card's serif style rather
+  // than this page's small h2 section-label style, and saved guides show
+  // their creator.
+  const primary = (
+    <GuideCardSummary
+      guide={guide}
+      href={guide.draft ? undefined : `/guides/${guide.id}?preview=1&view=1`}
+      onClick={guide.draft ? () => onOpenDraft(guide) : undefined}
+    />
   )
 
   return (
