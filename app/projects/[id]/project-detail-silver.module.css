@@ -533,6 +533,17 @@
   box-shadow: var(--og-shadow-large);
 }
 
+.dialogPanel h2,
+.dialogPanel h3 {
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-weight: 600;
+}
+
+.dialogPanel p {
+  color: var(--og-text-secondary);
+}
+
 .projectDetailSilver :global(.inline-flex.items-center.gap-2.rounded-2xl) {
   border-color: color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
   background-color: var(--og-walnut-950);

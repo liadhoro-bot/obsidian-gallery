@@ -16,7 +16,7 @@ export function CompactGuideCard({ guide }: { guide: GuidesV3GuideFile }) {
       <span className="h-6 w-px shrink-0 bg-black/12" aria-hidden="true" />
       <Link href={`/guides/${guide.id}?preview=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><InfoIcon /> Info</Link>
       {guide.isOwner ? <Link href={`/guides/${guide.id}?preview=1&edit=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><EditIcon /> Edit</Link> : null}
-      {guide.deckId ? <><span className="ml-auto h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><GuideSocialActions recipeId={guide.deckId} likeCount={guide.likeCount} saveCount={guide.saveCount} viewerHasLiked={guide.viewerHasLiked} viewerHasSaved={guide.viewerHasSaved} size="sm" /></> : null}
+      {guide.deckId ? <><span className="ml-auto h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><GuideSocialActions recipeId={guide.deckId} likeCount={guide.likeCount} saveCount={guide.saveCount} viewerHasLiked={guide.viewerHasLiked} viewerHasSaved={guide.viewerHasSaved} assignContentType="guide" assignContentId={guide.id} assignTitle={guide.title} size="sm" /></> : null}
     </div>
   </article>
 }

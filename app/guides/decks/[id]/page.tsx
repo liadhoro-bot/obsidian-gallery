@@ -322,6 +322,7 @@ export default async function DeckDetailPage({
         saveCount={deck.saveCount ?? 0}
         viewerHasLiked={deck.viewerHasLiked ?? false}
         viewerHasSaved={deck.viewerHasSaved ?? false}
+        assignTitle={deck.title}
       />
       <DeckShareMenu
         cards={shareCards}

@@ -108,6 +108,9 @@ export default async function GuideDetailPage({
           saveCount={guide.saveCount}
           viewerHasLiked={guide.viewerHasLiked}
           viewerHasSaved={guide.viewerHasSaved}
+          assignContentType="guide"
+          assignContentId={guide.id}
+          assignTitle={guide.title}
         />
       ) : null}
       <DeckShareMenu
@@ -153,6 +156,9 @@ export default async function GuideDetailPage({
                 saveCount={guide.saveCount}
                 viewerHasLiked={guide.viewerHasLiked}
                 viewerHasSaved={guide.viewerHasSaved}
+                assignContentType="guide"
+                assignContentId={guide.id}
+                assignTitle={guide.title}
                 className="absolute right-3 top-3 z-10"
               />
             ) : null}

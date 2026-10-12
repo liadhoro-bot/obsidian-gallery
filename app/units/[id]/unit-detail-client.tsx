@@ -35,6 +35,7 @@ import {
 import { createClient } from '../../../utils/supabase/client'
 import { resolveOversizedGalleryImages } from '../../../utils/images/resolve-gallery-image-selection'
 import LazyUnitSessionTracker from './components/lazy-unit-session-tracker'
+import AssignedContentCard from '../../guides/shared/assigned-content-card'
 const DeleteConfirmationCard = dynamic(
   () => import('../../components/delete-confirmation-card')
 )
@@ -1736,6 +1737,10 @@ const handleRemoveStagePhoto = (imageId: string) => {
               projectId={unit.project_id || ''}
               unitId={unit.id}
             />
+          </section>
+
+          <section className="mt-6">
+            <AssignedContentCard targetType="unit" targetId={unit.id} />
           </section>
 
           <UnitGallerySection

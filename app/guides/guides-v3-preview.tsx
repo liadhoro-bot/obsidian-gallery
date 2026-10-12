@@ -3910,7 +3910,7 @@ function GuideFileCard({
       data-feature-guide-target="guides.tabs.guides"
     >
       {primary}
-      {!guide.draft ? <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-black/10 pt-2" data-v3-guides-indicator="list-card-actions"><ViewCardsLink href={`/guides/${guide.id}?preview=1&view=1`} title={guide.title} /><span className="h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><Link href={`/guides/${guide.id}?preview=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><InfoIcon /> Info</Link>{guide.isOwner ? <Link href={`/guides/${guide.id}?preview=1&edit=1`} data-v3-guides-indicator="guide-edit-link" className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><EditIcon /> Edit</Link> : null}{guide.deckId ? <><span className="ml-auto h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><GuideSocialActions recipeId={guide.deckId} likeCount={guide.likeCount} saveCount={guide.saveCount} viewerHasLiked={guide.viewerHasLiked} viewerHasSaved={guide.viewerHasSaved} size="sm" /></> : null}</div> : (
+      {!guide.draft ? <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-black/10 pt-2" data-v3-guides-indicator="list-card-actions"><ViewCardsLink href={`/guides/${guide.id}?preview=1&view=1`} title={guide.title} /><span className="h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><Link href={`/guides/${guide.id}?preview=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><InfoIcon /> Info</Link>{guide.isOwner ? <Link href={`/guides/${guide.id}?preview=1&edit=1`} data-v3-guides-indicator="guide-edit-link" className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><EditIcon /> Edit</Link> : null}{guide.deckId ? <><span className="ml-auto h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><GuideSocialActions recipeId={guide.deckId} likeCount={guide.likeCount} saveCount={guide.saveCount} viewerHasLiked={guide.viewerHasLiked} viewerHasSaved={guide.viewerHasSaved} assignContentType="guide" assignContentId={guide.id} assignTitle={guide.title} size="sm" /></> : null}</div> : (
         <button
           type="button"
           aria-label={`Edit ${guide.title}`}
@@ -4001,7 +4001,7 @@ function DeckRow({
           <EditIcon /> Edit
         </Link>
       ) : null}
-      {!isDraftDeck ? <><span className="ml-auto h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><GuideSocialActions recipeId={deck.id} likeCount={deck.likeCount ?? 0} saveCount={deck.saveCount ?? 0} viewerHasLiked={deck.viewerHasLiked ?? false} viewerHasSaved={deck.viewerHasSaved ?? false} size="sm" /></> : null}
+      {!isDraftDeck ? <><span className="ml-auto h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><GuideSocialActions recipeId={deck.id} likeCount={deck.likeCount ?? 0} saveCount={deck.saveCount ?? 0} viewerHasLiked={deck.viewerHasLiked ?? false} viewerHasSaved={deck.viewerHasSaved ?? false} assignTitle={deck.title} size="sm" /></> : null}
       </div>
     </article>
   )

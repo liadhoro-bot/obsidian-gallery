@@ -8,6 +8,7 @@ import type {
 } from './types'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
 import styles from './project-detail-silver.module.css'
+import AssignedContentCard from '../../guides/shared/assigned-content-card'
 
 type Props = {
   project: ProjectRow | null
@@ -82,6 +83,8 @@ export default function ProjectDetailsTab({
       </section>
 
       <ProjectPaletteCard theme={projectTheme} projectId={projectId} />
+
+      <AssignedContentCard targetType="project" targetId={projectId} />
 
       <ProjectGalleryCardLazy
         project={project}

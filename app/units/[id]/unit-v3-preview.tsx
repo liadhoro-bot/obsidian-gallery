@@ -41,6 +41,7 @@ import WorkbenchGallery from '../../components/gallery/workbench-gallery'
 import FeatureOnDashboardButton from '../../components/feature-on-dashboard-button'
 import PaletteCard, { type PaletteCardPaint } from '../../projects/[id]/palette-card'
 import styles from './unit-v3-silver.module.css'
+import AssignedContentCard from '../../guides/shared/assigned-content-card'
 
 const FeatureGuideTour = dynamic(() => import('../../components/feature-guide-tour'), {
   ssr: false,
@@ -1146,11 +1147,6 @@ function DetailsTab({
   onEditDetails: () => void
   onLocalUnitChange: (updater: (current: PreviewUnit | null) => PreviewUnit | null) => void
 }) {
-  const firstProgressStepId =
-    unit.progressSteps
-      ?.slice()
-      .sort((a, b) => a.step_order - b.step_order)
-      .find((step) => step.step_key !== 'done')?.id ?? null
   const primaryProjectId = unit.selectedProjectIds?.[0] ?? null
 
   return (
@@ -1236,11 +1232,7 @@ function DetailsTab({
 
       <UnitPaletteCard unit={unit} />
 
-      <UnitGuidesCard
-        unit={unit}
-        firstProgressStepId={firstProgressStepId}
-        onLocalUnitChange={onLocalUnitChange}
-      />
+      <AssignedContentCard targetType="unit" targetId={unit.id} />
 
       <UnitV3GalleryCard unit={unit} onLocalUnitChange={onLocalUnitChange} />
     </>
@@ -1627,6 +1619,8 @@ function GuideCardPopup({
     </div>
   )
 }
+
+void UnitGuidesCard
 
 function mapUploadedUnitImages(
   result: GalleryUploadResult | void,
