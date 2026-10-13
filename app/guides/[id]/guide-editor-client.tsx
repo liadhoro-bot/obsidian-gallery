@@ -602,7 +602,7 @@ function AddDecksSheet({
         <div className={styles.cardList}>
           {decks.length ? (
             decks.map((deck) => (
-              <article key={deck.id} className={styles.cardRow}>
+              <article key={deck.id} className={`${styles.cardRow} ${styles.addDeckRow}`}>
                 <span className={styles.cardNumber} aria-hidden="true" />
                 <span className={styles.cardInfo}>
                   <span className={styles.cardTypeLabel}>{deck.category}</span>

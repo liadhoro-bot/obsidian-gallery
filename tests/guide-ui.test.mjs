@@ -20,6 +20,7 @@ before(async () => {
       const step = (id, template='step') => ({id, number:1, title:id==='one'?'First card':longTitle, template, instructions:'Thin your paints and build up several smooth layers.', paints:[], image:template==='step'?null:'/image.svg', rawImage:template==='step'?null:'/image.svg', imageFocalX:50, imageFocalY:50});
       const deck = (id, steps) => ({id, title:id==='a'?'First deck':'Second deck', steps, coverPosition:0, image:'/image.svg', description:'A painting deck', paintList:[], cards:steps.length+1, paints:0, isOwner:true, isPublic:false});
       const decks=[deck('a',[step('one'),step('two')]),deck('b',[step('three')])];
+      const availableDecks=[deck('c',[step('four')])];
       window.sources=JSON.stringify(decks); installEditorNavigationProtection();
       function App() {
         if(location.pathname==='/discover') return <div className={browseStyles.guidesSilver}><CompactGuideCard guide={{id:'public',title:longTitle,subtitle:'Learn every stage of painting these warriors, from preparing the armour to the final highlights, with detailed colour choices and practical advice.', image:'/image.svg',deckId:'a',likeCount:12,saveCount:4,isOwner:false,tags:['Weathering']}} /></div>;
@@ -28,7 +29,7 @@ before(async () => {
           const cards=deckCardEntries({...decks[0],title:longTitle,steps:['step','image','small-image','theme','theme-alt','paints','video'].map((t,i)=>step('t'+i,t))});
           return <div>{cards.map(c=><div data-test-card={c.key} key={c.key} style={{width:'min(360px, 100vw)',aspectRatio:'9/16',margin:'20px auto'}}>{c.node}</div>)}</div>
         }
-        return <GuideEditor guide={{id:'g',title:'Guide',subtitle:'A guide',deckIds:['a','b']}} memberDecks={decks} availableDecks={[]} deckDetails={decks} initialCoverImage='/image.svg' featureGuides={[]} backHref='/guides?tab=decks' onSaveDraft={async payload=>{window.saved=payload;window.afterSources=JSON.stringify(decks);return true}} />
+        return <GuideEditor guide={{id:'g',title:'Guide',subtitle:'A guide',deckIds:['a','b']}} memberDecks={decks} availableDecks={availableDecks} deckDetails={decks} initialCoverImage='/image.svg' featureGuides={[]} backHref='/guides?tab=decks' onSaveDraft={async payload=>{window.saved=payload;window.afterSources=JSON.stringify(decks);return true}} />
       }
       createRoot(document.getElementById('root')).render(<App/>);
     ` },
@@ -81,6 +82,27 @@ test('guide editor expands, hides, transfers and saves cards independently of so
   assert.deepEqual((await page.evaluate(()=>window.saved)).tags,['Industrial Weathering'])
   await page.getByRole('tab',{name:'Preview',exact:true}).click()
   assert.equal(await page.getByRole('heading',{name:'First card',exact:true}).count(),0)
+  await page.close()
+})
+
+test('add-deck picker keeps actions compact without squeezing deck titles', async()=>{
+  const page=await browser.newPage()
+  for(const width of [390,1280]) {
+    await page.setViewportSize({width,height:900});await page.goto(origin+'/editor')
+    await page.getByRole('tab',{name:'Decks',exact:true}).click()
+    await page.getByRole('button',{name:'Add Decks',exact:true}).click()
+    const dialog=page.getByRole('dialog')
+    const row=dialog.locator('article').filter({has:page.getByText('Second deck',{exact:true})})
+    const dimensions=await row.evaluate((node)=>{
+      const action=node.querySelector('button').getBoundingClientRect()
+      const title=node.querySelector('[class*="cardName"]').getBoundingClientRect()
+      return {actionWidth:action.width,rowWidth:node.getBoundingClientRect().width,titleWidth:title.width}
+    })
+    assert.ok(dimensions.actionWidth<=100,JSON.stringify({width,dimensions}))
+    assert.ok(dimensions.titleWidth>dimensions.actionWidth,JSON.stringify({width,dimensions}))
+    assert.ok(dimensions.actionWidth<dimensions.rowWidth*.3,JSON.stringify({width,dimensions}))
+    await page.getByRole('button',{name:'Close',exact:true}).click()
+  }
   await page.close()
 })
 test('long titles remain within the card bounds in every template at mobile and desktop widths',async()=>{

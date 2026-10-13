@@ -429,6 +429,19 @@
   color: var(--og-text-primary);
 }
 
+/* The add-deck picker has no type-icon column. Keep its action in a
+   content-sized trailing column instead of letting it occupy the flexible
+   title column used by the four-cell card rows. */
+.cardRow.addDeckRow {
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+}
+
+.addDeckRow .editButton {
+  grid-column: auto;
+  justify-self: end;
+  width: auto;
+}
+
 /* Guide editor's deck rows pair an Edit link with a Remove button in the
    same trailing grid cell that a card row gives its single Edit button. */
 .cardRowActions {
