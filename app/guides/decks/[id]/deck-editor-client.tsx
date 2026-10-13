@@ -26,7 +26,10 @@ import {
 import PaintPickerDialog, {
   type PaintPickerPaint,
 } from '../../../../components/paints/paint-picker-dialog'
-import { uploadDeckEditorImage } from '../../actions'
+import { createClient } from '../../../../utils/supabase/client'
+import { downscaleImageFile } from '../../../../utils/images/downscale-image'
+import { getSafeImageExtension } from '../../../../utils/images/gallery-upload'
+import { hasUnuploadedImage } from '../../shared/deck-save-values'
 import type { GuidesV3DeckDetail } from '../../guides-v3-detail-data'
 import { ImageFocalPointField } from '../../shared/image-focal-point-field'
 import styles from './deck-editor-client.module.css'
@@ -111,6 +114,50 @@ const cardTemplateOptions: CardTemplate[] = ['step', 'theme', 'theme-alt', 'imag
 const addCardTemplateOptions: CardTemplate[] = ['cover', 'step', 'theme', 'theme-alt', 'image', 'small-image', 'paints', 'video']
 const themePaintLimit = 7
 const stepPaintLimit = 4
+const DIRECT_UPLOAD_DOWNSCALE_THRESHOLD = 6 * 1024 * 1024
+
+async function uploadDeckEditorImage(file: File) {
+  const supabase = createClient()
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) throw new Error('Sign in again to upload photos.')
+
+  let uploadFile = file
+
+  // Keep common phone photos quick and reliable on mobile connections. This
+  // happens after the original file has already been used for the instant
+  // local preview, so it never delays the visible UI response.
+  if (file.size > DIRECT_UPLOAD_DOWNSCALE_THRESHOLD) {
+    try {
+      uploadFile = await downscaleImageFile(file)
+    } catch {
+      // Some formats (notably HEIC in certain browsers) cannot be decoded by
+      // canvas. Direct upload still supports them, so retain the original.
+      uploadFile = file
+    }
+  }
+
+  const extension = getSafeImageExtension(uploadFile.name)
+  const path = `users/${user.id}/deck-editor/${Date.now()}-${crypto.randomUUID()}.${extension}`
+  const { error: uploadError } = await supabase.storage
+    .from('obsidian-images')
+    .upload(path, uploadFile, {
+      cacheControl: '3600',
+      contentType: uploadFile.type || undefined,
+      upsert: false,
+    })
+
+  if (uploadError) throw new Error(uploadError.message)
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from('obsidian-images').getPublicUrl(path)
+
+  return publicUrl
+}
 
 function inferDifficulty(cardCount: number): DeckDifficulty {
   if (cardCount >= 8) return 'Advanced'
@@ -682,6 +729,7 @@ export default function DeckEditorClient({
     const file = event.target.files?.[0]
     const activeCardId = editingCardId
     if (!file || !activeCardId) return
+    const previousImage = editingCard?.image ?? null
     const url = URL.createObjectURL(file)
     const template =
       editingCard?.template === 'cover' ||
@@ -705,19 +753,27 @@ export default function DeckEditorClient({
     event.target.value = ''
 
     try {
-      const formData = new FormData()
-      formData.set('image', file)
-      const result = await uploadDeckEditorImage(formData)
-      updateCardById(activeCardId, {
-        image: result.url,
-        template,
-      })
-      URL.revokeObjectURL(url)
+      const uploadedUrl = await uploadDeckEditorImage(file)
+      setCards((current) =>
+        current.map((card) =>
+          card.id === activeCardId && card.image === url
+            ? { ...card, image: uploadedUrl, template }
+            : card
+        )
+      )
     } catch (error) {
+      setCards((current) =>
+        current.map((card) =>
+          card.id === activeCardId && card.image === url
+            ? { ...card, image: previousImage }
+            : card
+        )
+      )
       setImageUploadError(
         error instanceof Error ? error.message : 'Could not upload image.'
       )
     } finally {
+      URL.revokeObjectURL(url)
       setPendingImageUploads((count) => Math.max(0, count - 1))
     }
   }
@@ -751,6 +807,11 @@ export default function DeckEditorClient({
   function handleSave() {
     if (isUploadingImages) {
       setImageUploadError('Wait for the image upload to finish before saving.')
+      return
+    }
+
+    if (hasUnuploadedImage(cards.map((card) => card.image))) {
+      setImageUploadError('One or more photos have not finished uploading. Retry or remove them before saving.')
       return
     }
 
@@ -794,6 +855,8 @@ export default function DeckEditorClient({
       alt: file.name,
       file,
     }))
+    const previousHeroId = heroImageId
+    const previousHeroUrl = gallery.find((image) => image.id === previousHeroId)?.url ?? null
     const wasGalleryEmpty = !heroImageId
     const firstNewImage = pendingUploads[0]
 
@@ -812,22 +875,26 @@ export default function DeckEditorClient({
     await Promise.all(
       pendingUploads.map(async ({ id, url, file }) => {
         try {
-          const formData = new FormData()
-          formData.set('image', file)
-          const result = await uploadDeckEditorImage(formData)
+          const uploadedUrl = await uploadDeckEditorImage(file)
           setGallery((current) =>
-            current.map((image) => (image.id === id ? { ...image, url: result.url } : image))
+            current.map((image) => (image.id === id ? { ...image, url: uploadedUrl } : image))
           )
           setHeroImageId((currentHeroId) => {
-            if (currentHeroId === id) syncCoverImage(result.url)
+            if (currentHeroId === id) syncCoverImage(uploadedUrl)
             return currentHeroId
           })
-          URL.revokeObjectURL(url)
         } catch (error) {
+          setGallery((current) => current.filter((image) => image.id !== id))
+          setHeroImageId((currentHeroId) => {
+            if (currentHeroId !== id) return currentHeroId
+            syncCoverImage(previousHeroUrl)
+            return previousHeroId
+          })
           setImageUploadError(
             error instanceof Error ? error.message : 'Could not upload image.'
           )
         } finally {
+          URL.revokeObjectURL(url)
           setPendingImageUploads((count) => Math.max(0, count - 1))
         }
       })

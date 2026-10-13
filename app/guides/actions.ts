@@ -7,10 +7,6 @@ import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
 import { getGuideDeckThumbnail } from './guides-v3-data'
-import {
-  getSafeImageExtension,
-  validateGalleryImageFile,
-} from '../../utils/images/gallery-upload'
 
 export type CreateDeckCardInput = {
   paintAlignment?: 'left' | 'right'
@@ -54,10 +50,6 @@ export type CreatedDeckResult = {
   isOwner: boolean
   accent: string
   createdAt: string
-}
-
-export type DeckEditorImageUploadResult = {
-  url: string
 }
 
 type SupabaseErrorLike = {
@@ -199,41 +191,6 @@ function safeCardTemplate(value: string | null | undefined) {
   }
 
   return 'step'
-}
-
-export async function uploadDeckEditorImage(
-  formData: FormData
-): Promise<DeckEditorImageUploadResult> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) throw new Error('Not authenticated')
-
-  const file = formData.get('image')
-  if (!(file instanceof File)) throw new Error('Choose an image to upload.')
-
-  const validationError = validateGalleryImageFile(file)
-  if (validationError) throw new Error(validationError)
-
-  const extension = getSafeImageExtension(file.name)
-  const fileName = `users/${user.id}/deck-editor/${Date.now()}-${crypto.randomUUID()}.${extension}`
-
-  const { error: uploadError } = await supabase.storage
-    .from('obsidian-images')
-    .upload(fileName, file, {
-      cacheControl: '3600',
-      upsert: false,
-    })
-
-  if (uploadError) throw new Error(uploadError.message)
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from('obsidian-images').getPublicUrl(fileName)
-
-  return { url: publicUrl }
 }
 
 function isMissingColumn(error: SupabaseErrorLike | null | undefined, column: string) {
