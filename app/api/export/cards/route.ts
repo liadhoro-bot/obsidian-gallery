@@ -13,7 +13,7 @@ import { createServiceRoleClient } from '../../../../utils/supabase/service-role
 // may only load from this app's origin and Supabase storage.
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 180
 
 const CARD_WIDTH = 540
 const CARD_HEIGHT = 960
@@ -21,6 +21,7 @@ const PIXEL_RATIO = 2
 const MAX_CARDS = 80
 const MAX_BODY_BYTES = 8 * 1024 * 1024
 const RENDER_TIMEOUT_MS = 25_000
+const CARD_SETTLE_TIMEOUT_MS = 5_000
 
 type ExportRequest = {
   format: 'pdf' | 'zip'
@@ -217,21 +218,36 @@ export async function POST(request: NextRequest) {
       void outgoing.abort('blockedbyclient')
     })
 
-    await page.goto(`${origin}/api/export/cards`, { waitUntil: 'load', timeout: RENDER_TIMEOUT_MS })
-    await page.setContent(buildDocument(input, origin), {
-      waitUntil: 'load',
-      timeout: RENDER_TIMEOUT_MS,
-    })
-    // Stylesheets' fonts and background textures load after `load`.
-    await page.waitForNetworkIdle({ idleTime: 300, timeout: RENDER_TIMEOUT_MS }).catch(() => undefined)
+    const timings: Record<string, number> = {}
+    let mark = Date.now()
+    const lap = (name: string) => {
+      timings[name] = (timings[name] ?? 0) + Date.now() - mark
+      mark = Date.now()
+    }
 
-    const cards = await page.$$('[data-export-card]')
+    await page.goto(`${origin}/api/export/cards`, { waitUntil: 'load', timeout: RENDER_TIMEOUT_MS })
+    lap('blank')
+
+    // One card per document, exactly viewport-sized, captured with a plain
+    // viewport screenshot. Element screenshots on one tall page of every
+    // card got slower as the page grew: a 38-card guide passed the time
+    // limit. Stylesheets and images stay cached between cards.
     const baseName = sanitizeFilePart(input.fileBaseName)
     // JPEG for both outputs: PNGs of these textured cards are ~3 MB each,
     // far too much to download on a phone, and q90 is visually identical.
     const shots: Uint8Array[] = []
-    for (const card of cards) {
-      shots.push(await card.screenshot({ type: 'jpeg', quality: 90 }))
+    for (const card of input.cards) {
+      await page.setContent(buildDocument({ ...input, cards: [card] }, origin), {
+        waitUntil: 'load',
+        timeout: RENDER_TIMEOUT_MS,
+      })
+      lap('content')
+      // Fonts and CSS background textures load after `load`; after the
+      // first card they come from cache, so this settles quickly.
+      await page.waitForNetworkIdle({ idleTime: 150, timeout: CARD_SETTLE_TIMEOUT_MS }).catch(() => undefined)
+      lap('settle')
+      shots.push(await page.screenshot({ type: 'jpeg', quality: 90, optimizeForSpeed: true }))
+      lap('screenshot')
     }
 
     let file: { body: ArrayBuffer; name: string; type: string }
@@ -260,7 +276,10 @@ export async function POST(request: NextRequest) {
 
     // Vercel caps function responses at 4.5 MB, below a typical export, so
     // hand the file over through storage and a short-lived signed link.
+    lap('encode')
     const url = await uploadExport(file)
+    lap('upload')
+    console.log('[export/cards] done', input.format, input.cards.length, 'cards', JSON.stringify(timings))
     after(cleanUpOldExports)
     return NextResponse.json({ url, fileName: file.name }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {

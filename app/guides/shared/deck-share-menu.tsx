@@ -45,6 +45,20 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
+// Exported cards are 540px wide at 2x, so 1080px is the most an image can
+// show. Full-bleed photo cards otherwise ask next/image for w=3840, and
+// resizing a large original that big on demand is slow enough that the
+// server screenshot ran before the photo arrived (blank photo cards).
+const EXPORT_IMAGE_WIDTH = 1080
+function exportImageUrl(source: string) {
+  const url = new URL(source, window.location.href)
+  if (url.origin === window.location.origin && url.pathname === '/_next/image') {
+    const width = Number(url.searchParams.get('w'))
+    if (!width || width > EXPORT_IMAGE_WIDTH) url.searchParams.set('w', String(EXPORT_IMAGE_WIDTH))
+  }
+  return url.href
+}
+
 // Signed storage links carry their own Content-Disposition, so a plain
 // anchor click downloads the file without pulling it through JS first.
 function downloadUrl(url: string, fileName: string) {
@@ -282,7 +296,7 @@ export default function DeckShareMenu({
         // Pin each image to the copy the browser already loaded, as an
         // absolute URL (the server renders under a <base> of this origin).
         const loaded = originals[index]?.currentSrc || originals[index]?.src
-        if (loaded) image.setAttribute('src', new URL(loaded, window.location.href).href)
+        if (loaded) image.setAttribute('src', exportImageUrl(loaded))
         image.removeAttribute('srcset')
         image.removeAttribute('sizes')
         image.setAttribute('loading', 'eager')
