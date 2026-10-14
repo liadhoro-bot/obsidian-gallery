@@ -1625,6 +1625,7 @@ export default function GuidesV3Preview({
         {activeTab === 'guides' ? (
           <GuidesTab
             guideFiles={sortedGuideFiles}
+            allGuideFiles={guideFiles}
             onOpenDraft={editDraftGuide}
             query={guidesQuery}
             onQueryChange={setGuidesQuery}
@@ -1637,6 +1638,7 @@ export default function GuidesV3Preview({
         {activeTab === 'decks' ? (
           <DecksTab
             decks={sortedDecksTabDecks}
+            totalDecks={decks.length}
             onAddDeck={openCreateChoice}
             onEditDraftDeck={editDraftDeck}
             query={decksQuery}
@@ -3338,6 +3340,7 @@ function Tabs({
       className="grid grid-cols-3 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-0.5"
       role="tablist"
       aria-label="Guide sections"
+      data-tour-target="guides.tabs"
     >
       {(
         [
@@ -3369,6 +3372,7 @@ function Tabs({
 
 function GuidesTab({
   guideFiles,
+  allGuideFiles,
   onOpenDraft,
   query,
   onQueryChange,
@@ -3378,6 +3382,8 @@ function GuidesTab({
   onViewModeChange,
 }: {
   guideFiles: GuideFile[]
+  // Unfiltered by search, for the section counters.
+  allGuideFiles: GuideFile[]
   onOpenDraft: (guide: GuideFile) => void
   query: string
   onQueryChange: (query: string) => void
@@ -3390,16 +3396,18 @@ function GuidesTab({
   // saved it. Local drafts are always their own.
   const myGuides = guideFiles.filter((guide) => guide.isOwner || guide.draft)
   const savedGuides = guideFiles.filter((guide) => !guide.isOwner && !guide.draft)
+  const myGuidesTotal = allGuideFiles.filter((guide) => guide.isOwner || guide.draft).length
+  const savedGuidesTotal = allGuideFiles.length - myGuidesTotal
   const mineSection = {
     key: 'mine',
-    title: 'My Guides',
+    title: `My Guides • ${myGuidesTotal}`,
     guides: myGuides,
     emptyTitle: 'No guides of your own yet',
     emptyText: 'Create a guide by choosing decks from your collection.',
   }
   const savedSection = {
     key: 'saved',
-    title: 'Saved Guides',
+    title: `Saved Guides • ${savedGuidesTotal}`,
     guides: savedGuides,
     emptyTitle: 'No saved guides yet',
     emptyText: 'Save a public guide from Discover and it will appear here.',
@@ -3483,6 +3491,7 @@ function GuideFileList({
 
 function DecksTab({
   decks,
+  totalDecks,
   onAddDeck,
   onEditDraftDeck,
   query,
@@ -3493,6 +3502,8 @@ function DecksTab({
   onViewModeChange,
 }: {
   decks: Deck[]
+  // Unfiltered by search, for the section counter.
+  totalDecks: number
   onAddDeck: () => void
   onEditDraftDeck: (deck: Deck) => void
   query: string
@@ -3541,7 +3552,7 @@ function DecksTab({
         >
           <div className="flex items-center justify-between px-4 py-4">
             <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-              Your Deck Library
+              My Deck Library • {totalDecks}
             </h2>
             <button
               type="button"

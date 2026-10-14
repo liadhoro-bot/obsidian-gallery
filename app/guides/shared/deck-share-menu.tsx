@@ -20,6 +20,7 @@ type DeckShareMenuProps = {
 const EXPORT_CARD_WIDTH = 540
 const EXPORT_CARD_HEIGHT = 960
 const EXPORT_PIXEL_RATIO = 2
+const IMAGE_WAIT_TIMEOUT_MS = 8000
 
 function sanitizeFilePart(value: string) {
   return (
@@ -43,15 +44,6 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
-function blobToDataUrl(blob: Blob) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(blob)
-  })
-}
-
 async function waitForImages(root: HTMLElement) {
   const images = Array.from(root.querySelectorAll('img'))
 
@@ -61,9 +53,12 @@ async function waitForImages(root: HTMLElement) {
         return image.decode?.().catch(() => undefined) ?? Promise.resolve()
       }
 
+      // Capped so an image that never settles (e.g. a lazy image the
+      // browser defers in the off-screen export layer) can't stall export.
       return new Promise<void>((resolve) => {
         image.addEventListener('load', () => resolve(), { once: true })
         image.addEventListener('error', () => resolve(), { once: true })
+        setTimeout(resolve, IMAGE_WAIT_TIMEOUT_MS)
       })
     })
   )
@@ -91,6 +86,7 @@ export default function DeckShareMenu({
   const [isOpen, setIsOpen] = useState(false)
   const [hasOpened, setHasOpened] = useState(false)
   const [isBusy, setIsBusy] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const cardRefs = useRef<Array<HTMLDivElement | null>>([])
@@ -112,6 +108,7 @@ export default function DeckShareMenu({
 
   async function runWork(work: () => Promise<void>) {
     setIsBusy(true)
+    setProgress(null)
     setNotice(null)
     setError(null)
 
@@ -121,11 +118,13 @@ export default function DeckShareMenu({
       setError(err instanceof Error ? err.message : 'Could not complete this action.')
     } finally {
       setIsBusy(false)
+      setProgress(null)
     }
   }
 
-  const captureCardFiles = useCallback(async () => {
-    const { toBlob } = await import('html-to-image')
+  // Renders every card to a canvas once; callers pick the encoding.
+  const captureCardCanvases = useCallback(async (onProgress?: (done: number, total: number) => void) => {
+    const { toCanvas, getFontEmbedCSS } = await import('html-to-image')
     const nodes = cards.map((_, index) => cardRefs.current[index])
 
     if (nodes.some((node) => !node)) {
@@ -134,15 +133,19 @@ export default function DeckShareMenu({
 
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 
-    const files: File[] = []
+    // Every card uses the same fonts; embedding them once instead of per
+    // card skips re-fetching the font files for each capture.
+    const fontEmbedCSS = nodes[0] ? await getFontEmbedCSS(nodes[0]).catch(() => undefined) : undefined
+    const canvases: HTMLCanvasElement[] = []
 
     for (let index = 0; index < nodes.length; index += 1) {
       const node = nodes[index]
       if (!node) continue
 
+      onProgress?.(index, nodes.length)
       await waitForImages(node)
 
-      const blob = await toBlob(node, {
+      canvases.push(await toCanvas(node, {
         width: EXPORT_CARD_WIDTH,
         height: EXPORT_CARD_HEIGHT,
         pixelRatio: EXPORT_PIXEL_RATIO,
@@ -150,23 +153,18 @@ export default function DeckShareMenu({
         backgroundColor: '#e6d7b8',
         canvasWidth: EXPORT_CARD_WIDTH,
         canvasHeight: EXPORT_CARD_HEIGHT,
-      })
-
-      if (!blob) {
-        throw new Error('Could not render one of the guide cards.')
-      }
-
-      files.push(
-        new File(
-          [blob],
-          `${sanitizeFilePart(fileBaseName)}-${String(index + 1).padStart(2, '0')}.png`,
-          { type: 'image/png' }
-        )
-      )
+        fontEmbedCSS,
+      }))
     }
 
-    return files
-  }, [cards, fileBaseName])
+    return canvases
+  }, [cards])
+
+  const cardFileName = useCallback(
+    (index: number, extension: string) =>
+      `${sanitizeFilePart(fileBaseName)}-${String(index + 1).padStart(2, '0')}.${extension}`,
+    [fileBaseName]
+  )
 
   async function handleCopyLink() {
     await runWork(async () => {
@@ -176,9 +174,18 @@ export default function DeckShareMenu({
     })
   }
 
+  function reportProgress(done: number, total: number) {
+    setProgress(`${done}/${total}`)
+  }
+
   async function handleSaveImages() {
     await runWork(async () => {
-      const files = await captureCardFiles()
+      const canvases = await captureCardCanvases(reportProgress)
+      const files = await Promise.all(canvases.map(async (canvas, index) => {
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+        if (!blob) throw new Error('Could not render one of the guide cards.')
+        return new File([blob], cardFileName(index, 'png'), { type: 'image/png' })
+      }))
 
       if (canShareFiles(files)) {
         try {
@@ -209,7 +216,7 @@ export default function DeckShareMenu({
 
   async function handleSavePdf() {
     await runWork(async () => {
-      const files = await captureCardFiles()
+      const canvases = await captureCardCanvases(reportProgress)
       const { jsPDF } = await import('jspdf')
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -217,19 +224,25 @@ export default function DeckShareMenu({
         format: [EXPORT_CARD_WIDTH, EXPORT_CARD_HEIGHT],
       })
 
-      for (let index = 0; index < files.length; index += 1) {
+      for (let index = 0; index < canvases.length; index += 1) {
         if (index > 0) {
           doc.addPage([EXPORT_CARD_WIDTH, EXPORT_CARD_HEIGHT], 'portrait')
         }
 
-        const dataUrl = await blobToDataUrl(files[index])
+        // JPEG, not PNG: jsPDF embeds JPEG bytes as-is, but decodes and
+        // re-deflates every PNG in JavaScript - over a minute for a 24-card
+        // guide on desktop, long enough on a phone to look stuck on
+        // "Preparing cards...".
+        const dataUrl = canvases[index].toDataURL('image/jpeg', 0.92)
         // jsPDF caches added images by a hash of half their raw bytes, keyed
         // off an auto-generated alias when none is given. Every exported
         // card shares the same border/frame template and differs mainly in
         // the embedded photo, so that hash collides across cards and jsPDF
         // silently reuses an earlier image. Passing an explicit unique
         // alias per card bypasses that cache entirely.
-        doc.addImage(dataUrl, 'PNG', 0, 0, EXPORT_CARD_WIDTH, EXPORT_CARD_HEIGHT, `card-${index}`)
+        doc.addImage(dataUrl, 'JPEG', 0, 0, EXPORT_CARD_WIDTH, EXPORT_CARD_HEIGHT, `card-${index}`)
+        // Let the progress label repaint between pages.
+        await new Promise((resolve) => setTimeout(resolve, 0))
       }
 
       doc.save(`${sanitizeFilePart(fileBaseName)}-cards.pdf`)
@@ -367,7 +380,7 @@ export default function DeckShareMenu({
 
                 {isBusy ? (
                   <p className="mt-3 text-xs font-bold" style={{ color: 'var(--og-text-secondary)' }}>
-                    Preparing cards...
+                    Preparing cards...{progress ? ` ${progress}` : ''}
                   </p>
                 ) : null}
                 {notice ? (
