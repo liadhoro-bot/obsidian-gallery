@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     '192.168.1.8',
   ],
 
+  // @sparticuz/chromium reads its compressed Chromium build from bin/ at
+  // runtime, which file tracing can't see. Only the card export route needs it.
+  outputFileTracingIncludes: {
+    '/api/export/cards': ['./node_modules/@sparticuz/chromium/bin/**/*'],
+  },
+
   experimental: {
     serverActions: {
       bodySizeLimit: '8mb',

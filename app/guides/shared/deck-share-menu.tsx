@@ -45,6 +45,18 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
+// Signed storage links carry their own Content-Disposition, so a plain
+// anchor click downloads the file without pulling it through JS first.
+function downloadUrl(url: string, fileName: string) {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
 async function waitForImages(root: HTMLElement) {
   const images = Array.from(root.querySelectorAll('img'))
 
@@ -141,6 +153,7 @@ export default function DeckShareMenu({
   const [hasOpened, setHasOpened] = useState(false)
   const [isBusy, setIsBusy] = useState(false)
   const [progress, setProgress] = useState<string | null>(null)
+  const [pendingShare, setPendingShare] = useState<File[] | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const cardRefs = useRef<Array<HTMLDivElement | null>>([])
@@ -152,6 +165,7 @@ export default function DeckShareMenu({
   function openMenu() {
     setNotice(null)
     setError(null)
+    setPendingShare(null)
     setHasOpened(true)
     setIsOpen(true)
   }
@@ -251,8 +265,105 @@ export default function DeckShareMenu({
     setProgress(`${done}/${total}`)
   }
 
+  // Server-side export (/api/export/cards): headless Chromium renders the
+  // same card markup in seconds on any device, where html-to-image took
+  // minutes on phones. Returns a short-lived download link.
+  const requestServerExport = useCallback(async (format: 'pdf' | 'zip') => {
+    const nodes = cards.map((_, index) => cardRefs.current[index])
+    if (nodes.some((node) => !node)) {
+      throw new Error('Guide cards are not ready to export yet.')
+    }
+    await Promise.all(nodes.map((node) => (node ? waitForImages(node) : undefined)))
+
+    const markup = nodes.map((node) => {
+      const clone = node!.cloneNode(true) as HTMLElement
+      const originals = node!.querySelectorAll('img')
+      clone.querySelectorAll('img').forEach((image, index) => {
+        // Pin each image to the copy the browser already loaded, as an
+        // absolute URL (the server renders under a <base> of this origin).
+        const loaded = originals[index]?.currentSrc || originals[index]?.src
+        if (loaded) image.setAttribute('src', new URL(loaded, window.location.href).href)
+        image.removeAttribute('srcset')
+        image.removeAttribute('sizes')
+        image.setAttribute('loading', 'eager')
+      })
+      return clone.innerHTML
+    })
+
+    const response = await fetch('/api/export/cards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        format,
+        fileBaseName,
+        cards: markup,
+        stylesheets: Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')).map((link) => link.href),
+        inlineStyles: Array.from(document.querySelectorAll('style')).map((style) => style.textContent ?? ''),
+        htmlClass: document.documentElement.className,
+        htmlStyle: document.documentElement.getAttribute('style') ?? '',
+        bodyClass: document.body.className,
+        bodyStyle: document.body.getAttribute('style') ?? '',
+      }),
+    })
+    if (!response.ok) throw new Error(`Export failed (${response.status})`)
+    return (await response.json()) as { url: string; fileName: string }
+  }, [cards, fileBaseName])
+
+  async function shareFiles(files: File[]) {
+    if (!canShareFiles(files)) return false
+    try {
+      await navigator.share({ title: fileBaseName, files })
+      setNotice('Share sheet opened.')
+      return true
+    } catch (err) {
+      // AbortError means the person closed the native share sheet
+      // themselves - respect that instead of dropping a zip on them.
+      if (err instanceof Error && err.name === 'AbortError') return true
+      // Phones only allow share() shortly after a tap, and a long export
+      // can outlive that - offer a button for a fresh tap instead.
+      if (err instanceof Error && err.name === 'NotAllowedError') {
+        setPendingShare(files)
+        return true
+      }
+      // Anything else (most commonly a permissions-policy rejection in
+      // an embedded/webview context) falls through to the zip download.
+      return false
+    }
+  }
+
+  async function handleSharePending() {
+    const files = pendingShare
+    setPendingShare(null)
+    if (files) await runWork(async () => { await shareFiles(files) })
+  }
+
+  async function saveImagesOnServer() {
+    const { url, fileName } = await requestServerExport('zip')
+    if (canShareFiles([new File([], 'probe.jpg', { type: 'image/jpeg' })])) {
+      const archive = await (await fetch(url)).blob()
+      const { default: JSZip } = await import('jszip')
+      const zip = await JSZip.loadAsync(archive)
+      const files = await Promise.all(
+        Object.values(zip.files)
+          .filter((entry) => !entry.dir)
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(async (entry) => new File([await entry.async('blob')], entry.name, { type: 'image/jpeg' }))
+      )
+      if (await shareFiles(files)) return
+    }
+    downloadUrl(url, fileName)
+    setNotice('Cards downloaded.')
+  }
+
   async function handleSaveImages() {
     await runWork(async () => {
+      try {
+        await saveImagesOnServer()
+        return
+      } catch (err) {
+        console.warn('Server export failed, rendering in the browser instead.', err)
+      }
+
       const canvases = await captureCardCanvases(reportProgress)
       const files = await Promise.all(canvases.map(async (canvas, index) => {
         const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
@@ -260,19 +371,7 @@ export default function DeckShareMenu({
         return new File([blob], cardFileName(index, 'png'), { type: 'image/png' })
       }))
 
-      if (canShareFiles(files)) {
-        try {
-          await navigator.share({ title: fileBaseName, files })
-          setNotice('Share sheet opened.')
-          return
-        } catch (err) {
-          // AbortError means the person closed the native share sheet
-          // themselves - respect that instead of dropping a zip on them.
-          if (err instanceof Error && err.name === 'AbortError') return
-          // Anything else (most commonly a permissions-policy rejection in
-          // an embedded/webview context) falls through to the zip download.
-        }
-      }
+      if (await shareFiles(files)) return
 
       const { default: JSZip } = await import('jszip')
       const zip = new JSZip()
@@ -289,6 +388,15 @@ export default function DeckShareMenu({
 
   async function handleSavePdf() {
     await runWork(async () => {
+      try {
+        const { url, fileName } = await requestServerExport('pdf')
+        downloadUrl(url, fileName)
+        setNotice('PDF downloaded.')
+        return
+      } catch (err) {
+        console.warn('Server export failed, rendering in the browser instead.', err)
+      }
+
       const canvases = await captureCardCanvases(reportProgress)
       const { jsPDF } = await import('jspdf')
       const doc = new jsPDF({
@@ -451,6 +559,25 @@ export default function DeckShareMenu({
                   </button>
                 </div>
 
+                {pendingShare && !isBusy ? (
+                  <button
+                    type="button"
+                    onClick={handleSharePending}
+                    className="mt-3 min-h-11 w-full rounded-[8px] px-4 py-3 text-left text-sm font-black transition"
+                    style={{
+                      border: '1px solid color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700))',
+                      backgroundColor: 'var(--og-brass-500)',
+                      backgroundImage: 'var(--og-material-brass)',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat, repeat, no-repeat',
+                      backgroundSize: '100% 100%, 180px auto, 100% 100%',
+                      color: 'var(--og-ink-950)',
+                      boxShadow: 'var(--og-shadow-control-built)',
+                    }}
+                  >
+                    Share {pendingShare.length} images
+                  </button>
+                ) : null}
                 {isBusy ? (
                   <p className="mt-3 text-xs font-bold" style={{ color: 'var(--og-text-secondary)' }}>
                     Preparing cards...{progress ? ` ${progress}` : ''}

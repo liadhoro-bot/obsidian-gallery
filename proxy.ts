@@ -142,6 +142,9 @@ export default async function proxy(request: NextRequest) {
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname === '/api/youtube-oembed' ||
+    // Renders cards the caller already has on screen (public share pages
+    // included) to PDF/PNG; it reads no data of its own.
+    pathname === '/api/export/cards' ||
     // Serves allow-listed public storage swatches only. Must stay public:
     // next/image fetches it without the visitor's cookies.
     pathname === '/api/paints/v3-swatch' ||
