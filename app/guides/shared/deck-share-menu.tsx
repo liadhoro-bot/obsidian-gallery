@@ -21,6 +21,7 @@ const EXPORT_CARD_WIDTH = 540
 const EXPORT_CARD_HEIGHT = 960
 const EXPORT_PIXEL_RATIO = 2
 const IMAGE_WAIT_TIMEOUT_MS = 8000
+const FONT_EMBED_TIMEOUT_MS = 3000
 
 function sanitizeFilePart(value: string) {
   return (
@@ -62,6 +63,59 @@ async function waitForImages(root: HTMLElement) {
       })
     })
   )
+}
+
+// html-to-image inlines every computed property on every cloned element,
+// including the design system's ~270 CSS custom properties (some, like the
+// material textures, are long). Their var() uses are already resolved in the
+// computed values, so they were pure dead weight: ~1.3 MB of inline style per
+// card, built, serialized and decoded for every card - minutes on a phone.
+let cachedStyleProperties: string[] | null = null
+function exportStyleProperties() {
+  cachedStyleProperties ??= Array.from(getComputedStyle(document.documentElement))
+    .filter((name) => !name.startsWith('--'))
+  return cachedStyleProperties
+}
+
+// Safari reports a computed style's full cssText (custom properties
+// included), and html-to-image copies that wholesale instead of honouring
+// includeStyleProperties. Hide cssText while capturing so every browser
+// takes the filtered path; returns a function restoring the original.
+function withoutComputedCssText() {
+  const original = window.getComputedStyle
+  window.getComputedStyle = function (element: Element, pseudoElement?: string | null) {
+    const style = original.call(window, element, pseudoElement)
+    if (!style.cssText) return style
+    return new Proxy(style, {
+      get(target, property) {
+        if (property === 'cssText') return ''
+        const value = Reflect.get(target, property, target)
+        return typeof value === 'function' ? value.bind(target) : value
+      },
+    })
+  } as typeof window.getComputedStyle
+  return () => {
+    window.getComputedStyle = original
+  }
+}
+
+// html-to-image embeds an <img>'s `src`, which for next/image is the
+// largest srcset variant (w=3840) rather than the size the browser actually
+// loaded. That meant downloading every card's photo at full resolution
+// (cache-busted, so never from cache) and base64-ing it into the card - the
+// bulk of the export time on phones. Point each export image at its loaded
+// `currentSrc` instead; it's already in the HTTP cache.
+async function pinLoadedImageSources(root: HTMLElement) {
+  let changed = false
+  for (const image of Array.from(root.querySelectorAll('img'))) {
+    const loaded = image.currentSrc
+    if (!loaded || loaded === image.src) continue
+    image.removeAttribute('srcset')
+    image.removeAttribute('sizes')
+    image.src = loaded
+    changed = true
+  }
+  if (changed) await waitForImages(root)
 }
 
 function canShareFiles(files: File[]) {
@@ -133,28 +187,47 @@ export default function DeckShareMenu({
 
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 
-    // Every card uses the same fonts; embedding them once instead of per
-    // card skips re-fetching the font files for each capture.
-    const fontEmbedCSS = nodes[0] ? await getFontEmbedCSS(nodes[0]).catch(() => undefined) : undefined
+    // Every card uses the same fonts, so resolve the embed CSS once rather
+    // than per card (each call re-fetches and scans every stylesheet). Its
+    // fetches have no timeout and have been seen to stall, so cap it; an
+    // empty string means "embed nothing" without retrying per card.
+    const fontEmbedCSS = nodes[0]
+      ? await Promise.race([
+          getFontEmbedCSS(nodes[0]).catch(() => ''),
+          new Promise<string>((resolve) => setTimeout(() => resolve(''), FONT_EMBED_TIMEOUT_MS)),
+        ])
+      : ''
     const canvases: HTMLCanvasElement[] = []
 
-    for (let index = 0; index < nodes.length; index += 1) {
-      const node = nodes[index]
-      if (!node) continue
+    const restoreComputedStyle = withoutComputedCssText()
+    try {
+      for (let index = 0; index < nodes.length; index += 1) {
+        const node = nodes[index]
+        if (!node) continue
 
-      onProgress?.(index, nodes.length)
-      await waitForImages(node)
+        onProgress?.(index, nodes.length)
+        await waitForImages(node)
+        await pinLoadedImageSources(node)
 
-      canvases.push(await toCanvas(node, {
-        width: EXPORT_CARD_WIDTH,
-        height: EXPORT_CARD_HEIGHT,
-        pixelRatio: EXPORT_PIXEL_RATIO,
-        cacheBust: true,
-        backgroundColor: '#e6d7b8',
-        canvasWidth: EXPORT_CARD_WIDTH,
-        canvasHeight: EXPORT_CARD_HEIGHT,
-        fontEmbedCSS,
-      }))
+        canvases.push(await toCanvas(node, {
+          width: EXPORT_CARD_WIDTH,
+          height: EXPORT_CARD_HEIGHT,
+          pixelRatio: EXPORT_PIXEL_RATIO,
+          cacheBust: true,
+          backgroundColor: '#e6d7b8',
+          canvasWidth: EXPORT_CARD_WIDTH,
+          canvasHeight: EXPORT_CARD_HEIGHT,
+          fontEmbedCSS,
+          includeStyleProperties: exportStyleProperties(),
+          // html-to-image caches embedded images by URL with the query
+          // string stripped, and every next/image URL is
+          // /_next/image?url=... - so without this every card reused the
+          // first card's photo.
+          includeQueryParams: true,
+        }))
+      }
+    } finally {
+      restoreComputedStyle()
     }
 
     return canvases
