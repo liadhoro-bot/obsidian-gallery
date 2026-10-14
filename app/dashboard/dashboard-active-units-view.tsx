@@ -176,7 +176,7 @@ function DashboardHeader({
 
 function DashboardTabs({ currentTab, onChange }: { currentTab: ActiveTab; onChange: (tab: ActiveTab) => void }) {
   return (
-    <div className={styles.primaryTabs} role="tablist" aria-label="Dashboard sections">
+    <div className={styles.primaryTabs} role="tablist" aria-label="Dashboard sections" data-tour-target="dashboard.tabs">
       <button
         type="button"
         role="tab"

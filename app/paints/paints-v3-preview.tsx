@@ -1252,6 +1252,7 @@ export default function PaintsV3Preview({
           className="grid grid-cols-2 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-0.5"
           role="tablist"
           aria-label="Paint views"
+          data-tour-target="paints.tabs"
         >
           <button
             type="button"
@@ -1290,7 +1291,10 @@ export default function PaintsV3Preview({
           ref={searchToolbarRef}
           data-v3-paints-indicator="search-filter-toolbar"
         >
-          <div className="grid grid-cols-[minmax(0,1fr)_64px_56px] gap-2">
+          <div
+            className="grid grid-cols-[minmax(0,1fr)_64px_56px] gap-2"
+            data-tour-target="paints.toolbar"
+          >
             <label
               className="relative block"
               data-feature-guide-target="paints.search"

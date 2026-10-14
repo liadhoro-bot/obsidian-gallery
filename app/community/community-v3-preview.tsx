@@ -156,6 +156,7 @@ function TopNav({
           type="button"
           aria-expanded={isHelpOpen}
           aria-label="Show community explanation"
+          data-feature-guide-target="community.help"
           data-feature-guide-launcher-button="true"
           onClick={onHelp}
         >
@@ -194,6 +195,7 @@ function Tabs({
       role="tablist"
       aria-label="Community sections"
       data-v3-community-indicator="tabs"
+      data-tour-target="community.tabs"
     >
       {tabs.map((tab) => (
         <button

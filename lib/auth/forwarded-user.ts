@@ -12,6 +12,7 @@ export function serializeForwardedUser(user: User) {
     user_metadata: {
       full_name: user.user_metadata?.full_name,
       startup_page: user.user_metadata?.startup_page,
+      onboarding_tour: user.user_metadata?.onboarding_tour,
       terms_accepted_at: user.user_metadata?.terms_accepted_at,
     },
   } satisfies ForwardedUser))

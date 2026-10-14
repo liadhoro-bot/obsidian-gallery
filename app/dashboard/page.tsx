@@ -20,6 +20,7 @@ import DashboardQuickActions from './dashboard-quick-actions'
 import DashboardHobbyBadges from './dashboard-hobby-badges'
 import DashboardAchievements from './dashboard-achievements'
 import type { DashboardFeatureGuide } from './feature-guide-types'
+import OnboardingTourAutoStart from '../components/onboarding-tour/onboarding-tour-auto-start'
 import { getStartupPage, getStartupPath } from '../../lib/startup-page'
 
 import {
@@ -35,6 +36,7 @@ type DashboardPageProps = {
     preview?: string
     source?: string
     tab?: string
+    tour?: string
   }>
 }
 
@@ -245,6 +247,12 @@ export default async function DashboardPage({
           featureGuides={featureGuides}
           initialTab={activeTab}
           profilePanel={previewProfilePanel}
+          userId={user.id}
+        />
+        <OnboardingTourAutoStart
+          createdAt={user.created_at}
+          testRun={resolvedSearchParams?.tour === 'test'}
+          status={user.user_metadata?.onboarding_tour}
           userId={user.id}
         />
       </WorkbenchShell>

@@ -1,0 +1,71 @@
+.scrim {
+  pointer-events: auto;
+}
+
+.spotlightPanel {
+  width: min(340px, calc(100vw - 24px));
+}
+
+.modalPanel {
+  width: min(380px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100vh - 24px);
+}
+
+.body {
+  display: grid;
+  gap: 10px;
+}
+
+.loadingCopy {
+  margin-top: 6px;
+}
+
+.welcomeFooter {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(236, 242, 242, 0.14);
+  padding: 12px;
+}
+
+.secondaryActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.videoRow {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.videoButton {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px dashed rgba(230, 196, 132, 0.6);
+  border-radius: 8px;
+  background: rgba(230, 196, 132, 0.08);
+  color: #e8c178;
+  font-family: var(--font-source-sans-3, sans-serif);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.videoButton:hover {
+  border-color: rgba(230, 196, 132, 0.9);
+  background: rgba(230, 196, 132, 0.14);
+}
+
+.videoIcon {
+  width: 18px;
+  height: 18px;
+}
+

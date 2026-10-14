@@ -600,6 +600,7 @@ function Tabs({
       className="grid grid-cols-2 rounded-[8px] border border-white/[0.04] bg-white/[0.055] p-0.5"
       role="tablist"
       aria-label="Project sections"
+      data-tour-target="projects.tabs"
     >
       {(['projects', 'units'] as const).map((tab) => (
         <button

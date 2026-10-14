@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { getFeatureGuideCounter } from './feature-guide-navigation'
+import { startOnboardingTour } from './onboarding-tour/tour-events'
 import type { FeatureGuideEntry } from './feature-guide-types'
 import styles from './feature-guide-tour.module.css'
 
@@ -204,6 +205,19 @@ export default function FeatureGuideTour({
             className={`${styles.navButton} ${styles.primaryButton}`}
           >
             Next
+          </button>
+        </div>
+
+        <div className={styles.fullTourRow}>
+          <button
+            type="button"
+            className={styles.fullTourButton}
+            onClick={() => {
+              onClose()
+              startOnboardingTour()
+            }}
+          >
+            Take the full app tour
           </button>
         </div>
       </aside>

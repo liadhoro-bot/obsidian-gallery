@@ -12,6 +12,10 @@ const MobileInstallPrompt = dynamic(
   () => import('../components/mobile-install-prompt'),
   { ssr: false }
 )
+const OnboardingTour = dynamic(
+  () => import('../components/onboarding-tour/onboarding-tour'),
+  { ssr: false }
+)
 const PostHogUserIdentifier = dynamic(
   () => import('./posthog-user-identifier'),
   { ssr: false }
@@ -53,6 +57,7 @@ export default function ClientShell({
       {showInstallPrompt ? <MobileInstallPrompt /> : null}
       {enableProductionTelemetry ? <PostHogUserIdentifier /> : null}
       {showMobileNav ? <MobileNav /> : null}
+      {showMobileNav ? <OnboardingTour /> : null}
     </>
   )
 }
