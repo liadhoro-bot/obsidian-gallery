@@ -76,6 +76,25 @@ function parseRequest(body: unknown): ExportRequest | null {
   }
 }
 
+// The cards use system font stacks (Georgia/Times for serif, Arial/
+// Helvetica for sans). Serverless Chromium only ships Open Sans, so every
+// title fell back to sans. Map those names to metric-compatible OFL fonts
+// (Gelasio for Georgia, Arimo for Arial) served from public/fonts/export.
+const SYSTEM_FONT_STANDINS: Array<[string[], string]> = [
+  [['Georgia', 'Cambria', 'Times New Roman', 'Times'], 'gelasio'],
+  [['Arial', 'Helvetica', 'Helvetica Neue'], 'arimo'],
+]
+const EXPORT_FONT_CSS = SYSTEM_FONT_STANDINS.flatMap(([families, file]) =>
+  families.flatMap((family) =>
+    [400, 700].flatMap((weight) =>
+      ['normal', 'italic'].map(
+        (style) =>
+          `@font-face{font-family:"${family}";font-style:${style};font-weight:${weight};font-display:block;src:url(/fonts/export/${file}-latin-${weight}-${style}.woff2) format("woff2")}`
+      )
+    )
+  )
+).join('')
+
 function buildDocument(input: ExportRequest, origin: string) {
   const links = input.stylesheets
     .filter((href) => {
@@ -94,7 +113,7 @@ function buildDocument(input: ExportRequest, origin: string) {
     .map((card) => `<div data-export-card style="width:${CARD_WIDTH}px;height:${CARD_HEIGHT}px;overflow:hidden;position:relative">${stripScripts(card)}</div>`)
     .join('')
 
-  return `<!doctype html><html class="${escapeAttribute(input.htmlClass)}" style="${escapeAttribute(input.htmlStyle)}"><head><meta charset="utf-8"><base href="${escapeAttribute(origin)}/">${links}${inline}<style>html,body{margin:0;padding:0;background:#e6d7b8}</style></head><body class="${escapeAttribute(input.bodyClass)}" style="${escapeAttribute(input.bodyStyle)}">${cards}</body></html>`
+  return `<!doctype html><html class="${escapeAttribute(input.htmlClass)}" style="${escapeAttribute(input.htmlStyle)}"><head><meta charset="utf-8"><base href="${escapeAttribute(origin)}/"><style>${EXPORT_FONT_CSS}</style>${links}${inline}<style>html,body{margin:0;padding:0;background:#e6d7b8}</style></head><body class="${escapeAttribute(input.bodyClass)}" style="${escapeAttribute(input.bodyStyle)}">${cards}</body></html>`
 }
 
 const EXPORT_BUCKET = 'card-exports'
@@ -236,6 +255,7 @@ export async function POST(request: NextRequest) {
     // JPEG for both outputs: PNGs of these textured cards are ~3 MB each,
     // far too much to download on a phone, and q90 is visually identical.
     const shots: Uint8Array[] = []
+    let fontsReady: unknown = null
     for (const card of input.cards) {
       await page.setContent(buildDocument({ ...input, cards: [card] }, origin), {
         waitUntil: 'load',
@@ -245,6 +265,13 @@ export async function POST(request: NextRequest) {
       // Fonts and CSS background textures load after `load`; after the
       // first card they come from cache, so this settles quickly.
       await page.waitForNetworkIdle({ idleTime: 150, timeout: CARD_SETTLE_TIMEOUT_MS }).catch(() => undefined)
+      // `load` doesn't wait for web fonts, and font-display:block keeps text
+      // invisible until they arrive. (DevTools evaluation still runs with
+      // page JavaScript disabled.)
+      fontsReady = await Promise.race([
+        page.evaluate('document.fonts.ready.then(() => document.fonts.status)'),
+        new Promise((resolve) => setTimeout(() => resolve('timeout'), CARD_SETTLE_TIMEOUT_MS)),
+      ]).catch((error) => `error: ${error instanceof Error ? error.message : error}`)
       lap('settle')
       shots.push(await page.screenshot({ type: 'jpeg', quality: 90, optimizeForSpeed: true }))
       lap('screenshot')
@@ -279,7 +306,7 @@ export async function POST(request: NextRequest) {
     lap('encode')
     const url = await uploadExport(file)
     lap('upload')
-    console.log('[export/cards] done', input.format, input.cards.length, 'cards', JSON.stringify(timings))
+    console.log('[export/cards] done', input.format, input.cards.length, 'cards', JSON.stringify(timings), 'fonts', fontsReady)
     after(cleanUpOldExports)
     return NextResponse.json({ url, fileName: file.name }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
