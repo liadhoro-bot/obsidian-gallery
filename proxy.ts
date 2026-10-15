@@ -119,7 +119,11 @@ export default async function proxy(request: NextRequest) {
     )
   }
 
-  const isPublicRoute =
+  // Anything "public" skips the payment gate below, so keep this list to
+  // pages a visitor needs before paying. /guides, /paints, /themes and
+  // /recipes were once listed here and let signed-in users with no trial or
+  // subscription browse them; share links (/s/) are the only public way in.
+  const isPrePaymentPage =
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/offline' ||
@@ -129,16 +133,21 @@ export default async function proxy(request: NextRequest) {
     pathname === '/trial' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
-    pathname === '/contests/dice-roll' ||
-    pathname === '/guides' ||
+    pathname === '/contests/dice-roll'
+  // Server Actions can be POSTed to any path, not just the page that renders
+  // them. Only the pre-payment pages above may run them ungated, so a share
+  // page or API path can't be used to reach the rest of the app's actions.
+  const isServerActionRequest =
+    request.method === 'POST' && request.headers.has('next-action')
+  const isStaticAsset =
+    /\.(?:ico|png|jpe?g|gif|webp|avif|svg|js|css|map|json|webmanifest|txt|xml|pdf|woff2?|ttf|otf|mp4|webm)$/i.test(
+      pathname
+    )
+
+  const isPublicRoute = isServerActionRequest
+    ? isPrePaymentPage
+    : isPrePaymentPage ||
     pathname.startsWith('/s/') ||
-    pathname.startsWith('/guides/') ||
-    pathname === '/recipes' ||
-    pathname.startsWith('/recipes/') ||
-    pathname === '/paints' ||
-    pathname.startsWith('/paints/') ||
-    pathname === '/themes' ||
-    pathname.startsWith('/themes/') ||
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname === '/api/youtube-oembed' ||
@@ -152,7 +161,9 @@ export default async function proxy(request: NextRequest) {
     pathname.startsWith('/api/trial/') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||
-    pathname.includes('.')
+    // Real file extensions only. A bare "contains a dot" check made any
+    // dynamic route public when its param had a dot in it.
+    isStaticAsset
 
   const shouldRequireAuthenticatedPreview =
     isInspectionPreview && isInspectionPreviewRoute && pathname !== '/onboarding'
