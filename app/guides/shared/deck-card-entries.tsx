@@ -65,6 +65,7 @@ function toRecipeStep(step: GuidesV3DeckStep): RecipeStep {
     image_focal_x: step.imageFocalX,
     image_focal_y: step.imageFocalY,
     paint_alignment: step.paintAlignment ?? 'left',
+    paint_vertical_alignment: step.paintVerticalAlignment ?? 'top',
     subtitle: step.subtitle ?? null,
   }
 }

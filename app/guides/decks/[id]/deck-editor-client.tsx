@@ -2,7 +2,7 @@
 
 import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-changes'
 
-import { PaintAlignmentToggle } from '../../shared/paint-alignment-toggle'
+import { PaintAlignmentToggle, PaintVerticalAlignmentPicker } from '../../shared/paint-alignment-toggle'
 
 import GuideBackButton from '@/app/guides/shared/guide-back-button'
 import { useEditorTab } from '@/app/guides/shared/use-editor-tab'
@@ -55,6 +55,7 @@ export type DeckEditorSavePaint = {
 
 export type DeckEditorInitialCard = {
   paintAlignment?: 'left' | 'right'
+  paintVerticalAlignment?: 'top' | 'center' | 'bottom'
   // Theme card kicker; empty means the default "Color Reference".
   subtitle?: string | null
   id: string
@@ -83,6 +84,7 @@ export type DeckEditorSavePayload = {
 
 type EditorCard = {
   paintAlignment?: 'left' | 'right'
+  paintVerticalAlignment?: 'top' | 'center' | 'bottom'
   subtitle?: string | null
   id: string
   title: string
@@ -113,6 +115,8 @@ const statusOptions: DeckStatus[] = ['Draft', 'Private', 'Public']
 const cardTemplateOptions: CardTemplate[] = ['step', 'theme', 'theme-alt', 'image', 'small-image', 'paints', 'video']
 const addCardTemplateOptions: CardTemplate[] = ['cover', 'step', 'theme', 'theme-alt', 'image', 'small-image', 'paints', 'video']
 const themePaintLimit = 7
+// Type B flows paints 8-14 into a second column.
+const altThemePaintLimit = 14
 const stepPaintLimit = 4
 const DIRECT_UPLOAD_DOWNSCALE_THRESHOLD = 6 * 1024 * 1024
 
@@ -166,7 +170,8 @@ function inferDifficulty(cardCount: number): DeckDifficulty {
 }
 
 function paintLimitForTemplate(template: CardTemplate) {
-  if (template === 'theme' || template === 'theme-alt') return themePaintLimit
+  if (template === 'theme') return themePaintLimit
+  if (template === 'theme-alt') return altThemePaintLimit
   if (template === 'paints') return Infinity
   return stepPaintLimit
 }
@@ -251,6 +256,7 @@ function initialDeckCards(deck: GuidesV3DeckDetail): EditorCard[] {
     imageFocalX: step.imageFocalX,
     imageFocalY: step.imageFocalY,
     paintAlignment: step.paintAlignment ?? 'left',
+    paintVerticalAlignment: step.paintVerticalAlignment ?? 'top',
     subtitle: step.subtitle ?? null,
   }))
 
@@ -836,6 +842,7 @@ export default function DeckEditorClient({
         imageFocalX: card.imageFocalX,
         imageFocalY: card.imageFocalY,
         paintAlignment: card.paintAlignment ?? 'left',
+        paintVerticalAlignment: card.paintVerticalAlignment ?? 'top',
         subtitle: card.subtitle?.trim() || null,
       })),
     }))
@@ -1794,6 +1801,12 @@ function CardEditorSheet({
             <div className={styles.paintEditorHeader}>
               <h3>Paints & Ratios</h3>
               <div className={styles.paintEditorActions}>
+              {card.template === 'theme-alt' ? (
+                <PaintVerticalAlignmentPicker
+                  value={card.paintVerticalAlignment}
+                  onChange={(paintVerticalAlignment) => onChange({ paintVerticalAlignment })}
+                />
+              ) : null}
               {card.template === 'theme' || card.template === 'theme-alt' ? (
                 <PaintAlignmentToggle
                   value={card.paintAlignment}
@@ -2095,6 +2108,7 @@ function DeckPreview({
           image_focal_x: card.imageFocalX,
           image_focal_y: card.imageFocalY,
           paint_alignment: card.paintAlignment ?? 'left',
+          paint_vertical_alignment: card.paintVerticalAlignment ?? 'top',
           subtitle: card.subtitle ?? null,
         }
 

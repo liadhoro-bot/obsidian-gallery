@@ -1430,6 +1430,21 @@
   border-radius: 3px;
   opacity: 0.55;
 }
+.paintAlignmentTrack button {
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 3px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+}
+.paintAlignmentTrack button:focus-visible {
+  outline: 2px solid var(--og-brass-500);
+  outline-offset: 1px;
+}
+.paintAlignmentTrack button[data-active='true'],
 .paintAlignmentTrack[data-right='false'] span:first-child,
 .paintAlignmentTrack[data-right='true'] span:last-child {
   color: var(--og-ink-950);

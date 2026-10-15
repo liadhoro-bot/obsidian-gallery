@@ -15,6 +15,7 @@ import {
 
 export type GuidesV3DeckStep = {
   paintAlignment?: 'left' | 'right'
+  paintVerticalAlignment?: 'top' | 'center' | 'bottom'
   subtitle?: string | null
   id: string
   number: number
@@ -218,6 +219,7 @@ function parseDeckCardInstructions(value: string | null | undefined) {
       template: null as string | null,
       videoUrl: null as string | null,
       paintAlignment: 'left' as const,
+      paintVerticalAlignment: 'top' as const,
     }
   }
 
@@ -226,6 +228,7 @@ function parseDeckCardInstructions(value: string | null | undefined) {
       template?: unknown
       youtubeUrl?: unknown
       paintAlignment?: unknown
+      paintVerticalAlignment?: unknown
     }
     const body = rest.join('\n').replace(/^\s+/, '')
     const youtubeUrl =
@@ -239,6 +242,10 @@ function parseDeckCardInstructions(value: string | null | undefined) {
       template: parseDeckCardMetaTemplate(metadata.template),
       videoUrl: youtubeUrl,
       paintAlignment: metadata.paintAlignment === 'right' ? 'right' as const : 'left' as const,
+      paintVerticalAlignment:
+        metadata.paintVerticalAlignment === 'center' || metadata.paintVerticalAlignment === 'bottom'
+          ? metadata.paintVerticalAlignment as 'center' | 'bottom'
+          : 'top' as const,
     }
   } catch {
     return {
@@ -246,6 +253,7 @@ function parseDeckCardInstructions(value: string | null | undefined) {
       template: null as string | null,
       videoUrl: null as string | null,
       paintAlignment: 'left' as const,
+      paintVerticalAlignment: 'top' as const,
     }
   }
 }
@@ -485,6 +493,7 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
         imageFocalX: step.image_focal_x ?? 50,
         imageFocalY: step.image_focal_y ?? 50,
         paintAlignment: parsedInstructions.paintAlignment,
+        paintVerticalAlignment: parsedInstructions.paintVerticalAlignment,
         subtitle: step.subtitle?.trim() || null,
       }
     })

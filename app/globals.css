@@ -2042,6 +2042,23 @@ button:disabled {
   padding-right: 0.8cqw;
 }
 
+/* Type B vertical placement of the paint column(s) within the body. */
+.recipe-guide-theme-valign-center .recipe-guide-alt-theme-paint-list { justify-content: center; }
+.recipe-guide-theme-valign-bottom .recipe-guide-alt-theme-paint-list { justify-content: flex-end; }
+
+/* Type B with 8+ paints: paints 8-14 fill a second column on the opposite half. */
+.recipe-guide-alt-theme-two-columns .recipe-guide-alt-theme-paint-list {
+  width: calc(50% - 0.8cqw);
+}
+.recipe-guide-alt-theme-two-columns .recipe-guide-alt-theme-paint-list + .recipe-guide-alt-theme-paint-list {
+  left: auto;
+  right: 0;
+}
+.recipe-guide-theme-align-right .recipe-guide-alt-theme-two-columns .recipe-guide-alt-theme-paint-list + .recipe-guide-alt-theme-paint-list {
+  left: 0;
+  right: auto;
+}
+
 /* Card titles share predictable wrapping and length-based sizing in the viewer,
    editor, and exported images. Keep the entire title rather than an ellipsis. */
 .recipe-guide-title,

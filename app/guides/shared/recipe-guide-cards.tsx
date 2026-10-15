@@ -611,12 +611,17 @@ function ThemeStepCard({
   const focalX = usesOwnImage ? step.image_focal_x ?? 50 : fallbackFocalX
   const focalY = usesOwnImage ? step.image_focal_y ?? 50 : fallbackFocalY
   const footerText = step.instructions?.trim() || 'A curated palette for stunning results'
-  const shownPaints = paints.slice(0, 7)
+  // Type B fills a second column with paints 8-14.
+  const shownPaints = paints.slice(0, variant === 'b' ? 14 : 7)
   const hiddenPaintCount = Math.max(0, paints.length - shownPaints.length)
+  const paintColumns = variant === 'b'
+    ? [shownPaints.slice(0, 7), shownPaints.slice(7)].filter(column => column.length)
+    : [shownPaints]
+  const verticalAlignment = variant === 'b' ? step.paint_vertical_alignment ?? 'top' : 'top'
 
   return (
     <ObsidianShareCardFrame showBrandMark={showBrandMark}>
-      <div className={`recipe-guide-alt-theme-card recipe-guide-theme-type-${variant} ${step.paint_alignment === 'right' ? 'recipe-guide-theme-align-right' : ''} relative min-h-0 flex-1 overflow-hidden`}>
+      <div className={`recipe-guide-alt-theme-card recipe-guide-theme-type-${variant} ${step.paint_alignment === 'right' ? 'recipe-guide-theme-align-right' : ''} recipe-guide-theme-valign-${verticalAlignment} relative min-h-0 flex-1 overflow-hidden`}>
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -643,24 +648,27 @@ function ThemeStepCard({
           </div>
 
           {shownPaints.length ? (
-            <div className="recipe-guide-alt-theme-body">
-              <ul
-                className={`recipe-guide-theme-paint-list ${variant === 'a' ? 'recipe-guide-type-a-paint-list' : 'recipe-guide-alt-theme-paint-list'}`}
-                style={{ '--paint-count': shownPaints.length || 1 } as CSSProperties}
-              >
-                {shownPaints.map((paint, index) => variant === 'a' ? (
-                  <ThemePaintReferenceRow
-                    key={`${paint?.id || 'paint'}-${index}`}
-                    paint={paint}
-                    showBrandMark={showBrandMark}
-                  />
-                ) : (
-                  <AltThemePaintRow
-                    key={`${paint?.id || 'paint'}-${index}`}
-                    paint={paint}
-                  />
-                ))}
-              </ul>
+            <div className={`recipe-guide-alt-theme-body ${paintColumns.length > 1 ? 'recipe-guide-alt-theme-two-columns' : ''}`}>
+              {paintColumns.map((column, columnIndex) => (
+                <ul
+                  key={columnIndex}
+                  className={`recipe-guide-theme-paint-list ${variant === 'a' ? 'recipe-guide-type-a-paint-list' : 'recipe-guide-alt-theme-paint-list'}`}
+                  style={{ '--paint-count': paintColumns[0].length || 1 } as CSSProperties}
+                >
+                  {column.map((paint, index) => variant === 'a' ? (
+                    <ThemePaintReferenceRow
+                      key={`${paint?.id || 'paint'}-${index}`}
+                      paint={paint}
+                      showBrandMark={showBrandMark}
+                    />
+                  ) : (
+                    <AltThemePaintRow
+                      key={`${paint?.id || 'paint'}-${index}`}
+                      paint={paint}
+                    />
+                  ))}
+                </ul>
+              ))}
             </div>
           ) : (
             <div className="recipe-guide-alt-theme-body" />

@@ -10,6 +10,7 @@ import { getGuideDeckThumbnail } from './guides-v3-data'
 
 export type CreateDeckCardInput = {
   paintAlignment?: 'left' | 'right'
+  paintVerticalAlignment?: 'top' | 'center' | 'bottom'
   subtitle?: string | null
   title: string
   template: string
@@ -143,10 +144,15 @@ function encodeDeckCardInstructions(card: CreateDeckCardInput) {
     template: string
     youtubeUrl?: string
     paintAlignment?: 'left' | 'right'
+    paintVerticalAlignment?: 'top' | 'center' | 'bottom'
   } = { template }
 
   if (template === 'theme' || template === 'theme-alt') {
     metadata.paintAlignment = card.paintAlignment === 'right' ? 'right' : 'left'
+  }
+
+  if (template === 'theme-alt' && (card.paintVerticalAlignment === 'center' || card.paintVerticalAlignment === 'bottom')) {
+    metadata.paintVerticalAlignment = card.paintVerticalAlignment
   }
 
   if (youtubeUrl) {
