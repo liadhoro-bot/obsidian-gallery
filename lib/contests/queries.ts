@@ -838,6 +838,22 @@ export async function getPublicGuideCreatorLeaderboard(
     if (recipe.image_url) directImageByRecipeId.set(recipe.id, recipe.image_url)
   }
 
+  // A creator's public collection is each public deck (counted above) plus
+  // each guide they composed that has a public deck - the same set their
+  // creator page lists (creatorCollectionGuides in guides-v3-data.ts).
+  // Auto-guides are not counted separately: they are the decks themselves.
+  const publicRecipeIds = new Set(recipes.map((recipe) => recipe.id))
+  const { data: composedGuides, error: composedError } = await supabase
+    .from('guides')
+    .select('id, user_id, guide_decks(recipe_id)')
+    .eq('is_auto', false)
+    .in('user_id', Array.from(recipeIdsByOwner.keys()))
+  if (composedError) throw new Error(composedError.message)
+  for (const guide of (composedGuides ?? []) as { user_id: string; guide_decks: { recipe_id: string }[] | null }[]) {
+    if (!(guide.guide_decks ?? []).some((deck) => publicRecipeIds.has(deck.recipe_id))) continue
+    countByOwner.set(guide.user_id, (countByOwner.get(guide.user_id) ?? 0) + 1)
+  }
+
   const allRecipeIds = recipes.map((recipe) => recipe.id)
   const { data: assets } = await supabase
     .from('image_assets')

@@ -858,10 +858,27 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
       result.push(toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, viewerId))
     }
     if (rows.length < pageSize) {
-      const keptIds = new Set(withoutRedundantAutoGuides(listedGuides).map((guide) => guide.id))
+      const keptIds = new Set(creatorCollectionGuides(listedGuides).map((guide) => guide.id))
       return result.filter((guide) => keptIds.has(guide.id))
     }
   }
+}
+
+// A creator's public collection is every guide they composed plus every
+// public deck they made, each exactly once. Decks are listed through their
+// auto-guide, even when a composed guide also contains them (unlike
+// Discover, which hides those), and a deck with more than one auto-guide
+// still appears once. Must match the count on the contest entry card -
+// see getPublicGuideCreatorLeaderboard in lib/contests/queries.ts.
+function creatorCollectionGuides(guides: GuideRow[]) {
+  const seenDecks = new Set<string>()
+  return guides.filter((guide) => {
+    if (!guide.is_auto) return true
+    const deck = memberRecipesOf(guide)[0]
+    if (!deck?.is_public || seenDecks.has(deck.id)) return false
+    seenDecks.add(deck.id)
+    return true
+  })
 }
 
 // One public guide for the logged-out share route (/s/guides/[id]). Reads
