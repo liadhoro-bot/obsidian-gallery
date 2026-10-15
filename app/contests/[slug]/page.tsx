@@ -29,10 +29,10 @@ export default async function ContestDetailPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; ballotPreview?: string }>
 }) {
   const { slug } = await params
-  const { tab } = await searchParams
+  const { tab, ballotPreview } = await searchParams
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
   const contest = await getContestBySlug(slug)
@@ -77,7 +77,7 @@ export default async function ContestDetailPage({
       : []
   const guideCreatorLeaderboard =
     !isDemoContest && isGuideContest
-      ? await getPublicGuideCreatorLeaderboard(hideIdentity, user?.id)
+      ? await getPublicGuideCreatorLeaderboard(hideIdentity, user?.id, contest.id)
       : []
 
   return (
@@ -96,6 +96,7 @@ export default async function ContestDetailPage({
           viewerUserId={user?.id}
           privateReportHref={await canReadContestBallots(user?.id, contest.id) ? `/contests/${contest.slug}/report` : undefined}
           ballot={ballot}
+          ballotPreview={process.env.NODE_ENV === 'development' && ballotPreview === '1'}
           isEligibleParticipant={isEligibleParticipant}
           contest={contest}
           guideCreatorLeaderboard={guideCreatorLeaderboard}

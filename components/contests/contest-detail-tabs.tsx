@@ -10,6 +10,7 @@ import {
   getNomineeType,
   getOrdinal,
   getPhaseHeadline,
+  GUIDE_CREATOR_CONTEST_SLUG,
   type NomineeCopy,
 } from '../../lib/contests/nominee-copy'
 import { submitNominationAction } from '../../lib/contests/actions'
@@ -25,6 +26,7 @@ import type {
 } from '../../lib/contests/types'
 import NominateModal from './nominate-modal'
 import ArmyBallotModal from './army-ballot-modal'
+import GuideCreatorBallotModal from './guide-creator-ballot-modal'
 import styles from './contest-v3-silver.module.css'
 
 type ContestDetailTab = 'details' | 'entries' | 'my-activity'
@@ -86,6 +88,7 @@ function ballotEntryNames(
 
 export default function ContestDetailTabs({
   ballot,
+  ballotPreview = false,
   contest,
   guideCreatorLeaderboard = [],
   initialTab = 'details',
@@ -98,6 +101,7 @@ export default function ContestDetailTabs({
   privateReportHref,
 }: {
   ballot: ContestBallot | null
+  ballotPreview?: boolean
   contest: Contest
   guideCreatorLeaderboard?: GuideCreatorLeaderboardEntry[]
   initialTab?: ContestDetailTab
@@ -116,8 +120,11 @@ export default function ContestDetailTabs({
   const [isNominateModalOpen, setIsNominateModalOpen] = useState(false)
   const [isBallotModalOpen, setIsBallotModalOpen] = useState(false)
   const isArmyContest = contest.slug === 'path-to-glory-coolest-army'
+  const isGuideCreatorContest = contest.slug === GUIDE_CREATOR_CONTEST_SLUG
   const phase = getContestPhase(contest)
-  const votingIsOpen = phase === 'voting_open'
+  // Dev-only preview opens the guide creator ballot before voting starts; it never records a vote.
+  const isBallotPreview = ballotPreview && isGuideCreatorContest
+  const votingIsOpen = phase === 'voting_open' || isBallotPreview
   const votingHasClosed = ['voting_closed', 'results_published'].includes(phase)
   const nomineeType = getNomineeType(contest)
   const nomineeCopy = getNomineeCopy(contest)
@@ -147,6 +154,13 @@ export default function ContestDetailTabs({
     )
   }, [guideCreatorLeaderboard, search])
   const submittedEntryNames = ballotEntryNames(ballot, nominations, hideIdentity)
+  const submittedCreatorIds = useMemo(() => {
+    if (ballot?.status !== 'submitted' || !ballot.contest_ballot_items?.length) return []
+    const ownerByNomination = new Map(nominations.map((nomination) => [nomination.id, nomination.owner_user_id]))
+    return [...ballot.contest_ballot_items]
+      .sort((first, second) => (first.selection_rank ?? 99) - (second.selection_rank ?? 99))
+      .map((item) => ownerByNomination.get(item.nomination_id) ?? '')
+  }, [ballot, nominations])
   const votingOpensIn = daysUntil(contest.voting_open_at)
   const votingClosesIn = daysUntil(contest.voting_close_at)
   const hasReachedNominationLimit =
@@ -484,7 +498,11 @@ export default function ContestDetailTabs({
                       <strong>{getOrdinal(index + 1)}</strong> — {submittedEntryNames[index] || 'Selection recorded'}
                     </p>
                   ))}
-                  {contest.allow_ballot_changes && votingIsOpen ? (
+                  {contest.allow_ballot_changes && votingIsOpen && isGuideCreatorContest ? (
+                    <button type="button" className={styles.inlineTextLink} onClick={() => setIsBallotModalOpen(true)}>
+                      Change your vote →
+                    </button>
+                  ) : contest.allow_ballot_changes && votingIsOpen ? (
                     <Link href={`/contests/${contest.slug}/vote`} className={styles.inlineTextLink}>
                       Edit ballot →
                     </Link>
@@ -499,7 +517,7 @@ export default function ContestDetailTabs({
                   <p>Help decide who takes the prize.</p>
                   <p>Voting closes {votingClosesIn === 1 ? 'in 1 day' : `in ${votingClosesIn ?? 0} days`}.</p>
                 </div>
-                {isArmyContest && viewerUserId ? (
+                {(isArmyContest || isGuideCreatorContest) && viewerUserId ? (
                   <button type="button" className={styles.brassButton} onClick={() => setIsBallotModalOpen(true)}>Cast your vote</button>
                 ) : (
                   <Link href={`/contests/${contest.slug}/vote`} className={styles.brassButton}>Choose Your Winners</Link>
@@ -515,7 +533,16 @@ export default function ContestDetailTabs({
         </div>
       </div>
 
-      {isBallotModalOpen && viewerUserId ? (
+      {isBallotModalOpen && viewerUserId && isGuideCreatorContest ? (
+        <GuideCreatorBallotModal
+          contest={contest}
+          creators={guideCreatorLeaderboard}
+          initialPicks={submittedCreatorIds}
+          isChange={submittedCreatorIds.length > 0}
+          preview={isBallotPreview}
+          onClose={() => setIsBallotModalOpen(false)}
+        />
+      ) : isBallotModalOpen && viewerUserId ? (
         <ArmyBallotModal contest={contest} nominations={nominations} viewerUserId={viewerUserId} onClose={() => setIsBallotModalOpen(false)} />
       ) : null}
       {isNominateModalOpen ? (

@@ -24,6 +24,7 @@ import {
   isSubscriptionGateEnabled,
 } from '../subscription/subscription-guard'
 import { isContestSchemaMissing } from './schema'
+import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 
 export const DEMO_CONTEST_ID = '00000000-0000-4000-8000-000000000001'
 export const DEMO_CONTEST_SLUG = 'demo-community-showcase'
@@ -798,14 +799,44 @@ export type GuideCreatorLeaderboardEntry = {
   ownerName: string
   guideCount: number
   imageUrl: string | null
+  guideImageUrls: string[]
+  avatarUrl: string | null
   isViewer: boolean
+}
+
+export type ContestCreatorProfile = {
+  description: string | null
+  coverRecipeId: string | null
+}
+
+// Organizer-curated creator descriptions and entry covers. Returns an empty map
+// until the contest_creator_profiles table exists, so pages keep working.
+export async function getContestCreatorProfiles(contestId: string) {
+  const { data, error } = await createServiceRoleClient()
+    .from('contest_creator_profiles')
+    .select('owner_user_id, description, cover_recipe_id')
+    .eq('contest_id', contestId)
+  const profiles = new Map<string, ContestCreatorProfile>()
+  if (error) {
+    if (!['42P01', 'PGRST205'].includes(error.code)) console.error('Creator profiles failed to load', error)
+    return profiles
+  }
+  for (const row of data ?? []) {
+    profiles.set(row.owner_user_id, {
+      description: row.description?.trim() || null,
+      coverRecipeId: row.cover_recipe_id,
+    })
+  }
+  return profiles
 }
 
 export async function getPublicGuideCreatorLeaderboard(
   hideIdentity?: boolean,
-  viewerId?: string | null
+  viewerId?: string | null,
+  contestId?: string
 ): Promise<GuideCreatorLeaderboardEntry[]> {
   const supabase = await createClient()
+  const profilesPromise = contestId ? getContestCreatorProfiles(contestId) : Promise.resolve(new Map<string, ContestCreatorProfile>())
   const { data: publicRecipes, error } = await supabase
     .from('recipes')
     .select('id, user_id, image_url, created_at')
@@ -876,34 +907,44 @@ export async function getPublicGuideCreatorLeaderboard(
 
   const ownerIds = Array.from(countByOwner.keys())
   const nameByOwner = new Map<string, string>()
+  const avatarByOwner = new Map<string, string>()
   if (!hideIdentity) {
-    // Profiles are private under RLS. Read only public usernames for the
-    // creators whose public guides were visible to this viewer above.
+    // Profiles are private under RLS. Read only public usernames and avatars
+    // for the creators whose public guides were visible to this viewer above.
     const { data: profiles, error: profilesError } = await createServiceRoleClient()
       .from('profiles')
-      .select('id, username')
+      .select('id, username, avatar_url')
       .in('id', ownerIds)
 
     if (profilesError) throw new Error(profilesError.message)
-    for (const profile of (profiles ?? []) as { id: string; username: string | null }[]) {
+    for (const profile of (profiles ?? []) as { id: string; username: string | null; avatar_url: string | null }[]) {
       if (profile.username) nameByOwner.set(profile.id, profile.username)
+      const avatar = getSupabaseImageUrl(profile.avatar_url, { width: 96, height: 96, quality: 60, resize: 'cover' })
+      if (avatar) avatarByOwner.set(profile.id, avatar)
     }
   }
 
+  const creatorProfiles = await profilesPromise
   return ownerIds
     .map((ownerId) => {
-      const recipeIds = recipeIdsByOwner.get(ownerId) ?? []
-      const imageUrl =
-        recipeIds
-          .map((id) => assetImageByRecipeId.get(id) ?? directImageByRecipeId.get(id))
-          .find((url) => Boolean(url)) ?? null
+      // A chosen cover guide leads the thumbnails and becomes the entry card image.
+      const coverId = creatorProfiles.get(ownerId)?.coverRecipeId
+      const ownRecipeIds = recipeIdsByOwner.get(ownerId) ?? []
+      const recipeIds = coverId && ownRecipeIds.includes(coverId)
+        ? [coverId, ...ownRecipeIds.filter((id) => id !== coverId)]
+        : ownRecipeIds
+      const guideImageUrls = recipeIds
+        .map((id) => assetImageByRecipeId.get(id) ?? directImageByRecipeId.get(id))
+        .filter((url): url is string => Boolean(url))
 
       return {
         ownerId,
         ownerName: hideIdentity ? 'Gallery Member' : nameByOwner.get(ownerId) || 'Gallery Member',
         guideCount: countByOwner.get(ownerId) ?? 0,
         isViewer: ownerId === viewerId,
-        imageUrl,
+        imageUrl: guideImageUrls[0] ?? null,
+        guideImageUrls: guideImageUrls.slice(0, 12),
+        avatarUrl: avatarByOwner.get(ownerId) ?? null,
       }
     })
     .sort((first, second) => second.guideCount - first.guideCount)

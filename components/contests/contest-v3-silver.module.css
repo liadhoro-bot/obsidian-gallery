@@ -1167,6 +1167,147 @@
 .ballotFooter { display: flex; justify-content: flex-end; gap: 12px; padding: 14px; }
 .ballotFooter button:disabled { opacity: .5; cursor: not-allowed; }
 
+.ballotPreviewNote {
+  border: 1px dashed color-mix(in srgb, var(--og-brass-700) 60%, transparent);
+  border-radius: var(--og-radius-s);
+  padding: 6px 10px;
+  color: var(--og-text-secondary);
+  font-size: .78rem;
+  font-weight: 800;
+}
+.ballotPlace {
+  overflow: clip;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 34%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: color-mix(in srgb, var(--og-paper-50) 40%, transparent);
+}
+.ballotPlace[data-open] { border-color: color-mix(in srgb, var(--og-brass-500) 76%, var(--og-walnut-700)); }
+.ballotPlaceToggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  color: var(--og-text-primary);
+  text-align: left;
+}
+.ballotPlaceToggle:focus-visible { outline: 2px solid var(--og-brass-500); outline-offset: -2px; }
+.ballotPlaceText { display: grid; gap: 3px; min-width: 0; }
+.ballotPlaceText strong { font-weight: 900; font-size: .92rem; }
+.ballotPlaceText small { color: var(--og-text-secondary); font-size: .78rem; font-weight: 700; }
+.ballotPlacePick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: .85rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ballotChevron { color: var(--og-text-secondary); transition: transform .18s ease; }
+.ballotPlace[data-open] .ballotChevron { transform: rotate(180deg); }
+.ballotRankBadge {
+  display: grid;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--og-walnut-700) 82%, var(--og-brass-500));
+  color: var(--og-paper-50);
+  font-size: .74rem;
+  font-weight: 900;
+}
+.ballotPlace[data-picked] .ballotRankBadge { background-color: var(--og-brass-500); color: var(--og-ink-950); }
+.ballotPlaceChoices {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border: 0;
+  border-top: var(--og-border-width) solid color-mix(in srgb, var(--og-walnut-700) 18%, transparent);
+  padding: 6px;
+}
+.ballotCreatorRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 26%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: color-mix(in srgb, var(--og-paper-50) 46%, transparent);
+  padding: 8px;
+  cursor: pointer;
+}
+.ballotCreatorRow:has(input:checked) {
+  border-color: color-mix(in srgb, var(--og-brass-500) 76%, var(--og-walnut-700));
+  background-color: color-mix(in srgb, var(--og-brass-500) 16%, var(--og-paper-50));
+}
+.ballotCreatorRow:focus-within { outline: 2px solid var(--og-brass-500); outline-offset: 2px; }
+/* The radio stays focusable for keyboards; the badge on the avatar shows its state. */
+.ballotRadio { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ballotAvatarWrap { position: relative; display: block; }
+.ballotCheck {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, var(--og-walnut-700) 60%, var(--og-brass-700));
+  border-radius: 999px;
+  background-color: var(--og-paper-50);
+  color: var(--og-ink-950);
+  font-size: .7rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.ballotCreatorRow:has(input:checked) .ballotCheck { border-color: var(--og-paper-50); background-color: var(--og-brass-500); }
+.ballotCreatorRow:has(input:checked) .ballotCheck::before { content: '✓'; }
+.ballotCreatorBody { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.ballotCreatorBody strong {
+  overflow: hidden;
+  min-width: 0;
+  font-size: .95rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ballotCreatorBody small { flex: 0 0 auto; color: var(--og-text-secondary); font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.ballotAvatar { position: relative; width: 56px; height: 56px; font-size: .9rem; }
+.ballotAvatarSmall { width: 28px; height: 28px; font-size: .62rem; box-shadow: none; }
+.ballotThumbs { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 5px; min-width: 0; }
+.ballotThumbs:empty { display: none; }
+.ballotThumb {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 32%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-bg-recess);
+}
+.ballotThumbMore { color: var(--og-text-secondary); font-size: .78rem; font-weight: 900; background-color: color-mix(in srgb, var(--og-paper-50) 42%, transparent); }
+.ballotSummary { display: grid; gap: 8px; margin: 4px 0; padding: 0; list-style: none; }
+.ballotSummary li {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 26%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  padding: 8px 10px;
+}
+.ballotSummary strong { overflow: hidden; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.ballotPoints { color: var(--og-text-secondary); font-size: .8rem; font-weight: 900; white-space: nowrap; }
+
 .modalPanel {
   display: grid;
   width: 100%;
@@ -2112,3 +2253,9 @@
     height: 54px;
   }
 }
+
+/* Creator page: organizer-written description and vote buttons. */
+.creatorVoteCta { display: grid; gap: 6px; justify-items: center; }
+.creatorVoteCta button:disabled { opacity: .55; cursor: not-allowed; }
+.creatorVoteCta small { color: var(--og-paper-50); opacity: .75; font-size: .78rem; font-weight: 700; }
+.creatorDescription { white-space: pre-line; overflow-wrap: anywhere; }

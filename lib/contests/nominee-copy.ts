@@ -2,6 +2,9 @@ import { getContestPhase, getPhaseLabel } from './phases'
 import { getRankedPoints } from './ranking'
 import type { Contest, ContestNomineeType } from './types'
 
+// Founders Contest: Top Hobby Guides. Voters rank creators, not guides.
+export const GUIDE_CREATOR_CONTEST_SLUG = 'best-painting-guide'
+
 function ordinal(n: number) {
   if (n === 1) return '1st'
   if (n === 2) return '2nd'

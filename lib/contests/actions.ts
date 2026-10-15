@@ -8,6 +8,8 @@ import { safeEvaluateAchievements } from '../achievements/evaluateAchievements'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { isCurrentUserAdmin } from '../admin'
 import { getContestPhase } from './phases'
+import { getPublicGuideCreatorLeaderboard } from './queries'
+import { GUIDE_CREATOR_CONTEST_SLUG } from './nominee-copy'
 import { validateContestConfig } from './validation'
 import { canManageContest, canModerateContest, canNominateInContest } from './permissions'
 import {
@@ -845,6 +847,100 @@ export async function submitArmyBallotAction(contestId: string, nominationIds: s
   }
   contestRevalidate(contest.slug)
   // Recording the vote is authoritative even if optional analytics fails.
+  const summary = Array.isArray(data) ? data[0] : data
+  try {
+    await safeEvaluateAchievements(user.id, {
+      triggers: ['contest_votes_total'], sourceType: 'contest_vote_cast', sourceId: summary?.ballot_id ?? contestId,
+    })
+  } catch (error) { console.error('Contest achievement update failed', error) }
+  return { error: null }
+}
+
+const ballotRpcErrors: Record<string, string> = {
+  voting_not_open: 'Voting is not open. Refresh to see the latest contest dates.',
+  ballot_changes_locked: 'You have already voted. Your ballot cannot be changed.',
+  verified_email_required: 'Please verify your email before voting.',
+  account_too_new: 'Your account is too new to vote in this contest.',
+  minimum_projects_required: 'Add at least one project to your account before voting.',
+  minimum_units_required: 'Add at least one unit to your account before voting.',
+  self_vote_not_allowed: 'You cannot vote for yourself.',
+  invalid_nomination: 'A creator is no longer eligible. Refresh and choose again.',
+  duplicate_nominees: 'Choose a different creator for each place.',
+  exact_selection_count_required: 'Choose a creator for every place.',
+}
+
+// The guide contest enters creators by publishing public guides, so it has no
+// nomination rows until someone votes. Each creator gets one approved row keyed
+// to their earliest public guide; the unique guide index makes concurrent first
+// votes converge on the same row.
+async function ensureGuideCreatorNominations(contestId: string, creatorIds: string[], viewerId: string) {
+  const service = createServiceRoleClient()
+  const leaderboard = await getPublicGuideCreatorLeaderboard(false, viewerId)
+  const entryById = new Map(leaderboard.map((entry) => [entry.ownerId, entry]))
+  if (creatorIds.some((id) => !entryById.has(id))) return null
+
+  const loadExisting = async () => {
+    const { data, error } = await service.from('contest_nominations')
+      .select('id, owner_user_id').eq('contest_id', contestId).eq('status', 'approved')
+      .in('owner_user_id', creatorIds).order('submitted_at').order('id')
+    if (error) throw new Error(error.message)
+    const byOwner = new Map<string, string>()
+    for (const row of data ?? []) if (!byOwner.has(row.owner_user_id)) byOwner.set(row.owner_user_id, row.id)
+    return byOwner
+  }
+
+  let byOwner = await loadExisting()
+  const missing = creatorIds.filter((id) => !byOwner.has(id))
+  for (const ownerId of missing) {
+    const { data: guide } = await service.from('recipes').select('id')
+      .eq('user_id', ownerId).eq('is_public', true).order('created_at').order('id').limit(1).maybeSingle()
+    if (!guide) return null
+    const entry = entryById.get(ownerId)!
+    const now = new Date().toISOString()
+    const { error } = await service.from('contest_nominations').insert({
+      contest_id: contestId, submitted_by_user_id: ownerId, owner_user_id: ownerId,
+      source_type: 'guide', source_guide_id: guide.id,
+      snapshot_title: entry.ownerName, snapshot_owner_display_name: entry.ownerName,
+      snapshot_image_url: entry.imageUrl ?? '/onboarding/welcome-hero.jpeg',
+      snapshot_metadata: { creator_entry: true, guide_count: entry.guideCount },
+      status: 'approved', submitted_at: now, reviewed_at: now,
+    })
+    if (error && error.code !== '23505') throw new Error(error.message)
+  }
+  if (missing.length) byOwner = await loadExisting()
+  return creatorIds.every((id) => byOwner.has(id)) ? creatorIds.map((id) => byOwner.get(id)!) : null
+}
+
+export async function submitGuideCreatorBallotAction(contestId: string, creatorIds: string[]): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Please sign in to cast your vote.' }
+  const { data: contest, error: contestError } = await supabase.from('contests')
+    .select('slug, maximum_selections_per_ballot, allow_self_vote, publication_status, submissions_open_at, submissions_close_at, voting_open_at, voting_close_at, results_published_at')
+    .eq('id', contestId).single()
+  if (contestError || contest?.slug !== GUIDE_CREATOR_CONTEST_SLUG) return { error: 'Contest not found.' }
+  // The RPC enforces this too; checking first keeps nomination rows from being created early.
+  if (getContestPhase(contest) !== 'voting_open') return { error: ballotRpcErrors.voting_not_open }
+  const size = contest.maximum_selections_per_ballot
+  if (creatorIds.length !== size || new Set(creatorIds).size !== size) {
+    return { error: 'Choose a different creator for each place.' }
+  }
+  if (!contest.allow_self_vote && creatorIds.includes(user.id)) return { error: 'You cannot vote for yourself.' }
+
+  let nominationIds: string[] | null
+  try {
+    nominationIds = await ensureGuideCreatorNominations(contestId, creatorIds, user.id)
+  } catch (error) {
+    console.error('Guide creator nomination sync failed', error)
+    return { error: 'Your ballot could not be saved. Please try again.' }
+  }
+  if (!nominationIds) return { error: ballotRpcErrors.invalid_nomination }
+
+  const { data, error } = await supabase.rpc('replace_contest_ballot', {
+    p_contest_id: contestId, p_nomination_ids: nominationIds,
+  })
+  if (error) return { error: ballotRpcErrors[error.message] ?? 'Your ballot could not be saved. Please try again.' }
+  contestRevalidate(contest.slug)
   const summary = Array.isArray(data) ? data[0] : data
   try {
     await safeEvaluateAchievements(user.id, {
