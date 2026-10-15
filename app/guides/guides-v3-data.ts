@@ -2,6 +2,7 @@ import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
+import { selectCreatorCollection } from './shared/creator-collection'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { createSharedReadClient } from './shared-read-client'
 
@@ -864,33 +865,21 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
   }
 }
 
-// A creator's public collection is every public deck they made plus every
-// multi-deck guide they composed, each exactly once. A deck is shown by a
-// guide that wraps only that deck - preferably one they composed (it has
-// their own title and description), otherwise its auto-guide - so a
-// single-deck guide and its deck never both appear. Multi-deck guides are
-// listed in addition to their decks (unlike Discover, which hides those
-// decks' auto-guides). Must match the count on the contest entry card -
-// see getPublicGuideCreatorLeaderboard in lib/contests/queries.ts.
+// The creator's collection rule (see shared/creator-collection.ts), judged
+// on public decks only so the owner - who can also see their private decks
+// - gets the same list as everyone else. Unlike Discover, multi-deck guides
+// are listed in addition to their decks.
 function creatorCollectionGuides(guides: GuideRow[]) {
-  // Judged on public decks only, so the owner (who can also see their
-  // private decks) gets the same list as everyone else.
-  const publicDecksOf = (guide: GuideRow) => memberRecipesOf(guide).filter((deck) => deck.is_public)
-  const singleDeckOf = (guide: GuideRow) => {
-    const decks = publicDecksOf(guide)
-    return decks.length === 1 ? decks[0].id : null
-  }
-  const deckShownBy = new Map<string, string>()
-  for (const guide of [...guides].sort((a, b) => Number(a.is_auto) - Number(b.is_auto))) {
-    const deckId = singleDeckOf(guide)
-    if (deckId && !deckShownBy.has(deckId)) deckShownBy.set(deckId, guide.id)
-  }
-  return guides.filter((guide) => {
-    const deckId = singleDeckOf(guide)
-    if (deckId) return deckShownBy.get(deckId) === guide.id
-    // Multi-deck composed guides; auto-guides always wrap a single deck.
-    return !guide.is_auto && publicDecksOf(guide).length > 1
-  })
+  const kept = new Set(
+    selectCreatorCollection(
+      guides.map((guide) => ({
+        id: guide.id,
+        isAuto: Boolean(guide.is_auto),
+        publicDeckIds: memberRecipesOf(guide).filter((deck) => deck.is_public).map((deck) => deck.id),
+      }))
+    ).map((guide) => guide.id)
+  )
+  return guides.filter((guide) => kept.has(guide.id))
 }
 
 // One public guide for the logged-out share route (/s/guides/[id]). Reads

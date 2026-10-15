@@ -9,6 +9,7 @@ import {
 } from '../../utils/supabase/server'
 import { canViewContest } from './permissions'
 import { loadNominationGallery } from './nomination-gallery'
+import { countCreatorCollection } from '../../app/guides/shared/creator-collection'
 import type {
   Contest,
   ContestBallot,
@@ -838,11 +839,9 @@ export async function getPublicGuideCreatorLeaderboard(
     if (recipe.image_url) directImageByRecipeId.set(recipe.id, recipe.image_url)
   }
 
-  // A creator's public collection is each public deck (counted above) plus
-  // each guide they composed from two or more public decks - the same set
-  // their creator page lists (creatorCollectionGuides in guides-v3-data.ts).
-  // Auto-guides and single-deck guides are not counted separately: each
-  // one is just a way of showing that deck.
+  // The count is the creator's whole collection - public decks plus
+  // multi-deck guides - exactly what their creator page lists (both use
+  // app/guides/shared/creator-collection.ts).
   const publicRecipeIds = new Set(recipes.map((recipe) => recipe.id))
   const { data: composedGuides, error: composedError } = await supabase
     .from('guides')
@@ -850,10 +849,13 @@ export async function getPublicGuideCreatorLeaderboard(
     .eq('is_auto', false)
     .in('user_id', Array.from(recipeIdsByOwner.keys()))
   if (composedError) throw new Error(composedError.message)
+  const composedByOwner = new Map<string, { publicDeckIds: string[] }[]>()
   for (const guide of (composedGuides ?? []) as { user_id: string; guide_decks: { recipe_id: string }[] | null }[]) {
-    const publicDecks = new Set((guide.guide_decks ?? []).map((deck) => deck.recipe_id).filter((id) => publicRecipeIds.has(id)))
-    if (publicDecks.size < 2) continue
-    countByOwner.set(guide.user_id, (countByOwner.get(guide.user_id) ?? 0) + 1)
+    const publicDeckIds = (guide.guide_decks ?? []).map((deck) => deck.recipe_id).filter((id) => publicRecipeIds.has(id))
+    composedByOwner.set(guide.user_id, [...(composedByOwner.get(guide.user_id) ?? []), { publicDeckIds }])
+  }
+  for (const [ownerId, ownerRecipeIds] of recipeIdsByOwner) {
+    countByOwner.set(ownerId, countCreatorCollection(ownerRecipeIds, composedByOwner.get(ownerId) ?? []))
   }
 
   const allRecipeIds = recipes.map((recipe) => recipe.id)
