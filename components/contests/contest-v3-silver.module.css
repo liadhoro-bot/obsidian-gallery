@@ -1154,12 +1154,22 @@
   margin: auto;
   width: calc(100% - 24px);
   max-width: 520px;
-  max-height: 90dvh;
+  /* Not 90dvh: some iPhone views (home-screen app, in-app browsers) report a
+     tiny dynamic viewport, which squeezed the ballot down to its header and
+     buttons. vh is the steadiest viewport unit on iOS. */
+  max-height: calc(100vh - 48px);
   border-radius: var(--og-radius-l);
   color: var(--og-text-primary);
   padding: 0;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* The choices list takes its natural height and only scrolls when the
+     screen is too short for the whole ballot. */
+  display: flex;
+  flex-direction: column;
 }
+
+.ballotDialog > .modalHeader,
+.ballotDialog > .ballotFooter { flex: none; }
+.ballotDialog > .modalList { flex: 0 1 auto; min-height: 0; }
 
 .ballotDialog:not([open]) { display: none; }
 .ballotDialog::backdrop { background: rgb(0 0 0 / 70%); }
