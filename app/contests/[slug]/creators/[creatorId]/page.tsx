@@ -74,6 +74,15 @@ export default async function ContestCreatorGuidesPage({ params, searchParams }:
     creatorName = profile?.username || creatorName
   }
   const description = hideIdentity ? null : creatorProfiles.get(creatorId)?.description
+  // Guides the organizer ordered come first, in that order; the rest keep theirs.
+  const guideOrder = creatorProfiles.get(creatorId)?.guideOrder ?? []
+  const orderedGuides = guideOrder.length
+    ? [...guides].sort((first, second) => {
+      const a = guideOrder.indexOf(first.id)
+      const b = guideOrder.indexOf(second.id)
+      return (a === -1 ? guideOrder.length : a) - (b === -1 ? guideOrder.length : b)
+    })
+    : guides
   const returnPath = `/contests/${contest.slug}/creators/${creatorId}`
   const gate = gateVariant ? { variant: gateVariant, returnPath, creatorName } : undefined
   // Visitors can't open the Entries tab yet, so send them straight to the
@@ -120,7 +129,7 @@ export default async function ContestCreatorGuidesPage({ params, searchParams }:
         ) : null}
         {voteCta}
         <LibrarySection title="Public Guides">
-          {guides.length ? guides.map((guide) => isMember
+          {orderedGuides.length ? orderedGuides.map((guide) => isMember
             ? <CompactGuideCard key={guide.id} guide={guide} />
             : <SharedCompactGuideCard key={guide.id} guide={guide} />) : (
             <p className="px-4 py-6 text-sm">This creator has no public guides right now.</p>

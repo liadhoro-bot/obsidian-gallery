@@ -826,6 +826,8 @@ export type GuideCreatorLeaderboardEntry = {
 export type ContestCreatorProfile = {
   description: string | null
   coverRecipeId: string | null
+  // Guide ids the organizer wants first on the creator page, in order.
+  guideOrder: string[]
 }
 
 // Organizer-curated creator descriptions and entry covers. Returns an empty map
@@ -833,7 +835,7 @@ export type ContestCreatorProfile = {
 export async function getContestCreatorProfiles(contestId: string) {
   const { data, error } = await createServiceRoleClient()
     .from('contest_creator_profiles')
-    .select('owner_user_id, description, cover_recipe_id')
+    .select('owner_user_id, description, cover_recipe_id, guide_order')
     .eq('contest_id', contestId)
   const profiles = new Map<string, ContestCreatorProfile>()
   if (error) {
@@ -844,6 +846,7 @@ export async function getContestCreatorProfiles(contestId: string) {
     profiles.set(row.owner_user_id, {
       description: row.description?.trim() || null,
       coverRecipeId: row.cover_recipe_id,
+      guideOrder: row.guide_order ?? [],
     })
   }
   return profiles
