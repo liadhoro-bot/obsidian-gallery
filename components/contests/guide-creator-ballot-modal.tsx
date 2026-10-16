@@ -107,7 +107,10 @@ export default function GuideCreatorBallotModal({ contest, creators, initialPick
         setSubmitted(true)
         router.refresh()
       } catch {
-        setError('We could not confirm your vote. Refresh My Activity to check whether it was recorded before trying again.')
+        // The request itself failed (signed out, page older than the app, or a
+        // network drop), so nothing came back to say whether it was saved.
+        setError('Your vote didn’t go through. Reload the page and try again. If it was saved, the page will show that you’ve voted.')
+        router.refresh()
       }
     })
   }

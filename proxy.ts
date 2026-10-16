@@ -144,6 +144,7 @@ export default async function proxy(request: NextRequest) {
       pathname
     )
 
+  const isContestCreatorPage = /^\/contests\/[^/]+\/creators\/[0-9a-f-]{36}\/?$/i.test(pathname)
   const isPublicRoute = isServerActionRequest
     ? isPrePaymentPage
     : isPrePaymentPage ||
@@ -151,7 +152,7 @@ export default async function proxy(request: NextRequest) {
     // Contest creator pages are shareable like /s/ links: visitors get a
     // read-only page with a login / trial dialog. Voting (a Server Action)
     // still goes through the gate, since only pre-payment pages run actions.
-    /^\/contests\/[^/]+\/creators\/[0-9a-f-]{36}\/?$/i.test(pathname) ||
+    isContestCreatorPage ||
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname === '/api/youtube-oembed' ||
@@ -176,6 +177,10 @@ export default async function proxy(request: NextRequest) {
     pathname === '/onboarding' ||
     pathname === '/subscribe' ||
     pathname === '/trial' ||
+    // Signed-in voters need a refreshed session here: the page's vote is a
+    // Server Action, and a session the page refreshed but couldn't save
+    // would leave that POST signed out.
+    isContestCreatorPage ||
     shouldRequireAuthenticatedPreview
 
   if (!shouldCheckSession) {
@@ -277,7 +282,9 @@ export default async function proxy(request: NextRequest) {
   const hasAcceptedTerms =
     hasTrustedTermsSignal || Boolean(profileResult?.data?.terms_accepted_at)
 
-  if (!hasAcceptedTerms && (!isPublicRoute || shouldRequireAuthenticatedPreview)) {
+  // Signed-in users finish onboarding before a creator page too, since
+  // voting from it requires accepted terms.
+  if (!hasAcceptedTerms && (!isPublicRoute || shouldRequireAuthenticatedPreview || isContestCreatorPage)) {
     return finalizeResponse(
       NextResponse.redirect(new URL('/onboarding', request.url))
     )
