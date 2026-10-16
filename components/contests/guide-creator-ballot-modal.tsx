@@ -158,6 +158,7 @@ export default function GuideCreatorBallotModal({ contest, creators, initialPick
                 `${getOrdinal(index + 2)} gets ${pointsLabel(getRankedPoints(places, index + 2))}`
               ).join(', and ')}.
               {hasOwnEntry ? ' You cannot vote for yourself.' : ''}
+              {contest.allow_ballot_changes ? '' : ' Your vote is final once you submit it.'}
             </p>
             {eligible.length < places ? (
               <p role="status">There are not enough eligible creators to cast your ballot yet.</p>

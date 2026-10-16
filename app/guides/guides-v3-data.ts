@@ -811,8 +811,10 @@ export const getGuidesV3Payload = cache(async (
 
 // Load the creator's entire public collection, independently of Discover's
 // global limit. Keep the same thumbnail, guide mapping and social state.
-export async function getCreatorPublicGuides(creatorId: string, viewerId: string) {
-  const supabase = await createClient()
+// `shared` reads for a logged-out or non-member visitor (the public contest
+// creator page): it bypasses RLS, so only public guides and public decks are kept.
+export async function getCreatorPublicGuides(creatorId: string, viewerId: string, { shared = false } = {}) {
+  const supabase = shared ? createSharedReadClient() : await createClient()
   const result: GuidesV3GuideFile[] = []
   const listedGuides: GuideRow[] = []
   const pageSize = 100
@@ -832,7 +834,7 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
     listedGuides.push(...publicGuides)
     const recipesByGuideId = new Map<string, RecipeRow[]>()
     for (const guide of publicGuides) {
-      const recipes = memberRecipesOf(guide)
+      const recipes = memberRecipesOf(guide).filter((recipe) => !shared || recipe.is_public)
       if (recipes.length) recipesByGuideId.set(guide.id, recipes)
     }
     const recipes = Array.from(
@@ -842,7 +844,8 @@ export async function getCreatorPublicGuides(creatorId: string, viewerId: string
     const [statsByRecipeId, imageByRecipeId, socialByRecipeId] = await Promise.all([
       loadRecipeStats(supabase, recipeIds),
       loadRecipeImages(supabase, recipes),
-      loadRecipeSocialCounts(supabase, recipeIds, viewerId),
+      // Visitors get no like/save actions, so skip the viewer's social state.
+      shared ? Promise.resolve(new Map<string, never>()) : loadRecipeSocialCounts(supabase, recipeIds, viewerId),
     ])
     for (const guide of publicGuides) {
       const memberRecipes = recipesByGuideId.get(guide.id)

@@ -195,6 +195,25 @@ export async function getContestBySlug(slug: string) {
   return (data ?? null) as Contest | null
 }
 
+// For logged-out visitors (public contest creator pages): reads bypass RLS,
+// so only published contests that any account may open are returned - public
+// or unlisted ones, and private ones open to every signed-in user.
+export async function getPublicContestBySlug(slug: string) {
+  const { data, error } = await createServiceRoleClient()
+    .from('contests')
+    .select(contestSelect)
+    .eq('slug', slug)
+    .eq('publication_status', 'published')
+    .maybeSingle()
+  if (isContestSchemaMissing(error)) return null
+  if (error) throw new Error(error.message)
+  const contest = (data ?? null) as Contest | null
+  if (!contest) return null
+  const openToAnyAccount = ['public', 'unlisted'].includes(contest.visibility)
+    || (contest.visibility === 'private' && contest.voter_access_mode === 'public_authenticated')
+  return openToAnyAccount ? contest : null
+}
+
 export async function getContestById(id: string) {
   if (shouldShowDemoContest() && id === DEMO_CONTEST_ID) {
     return getDemoContest()
@@ -833,9 +852,11 @@ export async function getContestCreatorProfiles(contestId: string) {
 export async function getPublicGuideCreatorLeaderboard(
   hideIdentity?: boolean,
   viewerId?: string | null,
-  contestId?: string
+  contestId?: string,
+  // Read for a logged-out visitor; every query below already limits itself to public guides.
+  shared = false
 ): Promise<GuideCreatorLeaderboardEntry[]> {
-  const supabase = await createClient()
+  const supabase = shared ? createServiceRoleClient() : await createClient()
   const profilesPromise = contestId ? getContestCreatorProfiles(contestId) : Promise.resolve(new Map<string, ContestCreatorProfile>())
   const { data: publicRecipes, error } = await supabase
     .from('recipes')

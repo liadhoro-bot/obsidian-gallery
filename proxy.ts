@@ -148,6 +148,10 @@ export default async function proxy(request: NextRequest) {
     ? isPrePaymentPage
     : isPrePaymentPage ||
     pathname.startsWith('/s/') ||
+    // Contest creator pages are shareable like /s/ links: visitors get a
+    // read-only page with a login / trial dialog. Voting (a Server Action)
+    // still goes through the gate, since only pre-payment pages run actions.
+    /^\/contests\/[^/]+\/creators\/[0-9a-f-]{36}\/?$/i.test(pathname) ||
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname === '/api/youtube-oembed' ||

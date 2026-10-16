@@ -742,6 +742,11 @@
   font-size: 0.98rem;
 }
 
+.ctaButtonFull:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .stepList {
   display: grid;
   gap: 12px;

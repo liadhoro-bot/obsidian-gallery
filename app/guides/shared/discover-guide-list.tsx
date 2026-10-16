@@ -22,6 +22,20 @@ export function CompactGuideCard({ guide }: { guide: GuidesV3GuideFile }) {
     </div>
   </article>
 }
+// For logged-out visitors (public contest creator pages): opens the guide's
+// public share page, with no like/save actions.
+export function SharedCompactGuideCard({ guide }: { guide: GuidesV3GuideFile }) {
+  return <article data-v3-guides-indicator="compact-guide-card" className="overflow-hidden rounded-[12px] border px-3 py-3 shadow-sm">
+    <GuideCardSummary guide={guide} href={`/s/guides/${guide.id}?view=1`} />
+
+    <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-black/10 pt-2" data-v3-guides-indicator="list-card-actions">
+      <ViewCardsLink href={`/s/guides/${guide.id}?view=1`} title={guide.title} />
+      <span className="h-6 w-px shrink-0 bg-black/12" aria-hidden="true" />
+      <Link href={`/s/guides/${guide.id}`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><InfoIcon /> Info</Link>
+    </div>
+  </article>
+}
+
 // Thumbnail, creator, title and description - shared by Discover and the
 // Guides tab so both read the same. Opens the guide via `href`, or runs
 // `onClick` (unsaved drafts). The creator row is its own link, so it sits

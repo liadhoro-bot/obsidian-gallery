@@ -176,6 +176,18 @@ export default function ContestDetailTabs({
     phase === 'submissions_open' &&
     !hasReachedNominationLimit
   const myGuideCount = guideCreatorLeaderboard.find((entry) => entry.isViewer)?.guideCount ?? 0
+  const hasVoted = ballot?.status === 'submitted'
+  // Creator-vote contests point every tab at the ballot while voting is open.
+  const voteNowButton = isGuideCreatorContest && votingIsOpen && viewerUserId && isEligibleParticipant ? (
+    <button
+      type="button"
+      className={`${styles.brassButton} ${styles.ctaButtonFull}`}
+      disabled={hasVoted}
+      onClick={() => setIsBallotModalOpen(true)}
+    >
+      {hasVoted ? 'You have already voted' : 'Vote now'}
+    </button>
+  ) : null
 
   function cycleSort() {
     setSort((current) => (current === 'newest' ? 'title' : 'newest'))
@@ -260,7 +272,9 @@ export default function ContestDetailTabs({
                 />
               ))}
             </div>
-            {isGuideAutoNominate ? (
+            {isGuideAutoNominate && voteNowButton ? (
+              voteNowButton
+            ) : isGuideAutoNominate ? (
               <Link
                 href={guideCreationHref}
                 className={`${styles.brassButton} ${styles.ctaButtonFull}`}
@@ -316,6 +330,7 @@ export default function ContestDetailTabs({
               </button>
             ) : null}
           </div>
+          {voteNowButton}
 
           {nomineeType === 'guide' ? (
             sortedGuideCreatorLeaderboard.length === 0 ? (
