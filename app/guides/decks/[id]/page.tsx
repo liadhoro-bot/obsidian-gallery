@@ -27,7 +27,7 @@ import DeckShareMenu, { type ShareCardEntry } from '../../shared/deck-share-menu
 
 type DeckDetailPageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ edit?: string; preview?: string }>
+  searchParams?: Promise<{ edit?: string; preview?: string; addCard?: string; card?: string }>
 }
 
 type DeckGuidePaint = {
@@ -125,7 +125,7 @@ export default async function DeckDetailPage({
   const perf = createPerfTimer('/guides/decks/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} as { edit?: string; preview?: string }),
+    searchParams ?? Promise.resolve({} as { edit?: string; preview?: string; addCard?: string; card?: string }),
   ])
   const isEditing = resolvedSearchParams.edit === '1'
 
@@ -155,6 +155,21 @@ export default async function DeckDetailPage({
 
   if (!deck) notFound()
 
+  // A guide's inline deck holds that guide's direct cards: viewing opens the
+  // guide; editing edits just those cards and returns to the guide.
+  const { data: inlineRow } = await supabase
+    .from('recipes')
+    .select('inline_guide_id, user_id, inline_guide:guides!recipes_inline_guide_id_fkey(user_id, title)')
+    .eq('id', id)
+    .maybeSingle()
+  const inlineGuideRow = Array.isArray(inlineRow?.inline_guide) ? inlineRow.inline_guide[0] : inlineRow?.inline_guide
+  const inlineGuide = inlineRow?.inline_guide_id && inlineGuideRow?.user_id === inlineRow.user_id
+    ? { id: inlineRow.inline_guide_id as string, title: (inlineGuideRow?.title as string | null | undefined)?.trim() || 'Untitled Guide' }
+    : undefined
+  if (inlineGuide && !(isEditing && deck.isOwner)) {
+    redirect(`/guides/${inlineGuide.id}?preview=1&view=1`)
+  }
+
   if (isEditing && !deck.isOwner) {
     // Only the creator may edit a deck. A viewer who merely saved/bookmarked
     // it (or is looking at any other public deck) gets bounced to the
@@ -175,6 +190,9 @@ export default async function DeckDetailPage({
         <DeckEditPageClient
           deck={deck}
           featureGuides={featureGuides}
+          inlineGuide={inlineGuide}
+          openAddCard={resolvedSearchParams.addCard === '1'}
+          openCardId={resolvedSearchParams.card}
           initialInventoryNotes={notesRow?.inventory_required ?? ''}
           initialExpertTips={notesRow?.expert_tips ?? ''}
         />
@@ -339,7 +357,7 @@ export default async function DeckDetailPage({
       <DeckCardViewer
         cards={cards}
         title={deck.title}
-        backHref="/guides?preview=1&tab=decks"
+        backHref="/guides?preview=1&tab=guides"
         featureGuides={featureGuides}
         heroActions={heroActions}
       />

@@ -1,10 +1,11 @@
 'use client'
 
 import GuideBackButton from '../../shared/guide-back-button'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode, WheelEvent } from 'react'
 import FeatureGuideLauncher from '../../../components/feature-guide-launcher'
 import type { FeatureGuideEntry } from '../../../components/feature-guide-types'
+import { GuideCardNavigationContext } from '../../shared/guide-card-navigation'
 import styles from './deck-card-viewer.module.css'
 
 export type DeckCardEntry = {
@@ -37,13 +38,28 @@ export default function DeckCardViewer({
   const wheelLocked = useRef(false)
   const totalCards = cards.length
 
+  // Long jumps (e.g. from a Guide Index row) cut instead of sliding past
+  // unrendered slides.
+  const [instantJump, setInstantJump] = useState(false)
+
   const goPrevious = useCallback(() => {
+    setInstantJump(false)
     setActiveIndex((current) => Math.max(current - 1, 0))
   }, [])
 
   const goNext = useCallback(() => {
+    setInstantJump(false)
     setActiveIndex((current) => Math.max(0, Math.min(current + 1, totalCards - 1)))
   }, [totalCards])
+
+  const navigation = useMemo(() => ({
+    goToCard: (key: string) => {
+      const index = cards.findIndex(card => card.key === key)
+      if (index < 0) return
+      setInstantJump(Math.abs(index - activeIndex) > 1)
+      setActiveIndex(index)
+    },
+  }), [cards, activeIndex])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -139,7 +155,8 @@ export default function DeckCardViewer({
           )
         }
         onPointerDown={(event) => {
-          if (event.pointerType !== 'touch') {
+          // Capturing would retarget the click away from in-card controls (e.g. index rows).
+          if (event.pointerType !== 'touch' && !(event.target as Element).closest('button, a')) {
             event.currentTarget.setPointerCapture(event.pointerId)
             handleSwipeStart(event.clientX, event.clientY)
           }
@@ -157,9 +174,10 @@ export default function DeckCardViewer({
           if (event.pointerType !== 'touch') handleSwipeEnd()
         }}
       >
+        <GuideCardNavigationContext value={navigation}>
         <div
           className={styles.trackInner}
-          style={{ transform: `translateX(-${activeIndex * 100}%)` }}
+          style={{ transform: `translateX(-${activeIndex * 100}%)`, transition: instantJump ? 'none' : undefined }}
         >
           {cards.map((card, index) => (
             <div
@@ -172,6 +190,7 @@ export default function DeckCardViewer({
             </div>
           ))}
         </div>
+        </GuideCardNavigationContext>
       </div>
     </div>
   )

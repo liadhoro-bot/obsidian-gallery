@@ -70,3 +70,15 @@ test('the page list and the entry-card count always agree, and no deck is listed
     assert.deepEqual([...singleDeckShown].sort(), [...decks].sort(), `run ${run}: each deck must be shown exactly once`)
   }
 })
+
+test('a guide with direct cards is one collection item and its inline deck is never a deck', () => {
+  const withCards = (id: string, ...decks: string[]): CollectionGuide => ({ id, isAuto: false, publicDeckIds: decks, hasPublicInline: true })
+  // Direct cards plus one reused deck: the guide is listed beside that deck.
+  assert.deepEqual(ids([withCards('own', 'a'), auto('auto-a', 'a')]), ['own', 'auto-a'])
+  assert.equal(countCreatorCollection(['a'], [{ publicDeckIds: ['a'], hasPublicInline: true }]), 2)
+  // Direct cards only: the guide alone.
+  assert.deepEqual(ids([withCards('only-cards')]), ['only-cards'])
+  assert.equal(countCreatorCollection([], [{ publicDeckIds: [], hasPublicInline: true }]), 1)
+  // Without public direct cards nothing changes.
+  assert.equal(countCreatorCollection(['a'], [{ publicDeckIds: ['a'], hasPublicInline: false }]), 1)
+})

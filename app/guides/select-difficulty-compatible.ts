@@ -9,7 +9,7 @@ export async function selectDifficultyCompatible<T extends { error: QueryError |
   let compatibleSelection = selection
   let result = await query(compatibleSelection)
 
-  const optionalFields = ['difficulty', 'tags'] as const
+  const optionalFields = ['difficulty', 'tags', 'primary_recipe_id', 'inline_guide_id'] as const
   for (let attempt = 0; attempt < optionalFields.length; attempt += 1) {
     const error = result.error
     const field = optionalFields.find((candidate) => error && (

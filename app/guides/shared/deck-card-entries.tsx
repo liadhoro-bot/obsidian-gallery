@@ -18,7 +18,10 @@ import {
   RecipeGuideThemeStepCard,
   RecipeGuideVideoCard,
 } from '../shared/recipe-guide-cards'
+import type { ReactNode } from 'react'
 import type { GuidesV3DeckDetail, GuidesV3DeckStep } from '../guides-v3-detail-data'
+import { guideCardKey, guideIndexEntries, isGuideCoverCard, isGuideIndexCard, isGuideOwnedCard, type GuideCardPlacement } from './guide-card-layout'
+import { GuideIndexCard } from './guide-index-card'
 
 function isUsableImageUrl(value?: string | null) {
   const url = typeof value === 'string' ? value.trim() : ''
@@ -188,4 +191,48 @@ export function deckCardEntries(deck: GuidesV3DeckDetail) {
         ]
 
   return cardNodes
+}
+
+// The guide's own details, for its Cover cards.
+export type GuideCoverDetails = { id: string; title: string; description: string; image: string | null; isPublic?: boolean }
+
+// Every renderable card of a guide keyed by guideCardKey: the member decks'
+// own cards plus the guide-owned index and cover cards.
+export function guideCardNodes(decks: GuidesV3DeckDetail[], cards: GuideCardPlacement[], guide?: GuideCoverDetails) {
+  const nodes = new Map<string, ReactNode>(decks.flatMap(deck => deckCardEntries(deck).map(card => [deck.id + ':' + card.key, card.node] as const)))
+  const indexCards = cards.filter(isGuideIndexCard)
+  if (indexCards.length) {
+    const entries = guideIndexEntries(decks, cards)
+    for (const index of indexCards) nodes.set(guideCardKey(index), <GuideIndexCard entries={entries} />)
+  }
+  const coverCards = cards.filter(isGuideCoverCard)
+  if (coverCards.length && guide) {
+    const node = guideCoverNode(guide, decks, cards)
+    for (const cover of coverCards) nodes.set(guideCardKey(cover), node)
+  }
+  return nodes
+}
+
+function guideCoverNode(guide: GuideCoverDetails, decks: GuidesV3DeckDetail[], cards: GuideCardPlacement[]) {
+  const recipe: Recipe = {
+    id: guide.id,
+    name: guide.title,
+    description: guide.description,
+    inventory_required: null,
+    expert_tips: null,
+    youtube_url: null,
+    is_public: guide.isPublic ?? false,
+  }
+  const featuredImage: RecipeImage | null = isUsableImageUrl(guide.image)
+    ? { id: `${guide.id}-guide-cover`, image_url: guide.image as string, is_featured: true, alt_text: guide.title, focal_x: 50, focal_y: 50 }
+    : null
+  const paintIds = new Set(decks.flatMap((deck) => deck.paintList.map((paint) => paint.id)))
+  return (
+    <RecipeGuideCoverCard
+      recipe={recipe}
+      featuredImage={featuredImage}
+      cardCount={cards.filter((card) => !card.hidden && !isGuideOwnedCard(card)).length}
+      paintCount={paintIds.size}
+    />
+  )
 }

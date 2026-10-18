@@ -29,16 +29,25 @@ before(async () => {
           const cards=deckCardEntries({...decks[0],title:longTitle,steps:['step','image','small-image','theme','theme-alt','paints','video'].map((t,i)=>step('t'+i,t))});
           return <div>{cards.map(c=><div data-test-card={c.key} key={c.key} style={{width:'min(360px, 100vw)',aspectRatio:'9/16',margin:'20px auto'}}>{c.node}</div>)}</div>
         }
-        return <GuideEditor guide={{id:'g',title:'Guide',subtitle:'A guide',deckIds:['a','b']}} memberDecks={decks} availableDecks={availableDecks} deckDetails={decks} initialCoverImage='/image.svg' featureGuides={[]} backHref='/guides?tab=decks' onSaveDraft={async payload=>{window.saved=payload;window.afterSources=JSON.stringify(decks);return true}} />
+        if(location.pathname==='/inline') {
+          const own={...deck('own',[step('x'),step('y')]),title:'Own cards',coverPosition:null,isInline:true}; window.ownDeck=own;
+          const all=[...decks,own];
+          const layout=[{deckId:'own',cardId:'x',groupId:'own',hidden:false},{deckId:'b',cardId:'cover',groupId:'b',hidden:false},{deckId:'b',cardId:'three',groupId:'b',hidden:false},{deckId:'own',cardId:'y',groupId:'own',hidden:false}];
+          return <GuideEditor guide={{id:'g',title:'Guide',subtitle:'A guide',deckIds:['a','b','own'],cardLayout:layout}} memberDecks={all} availableDecks={availableDecks} deckDetails={all} initialCoverImage='/image.svg' featureGuides={[]} backHref='/guides' onSaveDraft={async payload=>{window.saved=payload;return true}} />
+        }
+        return <GuideEditor guide={{id:'g',title:'Guide',subtitle:'A guide',deckIds:['a','b'],cardLayout:[{deckId:'a',cardId:'two',groupId:'b',hidden:false}]}} memberDecks={decks} availableDecks={availableDecks} deckDetails={decks} initialCoverImage='/image.svg' featureGuides={[]} backHref='/guides?tab=decks' onSaveDraft={async payload=>{window.saved=payload;window.afterSources=JSON.stringify(decks);return true}} />
       }
       createRoot(document.getElementById('root')).render(<App/>);
     ` },
     bundle:true, write:false, outdir:'tests/.guide-ui-bundle', platform:'browser', format:'iife', jsx:'automatic',
     plugins:[{name:'next-test-adapters', setup(b){
-      b.onResolve({filter:/^(next\/image|.*navigation-link|.*navigation-provider|.*feature-guide-launcher|.*\/actions)$/}, a=>({path:a.path,namespace:'adapter'}))
+      b.onResolve({filter:/^(server-only|next\/image|.*navigation-link|.*navigation-provider|.*feature-guide-launcher|.*\/actions|.*\/assignment-actions)$/}, a=>({path:a.path,namespace:'adapter'}))
       b.onLoad({filter:/.*/,namespace:'adapter'}, a=>({loader:'tsx',resolveDir:process.cwd(),contents:
-        a.path.endsWith('/actions') ? 'export async function loadGuideEditorDeck(){throw new Error("Unexpected remote call")} export async function toggleRecipeLike(){return {active:true}} export async function toggleRecipeSave(){return {active:true}}' :
-        a.path.includes('navigation-provider') ? 'export function useRouter(){return {back:()=>history.back(),push:href=>location.assign(href)}}' :
+        // Server-only guards are irrelevant in this browser bundle.
+        a.path==='server-only' ? '' :
+        a.path.endsWith('/assignment-actions') ? 'export async function getAssignmentTargets(){return []} export async function setContentAssignments(){return {}} export async function getTargetAssignmentLibrary(){return []} export async function setTargetAssignments(){return {}}' :
+        a.path.endsWith('/actions') ? 'export async function addInlineGuideCard(id,template){window.addedCard={id,template};const own=window.ownDeck;return {deckId:"own",stepId:"z",deck:{...own,steps:[...own.steps,{id:"z",number:3,title:"Step Card",template:"step",instructions:"Describe it.",paints:[],image:null,rawImage:null,imageFocalX:50,imageFocalY:50}]}}} export async function updateInlineGuideCard(id,card){window.updatedCard={id,card};const own=window.ownDeck;return {deckId:"own",deck:{...own,steps:own.steps.map(s=>s.id===card.id?{...s,title:card.title,instructions:card.body}:s)}}} export async function deleteInlineGuideCard(id,stepId){window.deletedCard={id,stepId};const own=window.ownDeck;return {deckId:"own",deck:{...own,steps:own.steps.filter(s=>s.id!==stepId)}}} export async function ensureInlineGuideDeck(id){window.ensuredGuide=id;return {deckId:"own"}} export async function createDeckFromForge(input){window.createdInput=input;return {id:"n"}} export async function loadGuideEditorDeck(id){if(id!=="n")throw new Error("Unexpected remote call");return {id:"n",title:window.createdInput.title,steps:[],coverPosition:0,image:"/image.svg",description:"A reusable guide.",paintList:[],cards:1,paints:0,isOwner:true,isPublic:false}} export async function toggleRecipeLike(){return {active:true}} export async function toggleRecipeSave(){return {active:true}}' :
+        a.path.includes('navigation-provider') ? 'export function useRouter(){return {back:()=>history.back(),push:href=>{window.pushedHref=href},replace:href=>{window.pushedHref=href}}}' :
         a.path.includes('feature-guide-launcher') ? 'export default function Help(){return null}' :
         a.path==='next/image' ? `import React from 'react'; export default function Image({fill,priority,unoptimized,sizes,...p}){return <img {...p} style={{...p.style,...(fill?{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}:{})}}/>}` :
         `import React from 'react'; export default function Link(p){return <a {...p}/>}`
@@ -55,19 +64,25 @@ before(async () => {
   browser=await chromium.launch({headless:true});mkdirSync('test-results/guide-ui',{recursive:true})
 })
 after(async()=>{await browser?.close();await new Promise(r=>server?server.close(r):r())})
-test('guide editor expands, hides, transfers and saves cards independently of source decks',async()=>{
+test('guide editor expands, hides and saves cards within their nested guide, keeping earlier cross-group placements',async()=>{
   const page=await browser.newPage({viewport:{width:390,height:844}})
-  await page.goto(origin+'/editor');await page.getByRole('tab',{name:'Decks',exact:true}).click()
+  await page.goto(origin+'/editor');await page.getByRole('tab',{name:'Contents',exact:true}).click()
   assert.equal(await page.getByText('First card',{exact:true}).count(),0)
   await page.getByRole('button',{name:'Show cards'}).first().click()
   const card=page.locator('[data-hidden]').filter({has:page.getByText('First card',{exact:true})})
   await card.getByRole('button',{name:'Hide',exact:true}).click()
-  await card.getByRole('combobox').selectOption('b')
+  // No way to send a source card into another nested guide.
+  assert.equal(await page.locator('[data-hidden] select').count(),0)
+  assert.equal(await card.getByRole('button',{name:'Move First card down'}).isDisabled(),true)
+  assert.equal(await card.getByRole('button',{name:'Move First card up'}).isDisabled(),false)
   await page.getByRole('button',{name:'Show cards'}).click()
-  assert.equal(await page.locator('#guide-cards-b [data-guide-card-title]').filter({hasText:'First card'}).count(),1)
+  // A card an earlier editor moved into group b still renders there.
+  assert.equal(await page.locator('#guide-cards-a [data-guide-card-title]').count(),2)
+  assert.equal(await page.locator('#guide-cards-b [data-guide-card-title]').count(),3)
   await page.getByRole('button',{name:'Save',exact:true}).click()
   const saved=await page.evaluate(()=>window.saved)
-  assert.deepEqual(saved.cardLayout.find(c=>c.cardId==='one'),{deckId:'a',cardId:'one',groupId:'b',hidden:true})
+  assert.deepEqual(saved.cardLayout.find(c=>c.cardId==='one'),{deckId:'a',cardId:'one',groupId:'a',hidden:true})
+  assert.deepEqual(saved.cardLayout.find(c=>c.cardId==='two'),{deckId:'a',cardId:'two',groupId:'b',hidden:false})
   assert.equal(await page.evaluate(()=>window.sources===window.afterSources),true)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
   await page.screenshot({path:'test-results/guide-ui/editor-mobile.png',fullPage:true})
@@ -89,8 +104,9 @@ test('add-deck picker keeps actions compact without squeezing deck titles', asyn
   const page=await browser.newPage()
   for(const width of [390,1280]) {
     await page.setViewportSize({width,height:900});await page.goto(origin+'/editor')
-    await page.getByRole('tab',{name:'Decks',exact:true}).click()
-    await page.getByRole('button',{name:'Add Decks',exact:true}).click()
+    await page.getByRole('tab',{name:'Contents',exact:true}).click()
+    await page.getByRole('button',{name:'+ Add',exact:true}).click()
+    await page.getByRole('button',{name:'Add Existing Guide',exact:true}).click()
     const dialog=page.getByRole('dialog')
     const row=dialog.locator('article').filter({has:page.getByText('Second deck',{exact:true})})
     const dimensions=await row.evaluate((node)=>{
@@ -105,6 +121,122 @@ test('add-deck picker keeps actions compact without squeezing deck titles', asyn
   }
   await page.close()
 })
+test('+ Add offers one entry point and New Guide places a new reusable guide', async()=>{
+  const page=await browser.newPage({viewport:{width:390,height:844}})
+  await page.goto(origin+'/editor');await page.getByRole('tab',{name:'Contents',exact:true}).click()
+  assert.equal(await page.getByRole('button',{name:'Add Existing Guide',exact:true}).count(),0)
+  await page.getByRole('button',{name:'+ Add',exact:true}).click()
+  const menu=page.getByRole('dialog',{name:'Add to this guide'})
+  assert.deepEqual(await menu.locator('[class*="cardName"]').allTextContents(),['New Card','Existing Guide','New Guide'])
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+  await page.screenshot({path:'test-results/guide-ui/add-menu-mobile.png',fullPage:true})
+  await menu.getByRole('button',{name:'Add New Guide',exact:true}).click()
+  const form=page.getByRole('dialog',{name:'New guide'})
+  assert.equal(await form.getByRole('button',{name:'Create and Add'}).isDisabled(),true)
+  await form.getByLabel('Guide name').fill('Forgotten Tomb Gold')
+  await form.getByRole('button',{name:'Create and Add'}).click()
+  await page.getByRole('dialog').waitFor({state:'detached'})
+  assert.equal(await page.evaluate(()=>window.createdInput.status),'Private')
+  assert.equal(await page.locator('[class*="guideDeckRow"] [class*="cardName"]').filter({hasText:'Forgotten Tomb Gold'}).count(),1)
+  await page.getByRole('button',{name:'Save',exact:true}).click()
+  assert.deepEqual((await page.evaluate(()=>window.saved)).deckIds,['a','b','n'])
+  await page.close()
+})
+
+test('direct cards sit between nested guides, reorder at top level, and never show as a nested guide', async()=>{
+  const page=await browser.newPage({viewport:{width:390,height:844}})
+  await page.goto(origin+'/inline');await page.getByRole('tab',{name:'Contents',exact:true}).click()
+  const rows=page.locator('[class*="cardList"] > *')
+  const labels=async()=>rows.evaluateAll(nodes=>nodes.map(node=>node.querySelector(':scope > [class*="cardInfo"] [class*="cardName"], :scope > [class*="guideCardInfo"] [data-guide-card-title]').textContent))
+  // x (direct), b (nested), y (direct), a (nested, no saved cards -> appended block).
+  assert.deepEqual(await labels(),['Painting the Ancient Crimson Warriors of the Northern Kingdom','Second deck','Painting the Ancient Crimson Warriors of the Northern Kingdom','First deck'])
+  assert.equal(await page.getByText('Own cards',{exact:true}).count(),0)
+  assert.equal(await rows.nth(0).getByRole('button',{name:/^Edit /}).count(),1)
+  // Direct cards use the nested-card row: a preview, no sequence numbers.
+  assert.equal(await rows.nth(0).locator(':scope > [class*="guideCardPreview"]').count(),1)
+  assert.equal(await page.locator('[class*="cardList"] > * > [class*="cardNumber"]').count(),0)
+  const titleBox=await rows.nth(0).locator('[data-guide-card-title]').boundingBox()
+  assert.ok(titleBox.width>120,JSON.stringify(titleBox))
+  // Move the first direct card below the nested guide b.
+  await rows.nth(0).getByRole('button',{name:/ down$/}).press('Enter')
+  assert.deepEqual(await labels(),['Second deck','Painting the Ancient Crimson Warriors of the Northern Kingdom','Painting the Ancient Crimson Warriors of the Northern Kingdom','First deck'])
+  await page.getByRole('button',{name:'Save',exact:true}).click()
+  const saved=await page.evaluate(()=>window.saved)
+  assert.deepEqual(saved.deckIds,['b','a','own'])
+  assert.deepEqual(saved.cardLayout.map(c=>c.cardId).slice(0,4),['cover','three','x','y'])
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+  await page.screenshot({path:'test-results/guide-ui/direct-cards-mobile.png',fullPage:true})
+  // New Card picks a type right here and adds it to the guide - no other editor.
+  await page.getByRole('button',{name:'+ Add',exact:true}).click()
+  await page.getByRole('button',{name:'Add New Card',exact:true}).click()
+  const types=page.getByRole('dialog',{name:'Add New Card'})
+  const typeNames=await types.locator('button strong').allTextContents()
+  assert.deepEqual(typeNames,['Cover Card','Index Card','Step Card','Theme Card','Big Image Card','Small Image Card','Paints Card','Video Card'])
+  assert.equal(await types.getByRole('button',{name:/Index Card/}).isDisabled(),false)
+  assert.equal(typeNames.some(name=>name.includes('Type A')),false)
+  await types.getByRole('button',{name:/Step Card/}).click()
+  await page.getByRole('dialog').waitFor({state:'detached'})
+  assert.deepEqual(await page.evaluate(()=>window.addedCard),{id:'g',template:'step'})
+  assert.equal(await page.evaluate(()=>window.pushedHref),undefined)
+  assert.equal((await labels()).at(-1),'Step Card')
+  // Index Cards: as many as the creator wants, always under New Card.
+  for (let round=0; round<2; round+=1) {
+    await page.getByRole('button',{name:'+ Add',exact:true}).click()
+    await page.getByRole('button',{name:'Add New Card',exact:true}).click()
+    await page.getByRole('dialog',{name:'Add New Card'}).getByRole('button',{name:/Index Card/}).click()
+  }
+  assert.equal(await page.locator('[data-top-level-card] [data-guide-card-title]').filter({hasText:'Guide Index'}).count(),2)
+  // Cover Card: the guide's own cover, titled with the guide's name.
+  await page.getByRole('button',{name:'+ Add',exact:true}).click()
+  await page.getByRole('button',{name:'Add New Card',exact:true}).click()
+  await page.getByRole('dialog',{name:'Add New Card'}).getByRole('button',{name:/Cover Card/}).click()
+  const coverRow=page.locator('[data-top-level-card]').first()
+  assert.equal(await coverRow.locator('[class*="cardTypeLabel"]').textContent(),'Cover')
+  assert.equal(await coverRow.locator('[data-guide-card-title]').textContent(),'Guide')
+  assert.equal(await coverRow.getByRole('button',{name:'Remove cover'}).count(),1)
+  // Edit sits above Hide on a direct card.
+  const last=rows.last()
+  const editBox=await last.getByRole('button',{name:'Edit Step Card'}).boundingBox()
+  const hideBox=await last.getByRole('button',{name:'Hide Step Card'}).boundingBox()
+  assert.ok(editBox.y+editBox.height<=hideBox.y+1,JSON.stringify({editBox,hideBox}))
+  await page.close()
+})
+
+test('Edit on a direct card opens the card editor in place and saves just that card', async()=>{
+  const page=await browser.newPage({viewport:{width:390,height:844}})
+  await page.goto(origin+'/inline');await page.getByRole('tab',{name:'Contents',exact:true}).click()
+  const rows=page.locator('[class*="cardList"] > *')
+  // Closing without a change saves nothing.
+  await rows.nth(0).getByRole('button',{name:/^Edit /}).click()
+  const sheet=page.getByRole('dialog')
+  assert.equal(await sheet.getByRole('heading',{name:'Edit Step Card'}).count(),1)
+  await sheet.getByRole('button',{name:'Done',exact:true}).click()
+  await sheet.waitFor({state:'detached'})
+  assert.equal(await page.evaluate(()=>window.updatedCard),undefined)
+  // A changed card saves in place through the single-card action.
+  await rows.nth(0).getByRole('button',{name:/^Edit /}).click()
+  await sheet.getByRole('textbox').first().fill('Edited direct card')
+  await sheet.getByRole('button',{name:'Done',exact:true}).click()
+  await sheet.waitFor({state:'detached'})
+  const updated=await page.evaluate(()=>window.updatedCard)
+  assert.equal(updated.id,'g')
+  assert.equal(updated.card.id,'x')
+  assert.equal(updated.card.title,'Edited direct card')
+  assert.equal(updated.card.template,'step')
+  assert.equal(await page.evaluate(()=>window.pushedHref),undefined)
+  assert.equal(await page.getByRole('tab',{name:'Contents',exact:true}).getAttribute('aria-selected'),'true')
+  assert.equal(await rows.nth(0).locator('[data-guide-card-title]').textContent(),'Edited direct card')
+  // Delete Card removes just that card, after a confirmation.
+  page.once('dialog',dialog=>dialog.accept())
+  await rows.nth(0).getByRole('button',{name:/^Edit /}).click()
+  await sheet.getByRole('button',{name:'Delete Card',exact:true}).click()
+  await sheet.waitFor({state:'detached'})
+  assert.deepEqual(await page.evaluate(()=>window.deletedCard),{id:'g',stepId:'x'})
+  assert.equal(await page.locator('[data-top-level-card]').count(),1)
+  await page.screenshot({path:'test-results/guide-ui/direct-card-edit-mobile.png',fullPage:true})
+  await page.close()
+})
+
 test('long titles remain within the card bounds in every template at mobile and desktop widths',async()=>{
   const page=await browser.newPage()
   for(const width of [320,390,1280]) {

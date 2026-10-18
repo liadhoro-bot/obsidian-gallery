@@ -8,9 +8,24 @@ const source = ts.transpileModule(fs.readFileSync(new URL('../../app/guides/guid
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText
 
+function loadModule(path) {
+  const code = ts.transpileModule(fs.readFileSync(new URL(path, import.meta.url), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText
+  const exports = {}
+  vm.runInNewContext(code, { exports, require(name) { throw new Error(name) } })
+  return exports
+}
+
 function fixture(rows, fail = false) {
   const calls = []
-  const client = { from(table) {
+  const client = {
+  // Save totals come from the aggregate recipe_save_counts RPC.
+  rpc(fn) {
+    calls.push({ table: `rpc:${fn}`, filters: [], range: null })
+    return Promise.resolve({ data: [{ recipe_id: 'recipe-0', save_count: 1 }], error: null })
+  },
+  from(table) {
     const call = { table, filters: [], range: null }
     calls.push(call)
     const query = {
@@ -36,7 +51,12 @@ function fixture(rows, fail = false) {
   vm.runInNewContext(source, { exports, require(name) {
     if (name === 'react') return { cache: fn => fn }
     if (name.endsWith('supabase/server')) return { createClient: async () => client }
+    if (name.endsWith('supabase/service-role')) return { createServiceRoleClient: () => client }
+    if (name.endsWith('shared-read-client')) return { createSharedReadClient: () => client }
     if (name.endsWith('supabase-image')) return { getSupabaseImageUrl: url => url }
+    if (name === './select-difficulty-compatible') return { selectDifficultyCompatible: (selection, query) => query(selection) }
+    // The collection rule and social key are the real modules under test.
+    if (name === './shared/creator-collection' || name === './shared/guide-social-deck') return loadModule(`../../app/guides/${name.slice(2)}.ts`)
     throw new Error(name)
   }, URL })
   return { load: exports.getCreatorPublicGuides, calls }
@@ -73,4 +93,17 @@ test('creator collection includes guides beyond Discover and database page limit
 test('empty collections and query failures are handled explicitly', async () => {
   assert.equal((await fixture([]).load('creator', 'viewer')).length, 0)
   await assert.rejects(fixture([], true).load('creator', 'viewer'), /Query failed/)
+})
+
+test('a guide with direct cards is listed once and its inline deck never counts as a deck', async () => {
+  const deck = { id: 'deck-a', user_id: 'creator', name: 'Deck A', description: 'D', image_url: '/a.png', is_public: true }
+  const inline = { id: 'inline-1', user_id: 'creator', name: 'Inline', description: 'I', image_url: null, is_public: true, inline_guide_id: 'with-cards' }
+  const rows = [
+    { id: 'with-cards', user_id: 'creator', title: 'With cards', is_auto: false, guide_decks: [{ position: 0, recipes: deck }, { position: 1, recipes: inline }] },
+    { id: 'auto-a', user_id: 'creator', title: 'Deck A', is_auto: true, guide_decks: [{ position: 0, recipes: deck }] },
+  ]
+  const { load } = fixture(rows)
+  const guides = await load('creator', 'viewer')
+  assert.equal(JSON.stringify(guides.map((item) => item.id)), JSON.stringify(['with-cards', 'auto-a']))
+  assert.equal(guides.find((item) => item.id === 'with-cards').decks, 1)
 })
