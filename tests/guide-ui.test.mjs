@@ -46,7 +46,7 @@ before(async () => {
         // Server-only guards are irrelevant in this browser bundle.
         a.path==='server-only' ? '' :
         a.path.endsWith('/assignment-actions') ? 'export async function getAssignmentTargets(){return []} export async function setContentAssignments(){return {}} export async function getTargetAssignmentLibrary(){return []} export async function setTargetAssignments(){return {}}' :
-        a.path.endsWith('/actions') ? 'export async function addInlineGuideCard(id,template){window.addedCard={id,template};const own=window.ownDeck;return {deckId:"own",stepId:"z",deck:{...own,steps:[...own.steps,{id:"z",number:3,title:"Step Card",template:"step",instructions:"Describe it.",paints:[],image:null,rawImage:null,imageFocalX:50,imageFocalY:50}]}}} export async function ensureInlineGuideDeck(id){window.ensuredGuide=id;return {deckId:"own"}} export async function createDeckFromForge(input){window.createdInput=input;return {id:"n"}} export async function loadGuideEditorDeck(id){if(id!=="n")throw new Error("Unexpected remote call");return {id:"n",title:window.createdInput.title,steps:[],coverPosition:0,image:"/image.svg",description:"A reusable guide.",paintList:[],cards:1,paints:0,isOwner:true,isPublic:false}} export async function toggleRecipeLike(){return {active:true}} export async function toggleRecipeSave(){return {active:true}}' :
+        a.path.endsWith('/actions') ? 'export async function addInlineGuideCard(id,template){window.addedCard={id,template};const own=window.ownDeck;return {deckId:"own",stepId:"z",deck:{...own,steps:[...own.steps,{id:"z",number:3,title:"Step Card",template:"step",instructions:"Describe it.",paints:[],image:null,rawImage:null,imageFocalX:50,imageFocalY:50}]}}} export async function updateInlineGuideCard(id,card){window.updatedCard={id,card};const own=window.ownDeck;return {deckId:"own",deck:{...own,steps:own.steps.map(s=>s.id===card.id?{...s,title:card.title,instructions:card.body}:s)}}} export async function deleteInlineGuideCard(id,stepId){window.deletedCard={id,stepId};const own=window.ownDeck;return {deckId:"own",deck:{...own,steps:own.steps.filter(s=>s.id!==stepId)}}} export async function ensureInlineGuideDeck(id){window.ensuredGuide=id;return {deckId:"own"}} export async function createDeckFromForge(input){window.createdInput=input;return {id:"n"}} export async function loadGuideEditorDeck(id){if(id!=="n")throw new Error("Unexpected remote call");return {id:"n",title:window.createdInput.title,steps:[],coverPosition:0,image:"/image.svg",description:"A reusable guide.",paintList:[],cards:1,paints:0,isOwner:true,isPublic:false}} export async function toggleRecipeLike(){return {active:true}} export async function toggleRecipeSave(){return {active:true}}' :
         a.path.includes('navigation-provider') ? 'export function useRouter(){return {back:()=>history.back(),push:href=>{window.pushedHref=href},replace:href=>{window.pushedHref=href}}}' :
         a.path.includes('feature-guide-launcher') ? 'export default function Help(){return null}' :
         a.path==='next/image' ? `import React from 'react'; export default function Image({fill,priority,unoptimized,sizes,...p}){return <img {...p} style={{...p.style,...(fill?{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}:{})}}/>}` :
@@ -151,7 +151,7 @@ test('direct cards sit between nested guides, reorder at top level, and never sh
   // x (direct), b (nested), y (direct), a (nested, no saved cards -> appended block).
   assert.deepEqual(await labels(),['Painting the Ancient Crimson Warriors of the Northern Kingdom','Second deck','Painting the Ancient Crimson Warriors of the Northern Kingdom','First deck'])
   assert.equal(await page.getByText('Own cards',{exact:true}).count(),0)
-  assert.equal(await rows.nth(0).getByRole('link',{name:/^Edit /}).getAttribute('href'),'/guides/decks/own?preview=1&edit=1&editorTab=cards&card=x')
+  assert.equal(await rows.nth(0).getByRole('button',{name:/^Edit /}).count(),1)
   // Direct cards use the nested-card row: a preview, no sequence numbers.
   assert.equal(await rows.nth(0).locator(':scope > [class*="guideCardPreview"]').count(),1)
   assert.equal(await page.locator('[class*="cardList"] > * > [class*="cardNumber"]').count(),0)
@@ -196,9 +196,44 @@ test('direct cards sit between nested guides, reorder at top level, and never sh
   assert.equal(await coverRow.getByRole('button',{name:'Remove cover'}).count(),1)
   // Edit sits above Hide on a direct card.
   const last=rows.last()
-  const editBox=await last.getByRole('link',{name:'Edit Step Card'}).boundingBox()
+  const editBox=await last.getByRole('button',{name:'Edit Step Card'}).boundingBox()
   const hideBox=await last.getByRole('button',{name:'Hide Step Card'}).boundingBox()
   assert.ok(editBox.y+editBox.height<=hideBox.y+1,JSON.stringify({editBox,hideBox}))
+  await page.close()
+})
+
+test('Edit on a direct card opens the card editor in place and saves just that card', async()=>{
+  const page=await browser.newPage({viewport:{width:390,height:844}})
+  await page.goto(origin+'/inline');await page.getByRole('tab',{name:'Contents',exact:true}).click()
+  const rows=page.locator('[class*="cardList"] > *')
+  // Closing without a change saves nothing.
+  await rows.nth(0).getByRole('button',{name:/^Edit /}).click()
+  const sheet=page.getByRole('dialog')
+  assert.equal(await sheet.getByRole('heading',{name:'Edit Step Card'}).count(),1)
+  await sheet.getByRole('button',{name:'Done',exact:true}).click()
+  await sheet.waitFor({state:'detached'})
+  assert.equal(await page.evaluate(()=>window.updatedCard),undefined)
+  // A changed card saves in place through the single-card action.
+  await rows.nth(0).getByRole('button',{name:/^Edit /}).click()
+  await sheet.getByRole('textbox').first().fill('Edited direct card')
+  await sheet.getByRole('button',{name:'Done',exact:true}).click()
+  await sheet.waitFor({state:'detached'})
+  const updated=await page.evaluate(()=>window.updatedCard)
+  assert.equal(updated.id,'g')
+  assert.equal(updated.card.id,'x')
+  assert.equal(updated.card.title,'Edited direct card')
+  assert.equal(updated.card.template,'step')
+  assert.equal(await page.evaluate(()=>window.pushedHref),undefined)
+  assert.equal(await page.getByRole('tab',{name:'Contents',exact:true}).getAttribute('aria-selected'),'true')
+  assert.equal(await rows.nth(0).locator('[data-guide-card-title]').textContent(),'Edited direct card')
+  // Delete Card removes just that card, after a confirmation.
+  page.once('dialog',dialog=>dialog.accept())
+  await rows.nth(0).getByRole('button',{name:/^Edit /}).click()
+  await sheet.getByRole('button',{name:'Delete Card',exact:true}).click()
+  await sheet.waitFor({state:'detached'})
+  assert.deepEqual(await page.evaluate(()=>window.deletedCard),{id:'g',stepId:'x'})
+  assert.equal(await page.locator('[data-top-level-card]').count(),1)
+  await page.screenshot({path:'test-results/guide-ui/direct-card-edit-mobile.png',fullPage:true})
   await page.close()
 })
 

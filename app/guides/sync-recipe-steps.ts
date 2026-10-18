@@ -126,7 +126,7 @@ export async function syncRecipeSteps<Row extends SyncedStepRow>(
 
 // Returns whether the row was updated. Mirrors insertRecipeSteps: drop only
 // an optional column the database reports as missing, then retry.
-async function updateStep(supabase: SupabaseClient, deckId: string, id: string, fields: Record<string, unknown>) {
+export async function updateStep(supabase: SupabaseClient, deckId: string, id: string, fields: Record<string, unknown>) {
   const values = { ...fields }
   const remaining = new Set<string>(optionalColumns)
   for (;;) {

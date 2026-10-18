@@ -4,12 +4,13 @@ import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-c
 
 import GuideBackButton from '@/app/guides/shared/guide-back-button'
 import { useEditorTab } from '@/app/guides/shared/use-editor-tab'
-import { addInlineGuideCard, createDeckFromForge, loadGuideEditorDeck } from '../actions'
+import { addInlineGuideCard, createDeckFromForge, deleteInlineGuideCard, loadGuideEditorDeck, updateInlineGuideCard } from '../actions'
 import { AddContentSheet, CardTypeSheet } from '../shared/card-type-sheet'
+import { CardEditorSheet, cardEditingHandlers, editorCardFromStep, type CardEditorCard } from '../shared/card-editor-sheet'
+import { hasUnuploadedImage } from '../shared/deck-save-values'
 import { addableCardTypes, cardTypeLabel, isCardTypeId, type CardTypeId } from '../shared/card-templates'
 
 import Image from 'next/image'
-import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
 import { guideCardNodes } from '../shared/deck-card-entries'
 import { flattenGuideContentItems, newGuideCoverCardId, newGuideIndexCardId, guideCardKey, guideContentItems, isGuideCoverCard, isGuideIndexCard, isGuideOwnedCard, resolveGuideCards, type GuideCardPlacement, type GuideContentItem } from '../shared/guide-card-layout'
@@ -112,6 +113,8 @@ export default function GuideEditorClient({
   const [expandedDecks, setExpandedDecks] = useState<string[]>([])
   const [draggingCardKey, setDraggingCardKey] = useState<string | null>(null)
   const [cardDropTarget, setCardDropTarget] = useState<DropTarget | null>(null)
+  // Edit on a direct card opens the card editor right here.
+  const [editingDirectCard, setEditingDirectCard] = useState<{ deckId: string; stepId: string } | null>(null)
 
   const deckById = useMemo(() => {
     const map = new Map<string, GuidesV3Deck>()
@@ -265,6 +268,12 @@ export default function GuideEditorClient({
     } catch (error) {
       setCardLoadError(error instanceof Error ? error.message : 'Could not add this card.')
     } finally { setAddingDeckId(null) }
+  }
+
+  // A direct card saved or deleted from its editor sheet: show the inline
+  // deck's fresh detail in place, as New Card does.
+  function showInlineDeck(deck: GuidesV3DeckDetail) {
+    setLoadedDecks((current) => [...current.filter((item) => item.id !== deck.id), deck])
   }
 
   function reorderDeck(deckId: string, targetId: string, edge: DropTarget['edge']) {
@@ -537,7 +546,7 @@ export default function GuideEditorClient({
                       typeLabel={isIndex ? 'Index' : isGuideCover ? 'Cover' : cardTypeName(step?.template)}
                       hidden={card.hidden}
                       preview={cardNodes.get(key)}
-                      editHref={!isIndex && !isGuideCover && inlineDeckId ? `/guides/decks/${inlineDeckId}?preview=1&edit=1&editorTab=cards&card=${encodeURIComponent(card.cardId)}` : undefined}
+                      onEdit={!isIndex && !isGuideCover && step ? () => setEditingDirectCard({ deckId: card.deckId, stepId: card.cardId }) : undefined}
                       onRemove={isIndex || isGuideCover ? { label: isIndex ? 'Remove index' : 'Remove cover', run: () => removeGuideIndex(key) } : undefined}
                       isDragging={draggingDeckId === itemKey}
                       dropEdge={dropTarget?.id === itemKey ? dropTarget.edge : null}
@@ -737,6 +746,22 @@ export default function GuideEditorClient({
         />
       ) : null}
 
+      {editingDirectCard && deckDetailById.get(editingDirectCard.deckId) ? (
+        <DirectCardEditor
+          key={editingDirectCard.stepId}
+          guideId={guide.id}
+          deck={deckDetailById.get(editingDirectCard.deckId) as GuidesV3DeckDetail}
+          stepId={editingDirectCard.stepId}
+          onSaved={showInlineDeck}
+          onDeleted={(deck) => {
+            showInlineDeck(deck)
+            setCardLayout((current) => current.filter((placement) =>
+              placement.deckId !== editingDirectCard.deckId || placement.cardId !== editingDirectCard.stepId))
+          }}
+          onClose={() => setEditingDirectCard(null)}
+        />
+      ) : null}
+
       {addSheet === 'card-type' ? (
         <CardTypeSheet
           templates={addableCardTypes}
@@ -797,6 +822,103 @@ export default function GuideEditorClient({
   )
 }
 
+// The card editor sheet over the guide editor for one direct card (a step
+// of the guide's inline deck). Closing it saves just that card in place if
+// anything changed; the guide itself is saved separately with Save.
+function DirectCardEditor({
+  guideId,
+  deck,
+  stepId,
+  onSaved,
+  onDeleted,
+  onClose,
+}: {
+  guideId: string
+  deck: GuidesV3DeckDetail
+  stepId: string
+  onSaved: (deck: GuidesV3DeckDetail) => void
+  onDeleted: (deck: GuidesV3DeckDetail) => void
+  onClose: () => void
+}) {
+  const [cards, setCards] = useState<CardEditorCard[]>(() => {
+    const step = deck.steps.find((candidate) => candidate.id === stepId)
+    return step ? [editorCardFromStep(step)] : []
+  })
+  const [cardsOnOpen] = useState(() => JSON.stringify(cards))
+  const [pendingImageUploads, setPendingImageUploads] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const card = cards[0] ?? null
+  const handlers = cardEditingHandlers({
+    editingCard: card,
+    editingCardId: card?.id ?? null,
+    setCards,
+    setImageUploadError: setError,
+    setPendingImageUploads,
+  })
+
+  async function run(task: () => Promise<{ deck: GuidesV3DeckDetail }>, done: (deck: GuidesV3DeckDetail) => void) {
+    setIsSaving(true)
+    setError(null)
+    try {
+      const { deck: fresh } = await task()
+      done(fresh)
+      onClose()
+    } catch (taskError) {
+      setError(taskError instanceof Error ? taskError.message : 'Could not save this card.')
+      setIsSaving(false)
+    }
+  }
+
+  function close() {
+    if (isSaving) return
+    if (!card || JSON.stringify(cards) === cardsOnOpen) return onClose()
+    if (pendingImageUploads > 0) return setError('Wait for the image upload to finish before saving.')
+    if (hasUnuploadedImage([card.image])) {
+      return setError('The photo has not finished uploading. Retry or remove it before saving.')
+    }
+    void run(() => updateInlineGuideCard(guideId, {
+      id: card.id,
+      title: card.title,
+      template: card.template,
+      body: card.body,
+      image: card.image,
+      paints: card.paints.map((paint) => ({ id: paint.id, ratio_text: paint.ratio_text ?? null })),
+      videoUrl: card.videoUrl,
+      imageFocalX: card.imageFocalX,
+      imageFocalY: card.imageFocalY,
+      paintAlignment: card.paintAlignment ?? 'left',
+      paintVerticalAlignment: card.paintVerticalAlignment ?? 'top',
+      subtitle: card.subtitle?.trim() || null,
+    }), onSaved)
+  }
+
+  function remove() {
+    if (!card || isSaving) return
+    if (!window.confirm(`Delete "${card.title}" from this guide? This cannot be undone.`)) return
+    void run(() => deleteInlineGuideCard(guideId, card.id), onDeleted)
+  }
+
+  if (!card) return null
+  return (
+    <CardEditorSheet
+      canDelete={deck.steps.length > 1}
+      card={card}
+      deckPaints={deck.paintList}
+      error={error}
+      isSaving={isSaving}
+      onAddPaint={handlers.addEditingCardPaint}
+      onChange={handlers.updateEditingCard}
+      onChangeImage={handlers.updateEditingCardImage}
+      onChangePaint={handlers.updateEditingCardPaint}
+      onClose={close}
+      onDelete={remove}
+      onDeletePaint={handlers.deleteEditingCardPaint}
+      onSelectPaint={handlers.selectEditingCardPaint}
+    />
+  )
+}
+
 // The preview is a scrolling stack, so index rows scroll to their target card.
 const previewNavigation = {
   goToCard: (key: string) => {
@@ -820,7 +942,7 @@ function TopLevelCardRow({
   typeLabel,
   hidden,
   preview,
-  editHref,
+  onEdit,
   onRemove,
   isDragging,
   dropEdge,
@@ -838,7 +960,7 @@ function TopLevelCardRow({
   typeLabel: string
   hidden: boolean
   preview: ReactNode
-  editHref?: string
+  onEdit?: () => void
   onRemove?: { label: string; run: () => void }
   isDragging: boolean
   dropEdge: DropTarget['edge'] | null
@@ -871,8 +993,8 @@ function TopLevelCardRow({
       onDragEnd={onDragEnd}
     >
       <span className={styles.dragHandle} aria-label={`Drag to reorder ${label}`} title="Drag to reorder" draggable><DragHandleIcon /></span>
-      {editHref ? (
-        <Link href={editHref} className={styles.guideCardPreview} aria-hidden="true" tabIndex={-1}>{previewBox}</Link>
+      {onEdit ? (
+        <button type="button" className={styles.guideCardPreview} aria-hidden="true" tabIndex={-1} onClick={onEdit}>{previewBox}</button>
       ) : (
         <span className={styles.guideCardPreview} aria-hidden="true">{previewBox}</span>
       )}
@@ -882,10 +1004,10 @@ function TopLevelCardRow({
         {onRemove ? <button type="button" className={styles.guideIndexRemove} onClick={onRemove.run}>{onRemove.label}</button> : null}
       </span>
       <span className={styles.topLevelCardActions}>
-        {editHref ? (
-          <Link href={editHref} className={styles.visibilityButton} aria-label={`Edit ${label}`}>
+        {onEdit ? (
+          <button type="button" className={styles.visibilityButton} aria-label={`Edit ${label}`} onClick={onEdit}>
             <EditPencilIcon />Edit
-          </Link>
+          </button>
         ) : null}
         <button className={styles.visibilityButton} type="button" aria-pressed={hidden} aria-label={`${hidden ? 'Unhide' : 'Hide'} ${label}`} onClick={onToggleHidden}>
           <VisibilityIcon hidden={hidden} />{hidden ? 'Unhide' : 'Hide'}

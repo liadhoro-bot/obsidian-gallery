@@ -7,27 +7,21 @@ import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
 import { getGuideDeckThumbnail } from './guides-v3-data'
-import { syncRecipeSteps } from './sync-recipe-steps'
+import { syncRecipeSteps, updateStep } from './sync-recipe-steps'
 import { cardTypeDefaultBody, cardTypeLabel, isCardTypeId } from './shared/card-templates'
+import {
+  cleanText,
+  deckCardPaintRows,
+  deckCardStepFields,
+  encodeDeckCardInstructions,
+  safeCardTemplate,
+  safeFocalValue,
+  safePersistedImage,
+  safeThemeSubtitle,
+  type CreateDeckCardInput,
+} from './deck-card-rows'
 
-export type CreateDeckCardInput = {
-  // The saved recipe_steps id when editing an existing card; absent for new cards.
-  id?: string
-  paintAlignment?: 'left' | 'right'
-  paintVerticalAlignment?: 'top' | 'center' | 'bottom'
-  subtitle?: string | null
-  title: string
-  template: string
-  body: string
-  image: string | null
-  videoUrl?: string | null
-  paints?: Array<{
-    id: string
-    ratio_text?: string | null
-  }>
-  imageFocalX?: number
-  imageFocalY?: number
-}
+export type { CreateDeckCardInput } from './deck-card-rows'
 
 export type CreateDeckInput = {
   title: string
@@ -76,96 +70,6 @@ type RecipeStepInsert = {
   subtitle?: string | null
 }
 
-// Theme card kicker (recipe_steps.subtitle). Null renders the default
-// "Color Reference"; other card types don't show a subtitle.
-function safeThemeSubtitle(card: CreateDeckCardInput) {
-  if (card.template !== 'theme' && card.template !== 'theme-alt') return null
-  return card.subtitle?.trim().slice(0, 60) || null
-}
-
-function cleanText(value: string | null | undefined, fallback: string) {
-  const trimmed = value?.trim()
-  return trimmed || fallback
-}
-
-function safePersistedImage(value: string | null | undefined) {
-  const trimmed = value?.trim()
-  if (!trimmed) return null
-  if (trimmed.startsWith('/')) return trimmed
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed
-  return null
-}
-
-// image_focal_x/y and cover_focal_x/y are smallint columns - a drag-computed
-// percentage (e.g. 46.868551169312454) fails that insert, so clamp and round
-// here too rather than trusting the client sent a whole number.
-function safeFocalValue(value: number | null | undefined) {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 50
-  return Math.round(Math.max(0, Math.min(100, value)))
-}
-
-function safePersistedYoutubeUrl(value: string | null | undefined) {
-  let trimmed = value?.trim()
-  if (!trimmed) return null
-  if (trimmed.startsWith('www.youtube.com/')) {
-    trimmed = `https://${trimmed}`
-  }
-  if (trimmed.startsWith('youtube.com/')) {
-    trimmed = `https://${trimmed}`
-  }
-  if (trimmed.startsWith('youtu.be/')) {
-    trimmed = `https://${trimmed}`
-  }
-
-  try {
-    const parsed = new URL(trimmed)
-    const isYoutube =
-      (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
-      (parsed.hostname === 'youtube.com' ||
-        parsed.hostname.endsWith('.youtube.com') ||
-        parsed.hostname === 'youtu.be')
-
-    if (!isYoutube) return null
-    parsed.protocol = 'https:'
-
-    return parsed.toString()
-  } catch {
-    return null
-  }
-}
-
-const deckCardMetaPrefix = 'OG_DECK_CARD_META:'
-
-function encodeDeckCardInstructions(card: CreateDeckCardInput) {
-  const body = cleanText(card.body, 'No instructions yet.')
-  const template = safeCardTemplate(card.template)
-  const youtubeUrl =
-    template === 'video' ? safePersistedYoutubeUrl(card.videoUrl) : null
-
-  if (template === 'step') return body
-
-  const metadata: {
-    template: string
-    youtubeUrl?: string
-    paintAlignment?: 'left' | 'right'
-    paintVerticalAlignment?: 'top' | 'center' | 'bottom'
-  } = { template }
-
-  if (template === 'theme' || template === 'theme-alt') {
-    metadata.paintAlignment = card.paintAlignment === 'right' ? 'right' : 'left'
-  }
-
-  if (template === 'theme-alt' && (card.paintVerticalAlignment === 'center' || card.paintVerticalAlignment === 'bottom')) {
-    metadata.paintVerticalAlignment = card.paintVerticalAlignment
-  }
-
-  if (youtubeUrl) {
-    metadata.youtubeUrl = youtubeUrl
-  }
-
-  return `${deckCardMetaPrefix}${JSON.stringify(metadata)}\n\n${body}`
-}
-
 function accentFor(seed: string) {
   const colors = ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37', '#1e4f92']
   const index =
@@ -185,22 +89,6 @@ function categoryFor(input: CreateDeckInput) {
   }
   if (input.cards.some((card) => card.template === 'paints')) return 'Paints'
   return 'Steps'
-}
-
-function safeCardTemplate(value: string | null | undefined) {
-  if (
-    value === 'step' ||
-    value === 'theme' ||
-    value === 'theme-alt' ||
-    value === 'image' ||
-    value === 'small-image' ||
-    value === 'paints' ||
-    value === 'video'
-  ) {
-    return value
-  }
-
-  return 'step'
 }
 
 function isMissingColumn(error: SupabaseErrorLike | null | undefined, column: string) {
@@ -296,36 +184,6 @@ async function insertRecipeSteps(
   return result
 }
 
-function parsePaintSelection(rawValue: string | null | undefined) {
-  if (!rawValue || rawValue.startsWith('paint:')) return null
-
-  if (rawValue.includes(':')) {
-    const [source, id] = rawValue.split(':')
-
-    if (source === 'catalog' && id) {
-      return {
-        paint_source: 'catalog',
-        paint_catalog_id: id,
-        custom_paint_id: null,
-      }
-    }
-
-    if (source === 'custom' && id) {
-      return {
-        paint_source: 'custom',
-        paint_catalog_id: null,
-        custom_paint_id: id,
-      }
-    }
-  }
-
-  return {
-    paint_source: 'catalog',
-    paint_catalog_id: rawValue,
-    custom_paint_id: null,
-  }
-}
-
 export async function createDeckFromForge(
   input: CreateDeckInput
 ): Promise<CreatedDeckResult> {
@@ -375,26 +233,12 @@ export async function createDeckFromForge(
   const stepCards = input.cards.filter((card) =>
     card.template !== 'title' && card.template !== 'cover'
   )
-  const steps: RecipeStepInsert[] = stepCards.map((card, index) => {
-    const youtubeUrl =
-      card.template === 'video' ? safePersistedYoutubeUrl(card.videoUrl) : null
-
-    return {
-      recipe_id: recipe.id,
-      user_id: user.id,
-      step_number: index + 1,
-      title: cleanText(card.title, `Card ${index + 1}`),
-      // Older schemas restrict card_template to the original template names.
-      // Type B is restored from its existing OG_DECK_CARD_META instructions.
-      card_template: card.template === 'theme-alt' ? null : safeCardTemplate(card.template),
-      instructions: encodeDeckCardInstructions(card),
-      image_url: safePersistedImage(card.image),
-      youtube_url: youtubeUrl,
-      image_focal_x: safeFocalValue(card.imageFocalX),
-      image_focal_y: safeFocalValue(card.imageFocalY),
-      subtitle: safeThemeSubtitle(card),
-    }
-  })
+  const steps: RecipeStepInsert[] = stepCards.map((card, index) => ({
+    recipe_id: recipe.id,
+    user_id: user.id,
+    step_number: index + 1,
+    ...deckCardStepFields(card, index),
+  }))
 
   let insertedSteps: Array<{ id: string; step_number: number }> = []
 
@@ -412,20 +256,7 @@ export async function createDeckFromForge(
     const step = insertedSteps.find((row) => row.step_number === cardIndex + 1)
     if (!step) return []
 
-    return (card.paints ?? []).flatMap((paint, paintIndex) => {
-      const parsedPaint = parsePaintSelection(paint.id)
-      if (!parsedPaint) return []
-
-      return {
-        recipe_step_id: step.id,
-        user_id: user.id,
-        paint_source: parsedPaint.paint_source,
-        paint_catalog_id: parsedPaint.paint_catalog_id,
-        custom_paint_id: parsedPaint.custom_paint_id,
-        paint_order: paintIndex + 1,
-        ratio_text: paint.ratio_text?.trim() || null,
-      }
-    })
+    return deckCardPaintRows(step.id, user.id, card.paints)
   })
 
   if (stepPaintsToInsert.length) {
@@ -521,26 +352,12 @@ export async function updateDeckFromForge(
   const stepCards = input.cards.filter((card) =>
     card.template !== 'title' && card.template !== 'cover'
   )
-  const steps: RecipeStepInsert[] = stepCards.map((card, index) => {
-    const youtubeUrl =
-      card.template === 'video' ? safePersistedYoutubeUrl(card.videoUrl) : null
-
-    return {
-      recipe_id: deckId,
-      user_id: user.id,
-      step_number: index + 1,
-      title: cleanText(card.title, `Card ${index + 1}`),
-      // Older schemas restrict card_template to the original template names.
-      // Type B is restored from its existing OG_DECK_CARD_META instructions.
-      card_template: card.template === 'theme-alt' ? null : safeCardTemplate(card.template),
-      instructions: encodeDeckCardInstructions(card),
-      image_url: safePersistedImage(card.image),
-      youtube_url: youtubeUrl,
-      image_focal_x: safeFocalValue(card.imageFocalX),
-      image_focal_y: safeFocalValue(card.imageFocalY),
-      subtitle: safeThemeSubtitle(card),
-    }
-  })
+  const steps: RecipeStepInsert[] = stepCards.map((card, index) => ({
+    recipe_id: deckId,
+    user_id: user.id,
+    step_number: index + 1,
+    ...deckCardStepFields(card, index),
+  }))
 
   const { data: existingSteps, error: existingStepsError } = await supabase
     .from('recipe_steps')
@@ -609,20 +426,7 @@ export async function updateDeckFromForge(
     const stepId = stepIdByIndex[cardIndex]
     if (!stepId) return []
 
-    return (card.paints ?? []).flatMap((paint, paintIndex) => {
-      const parsedPaint = parsePaintSelection(paint.id)
-      if (!parsedPaint) return []
-
-      return {
-        recipe_step_id: stepId,
-        user_id: user.id,
-        paint_source: parsedPaint.paint_source,
-        paint_catalog_id: parsedPaint.paint_catalog_id,
-        custom_paint_id: parsedPaint.custom_paint_id,
-        paint_order: paintIndex + 1,
-        ratio_text: paint.ratio_text?.trim() || null,
-      }
-    })
+    return deckCardPaintRows(stepId, user.id, card.paints)
   })
 
   if (stepPaintsToInsert.length) {
@@ -1118,4 +922,107 @@ export async function loadGuideEditorDeck(deckId: string) {
   const deck = await getGuidesV3DeckDetail(deckId, user.id)
   if (!deck?.isOwner) throw new Error('You can only add your own decks to a guide.')
   return deck
+}
+
+// The guide's inline deck and one of its steps, both owned by the signed-in
+// user - the only rows the single-card saves below may touch.
+async function ownedInlineGuideStep(guideId: string, stepId: string | undefined) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  if (!guideId || !stepId) throw new Error('Missing card')
+
+  const { data: deck, error: deckError } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('inline_guide_id', guideId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (deckError) throw new Error(deckError.message)
+  if (!deck) throw new Error('Card not found')
+  const deckId = deck.id as string
+
+  const { data: step, error: stepError } = await supabase
+    .from('recipe_steps')
+    .select('id, step_number')
+    .eq('id', stepId)
+    .eq('recipe_id', deckId)
+    .maybeSingle()
+  if (stepError) throw new Error(stepError.message)
+  if (!step) throw new Error('Card not found')
+
+  return { supabase, user, deckId, step: step as { id: string; step_number: number } }
+}
+
+async function inlineGuideCardResult(guideId: string, deckId: string, userId: string) {
+  revalidatePath(`/guides/${guideId}`)
+  revalidatePath(`/guides/decks/${deckId}`)
+  const { getGuidesV3DeckDetail } = await import('./guides-v3-detail-data')
+  const deck = await getGuidesV3DeckDetail(deckId, userId)
+  if (!deck) throw new Error('Could not load this card.')
+  return { deckId, deck }
+}
+
+// Edit on a guide's direct card: saves that one card in place - same step
+// id and position, so guide layouts keep pointing at it - and replaces its
+// paint links. Returns the inline deck's fresh detail for the editor.
+export async function updateInlineGuideCard(guideId: string, card: CreateDeckCardInput) {
+  if (card.template === 'cover' || card.template === 'title') throw new Error('Choose a card type.')
+  const { supabase, user, deckId, step } = await ownedInlineGuideStep(guideId, card.id)
+
+  const fields = deckCardStepFields(card, Math.max(0, (step.step_number ?? 1) - 1))
+  const paintRows = deckCardPaintRows(step.id, user.id, card.paints)
+
+  if (!await updateStep(supabase, deckId, step.id, fields)) {
+    throw new Error('Could not save this card. Please try again.')
+  }
+
+  const { error: deletePaintsError } = await supabase
+    .from('recipe_step_paints')
+    .delete()
+    .eq('recipe_step_id', step.id)
+  if (deletePaintsError) throw new Error(deletePaintsError.message)
+
+  if (paintRows.length) {
+    const { error: paintsError } = await supabase.from('recipe_step_paints').insert(paintRows)
+    if (paintsError) throw new Error(paintsError.message)
+  }
+
+  return inlineGuideCardResult(guideId, deckId, user.id)
+}
+
+// Delete Card on a guide's direct card. Like the deck editor, the guide's
+// own cards keep at least one card. Later cards move up one step_number,
+// lowest first, so a (recipe_id, step_number) uniqueness rule never collides.
+export async function deleteInlineGuideCard(guideId: string, stepId: string) {
+  const { supabase, user, deckId, step } = await ownedInlineGuideStep(guideId, stepId)
+
+  const { data: siblings, error: siblingsError } = await supabase
+    .from('recipe_steps')
+    .select('id, step_number')
+    .eq('recipe_id', deckId)
+    .order('step_number', { ascending: true })
+  if (siblingsError) throw new Error(siblingsError.message)
+  if ((siblings ?? []).length <= 1) throw new Error('A guide keeps at least one of its own cards.')
+
+  const { error: deletePaintsError } = await supabase
+    .from('recipe_step_paints')
+    .delete()
+    .eq('recipe_step_id', step.id)
+  if (deletePaintsError) throw new Error(deletePaintsError.message)
+
+  const { data: deleted, error: deleteError } = await supabase
+    .from('recipe_steps')
+    .delete()
+    .eq('id', step.id)
+    .eq('recipe_id', deckId)
+    .select('id')
+  if (deleteError) throw new Error(deleteError.message)
+  if (!deleted?.length) throw new Error('Could not delete this card. Please try again.')
+
+  for (const later of (siblings ?? []).filter((row) => row.step_number > step.step_number)) {
+    await updateStep(supabase, deckId, later.id as string, { step_number: (later.step_number as number) - 1 })
+  }
+
+  return inlineGuideCardResult(guideId, deckId, user.id)
 }
