@@ -1,4 +1,4 @@
-import { parseGuideCardLayout, resolveGuideCards, type GuideCardPlacement } from './shared/guide-card-layout'
+import { EMPTY_DECK_DESCRIPTION, isGuideIndexCard, parseGuideCardLayout, resolveGuideCards, type GuideCardPlacement } from './shared/guide-card-layout'
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { loadRecipeSteps } from './load-recipe-steps'
 import { cache } from 'react'
@@ -516,7 +516,7 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
       accent: accentFor(typedRecipe.id),
       description: clean(
         typedRecipe.description,
-        'No description has been added to this deck yet.'
+        EMPTY_DECK_DESCRIPTION
       ),
       isPublic: typedRecipe.is_public === true,
       ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public deck',
@@ -569,7 +569,7 @@ export const getGuidesV3GuideDetail = cache(
       ...guide,
       cards: visibleCards ? visibleCards.length : guide.cards,
       cardLayout,
-      decksList: visibleCards ? decksList.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id).length })) : decksList,
+      decksList: visibleCards ? decksList.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideIndexCard(card)).length })) : decksList,
     } satisfies GuidesV3GuideDetail
   }
 )
@@ -598,7 +598,7 @@ export const getSharedGuideDetail = cache(async (guideId: string) => {
       ...shared.guide,
       cards: visibleCards.length,
       cardLayout,
-      decksList: shared.decks.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id).length })),
+      decksList: shared.decks.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideIndexCard(card)).length })),
     } satisfies GuidesV3GuideDetail,
     deckDetails: details,
     coverImageUrl: shared.coverImageUrl,

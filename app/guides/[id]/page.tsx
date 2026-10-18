@@ -1,7 +1,7 @@
 import DeckCardViewer from '../decks/[id]/deck-card-viewer'
 import ViewCardsLink from '../shared/view-cards-link'
-import { deckCardEntries } from '../shared/deck-card-entries'
-import { guideCardKey, resolveGuideCards } from '../shared/guide-card-layout'
+import { guideCardNodes } from '../shared/deck-card-entries'
+import { guideCardKey, isGuideIndexCard, resolveGuideCards } from '../shared/guide-card-layout'
 import GuideBackButton from '../shared/guide-back-button'
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
@@ -97,9 +97,10 @@ export default async function GuideDetailPage({
 
   if (resolvedSearchParams.view === '1') {
     const details = (await Promise.all((guide.deckIds ?? []).map(deckId => getGuidesV3DeckDetail(deckId, user.id)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
-    const entries = new Map(details.flatMap(deck => deckCardEntries(deck).map(card => [deck.id + ':' + card.key, card.node] as const)))
-    const cards = resolveGuideCards(details, guide.cardLayout).filter(card => !card.hidden).map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
-    const firstCard = resolveGuideCards(details, guide.cardLayout).find(card => !card.hidden && card.groupId === resolvedSearchParams.deck)
+    const resolved = resolveGuideCards(details, guide.cardLayout)
+    const entries = guideCardNodes(details, resolved)
+    const cards = resolved.filter(card => !card.hidden).map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
+    const firstCard = resolved.find(card => !card.hidden && !isGuideIndexCard(card) && card.groupId === resolvedSearchParams.deck)
     return <main><DeckCardViewer initialCardKey={firstCard ? guideCardKey(firstCard) : undefined} cards={cards} title={guide.title} backHref={`/guides/${guide.id}?preview=1`} featureGuides={featureGuides} heroActions={<>
       {guide.deckId ? (
         <DeckHeroActions

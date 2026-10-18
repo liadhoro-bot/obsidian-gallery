@@ -18,7 +18,10 @@ import {
   RecipeGuideThemeStepCard,
   RecipeGuideVideoCard,
 } from '../shared/recipe-guide-cards'
+import type { ReactNode } from 'react'
 import type { GuidesV3DeckDetail, GuidesV3DeckStep } from '../guides-v3-detail-data'
+import { guideCardKey, guideIndexEntries, isGuideIndexCard, type GuideCardPlacement } from './guide-card-layout'
+import { GuideIndexCard } from './guide-index-card'
 
 function isUsableImageUrl(value?: string | null) {
   const url = typeof value === 'string' ? value.trim() : ''
@@ -188,4 +191,13 @@ export function deckCardEntries(deck: GuidesV3DeckDetail) {
         ]
 
   return cardNodes
+}
+
+// Every renderable card of a guide keyed by guideCardKey: the member decks'
+// own cards plus the guide-owned index, whose rows come from `cards`.
+export function guideCardNodes(decks: GuidesV3DeckDetail[], cards: GuideCardPlacement[]) {
+  const nodes = new Map<string, ReactNode>(decks.flatMap(deck => deckCardEntries(deck).map(card => [deck.id + ':' + card.key, card.node] as const)))
+  const index = cards.find(isGuideIndexCard)
+  if (index) nodes.set(guideCardKey(index), <GuideIndexCard entries={guideIndexEntries(decks, cards)} />)
+  return nodes
 }

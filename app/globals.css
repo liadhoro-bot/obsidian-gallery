@@ -2100,3 +2100,192 @@ button:disabled {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
+
+/* Guide Index card: a parchment table of contents generated from the guide's
+   decks (app/guides/shared/guide-index-card.tsx). Sized in cqw like the other
+   recipe-guide cards so viewer, editor preview and exports match. */
+.guide-index-head {
+  padding-top: clamp(14px, 4.4cqw, 26px);
+}
+
+.guide-index-head .recipe-guide-title {
+  font-size: clamp(1.5rem, 11.4cqw, 3.4rem);
+  -webkit-line-clamp: 1;
+}
+
+.guide-index-subhead {
+  margin-top: clamp(4px, 1.4cqw, 8px);
+}
+
+.guide-index-tagline {
+  color: color-mix(in srgb, var(--og-walnut-700) 82%, var(--og-ink-950));
+  font-size: clamp(0.72rem, 4.1cqw, 1.2rem);
+  white-space: nowrap;
+}
+
+.guide-index-list {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(5px, 1.7cqw, 9px);
+  margin: 0;
+  padding: 0 clamp(4px, 1.6cqw, 10px) clamp(14px, 4cqw, 24px);
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.guide-index-list::-webkit-scrollbar {
+  display: none;
+}
+
+.guide-index-list > li {
+  display: flex;
+  flex: 1 1 0;
+  min-height: clamp(46px, 14cqw, 78px);
+  max-height: clamp(64px, 23cqw, 120px);
+}
+
+.guide-index-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: clamp(7px, 2.4cqw, 13px);
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--og-brass-700) 46%, var(--og-walnut-700));
+  border-radius: clamp(9px, 2.6cqw, 14px);
+  padding: clamp(4px, 1.3cqw, 8px) clamp(9px, 3cqw, 16px) clamp(4px, 1.3cqw, 8px) clamp(6px, 2cqw, 11px);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 242, 0.5), rgba(214, 196, 160, 0.16)),
+    color-mix(in srgb, var(--og-parchment-50) 86%, var(--og-paper-50));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 252, 238, 0.42),
+    inset 0 0 0 3px color-mix(in srgb, var(--og-brass-700) 18%, transparent),
+    0 2px 0 rgba(91, 64, 34, 0.14),
+    0 4px 10px rgba(73, 50, 27, 0.1);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.guide-index-row {
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+button.guide-index-row:hover {
+  background-color: color-mix(in srgb, var(--og-brass-500) 10%, var(--og-paper-50));
+}
+
+button.guide-index-row:active {
+  transform: translateY(1px);
+}
+
+button.guide-index-row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--og-brass-500) 80%, var(--og-walnut-700));
+  outline-offset: 2px;
+}
+
+.guide-index-medallion {
+  display: grid;
+  place-items: center;
+  width: clamp(28px, 9.6cqw, 50px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--og-brass-500) 74%, var(--og-walnut-700));
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.14), transparent 46%),
+    color-mix(in srgb, var(--og-ink-950) 92%, var(--og-walnut-700));
+  box-shadow:
+    0 0 0 2px rgba(255, 252, 238, 0.5),
+    0 0 0 3px color-mix(in srgb, var(--og-brass-700) 46%, transparent),
+    0 3px 6px rgba(40, 26, 12, 0.3);
+  color: var(--og-parchment-50);
+  font-size: clamp(0.85rem, 5cqw, 1.55rem);
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.guide-index-rule {
+  position: relative;
+  align-self: stretch;
+  width: 1px;
+  margin-block: clamp(2px, 0.8cqw, 5px);
+  background: color-mix(in srgb, var(--og-brass-700) 38%, transparent);
+}
+
+.guide-index-rule::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(5px, 1.5cqw, 8px);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--og-brass-700) 62%, var(--og-walnut-700));
+  background: color-mix(in srgb, var(--og-brass-500) 34%, var(--og-paper-100));
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.guide-index-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(1px, 0.4cqw, 3px);
+}
+
+.guide-index-kicker {
+  color: color-mix(in srgb, var(--og-brass-700) 74%, var(--og-walnut-700));
+  font-size: clamp(0.46rem, 2.1cqw, 0.68rem);
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  line-height: 1;
+}
+
+.guide-index-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: color-mix(in srgb, var(--og-ink-950) 90%, var(--og-walnut-700));
+  font-size: clamp(0.84rem, 4.9cqw, 1.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.guide-index-list[data-dense] .guide-index-title {
+  -webkit-line-clamp: 1;
+}
+
+.guide-index-subtitle {
+  overflow: hidden;
+  color: color-mix(in srgb, var(--og-walnut-700) 80%, var(--og-ink-950));
+  font-size: clamp(0.62rem, 3.1cqw, 0.95rem);
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Long guides: drop subtitles and tighten so rows stay legible without scrolling. */
+.guide-index-list[data-dense] .guide-index-subtitle {
+  display: none;
+}
+
+.guide-index-list[data-dense] > li {
+  min-height: clamp(38px, 11cqw, 62px);
+}
+
+.guide-index-chevron {
+  width: clamp(16px, 5.4cqw, 28px);
+  height: clamp(16px, 5.4cqw, 28px);
+  color: color-mix(in srgb, var(--og-ink-950) 78%, var(--og-walnut-700));
+}
+
+.guide-index-empty {
+  padding: clamp(12px, 4cqw, 24px);
+  color: color-mix(in srgb, var(--og-walnut-700) 82%, var(--og-ink-950));
+  font-size: clamp(0.8rem, 4cqw, 1.1rem);
+}

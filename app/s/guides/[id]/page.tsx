@@ -5,8 +5,8 @@ import { redirect } from 'next/navigation'
 import DeckCardViewer from '@/app/guides/decks/[id]/deck-card-viewer'
 import ViewCardsLink from '@/app/guides/shared/view-cards-link'
 import DeckShareMenu from '@/app/guides/shared/deck-share-menu'
-import { deckCardEntries } from '@/app/guides/shared/deck-card-entries'
-import { guideCardKey, resolveGuideCards } from '@/app/guides/shared/guide-card-layout'
+import { guideCardNodes } from '@/app/guides/shared/deck-card-entries'
+import { guideCardKey, isGuideIndexCard, resolveGuideCards } from '@/app/guides/shared/guide-card-layout'
 import { getSharedGuideDetail } from '@/app/guides/guides-v3-detail-data'
 import { getFeatureGuidesForPage } from '@/app/components/feature-guide-data'
 import { guideDetailFeatureGuides } from '@/app/components/feature-guide-presets'
@@ -99,10 +99,11 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
   const gate = <SharedGuideGate guideId={guide.id} variant={variant} />
 
   if (isCardView) {
-    const entries = new Map(deckDetails.flatMap(deck => deckCardEntries(deck).map(card => [deck.id + ':' + card.key, card.node] as const)))
-    const visible = resolveGuideCards(deckDetails, guide.cardLayout).filter(card => !card.hidden)
+    const resolved = resolveGuideCards(deckDetails, guide.cardLayout)
+    const entries = guideCardNodes(deckDetails, resolved)
+    const visible = resolved.filter(card => !card.hidden)
     const cards = visible.map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
-    const firstCard = visible.find(card => card.groupId === query.deck)
+    const firstCard = visible.find(card => !isGuideIndexCard(card) && card.groupId === query.deck)
 
     return (
       <main>
