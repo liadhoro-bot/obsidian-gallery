@@ -19,6 +19,8 @@
 
 .hero {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 236px;
   overflow: hidden;
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
@@ -116,14 +118,13 @@
 }
 
 .heroContent {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
+  /* In flow below .heroTop and pushed to the bottom: a long wrapped title
+     makes the hero taller instead of growing up over the Back/Help/Save
+     buttons. */
+  margin-top: auto;
   padding: 28px 20px 20px;
   color: var(--og-paper-50);
-  /* Grows upward with a long wrapped title - must not eat clicks meant
-     for the Back/Save buttons in .heroTop above it (see deck editor
-     "save button unusable after editing the title" bug). */
+  overflow-wrap: anywhere;
   pointer-events: none;
 }
 

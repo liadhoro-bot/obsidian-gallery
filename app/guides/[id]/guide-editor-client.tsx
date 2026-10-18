@@ -13,7 +13,7 @@ import { addableCardTypes, cardTypeLabel, isCardTypeId, type CardTypeId } from '
 import Image from 'next/image'
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
 import { guideCardNodes } from '../shared/deck-card-entries'
-import { flattenGuideContentItems, newGuideCoverCardId, newGuideIndexCardId, guideCardKey, guideContentItems, isGuideCoverCard, isGuideIndexCard, isGuideOwnedCard, resolveGuideCards, type GuideCardPlacement, type GuideContentItem } from '../shared/guide-card-layout'
+import { forGuide, flattenGuideContentItems, newGuideCoverCardId, newGuideIndexCardId, guideCardKey, guideContentItems, isGuideCoverCard, isGuideIndexCard, isGuideOwnedCard, resolveGuideCards, type GuideCardPlacement, type GuideContentItem } from '../shared/guide-card-layout'
 import { GuideCardNavigationContext } from '../shared/guide-card-navigation'
 import { MAX_GUIDE_TAGS, normalizeGuideTag, normalizeGuideTags } from '../shared/guide-tags'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
@@ -125,14 +125,14 @@ export default function GuideEditorClient({
     return map
   }, [memberDecks, availableDecks, loadedDecks])
   const deckDetailById = useMemo(
-    () => new Map([...deckDetails, ...loadedDecks].map((deck) => [deck.id, deck])),
-    [deckDetails, loadedDecks]
+    () => new Map(forGuide([...deckDetails, ...loadedDecks], guide.id).map((deck) => [deck.id, deck])),
+    [deckDetails, loadedDecks, guide.id]
   )
 
   const selectedDecks = selectedDeckIds
     .map((id) => deckById.get(id))
     .filter((deck): deck is GuidesV3Deck => Boolean(deck))
-  const selectedDetails = selectedDeckIds.map(id => deckDetailById.get(id)).filter((deck): deck is GuidesV3DeckDetail => Boolean(deck))
+  const selectedDetails = selectedDeckIds.map(id => deckDetailById.get(id)).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
   const resolvedCards = resolveGuideCards(selectedDetails, cardLayout)
   // Cover cards show the guide's current title, description and cover image.
   const cardNodes = guideCardNodes(selectedDetails, resolvedCards, { id: guide.id, title: title || 'Untitled Guide', description, image: coverImage })
@@ -538,12 +538,14 @@ export default function GuideEditorClient({
                   const isIndex = isGuideIndexCard(card)
                   const isGuideCover = isGuideCoverCard(card)
                   const step = deckDetailById.get(card.deckId)?.steps.find((candidate) => candidate.id === card.cardId)
-                  const label = isIndex ? 'Guide Index' : isGuideCover ? title || 'Untitled Guide' : step?.title ?? 'Card'
+                  // A deck's own cover card (cardId 'cover') shows that deck's title.
+                  const isDeckCover = card.cardId === 'cover'
+                  const label = isIndex ? 'Guide Index' : isGuideCover ? title || 'Untitled Guide' : isDeckCover ? deckDetailById.get(card.deckId)?.title ?? 'Cover' : step?.title ?? 'Card'
                   return (
                     <TopLevelCardRow
                       key={itemKey}
                       label={label}
-                      typeLabel={isIndex ? 'Index' : isGuideCover ? 'Cover' : cardTypeName(step?.template)}
+                      typeLabel={isIndex ? 'Index' : isGuideCover || isDeckCover ? 'Cover' : cardTypeName(step?.template)}
                       hidden={card.hidden}
                       preview={cardNodes.get(key)}
                       onEdit={!isIndex && !isGuideCover && step ? () => setEditingDirectCard({ deckId: card.deckId, stepId: card.cardId }) : undefined}

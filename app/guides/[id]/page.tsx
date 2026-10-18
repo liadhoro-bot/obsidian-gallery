@@ -1,7 +1,7 @@
 import DeckCardViewer from '../decks/[id]/deck-card-viewer'
 import ViewCardsLink from '../shared/view-cards-link'
 import { guideCardNodes } from '../shared/deck-card-entries'
-import { guideCardKey, isGuideOwnedCard, resolveGuideCards } from '../shared/guide-card-layout'
+import { forGuide, guideCardKey, isGuideOwnedCard, resolveGuideCards } from '../shared/guide-card-layout'
 import GuideBackButton from '../shared/guide-back-button'
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
@@ -71,12 +71,13 @@ export default async function GuideDetailPage({
     const deckDetails = await Promise.all(deckIds.map(deckId => getGuidesV3DeckDetail(deckId, user.id)))
 
     const memberDeckIds = new Set(deckIds)
-    const availableDecks = payload.decks.filter(
-      (deck) => deck.isOwner && !memberDeckIds.has(deck.id)
+    // Any of the viewer's decks or other guides' own cards, by guide title.
+    const availableDecks = payload.nestableDecks.filter(
+      (deck) => deck.isOwner && !memberDeckIds.has(deck.id) && deck.inlineGuideId !== guide.id
     )
-    const resolvedDeckDetails = deckDetails.filter(
+    const resolvedDeckDetails = forGuide(deckDetails.filter(
       (deck): deck is NonNullable<typeof deck> => Boolean(deck)
-    )
+    ), guide.id)
     const primaryDeckDetail = resolvedDeckDetails.find((deck) => deck.id === deckIds[0])
     const initialCoverImage = guide.image || primaryDeckDetail?.fullImage || primaryDeckDetail?.image
 
@@ -96,7 +97,7 @@ export default async function GuideDetailPage({
   }
 
   if (resolvedSearchParams.view === '1') {
-    const details = (await Promise.all((guide.deckIds ?? []).map(deckId => getGuidesV3DeckDetail(deckId, user.id)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
+    const details = forGuide((await Promise.all((guide.deckIds ?? []).map(deckId => getGuidesV3DeckDetail(deckId, user.id)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck)), guide.id)
     const resolved = resolveGuideCards(details, guide.cardLayout)
     const entries = guideCardNodes(details, resolved, { id: guide.id, title: guide.title, description: guide.subtitle, image: guide.image })
     const cards = resolved.filter(card => !card.hidden).map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))

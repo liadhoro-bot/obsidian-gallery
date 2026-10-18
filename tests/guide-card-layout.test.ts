@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { defaultGuideCards, flattenGuideContentItems, guideContentItems, guideIndexEntries, isGuideIndexCard, isGuideOwnedCard, newGuideCoverCardId, newGuideIndexCardId, resolveGuideCards, EMPTY_DECK_DESCRIPTION, GUIDE_COVER_CARD_ID, GUIDE_INDEX_CARD_ID } from '../app/guides/shared/guide-card-layout'
+import { defaultGuideCards, flattenGuideContentItems, forGuide, guideContentItems, guideIndexEntries, isGuideIndexCard, isGuideOwnedCard, newGuideCoverCardId, newGuideIndexCardId, resolveGuideCards, EMPTY_DECK_DESCRIPTION, GUIDE_COVER_CARD_ID, GUIDE_INDEX_CARD_ID } from '../app/guides/shared/guide-card-layout'
 import type { GuidesV3DeckDetail } from '../app/guides/guides-v3-detail-data'
 const deck = (id: string, steps: string[], coverPosition: number | null = 0) => ({ id, coverPosition, steps: steps.map(id => ({ id })) }) as GuidesV3DeckDetail
 
@@ -98,4 +98,16 @@ test('guide Cover cards are guide-owned: any number, never a chapter, movable an
   const plain = [deck('a', ['a1'], null)]
   const parked = resolveGuideCards(plain, [{ deckId: 'g', cardId: GUIDE_COVER_CARD_ID, groupId: 'a', hidden: false }, card('a', 'a1')])
   assert.equal(guideIndexEntries(plain, parked)[0].targetKey, 'a:a1')
+})
+
+test('a deck is own cards only for its guide; any other guide reusing it shows it as a nested guide', () => {
+  const upgraded = { ...deck('d', ['d1', 'd2'], null), inlineGuideId: 'a' } as GuidesV3DeckDetail
+  const other = deck('x', ['x1'], null)
+  // In guide a, d is its own cards: top-level cards.
+  const inA = forGuide([upgraded], 'a')
+  assert.deepEqual(guideContentItems(inA, resolveGuideCards(inA, [])).map(item => item.kind), ['card', 'card'])
+  // In guide c, which reuses d, it stays one nested guide.
+  const inC = forGuide([upgraded, other], 'c')
+  assert.deepEqual(guideContentItems(inC, resolveGuideCards(inC, [])).map(item => item.kind === 'guide' ? item.deckId : 'card'), ['d', 'x'])
+  assert.deepEqual(guideIndexEntries(inC, resolveGuideCards(inC, [])).map(entry => entry.deckId), ['d', 'x'])
 })

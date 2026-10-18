@@ -22,6 +22,7 @@ import {
 } from '../../guides-v3-detail-data'
 import DeckCardViewer, { type DeckCardEntry } from './deck-card-viewer'
 import DeckEditPageClient from './deck-edit-page-client'
+import UpgradeDeckToGuide from './upgrade-to-guide'
 import DeckHeroActions from './deck-hero-actions'
 import DeckShareMenu, { type ShareCardEntry } from '../../shared/deck-share-menu'
 
@@ -168,6 +169,20 @@ export default async function DeckDetailPage({
     : undefined
   if (inlineGuide && !(isEditing && deck.isOwner)) {
     redirect(`/guides/${inlineGuide.id}?preview=1&view=1`)
+  }
+
+  // One kind of guide: editing a deck you own edits it as a full guide. An
+  // upgraded deck opens its guide's editor; a deck not yet upgraded is
+  // upgraded first (from the client, so link prefetches never trigger it).
+  // The single-card links (?card=, ?addCard=1) keep the cards-only editor.
+  const singleCardVisit = Boolean(resolvedSearchParams.card) || resolvedSearchParams.addCard === '1'
+  if (isEditing && deck.isOwner && !singleCardVisit) {
+    if (inlineGuide) redirect(`/guides/${inlineGuide.id}?preview=1&edit=1&editorTab=decks`)
+    return (
+      <main>
+        <UpgradeDeckToGuide deckId={id} />
+      </main>
+    )
   }
 
   if (isEditing && !deck.isOwner) {

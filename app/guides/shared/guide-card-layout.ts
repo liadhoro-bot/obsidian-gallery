@@ -32,6 +32,13 @@ export function defaultGuideCards(decks: GuidesV3DeckDetail[]): GuideCardPlaceme
   })
 }
 
+// A deck is a guide's own cards (its inline deck, recipes.inline_guide_id)
+// only for that one guide. Every other guide that reuses it shows it as a
+// nested guide, so mark decks for the guide being shown before resolving.
+export function forGuide<T extends { inlineGuideId?: string | null }>(decks: T[], guideId: string): (T & { isInline: boolean })[] {
+  return decks.map(deck => ({ ...deck, isInline: Boolean(deck.inlineGuideId) && deck.inlineGuideId === guideId }))
+}
+
 // A guide's inline deck (recipes.inline_guide_id) holds its direct cards.
 // Those cards are top-level items, interleaved with the nested guides; every
 // other deck stays one contiguous block.
