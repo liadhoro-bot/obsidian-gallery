@@ -41,9 +41,9 @@ export const paintsFeatureGuides = [
 ]
 
 export const guidesFeatureGuides = [
-  guide('guides.page', 'Guides', 'Guides is your painting knowledge library. It holds guide files, reusable step decks, and the public library for discovering new techniques.', 100),
-  guide('guides.tabs.guides', 'Guides Tab', 'Guides collects full painting guides. A guide can contain one or more decks and acts like the complete recipe file.', 110),
-  guide('guides.tabs.decks', 'Decks Tab', 'Decks are reusable card sequences: cover card first, then step cards. Open a deck to view the card stack or use the edit button to change the deck.', 120),
+  guide('guides.page', 'Guides', 'Guides is your painting knowledge library. It holds the guides you made, the guides you saved, and the public library for discovering new techniques.', 100),
+  guide('guides.tabs.guides', 'My Guides Tab', 'My Guides holds every guide you made. A guide is made of cards, and it can also reuse other guides inside it.', 110),
+  guide('guides.tabs.saved', 'Saved Tab', 'Saved holds the public guides from other painters that you bookmarked.', 120),
   guide('guides.tabs.library', 'Library Tab', 'Library is for finding shared public guides and decks, using search and tags to narrow the collection.', 130),
   guide('guides.library_search', 'Library Search', 'Search filters guides and decks in the library so you can find a technique, paint effect, or recipe quickly.', 140),
   guide('guides.deck_save', 'Deck Edit', 'The edit control opens the deck editor where the deck description, card order, and cards can be changed.', 150, 'left'),
@@ -86,9 +86,9 @@ export const unitPreviewFeatureGuides = [
 ]
 
 export const guideDetailFeatureGuides = [
-  guide('guides.detail.page', 'Guide Detail', 'Guide Detail explains one guide file: what it teaches, how many decks and cards it contains, and which level it serves.', 100),
+  guide('guides.detail.page', 'Guide Detail', 'Guide Detail explains one guide: what it teaches, how many cards and reused guides it contains, and which level it serves.', 100),
   guide('guides.detail.description', 'Description', 'Description summarizes the guide and shows the palette or color identity attached to it.', 110),
-  guide('guides.detail.decks', 'Decks In This Guide', 'Decks In This Guide lists the step-card decks that belong to this guide. Press a deck to open its card stack.', 120, 'top'),
+  guide('guides.detail.decks', 'Guides Inside', 'Guides Inside lists the guides reused in this one. Press one to jump to its cards.', 120, 'top'),
 ]
 
 export const deckDetailFeatureGuides = [

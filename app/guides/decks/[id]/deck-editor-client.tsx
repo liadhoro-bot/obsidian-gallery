@@ -33,6 +33,8 @@ import { hasUnuploadedImage } from '../../shared/deck-save-values'
 import type { GuidesV3DeckDetail } from '../../guides-v3-detail-data'
 import { ImageFocalPointField } from '../../shared/image-focal-point-field'
 import styles from './deck-editor-client.module.css'
+import { addableCardTypes, cardTypeDefaultBody, cardTypeLabel } from '../../shared/card-templates'
+import { AddContentSheet, CardTypeSheet } from '../../shared/card-type-sheet'
 
 type DeckEditorTab = 'details' | 'cards' | 'preview'
 type DeckDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
@@ -113,7 +115,7 @@ type DropTarget = {
 const difficultyOptions: DeckDifficulty[] = ['Beginner', 'Intermediate', 'Advanced']
 const statusOptions: DeckStatus[] = ['Draft', 'Private', 'Public']
 const cardTemplateOptions: CardTemplate[] = ['step', 'theme', 'theme-alt', 'image', 'small-image', 'paints', 'video']
-const addCardTemplateOptions: CardTemplate[] = ['cover', 'step', 'theme', 'theme-alt', 'image', 'small-image', 'paints', 'video']
+const addCardTemplateOptions: CardTemplate[] = addableCardTypes
 const themePaintLimit = 7
 // Type B flows paints 8-14 into a second column.
 const altThemePaintLimit = 14
@@ -356,27 +358,7 @@ function getYoutubeEmbedUrl(url: string | null) {
   return id ? `https://www.youtube.com/embed/${id}` : null
 }
 
-function templateLabel(template: CardTemplate) {
-  if (template === 'cover') return 'Cover'
-  if (template === 'theme') return 'Theme Card Type A'
-  if (template === 'theme-alt') return 'Theme Card Type B'
-  if (template === 'image') return 'Big Image'
-  if (template === 'small-image') return 'Small Image'
-  if (template === 'paints') return 'Paints'
-  if (template === 'video') return 'Video'
-  return 'Step'
-}
-
-function templateDescription(template: CardTemplate) {
-  if (template === 'cover') return 'Deck title, hero image, and description'
-  if (template === 'theme') return 'Square paint swatches with full-width glass labels'
-  if (template === 'theme-alt') return 'Textured paint daubs with compact glass labels'
-  if (template === 'image') return 'Full-card image with a small title and notes panel'
-  if (template === 'small-image') return 'Cover-style image above title and longer notes'
-  if (template === 'paints') return 'Deck paints and current ownership status'
-  if (template === 'video') return 'YouTube walkthrough with a short caption'
-  return 'Instruction, paints, ratios, and optional image'
-}
+const templateLabel = (template: CardTemplate) => cardTypeLabel(template)
 
 function templateEditorSubtitle(template: CardTemplate) {
   if (template === 'cover') return 'Cover image, title, and deck description'
@@ -469,16 +451,6 @@ function DragHandleIcon() {
   )
 }
 
-function CardTypeIcon({ template }: { template: CardTemplate }) {
-  const label = templateLabel(template)
-
-  return (
-    <span className={styles.cardTypeIcon} aria-label={`${label} card`}>
-      {label}
-    </span>
-  )
-}
-
 function makeNewCard(
   template: CardTemplate,
   index: number,
@@ -488,20 +460,7 @@ function makeNewCard(
     id: `new:${template}:${Date.now()}:${index}`,
     title: `${templateLabel(template)} Card`,
     template,
-    body:
-      template === 'cover'
-        ? 'Describe the deck at a glance: subject, style, and promise.'
-        : template === 'theme' || template === 'theme-alt'
-          ? 'Describe the palette, mood, finish, and visual intent.'
-          : template === 'image'
-            ? 'Add the visual checkpoint notes for this card.'
-            : template === 'small-image'
-              ? 'Add the reference notes, comparison cues, or longer explanation for this image.'
-              : template === 'paints'
-                ? 'The full palette for this deck, at a glance.'
-                : template === 'video'
-                  ? 'Add a short caption for the video.'
-                  : 'Describe the painting action, timing, and result to check.',
+    body: cardTypeDefaultBody(template),
     image: null,
     paints:
       template === 'paints'
@@ -523,6 +482,12 @@ function makeNewCard(
 }
 
 const editorTabs = ['details', 'cards', 'preview'] as const
+// Decks and guides share one editor model; the tab ids stay put so existing
+// ?editorTab= links keep working.
+const editorTabLabels: Record<DeckEditorTab, string> = { details: 'Details', cards: 'Contents', preview: 'Preview' }
+// Editing a guide's own cards (its inline deck): the guide's details live in
+// the guide editor, so only the cards and their preview are shown here.
+const inlineEditorTabs = ['cards', 'preview'] as const
 
 export default function DeckEditorClient({
   backHref,
@@ -531,8 +496,12 @@ export default function DeckEditorClient({
   initialCards,
   initialInventoryNotes = '',
   initialExpertTips = '',
+  inlineGuide,
   isSaving = false,
   onBack,
+  openAddCard = false,
+  openCardId,
+  onExit,
   onDeleteDeck,
   onSaveDraft,
   saveError,
@@ -544,15 +513,23 @@ export default function DeckEditorClient({
   initialCards?: DeckEditorInitialCard[]
   initialInventoryNotes?: string
   initialExpertTips?: string
+  // Set when these are a guide's own cards (recipes.inline_guide_id).
+  inlineGuide?: { id: string; title: string }
   isSaving?: boolean
   onBack?: () => void
+  // Open the new-card picker on arrival (+ Add > New Card in the guide editor).
+  openAddCard?: boolean
+  // Open this saved card's editor on arrival (Edit on a guide's direct card).
+  openCardId?: string
+  // Leave without saving (nothing changed in a single-card visit).
+  onExit?: () => void
   onDeleteDeck?: () => Promise<void>
   onSaveDraft?: (payload: DeckEditorSavePayload) => void | Promise<boolean>
   onTogglePaintOwnership?: (formData: FormData) => void | Promise<void>
   saveError?: string | null
   saveLabel?: string
 }) {
-  const [activeTab, setActiveTab] = useEditorTab<DeckEditorTab>('details', editorTabs)
+  const [activeTab, setActiveTab] = useEditorTab<DeckEditorTab>(inlineGuide ? 'cards' : 'details', inlineGuide ? inlineEditorTabs : editorTabs)
   const [title, setTitle] = useState(deck.title)
   const [description, setDescription] = useState(deck.description)
   const [inventoryNotes] = useState(initialInventoryNotes)
@@ -581,10 +558,13 @@ export default function DeckEditorClient({
   const [isEditingGallery, setIsEditingGallery] = useState(false)
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([])
   const [expandedImage, setExpandedImage] = useState<EditorImage | null>(null)
-  const [editingCardId, setEditingCardId] = useState<string | null>(null)
+  const [editingCardId, setEditingCardId] = useState<string | null>(() =>
+    openCardId && cards.some((card) => card.id === openCardId) ? openCardId : null
+  )
   const [imageUploadError, setImageUploadError] = useState<string | null>(null)
   const [pendingImageUploads, setPendingImageUploads] = useState(0)
-  const [isAddCardOpen, setIsAddCardOpen] = useState(false)
+  const [isAddCardOpen, setIsAddCardOpen] = useState(openAddCard)
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
@@ -810,6 +790,24 @@ export default function DeckEditorClient({
     setIsAddCardOpen(false)
   }
 
+  // Arriving from a guide's Contents to add or edit one card: closing the card
+  // sheet ends the visit - saving if anything changed - instead of leaving the
+  // creator in this editor's card list.
+  const isSingleCardVisit = Boolean(inlineGuide && onExit && (openCardId || openAddCard))
+  const [cardsOnArrival] = useState(() => JSON.stringify(cards))
+  const finishSingleCardVisit = useRef<() => void>(() => {})
+  finishSingleCardVisit.current = () => {
+    if (JSON.stringify(cards) !== cardsOnArrival) handleSave()
+    else onExit?.()
+  }
+  const previousSheet = useRef<{ editing: string | null; adding: boolean } | null>(null)
+  useEffect(() => {
+    const previous = previousSheet.current
+    previousSheet.current = { editing: editingCardId, adding: isAddCardOpen }
+    if (!isSingleCardVisit || !previous || editingCardId || isAddCardOpen) return
+    if (previous.editing || previous.adding) finishSingleCardVisit.current()
+  }, [editingCardId, isAddCardOpen, isSingleCardVisit])
+
   function handleSave() {
     if (isUploadingImages) {
       setImageUploadError('Wait for the image upload to finish before saving.')
@@ -981,17 +979,23 @@ export default function DeckEditorClient({
             </div>
           </div>
           <div className={styles.heroContent}>
-            <p className={styles.eyebrow}>Deck Editor</p>
-            <h1>{title || 'Untitled Deck'}</h1>
-            <div className={styles.counters}>
-              <span>{deck.likeCount ?? 0} likes</span>
-              <span>{deck.saveCount ?? 0} saves</span>
-            </div>
+            <p className={styles.eyebrow}>Guide Editor</p>
+            <h1>{inlineGuide ? inlineGuide.title : title || 'Untitled Guide'}</h1>
+            {inlineGuide ? (
+              <div className={styles.counters}>
+                <span>Cards in this guide</span>
+              </div>
+            ) : (
+              <div className={styles.counters}>
+                <span>{deck.likeCount ?? 0} likes</span>
+                <span>{deck.saveCount ?? 0} saves</span>
+              </div>
+            )}
           </div>
         </header>
 
         <div className={styles.tabs} role="tablist" aria-label="Deck editor tabs">
-          {(['details', 'cards', 'preview'] as DeckEditorTab[]).map((tab) => (
+          {(inlineGuide ? inlineEditorTabs : editorTabs).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -1002,7 +1006,7 @@ export default function DeckEditorClient({
               className={activeTab === tab ? styles.activeTab : styles.tab}
               onClick={() => setActiveTab(tab)}
             >
-              {tab[0]?.toUpperCase()}{tab.slice(1)}
+              {editorTabLabels[tab]}
             </button>
           ))}
         </div>
@@ -1080,11 +1084,12 @@ export default function DeckEditorClient({
         {activeTab === 'cards' ? (
           <section className={styles.panel}>
             <div className={styles.cardList}>
-              {cards.map((card, index) => (
-                <article
+              {cards.map((card) => (
+                <div
                   key={card.id}
                   className={[
-                    styles.cardRow,
+                    styles.guideCardRow,
+                    styles.topLevelCardRow,
                     draggingCardId === card.id ? styles.cardRowDragging : '',
                     dropTarget?.id === card.id && dropTarget.edge === 'before'
                       ? styles.cardRowDropBefore
@@ -1131,29 +1136,37 @@ export default function DeckEditorClient({
                   >
                     <DragHandleIcon />
                   </span>
-                  <span className={styles.cardNumber} aria-hidden="true">
-                    {index + 1}
-                  </span>
-                  <span className={styles.cardInfo}>
-                    <span className={styles.cardTypeLabel}>{templateLabel(card.template)}</span>
-                    <span className={styles.cardName}>{card.title}</span>
-                  </span>
-                  <button
-                    className={styles.editButton}
-                    type="button"
-                    onClick={() => setEditingCardId(card.id)}
-                  >
-                    Edit
+                  <button type="button" className={styles.guideCardPreview} aria-hidden="true" tabIndex={-1} onClick={() => setEditingCardId(card.id)}>
+                    <span className={styles.guideCardPreviewStage}>
+                      <DeckPreviewCardNode card={card} cards={cards} deck={deck} description={description} heroImage={coverCard?.image ?? heroImage} status={status} title={title} />
+                    </span>
                   </button>
-                </article>
+                  <span className={styles.guideCardInfo}>
+                    <span className={styles.cardTypeLabel}>{templateLabel(card.template)}</span>
+                    <strong data-deck-card-title>{card.title}</strong>
+                  </span>
+                  <span className={styles.topLevelCardActions}>
+                    <button
+                      className={styles.visibilityButton}
+                      type="button"
+                      aria-label={`Edit ${card.title}`}
+                      onClick={() => setEditingCardId(card.id)}
+                    >
+                      <RowEditIcon />Edit
+                    </button>
+                  </span>
+                </div>
               ))}
             </div>
             <button
               type="button"
               className={styles.addCardButton}
-              onClick={() => setIsAddCardOpen(true)}
+              aria-haspopup="dialog"
+              // A guide's own cards only take cards; a former deck gets the
+              // same + Add choices as any guide.
+              onClick={() => inlineGuide ? setIsAddCardOpen(true) : setIsAddMenuOpen(true)}
             >
-              Add New Card
+              + Add
             </button>
           </section>
         ) : null}
@@ -1191,10 +1204,33 @@ export default function DeckEditorClient({
       ) : null}
 
       {isAddCardOpen ? (
-        <AddCardSheet
-          hasCover={cards.some((card) => card.template === 'cover')}
+        <CardTypeSheet
+          // Only one cover card at a time; a guide's own cards never have one.
+          templates={inlineGuide || cards.some((card) => card.template === 'cover')
+            ? addCardTemplateOptions.filter((template) => template !== 'cover')
+            : addCardTemplateOptions}
+          guideIndex={inlineGuide ? undefined : {
+            disabled: true,
+            note: 'Lists the guides inside - available once this deck is upgraded to a full guide.',
+            onAdd: () => {},
+          }}
           onAddCard={addCard}
           onClose={() => setIsAddCardOpen(false)}
+        />
+      ) : null}
+
+      {isAddMenuOpen ? (
+        <AddContentSheet
+          options={[
+            { key: 'card', kind: 'Card', title: 'New Card', note: 'Add a card to this guide.' },
+            { key: 'existing', kind: 'Guide', title: 'Existing Guide', note: 'Available once this deck is upgraded to a full guide.', disabled: true },
+            { key: 'new', kind: 'Guide', title: 'New Guide', note: 'Available once this deck is upgraded to a full guide.', disabled: true },
+          ]}
+          onChoose={(key) => {
+            setIsAddMenuOpen(false)
+            if (key === 'card') setIsAddCardOpen(true)
+          }}
+          onClose={() => setIsAddMenuOpen(false)}
         />
       ) : null}
 
@@ -1555,50 +1591,6 @@ function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
         </div>
       ) : null}
     </section>
-  )
-}
-
-function AddCardSheet({
-  hasCover,
-  onAddCard,
-  onClose,
-}: {
-  hasCover: boolean
-  onAddCard: (template: CardTemplate) => void
-  onClose: () => void
-}) {
-  // Only one cover card at a time - it's already in the list if hasCover.
-  const availableTemplates = hasCover
-    ? addCardTemplateOptions.filter((template) => template !== 'cover')
-    : addCardTemplateOptions
-
-  return (
-    <div className={styles.sheetBackdrop} role="dialog" aria-modal="true">
-      <section className={styles.sheet}>
-        <header>
-          <h2>Add New Card</h2>
-          <button type="button" onClick={onClose} aria-label="Close">
-            Close
-          </button>
-        </header>
-        <div className={styles.templateGrid}>
-          {availableTemplates.map((template) => (
-            <button
-              key={template}
-              type="button"
-              className={styles.templateButton}
-              onClick={() => onAddCard(template)}
-            >
-              <CardTypeIcon template={template} />
-              <span>
-                <strong>{templateLabel(template)} Card</strong>
-                <small>{templateDescription(template)}</small>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-    </div>
   )
 }
 
@@ -2042,7 +2034,41 @@ function DeckPaintPickerField({
   )
 }
 
-function DeckPreview({
+type DeckPreviewProps = {
+  cards: EditorCard[]
+  deck: GuidesV3DeckDetail
+  description: string
+  heroImage: string
+  status: DeckStatus
+  title: string
+}
+
+function DeckPreview(props: DeckPreviewProps) {
+  return (
+    <section className={styles.previewStack} aria-label="Deck preview">
+      {props.cards.map((card) => (
+        <div key={card.id} className={styles.previewShareMount}>
+          <DeckPreviewCardNode card={card} {...props} />
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function DeckPreviewCardNode({
+  card,
+  cards,
+  deck,
+  description,
+  heroImage,
+  status,
+  title,
+}: DeckPreviewProps & { card: EditorCard }) {
+  return renderDeckPreviewCard({ card, cards, deck, description, heroImage, status, title })
+}
+
+function renderDeckPreviewCard({
+  card,
   cards,
   deck,
   description,
@@ -2050,6 +2076,7 @@ function DeckPreview({
   status,
   title,
 }: {
+  card: EditorCard
   cards: EditorCard[]
   deck: GuidesV3DeckDetail
   description: string
@@ -2083,19 +2110,17 @@ function DeckPreview({
   // to always lead.
   const stepCards = cards.filter((card) => card.template !== 'cover')
 
-  return (
-    <section className={styles.previewStack} aria-label="Deck preview">
-      {cards.map((card) => {
+  {
         if (card.template === 'cover') {
           return (
-            <div key={card.id} className={styles.previewShareMount}>
+            <>
               <RecipeGuideCoverCard
                 recipe={recipe}
                 featuredImage={featuredImage}
                 cardCount={cards.length}
                 paintCount={deck.paintList.length}
               />
-            </div>
+            </>
           )
         }
 
@@ -2113,7 +2138,7 @@ function DeckPreview({
         }
 
         return (
-          <div key={card.id} className={styles.previewShareMount}>
+          <>
             {card.template === 'paints' ? (
               <RecipeGuidePaintsCard
                 title={card.title}
@@ -2163,10 +2188,17 @@ function DeckPreview({
                 paints={card.paints}
               />
             )}
-          </div>
+          </>
         )
-      })}
-    </section>
+  }
+}
+
+function RowEditIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" />
+      <path d="m14 7 3 3" />
+    </svg>
   )
 }
 

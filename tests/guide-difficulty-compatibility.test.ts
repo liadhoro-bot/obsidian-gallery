@@ -80,3 +80,15 @@ test('fallback failures are returned without an infinite retry', async () => {
   assert.equal(calls, 2)
   assert.equal(result.error, error)
 })
+
+test('a database without guides.primary_recipe_id still loads guides', async () => {
+  const calls: string[] = []
+  const result = await selectDifficultyCompatible('id, is_auto, primary_recipe_id, created_at', async fields => {
+    calls.push(fields)
+    return fields.includes('primary_recipe_id')
+      ? { data: null, error: { code: '42703', message: 'column guides.primary_recipe_id does not exist' } }
+      : { data: [{ id: 'guide' }], error: null }
+  })
+  assert.equal(result.error, null)
+  assert.deepEqual(calls, ['id, is_auto, primary_recipe_id, created_at', 'id, is_auto, created_at'])
+})

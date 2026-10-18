@@ -1,4 +1,4 @@
-import { EMPTY_DECK_DESCRIPTION, isGuideIndexCard, parseGuideCardLayout, resolveGuideCards, type GuideCardPlacement } from './shared/guide-card-layout'
+import { EMPTY_DECK_DESCRIPTION, isGuideOwnedCard, parseGuideCardLayout, resolveGuideCards, type GuideCardPlacement } from './shared/guide-card-layout'
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { loadRecipeSteps } from './load-recipe-steps'
 import { cache } from 'react'
@@ -103,6 +103,7 @@ type RecipeRow = {
   cover_position: number | null
   cover_focal_x: number | null
   cover_focal_y: number | null
+  inline_guide_id?: string | null
   user_id: string | null
   created_at: string | null
 }
@@ -309,7 +310,7 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
   {
 
     const { data: recipe, error: recipeError } = await selectDifficultyCompatible(
-      'id, name, description, image_url, is_public, difficulty, cover_position, cover_focal_x, cover_focal_y, user_id, created_at',
+      'id, name, description, image_url, is_public, difficulty, cover_position, cover_focal_x, cover_focal_y, inline_guide_id, user_id, created_at',
       selection => supabase
         .from('recipes')
         .select(selection)
@@ -519,6 +520,7 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
         EMPTY_DECK_DESCRIPTION
       ),
       isPublic: typedRecipe.is_public === true,
+      isInline: Boolean(typedRecipe.inline_guide_id),
       ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public deck',
       steps: normalizedSteps,
       paintList: paints,
@@ -569,7 +571,7 @@ export const getGuidesV3GuideDetail = cache(
       ...guide,
       cards: visibleCards ? visibleCards.length : guide.cards,
       cardLayout,
-      decksList: visibleCards ? decksList.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideIndexCard(card)).length })) : decksList,
+      decksList: visibleCards ? decksList.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideOwnedCard(card)).length })) : decksList,
     } satisfies GuidesV3GuideDetail
   }
 )
@@ -598,7 +600,7 @@ export const getSharedGuideDetail = cache(async (guideId: string) => {
       ...shared.guide,
       cards: visibleCards.length,
       cardLayout,
-      decksList: shared.decks.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideIndexCard(card)).length })),
+      decksList: shared.decks.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideOwnedCard(card)).length })),
     } satisfies GuidesV3GuideDetail,
     deckDetails: details,
     coverImageUrl: shared.coverImageUrl,

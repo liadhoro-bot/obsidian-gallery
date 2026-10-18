@@ -4,11 +4,16 @@ import { useEditorChanges } from '@/app/components/navigation-feedback/unsaved-c
 
 import GuideBackButton from '@/app/guides/shared/guide-back-button'
 import { useEditorTab } from '@/app/guides/shared/use-editor-tab'
-import { loadGuideEditorDeck } from '../actions'
+import { addInlineGuideCard, createDeckFromForge, loadGuideEditorDeck } from '../actions'
+import { AddContentSheet, CardTypeSheet } from '../shared/card-type-sheet'
+import { addableCardTypes, cardTypeLabel, isCardTypeId, type CardTypeId } from '../shared/card-templates'
+
 import Image from 'next/image'
-import { useMemo, useState } from 'react'
-import { deckCardEntries } from '../shared/deck-card-entries'
-import { guideCardKey, resolveGuideCards, type GuideCardPlacement } from '../shared/guide-card-layout'
+import Link from '@/app/components/navigation-feedback/navigation-link'
+import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
+import { guideCardNodes } from '../shared/deck-card-entries'
+import { flattenGuideContentItems, newGuideCoverCardId, newGuideIndexCardId, guideCardKey, guideContentItems, isGuideCoverCard, isGuideIndexCard, isGuideOwnedCard, resolveGuideCards, type GuideCardPlacement, type GuideContentItem } from '../shared/guide-card-layout'
+import { GuideCardNavigationContext } from '../shared/guide-card-navigation'
 import { MAX_GUIDE_TAGS, normalizeGuideTag, normalizeGuideTags } from '../shared/guide-tags'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
 import GalleryPager, { useGalleryPages } from '../../components/gallery/gallery-pager'
@@ -16,6 +21,11 @@ import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import type { GuidesV3Deck } from '../guides-v3-data'
 import type { GuidesV3DeckDetail, GuidesV3GuideDetail } from '../guides-v3-detail-data'
 import styles from '../decks/[id]/deck-editor-client.module.css'
+
+// The friendly name for a saved card's type ("Small Image", not "small-image").
+function cardTypeName(template: string | null | undefined) {
+  return template && isCardTypeId(template) ? cardTypeLabel(template) : 'Step'
+}
 
 type GuideEditorTab = 'details' | 'decks' | 'preview'
 type GuideDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
@@ -45,6 +55,8 @@ function inferDifficulty(cardCount: number): GuideDifficulty {
 }
 
 const editorTabs = ['details', 'decks', 'preview'] as const
+// The tab ids stay put so existing ?editorTab= links keep working.
+const editorTabLabels: Record<GuideEditorTab, string> = { details: 'Details', decks: 'Contents', preview: 'Preview' }
 
 export default function GuideEditorClient({
   guide,
@@ -89,7 +101,9 @@ export default function GuideEditorClient({
   )
   const [draggingDeckId, setDraggingDeckId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
-  const [isAddDecksOpen, setIsAddDecksOpen] = useState(false)
+  // One + Add entry point: the menu, then the existing-guide picker or the
+  // new-guide form.
+  const [addSheet, setAddSheet] = useState<'menu' | 'card-type' | 'existing' | 'new' | null>(null)
   const [deckSearch, setDeckSearch] = useState('')
   const [cardLayout, setCardLayout] = useState<GuideCardPlacement[]>(guide.cardLayout ?? [])
   const [loadedDecks, setLoadedDecks] = useState<GuidesV3DeckDetail[]>([])
@@ -103,8 +117,10 @@ export default function GuideEditorClient({
     const map = new Map<string, GuidesV3Deck>()
     for (const deck of memberDecks) map.set(deck.id, deck)
     for (const deck of availableDecks) map.set(deck.id, deck)
+    // Guides created from + Add > New Guide during this edit.
+    for (const deck of loadedDecks) if (!map.has(deck.id)) map.set(deck.id, deck)
     return map
-  }, [memberDecks, availableDecks])
+  }, [memberDecks, availableDecks, loadedDecks])
   const deckDetailById = useMemo(
     () => new Map([...deckDetails, ...loadedDecks].map((deck) => [deck.id, deck])),
     [deckDetails, loadedDecks]
@@ -115,11 +131,46 @@ export default function GuideEditorClient({
     .filter((deck): deck is GuidesV3Deck => Boolean(deck))
   const selectedDetails = selectedDeckIds.map(id => deckDetailById.get(id)).filter((deck): deck is GuidesV3DeckDetail => Boolean(deck))
   const resolvedCards = resolveGuideCards(selectedDetails, cardLayout)
+  // Cover cards show the guide's current title, description and cover image.
+  const cardNodes = guideCardNodes(selectedDetails, resolvedCards, { id: guide.id, title: title || 'Untitled Guide', description, image: coverImage })
+  // The guide's own cards (its inline deck), if it has any yet.
+  const inlineDeckId = selectedDetails.find((deck) => deck.isInline)?.id ?? null
+  const contentItems = guideContentItems(selectedDetails, resolvedCards)
+
+  function addGuideIndex() {
+    // With direct cards the index is a top-level card; otherwise it sits in
+    // the first nested guide, as before.
+    const groupId = inlineDeckId ?? selectedDeckIds.find((id) => !deckDetailById.get(id)?.isInline)
+    if (!groupId) return
+    setCardLayout([{ deckId: guide.id, cardId: newGuideIndexCardId(resolvedCards), groupId, hidden: false }, ...resolvedCards])
+    setExpandedDecks(current => current.includes(groupId) ? current : [...current, groupId])
+  }
+
+  // Guide Cover: placed first in the top-level sequence (or the first
+  // nested guide when the guide has no cards of its own yet).
+  function addGuideCover() {
+    const groupId = inlineDeckId ?? selectedDeckIds.find((id) => !deckDetailById.get(id)?.isInline)
+    if (!groupId) return
+    setCardLayout([{ deckId: guide.id, cardId: newGuideCoverCardId(resolvedCards), groupId, hidden: false }, ...resolvedCards])
+  }
+
+  function removeGuideIndex(key: string) {
+    setCardLayout(resolvedCards.filter(card => guideCardKey(card) !== key))
+  }
+
+  // Source cards reorder only within the nested guide they sit in; moving them
+  // between nested guides is not offered. Cards already placed in another
+  // group by an earlier editor keep that placement. The Guide Index belongs
+  // to this guide, so it may still move anywhere.
+  function canMoveBetween(card: GuideCardPlacement, target: GuideCardPlacement | undefined) {
+    return Boolean(target) && (isGuideOwnedCard(card) || target!.groupId === card.groupId)
+  }
+
   function moveCard(key: string, direction: -1 | 1) {
     const next = [...resolvedCards]
     const index = next.findIndex(card => guideCardKey(card) === key)
     const target = index + direction
-    if (index < 0 || target < 0 || target >= next.length) return
+    if (index < 0 || !canMoveBetween(next[index], next[target])) return
     const moved = { ...next[index], groupId: next[target].groupId }
     next.splice(index, 1)
     next.splice(target, 0, moved)
@@ -131,7 +182,7 @@ export default function GuideEditorClient({
     const next = [...resolvedCards]
     const fromIndex = next.findIndex((card) => guideCardKey(card) === cardKey)
     const targetIndex = next.findIndex((card) => guideCardKey(card) === targetKey)
-    if (fromIndex < 0 || targetIndex < 0) return
+    if (fromIndex < 0 || targetIndex < 0 || !canMoveBetween(next[fromIndex], next[targetIndex])) return
     const targetGroupId = next[targetIndex].groupId
     const [moved] = next.splice(fromIndex, 1)
     const adjustedTarget = fromIndex < targetIndex ? targetIndex - 1 : targetIndex
@@ -147,11 +198,74 @@ export default function GuideEditorClient({
   const filteredPickableDecks = pickableDecks.filter((deck) =>
     `${deck.title} ${deck.category}`.toLowerCase().includes(normalizedDeckSearch)
   )
-  const coverImageCandidates = selectedDecks.map((deck) => ({
+  // The guide's own cards deck has no cover of its own to offer.
+  const coverImageCandidates = selectedDecks.filter((deck) => !deckDetailById.get(deck.id)?.isInline).map((deck) => ({
     id: deck.id,
     image: deckDetailById.get(deck.id)?.fullImage || deckDetailById.get(deck.id)?.image || deck.image,
   }))
   const coverPages = useGalleryPages(coverImageCandidates)
+
+  function contentItemKey(item: GuideContentItem) {
+    return item.kind === 'guide' ? `guide:${item.deckId}` : `card:${guideCardKey(item.card)}`
+  }
+
+  // Moves a top-level item (a nested guide or a direct card). Without direct
+  // cards this is the existing deck reorder, unchanged.
+  function reorderTopLevel(fromKey: string, toKey: string, edge: DropTarget['edge']) {
+    if (fromKey === toKey) return
+    if (!inlineDeckId) {
+      if (fromKey.startsWith('guide:') && toKey.startsWith('guide:')) reorderDeck(fromKey.slice(6), toKey.slice(6), edge)
+      return
+    }
+    const next = [...contentItems]
+    const fromIndex = next.findIndex((item) => contentItemKey(item) === fromKey)
+    const toIndex = next.findIndex((item) => contentItemKey(item) === toKey)
+    if (fromIndex < 0 || toIndex < 0) return
+    const [moved] = next.splice(fromIndex, 1)
+    const adjusted = fromIndex < toIndex ? toIndex - 1 : toIndex
+    next.splice(adjusted + (edge === 'after' ? 1 : 0), 0, moved)
+    applyContentItems(next)
+  }
+
+  function moveTopLevel(key: string, direction: -1 | 1) {
+    const index = contentItems.findIndex((item) => contentItemKey(item) === key)
+    const target = contentItems[index + direction]
+    if (index < 0 || !target) return
+    reorderTopLevel(key, contentItemKey(target), direction === 1 ? 'after' : 'before')
+  }
+
+  // Nested guides keep their block order in guide_decks; the guide's own
+  // cards deck stays last so likes and first-deck fallbacks never land on it.
+  function applyContentItems(items: GuideContentItem[]) {
+    setCardLayout(flattenGuideContentItems(items))
+    const blockIds = items.flatMap((item) => item.kind === 'guide' ? [item.deckId] : [])
+    setSelectedDeckIds((current) => [
+      ...blockIds,
+      ...current.filter((id) => !blockIds.includes(id) && id !== inlineDeckId),
+      ...(inlineDeckId ? [inlineDeckId] : []),
+    ])
+  }
+
+  function toggleCardHidden(key: string) {
+    setCardLayout(resolvedCards.map(item => guideCardKey(item) === key ? { ...item, hidden: !item.hidden } : item))
+  }
+
+  // New Card: add a card of the chosen type straight to this guide's own
+  // cards (its hidden inline deck, created on first use). It lands at the end
+  // of Contents; Edit opens it in the card editor.
+  async function addDirectCard(template: CardTypeId) {
+    if (addingDeckId) return
+    setAddingDeckId('card')
+    setCardLoadError(null)
+    try {
+      const { deckId, deck } = await addInlineGuideCard(guide.id, template)
+      setLoadedDecks((current) => [...current.filter((item) => item.id !== deckId), deck])
+      setSelectedDeckIds((current) => current.includes(deckId) ? current : [...current, deckId])
+      setAddSheet(null)
+    } catch (error) {
+      setCardLoadError(error instanceof Error ? error.message : 'Could not add this card.')
+    } finally { setAddingDeckId(null) }
+  }
 
   function reorderDeck(deckId: string, targetId: string, edge: DropTarget['edge']) {
     if (deckId === targetId) return
@@ -179,7 +293,32 @@ export default function GuideEditorClient({
       }
       setSelectedDeckIds(current => current.includes(deckId) ? current : [...current, deckId])
     } catch (error) {
-      setCardLoadError(error instanceof Error ? error.message : 'Could not load this deck.')
+      setCardLoadError(error instanceof Error ? error.message : 'Could not load this guide.')
+    } finally { setAddingDeckId(null) }
+  }
+
+  // A nested guide is backed by a deck for now: create a private one with
+  // just its cover card, then place it here. It exists on its own (My Guides)
+  // even if this guide is not saved.
+  async function createNestedGuide(name: string) {
+    if (addingDeckId) return false
+    setAddingDeckId('new')
+    setCardLoadError(null)
+    try {
+      const created = await createDeckFromForge({
+        title: name,
+        description: 'A reusable guide.',
+        status: 'Private',
+        image: null,
+        cards: [{ template: 'cover', title: name, body: '', image: null }],
+      })
+      const detail = await loadGuideEditorDeck(created.id)
+      setLoadedDecks(current => [...current, detail])
+      setSelectedDeckIds(current => current.includes(created.id) ? current : [...current, created.id])
+      return true
+    } catch (error) {
+      setCardLoadError(error instanceof Error ? error.message : 'Could not create this guide.')
+      return false
     } finally { setAddingDeckId(null) }
   }
 
@@ -257,7 +396,7 @@ export default function GuideEditorClient({
               className={activeTab === tab ? styles.activeTab : styles.tab}
               onClick={() => setActiveTab(tab)}
             >
-              {tab[0]?.toUpperCase()}{tab.slice(1)}
+              {editorTabLabels[tab]}
             </button>
           ))}
         </div>
@@ -349,7 +488,7 @@ export default function GuideEditorClient({
             <section className={styles.panel}>
               <div className={styles.panelHeader}>
                 <h2>Gallery</h2>
-                <span>From selected decks</span>
+                <span>From guides inside</span>
               </div>
               <div className={styles.galleryGrid} {...coverPages.swipeHandlers}>
                 {coverPages.pageItems.map((candidate) => (
@@ -380,43 +519,94 @@ export default function GuideEditorClient({
 
         {activeTab === 'decks' ? (
           <section className={styles.panel}>
-            <p>Arrange cards for this guide only. Source decks stay unchanged. Moving past a group boundary moves the card into the next group.</p>
+            <p>Changes here affect this guide only. The source guide stays unchanged.</p>
             <div className={styles.cardList}>
-              {selectedDecks.map((deck) => (
+              {contentItems.map((item, itemIndex) => {
+                if (item.kind === 'card') {
+                  const card = item.card
+                  const key = guideCardKey(card)
+                  const itemKey = contentItemKey(item)
+                  const isIndex = isGuideIndexCard(card)
+                  const isGuideCover = isGuideCoverCard(card)
+                  const step = deckDetailById.get(card.deckId)?.steps.find((candidate) => candidate.id === card.cardId)
+                  const label = isIndex ? 'Guide Index' : isGuideCover ? title || 'Untitled Guide' : step?.title ?? 'Card'
+                  return (
+                    <TopLevelCardRow
+                      key={itemKey}
+                      label={label}
+                      typeLabel={isIndex ? 'Index' : isGuideCover ? 'Cover' : cardTypeName(step?.template)}
+                      hidden={card.hidden}
+                      preview={cardNodes.get(key)}
+                      editHref={!isIndex && !isGuideCover && inlineDeckId ? `/guides/decks/${inlineDeckId}?preview=1&edit=1&editorTab=cards&card=${encodeURIComponent(card.cardId)}` : undefined}
+                      onRemove={isIndex || isGuideCover ? { label: isIndex ? 'Remove index' : 'Remove cover', run: () => removeGuideIndex(key) } : undefined}
+                      isDragging={draggingDeckId === itemKey}
+                      dropEdge={dropTarget?.id === itemKey ? dropTarget.edge : null}
+                      canMoveUp={itemIndex > 0}
+                      canMoveDown={itemIndex < contentItems.length - 1}
+                      onMove={(direction) => moveTopLevel(itemKey, direction)}
+                      onToggleHidden={() => toggleCardHidden(key)}
+                      onDragStart={(event) => {
+                        setDraggingDeckId(itemKey)
+                        event.dataTransfer.effectAllowed = 'move'
+                        event.dataTransfer.setData('text/plain', itemKey)
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault()
+                        const rect = event.currentTarget.getBoundingClientRect()
+                        setDropTarget({ id: itemKey, edge: event.clientY < rect.top + rect.height / 2 ? 'before' : 'after' })
+                        event.dataTransfer.dropEffect = 'move'
+                      }}
+                      onDragLeave={() => { if (dropTarget?.id === itemKey) setDropTarget(null) }}
+                      onDrop={(event) => {
+                        event.preventDefault()
+                        const draggedKey = event.dataTransfer.getData('text/plain') || draggingDeckId
+                        if (draggedKey) reorderTopLevel(draggedKey, itemKey, dropTarget?.edge ?? 'before')
+                        setDraggingDeckId(null)
+                        setDropTarget(null)
+                      }}
+                      onDragEnd={() => { setDraggingDeckId(null); setDropTarget(null) }}
+                    />
+                  )
+                }
+                const deck = deckById.get(item.deckId)
+                if (!deck) return null
+                const rowKey = contentItemKey(item)
+                return (
                 <article
                   key={deck.id}
                   className={[
                     styles.cardRow,
                     styles.guideDeckRow,
-                    draggingDeckId === deck.id ? styles.cardRowDragging : '',
-                    dropTarget?.id === deck.id && dropTarget.edge === 'before'
+                    styles.guideDeckRowUnnumbered,
+                    draggingDeckId === rowKey ? styles.cardRowDragging : '',
+                    dropTarget?.id === rowKey && dropTarget.edge === 'before'
                       ? styles.cardRowDropBefore
                       : '',
-                    dropTarget?.id === deck.id && dropTarget.edge === 'after'
+                    dropTarget?.id === rowKey && dropTarget.edge === 'after'
                       ? styles.cardRowDropAfter
                       : '',
                   ].join(' ')}
                   onDragStart={(event) => {
-                    setDraggingDeckId(deck.id)
+                    setDraggingDeckId(rowKey)
                     event.dataTransfer.effectAllowed = 'move'
-                    event.dataTransfer.setData('text/plain', deck.id)
+                    event.dataTransfer.setData('text/plain', rowKey)
                   }}
                   onDragOver={(event) => {
                     event.preventDefault()
                     const rect = event.currentTarget.getBoundingClientRect()
                     const edge =
                       event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-                    setDropTarget({ id: deck.id, edge })
+                    setDropTarget({ id: rowKey, edge })
                     event.dataTransfer.dropEffect = 'move'
                   }}
                   onDragLeave={() => {
-                    if (dropTarget?.id === deck.id) setDropTarget(null)
+                    if (dropTarget?.id === rowKey) setDropTarget(null)
                   }}
                   onDrop={(event) => {
                     event.preventDefault()
                     const draggedId = event.dataTransfer.getData('text/plain') || draggingDeckId
                     if (draggedId) {
-                      reorderDeck(draggedId, deck.id, dropTarget?.edge ?? 'before')
+                      reorderTopLevel(draggedId, rowKey, dropTarget?.edge ?? 'before')
                     }
                     setDraggingDeckId(null)
                     setDropTarget(null)
@@ -434,11 +624,8 @@ export default function GuideEditorClient({
                   >
                     <DragHandleIcon />
                   </span>
-                  <span className={styles.cardNumber} aria-hidden="true">
-                    {selectedDeckIds.indexOf(deck.id) + 1}
-                  </span>
                   <span className={styles.cardInfo}>
-                    <span className={styles.cardTypeLabel}>Deck</span>
+                    <span className={styles.cardTypeLabel}>Guide</span>
                     <span className={styles.cardName}>{deck.title}</span>
                   </span>
                   <span className={styles.cardRowActions}>
@@ -457,12 +644,14 @@ export default function GuideEditorClient({
                   {expandedDecks.includes(deck.id) ? <div id={`guide-cards-${deck.id}`} className={styles.guideCardList}>
                     {resolvedCards.filter(card => card.groupId === deck.id).map(card => {
                       const key = guideCardKey(card)
-                      const source = deckDetailById.get(card.deckId)!
-                      const step = source.steps.find(step => step.id === card.cardId)
-                      const label = card.cardId === 'cover' ? source.title + ' — Cover' : step?.title ?? 'Card'
+                      const isIndex = isGuideIndexCard(card)
+                      const isGuideCover = isGuideCoverCard(card)
+                      const source = deckDetailById.get(card.deckId)
+                      const step = source?.steps.find(step => step.id === card.cardId)
+                      const label = isIndex ? 'Guide Index' : isGuideCover ? title || 'Untitled Guide' : card.cardId === 'cover' ? `${source?.title} — Cover` : step?.title ?? 'Card'
                       const index = resolvedCards.indexOf(card)
-                      const previewNode = deckCardEntries(source).find((entry) => entry.key === card.cardId)?.node
-                      const typeLabel = card.cardId === 'cover' ? 'Cover' : step?.template || 'Step'
+                      const previewNode = cardNodes.get(key)
+                      const typeLabel = isIndex ? 'Index' : isGuideCover || card.cardId === 'cover' ? 'Cover' : cardTypeName(step?.template)
                       return <div
                         key={key}
                         className={[
@@ -500,43 +689,95 @@ export default function GuideEditorClient({
                       >
                         <span className={styles.dragHandle} aria-label={`Drag to reorder ${label}`} title="Drag to reorder" draggable><DragHandleIcon /></span>
                         <span className={styles.guideCardPreview} aria-hidden="true"><span className={styles.guideCardPreviewStage}>{previewNode}</span></span>
-                        <span className={styles.guideCardInfo}><span className={styles.cardTypeLabel}>{typeLabel}</span><strong data-guide-card-title>{label}</strong></span>
+                        <span className={styles.guideCardInfo}><span className={styles.cardTypeLabel}>{typeLabel}</span><strong data-guide-card-title>{label}</strong>{isIndex || isGuideCover ? <button type="button" className={styles.guideIndexRemove} onClick={() => removeGuideIndex(key)}>{isIndex ? 'Remove index' : 'Remove cover'}</button> : null}</span>
                         <button className={styles.visibilityButton} type="button" aria-pressed={card.hidden} onClick={() => setCardLayout(resolvedCards.map(item => guideCardKey(item) === key ? { ...item, hidden: !item.hidden } : item))}><VisibilityIcon hidden={card.hidden} />{card.hidden ? 'Unhide' : 'Hide'}</button>
                         <span className={styles.keyboardMoveActions}>
-                          <button type="button" disabled={index === 0} aria-label={`Move ${label} up`} onClick={() => moveCard(key, -1)}>↑</button>
-                          <button type="button" disabled={index === resolvedCards.length - 1} aria-label={`Move ${label} down`} onClick={() => moveCard(key, 1)}>↓</button>
-                          <label><span className="sr-only">Move {label} to deck group</span><select value={card.groupId} onChange={event => {
-                            const next = resolvedCards.filter(item => guideCardKey(item) !== key)
-                            const last = next.findLastIndex(item => item.groupId === event.target.value)
-                            next.splice(last + 1, 0, { ...card, groupId: event.target.value })
-                            setCardLayout(next)
-                          }}>{selectedDecks.map(group => <option key={group.id} value={group.id}>{group.title}</option>)}</select></label>
+                          <button type="button" disabled={!canMoveBetween(card, resolvedCards[index - 1])} aria-label={`Move ${label} up`} onClick={() => moveCard(key, -1)}>↑</button>
+                          <button type="button" disabled={!canMoveBetween(card, resolvedCards[index + 1])} aria-label={`Move ${label} down`} onClick={() => moveCard(key, 1)}>↓</button>
                         </span>
                       </div>
                     })}
-                    {!resolvedCards.some(card => card.groupId === deck.id) ? <p>No cards in this group.</p> : null}
+                    {!resolvedCards.some(card => card.groupId === deck.id) ? <p>No cards in this guide.</p> : null}
                   </div> : null}
                 </article>
-              ))}
+                )
+              })}
             </div>
             <button
               type="button"
               className={styles.addCardButton}
-              onClick={() => setIsAddDecksOpen(true)}
+              aria-haspopup="dialog"
+              onClick={() => setAddSheet('menu')}
             >
-              Add Decks
+              + Add
             </button>
+            {cardLoadError && !addSheet ? <p role="alert" className={styles.saveError}>{cardLoadError}</p> : null}
           </section>
         ) : null}
 
         {activeTab === 'preview' ? (
-          <GuidePreview decks={selectedDetails} cards={resolvedCards} />
+          <GuidePreview nodes={cardNodes} cards={resolvedCards} />
         ) : null}
 
         {saveError ? <p className={styles.saveError}>{saveError}</p> : null}
       </div>
 
-      {isAddDecksOpen ? (
+      {addSheet === 'menu' ? (
+        <AddContentSheet
+          options={[
+            { key: 'card', kind: 'Card', title: 'New Card', note: 'Add a card straight to this guide.' },
+            { key: 'existing', kind: 'Guide', title: 'Existing Guide', note: 'Reuse a guide you made. Its source stays unchanged.' },
+            { key: 'new', kind: 'Guide', title: 'New Guide', note: 'Start a new reusable guide and place it here.' },
+          ]}
+          onChoose={(key) => {
+            setCardLoadError(null)
+            setAddSheet(key === 'card' ? 'card-type' : key === 'existing' ? 'existing' : 'new')
+          }}
+          onClose={() => setAddSheet(null)}
+        />
+      ) : null}
+
+      {addSheet === 'card-type' ? (
+        <CardTypeSheet
+          templates={addableCardTypes}
+          // Always available, as many as the creator wants. With no guides
+          // inside yet it shows an empty state and fills in as guides are added.
+          guideIndex={{
+            onAdd: () => {
+              addGuideIndex()
+              setAddSheet(null)
+            },
+          }}
+          isBusy={Boolean(addingDeckId)}
+          error={cardLoadError}
+          onAddCard={(template) => {
+            if (template === 'cover') {
+              addGuideCover()
+              setAddSheet(null)
+            } else void addDirectCard(template)
+          }}
+          onClose={() => {
+            setAddSheet(null)
+            setCardLoadError(null)
+          }}
+        />
+      ) : null}
+
+      {addSheet === 'new' ? (
+        <NewGuideSheet
+          isSaving={Boolean(addingDeckId)}
+          error={cardLoadError}
+          onCreate={async (name) => {
+            if (await createNestedGuide(name)) setAddSheet(null)
+          }}
+          onClose={() => {
+            setAddSheet(null)
+            setCardLoadError(null)
+          }}
+        />
+      ) : null}
+
+      {addSheet === 'existing' ? (
         <AddDecksSheet
           decks={filteredPickableDecks}
           isLoading={Boolean(addingDeckId)}
@@ -546,7 +787,7 @@ export default function GuideEditorClient({
             void addDeck(deckId)
           }}
           onClose={() => {
-            setIsAddDecksOpen(false)
+            setAddSheet(null)
             setDeckSearch('')
           }}
           onQueryChange={setDeckSearch}
@@ -556,12 +797,149 @@ export default function GuideEditorClient({
   )
 }
 
-function GuidePreview({ decks, cards }: { decks: GuidesV3DeckDetail[]; cards: GuideCardPlacement[] }) {
-  const nodes = new Map(decks.flatMap(deck => deckCardEntries(deck).map(card => [deck.id + ':' + card.key, card.node] as const)))
+// The preview is a scrolling stack, so index rows scroll to their target card.
+const previewNavigation = {
+  goToCard: (key: string) => {
+    document.querySelector(`[data-guide-card-key="${CSS.escape(key)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  },
+}
+
+function GuidePreview({ nodes, cards }: { nodes: Map<string, ReactNode>; cards: GuideCardPlacement[] }) {
   const visible = cards.filter(card => !card.hidden)
-  return <section className={styles.previewStack} aria-label="Guide preview">
-    {visible.length ? visible.map(card => <div key={guideCardKey(card)} className={styles.previewShareMount}>{nodes.get(guideCardKey(card))}</div>) : <p>No visible cards. Unhide a card in the Decks tab.</p>}
-  </section>
+  return <GuideCardNavigationContext value={previewNavigation}><section className={styles.previewStack} aria-label="Guide preview">
+    {visible.length ? visible.map(card => <div key={guideCardKey(card)} data-guide-card-key={guideCardKey(card)} className={styles.previewShareMount}>{nodes.get(guideCardKey(card))}</div>) : <p>No visible cards. Unhide a card in the Contents tab.</p>}
+  </section></GuideCardNavigationContext>
+}
+
+// A direct card (or the Guide Index once the guide has direct cards) in the
+// top-level sequence. Same row as a card inside a nested guide - preview,
+// type over title, Hide/Unhide - on its own surface. Tapping the card opens
+// it in the card editor.
+function TopLevelCardRow({
+  label,
+  typeLabel,
+  hidden,
+  preview,
+  editHref,
+  onRemove,
+  isDragging,
+  dropEdge,
+  canMoveUp,
+  canMoveDown,
+  onMove,
+  onToggleHidden,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+}: {
+  label: string
+  typeLabel: string
+  hidden: boolean
+  preview: ReactNode
+  editHref?: string
+  onRemove?: { label: string; run: () => void }
+  isDragging: boolean
+  dropEdge: DropTarget['edge'] | null
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMove: (direction: -1 | 1) => void
+  onToggleHidden: () => void
+  onDragStart: (event: DragEvent<HTMLElement>) => void
+  onDragOver: (event: DragEvent<HTMLElement>) => void
+  onDragLeave: () => void
+  onDrop: (event: DragEvent<HTMLElement>) => void
+  onDragEnd: () => void
+}) {
+  const previewBox = <span className={styles.guideCardPreviewStage}>{preview}</span>
+  return (
+    <div
+      className={[
+        styles.guideCardRow,
+        styles.topLevelCardRow,
+        isDragging ? styles.cardRowDragging : '',
+        dropEdge === 'before' ? styles.cardRowDropBefore : '',
+        dropEdge === 'after' ? styles.cardRowDropAfter : '',
+      ].join(' ')}
+      data-top-level-card
+      data-hidden={hidden}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+    >
+      <span className={styles.dragHandle} aria-label={`Drag to reorder ${label}`} title="Drag to reorder" draggable><DragHandleIcon /></span>
+      {editHref ? (
+        <Link href={editHref} className={styles.guideCardPreview} aria-hidden="true" tabIndex={-1}>{previewBox}</Link>
+      ) : (
+        <span className={styles.guideCardPreview} aria-hidden="true">{previewBox}</span>
+      )}
+      <span className={styles.guideCardInfo}>
+        <span className={styles.cardTypeLabel}>{typeLabel}</span>
+        <strong data-guide-card-title>{label}</strong>
+        {onRemove ? <button type="button" className={styles.guideIndexRemove} onClick={onRemove.run}>{onRemove.label}</button> : null}
+      </span>
+      <span className={styles.topLevelCardActions}>
+        {editHref ? (
+          <Link href={editHref} className={styles.visibilityButton} aria-label={`Edit ${label}`}>
+            <EditPencilIcon />Edit
+          </Link>
+        ) : null}
+        <button className={styles.visibilityButton} type="button" aria-pressed={hidden} aria-label={`${hidden ? 'Unhide' : 'Hide'} ${label}`} onClick={onToggleHidden}>
+          <VisibilityIcon hidden={hidden} />{hidden ? 'Unhide' : 'Hide'}
+        </button>
+      </span>
+      <span className={styles.keyboardMoveActions}>
+        <button type="button" disabled={!canMoveUp} aria-label={`Move ${label} up`} onClick={() => onMove(-1)}>↑</button>
+        <button type="button" disabled={!canMoveDown} aria-label={`Move ${label} down`} onClick={() => onMove(1)}>↓</button>
+      </span>
+    </div>
+  )
+}
+
+function NewGuideSheet({
+  isSaving,
+  error,
+  onCreate,
+  onClose,
+}: {
+  isSaving: boolean
+  error: string | null
+  onCreate: (name: string) => void | Promise<void>
+  onClose: () => void
+}) {
+  const [name, setName] = useState('')
+  const trimmed = name.trim()
+  return (
+    <div className={styles.sheetBackdrop} role="dialog" aria-modal="true" aria-label="New guide">
+      <section className={styles.sheet}>
+        <header>
+          <h2>New Guide</h2>
+          <button type="button" onClick={onClose} aria-label="Close">
+            Close
+          </button>
+        </header>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (trimmed && !isSaving) void onCreate(trimmed)
+          }}
+        >
+          <label className={styles.field}>
+            <span>Guide name</span>
+            <input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} placeholder="e.g. Forgotten Tomb Gold" autoFocus />
+          </label>
+          <p className={styles.guideIndexNote}>It starts private with a cover card. Add its cards from My Guides, and reuse it in other guides too.</p>
+          {error ? <p role="alert" className={styles.saveError}>{error}</p> : null}
+          <button type="submit" className={styles.addCardButton} disabled={!trimmed || isSaving}>
+            {isSaving ? 'Creating...' : 'Create and Add'}
+          </button>
+        </form>
+      </section>
+    </div>
+  )
 }
 
 function AddDecksSheet({
@@ -585,17 +963,17 @@ function AddDecksSheet({
     <div className={styles.sheetBackdrop} role="dialog" aria-modal="true">
       <section className={styles.sheet}>
         <header>
-          <h2>Add Decks</h2>
+          <h2>Add Existing Guide</h2>
           <button type="button" onClick={onClose} aria-label="Close">
             Close
           </button>
         </header>
         <label className={styles.field}>
-          <span>Search your decks</span>
+          <span>Search your guides</span>
           <input
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search your decks..."
+            placeholder="Search your guides..."
           />
         </label>
         {error ? <p role="alert" className={styles.saveError}>{error}</p> : null}
@@ -619,7 +997,7 @@ function AddDecksSheet({
               </article>
             ))
           ) : (
-            <p>No more decks to add.</p>
+            <p>No more guides to add.</p>
           )}
         </div>
       </section>
@@ -636,6 +1014,15 @@ function DragHandleIcon() {
       <circle cx="15" cy="6" r="1.7" />
       <circle cx="15" cy="12" r="1.7" />
       <circle cx="15" cy="18" r="1.7" />
+    </svg>
+  )
+}
+
+function EditPencilIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" />
+      <path d="m14 7 3 3" />
     </svg>
   )
 }

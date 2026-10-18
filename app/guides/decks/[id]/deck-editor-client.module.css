@@ -442,6 +442,18 @@
   width: auto;
 }
 
+/* Guide editor + Add menu: short option names wrap rather than truncate;
+   unavailable choices read as unavailable. */
+.addMenuRow .editButton:disabled,
+.templateButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.addMenuRow .cardName {
+  white-space: normal;
+}
+
 /* Guide editor's deck rows pair an Edit link with a Remove button in the
    same trailing grid cell that a card row gives its single Edit button. */
 .cardRowActions {
@@ -1510,6 +1522,37 @@
 }
 
 .guideCardRow:first-child { border-top: 0; }
+
+/* A guide's own card in the top-level Contents list: the nested-card row on
+   its own surface, matching the nested guide rows around it. */
+.guideCardRow.topLevelCardRow {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 28%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background: color-mix(in srgb, var(--og-paper-50) 28%, transparent);
+  padding: 10px 12px;
+}
+
+.topLevelCardActions {
+  display: grid;
+  gap: 6px;
+}
+
+.topLevelCardActions .visibilityButton {
+  grid-column: auto;
+  white-space: nowrap;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.topLevelCardTitle {
+  color: inherit;
+  text-decoration: none;
+}
+
+.topLevelCardTitle:hover strong,
+.topLevelCardTitle:focus-visible strong {
+  text-decoration: underline;
+}
 .guideCardRow[data-hidden="true"] .guideCardPreview,
 .guideCardRow[data-hidden="true"] .guideCardInfo { opacity: .48; }
 
@@ -1614,6 +1657,35 @@
 
 .keyboardMoveActions button:disabled { opacity: .35; }
 
+/* Guide Index: guide-owned card generated from the deck list. */
+.guideIndexAdd {
+  display: grid;
+  gap: 6px;
+}
+
+.guideIndexAdd p,
+.guideIndexNote {
+  color: var(--og-text-secondary);
+  font: 500 12px/1.35 var(--og-font-ui);
+}
+
+.guideIndexAdd .addCardButton:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.guideIndexRemove {
+  justify-self: start;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--og-text-secondary);
+  font: 700 12px/1.2 var(--og-font-ui);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 @media (max-width: 620px) {
   .guideDeckRow {
     grid-template-columns: 12px 14px minmax(0, 1fr) 58px 28px;
@@ -1698,5 +1770,25 @@
   .visibilityButton svg {
     width: 15px;
     height: 15px;
+  }
+}
+
+/* Guide editor Contents: nested guide rows carry no sequence number, so the
+   title gets that column back. */
+.guideDeckRow.guideDeckRowUnnumbered {
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+}
+
+@media (max-width: 620px) {
+  .guideDeckRow.guideDeckRowUnnumbered {
+    grid-template-columns: 12px minmax(0, 1fr) 58px 28px;
+  }
+
+  .guideDeckRowUnnumbered .editButton {
+    grid-column: 3;
+  }
+
+  .guideDeckRowUnnumbered .dangerButton {
+    grid-column: 4;
   }
 }

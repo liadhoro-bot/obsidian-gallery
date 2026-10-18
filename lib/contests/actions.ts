@@ -896,7 +896,7 @@ async function ensureGuideCreatorNominations(contestId: string, creatorIds: stri
   const missing = creatorIds.filter((id) => !byOwner.has(id))
   for (const ownerId of missing) {
     const { data: guide } = await service.from('recipes').select('id')
-      .eq('user_id', ownerId).eq('is_public', true).order('created_at').order('id').limit(1).maybeSingle()
+      .eq('user_id', ownerId).eq('is_public', true).is('inline_guide_id', null).order('created_at').order('id').limit(1).maybeSingle()
     if (!guide) return null
     const entry = entryById.get(ownerId)!
     const now = new Date().toISOString()

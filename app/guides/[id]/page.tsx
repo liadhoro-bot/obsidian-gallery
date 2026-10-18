@@ -1,7 +1,7 @@
 import DeckCardViewer from '../decks/[id]/deck-card-viewer'
 import ViewCardsLink from '../shared/view-cards-link'
 import { guideCardNodes } from '../shared/deck-card-entries'
-import { guideCardKey, isGuideIndexCard, resolveGuideCards } from '../shared/guide-card-layout'
+import { guideCardKey, isGuideOwnedCard, resolveGuideCards } from '../shared/guide-card-layout'
 import GuideBackButton from '../shared/guide-back-button'
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
@@ -98,9 +98,9 @@ export default async function GuideDetailPage({
   if (resolvedSearchParams.view === '1') {
     const details = (await Promise.all((guide.deckIds ?? []).map(deckId => getGuidesV3DeckDetail(deckId, user.id)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
     const resolved = resolveGuideCards(details, guide.cardLayout)
-    const entries = guideCardNodes(details, resolved)
+    const entries = guideCardNodes(details, resolved, { id: guide.id, title: guide.title, description: guide.subtitle, image: guide.image })
     const cards = resolved.filter(card => !card.hidden).map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
-    const firstCard = resolved.find(card => !card.hidden && !isGuideIndexCard(card) && card.groupId === resolvedSearchParams.deck)
+    const firstCard = resolved.find(card => !card.hidden && !isGuideOwnedCard(card) && card.groupId === resolvedSearchParams.deck)
     return <main><DeckCardViewer initialCardKey={firstCard ? guideCardKey(firstCard) : undefined} cards={cards} title={guide.title} backHref={`/guides/${guide.id}?preview=1`} featureGuides={featureGuides} heroActions={<>
       {guide.deckId ? (
         <DeckHeroActions
@@ -176,7 +176,7 @@ export default async function GuideDetailPage({
             </div>
           </div>
           <div className={styles.statGrid}>
-            <span>{guide.decks} {guide.decks === 1 ? 'deck' : 'decks'}</span>
+            <span>{guide.decks} {guide.decks === 1 ? 'guide' : 'guides'} inside</span>
             <span>
               {guide.cards} {guide.cards === 1 ? 'card' : 'cards'}
             </span>
@@ -202,12 +202,12 @@ export default async function GuideDetailPage({
         >
           <div className={styles.panelHeader}>
             <h2 className={styles.sectionHeading}>
-              Decks In This Guide
+              Guides Inside
             </h2>
           </div>
           <div className={styles.rows}>
-            {guide.decksList.length ? (
-              guide.decksList.map((deck) => (
+            {guide.decksList.some((deck) => !deck.isInline) ? (
+              guide.decksList.filter((deck) => !deck.isInline).map((deck) => (
                 <div key={deck.id} className={styles.deckRow}>
                 <Link href={`/guides/${guide.id}?preview=1&view=1&deck=${deck.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className={styles.deckThumb}>
@@ -234,7 +234,7 @@ export default async function GuideDetailPage({
               ))
             ) : (
               <div className={styles.emptyPanel}>
-                No decks have been added yet.
+                No guides are reused inside this one.
               </div>
             )}
           </div>

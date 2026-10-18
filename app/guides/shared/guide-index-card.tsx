@@ -35,7 +35,7 @@ export function GuideIndexCard({ entries }: { entries: GuideIndexEntry[] }) {
                 <span className="guide-index-medallion font-serif" aria-hidden="true">{index + 1}</span>
                 <span className="guide-index-rule" aria-hidden="true" />
                 <span className="guide-index-copy min-w-0">
-                  <span className="guide-index-kicker uppercase">Deck</span>
+                  <span className="guide-index-kicker uppercase">Guide</span>
                   <strong className="guide-index-title font-serif">{entry.title}</strong>
                   {entry.subtitle ? <span className="guide-index-subtitle font-serif">{entry.subtitle}</span> : null}
                 </span>
@@ -64,7 +64,7 @@ export function GuideIndexCard({ entries }: { entries: GuideIndexEntry[] }) {
         </ol>
       ) : (
         <p className="guide-index-empty grid flex-1 place-items-center text-center font-serif">
-          Add decks with visible cards to build this index.
+          Add guides with visible cards to build this index.
         </p>
       )}
     </ObsidianShareCardFrame>

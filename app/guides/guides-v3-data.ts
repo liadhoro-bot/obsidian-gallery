@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import { selectCreatorCollection } from './shared/creator-collection'
+import { socialDeckIdOf } from './shared/guide-social-deck'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { createSharedReadClient } from './shared-read-client'
 
@@ -17,9 +18,9 @@ export type GuidesV3GuideFile = {
   ownedPercent: number
   palette: string[]
   // The "primary" deck this guide's social state (like/save) is keyed to -
-  // for a single-deck guide this is its only member; for a multi-deck guide
-  // this is just its first member (likes/saves stay recipe-scoped, not
-  // guide-scoped, so a multi-deck guide's heart/bookmark act on this one).
+  // its pinned guides.primary_recipe_id, falling back to its first member
+  // (likes/saves stay recipe-scoped, not guide-scoped, so a multi-deck
+  // guide's heart/bookmark act on this one). See socialDeckIdOf.
   // Optional so any pre-existing consumer that only reads the original
   // fields is unaffected.
   deckId?: string
@@ -38,6 +39,9 @@ export type GuidesV3GuideFile = {
   viewerHasSaved: boolean
   createdAt: string
   tags?: string[]
+  // Set on the viewer's own untouched auto-guide: the id of the deck it
+  // only mirrors, so My Guides can list that deck once (my-guides-items.ts).
+  mirrorsDeckId?: string
   // Public creator identity, shown on Discover cards. Only the username and
   // avatar are exposed - display_name can hold a real name.
   creator?: GuidesV3Creator
@@ -73,6 +77,8 @@ export type GuidesV3Deck = {
   isOwner: boolean
   accent: string
   createdAt: string
+  // A guide's inline deck (its direct cards), never listed as a deck.
+  isInline?: boolean
   description?: string
   likeCount?: number
   saveCount?: number
@@ -91,6 +97,8 @@ export type GuidesV3Payload = {
 export type GuidesV3Tab = 'library' | 'guides' | 'decks'
 
 type RecipeRow = {
+  // Set on a guide's inline deck (the home of its direct cards); see isInlineDeckOf.
+  inline_guide_id?: string | null
   id: string
   name: string | null
   description: string | null
@@ -119,6 +127,7 @@ type GuideRow = {
   image_url: string | null
   difficulty: string | null
   is_auto: boolean | null
+  primary_recipe_id?: string | null
   created_at: string | null
   tags?: string[] | null
   guide_decks?: GuideDeckJoinRow[] | null
@@ -159,6 +168,7 @@ const guideWithDecksSelect = `
   difficulty,
   tags,
   is_auto,
+  primary_recipe_id,
   created_at,
   guide_decks (
     recipe_id,
@@ -170,6 +180,7 @@ const guideWithDecksSelect = `
       image_url,
       is_public,
       difficulty,
+      inline_guide_id,
       created_at,
       user_id
     )
@@ -254,10 +265,17 @@ function memberRecipesOf(guide: GuideRow): RecipeRow[] {
     .filter((recipe): recipe is RecipeRow => Boolean(recipe))
 }
 
-// The deck a guide's like/save are keyed to: its first member, exactly as
-// toGuideFile sets GuidesV3GuideFile.deckId.
-function primaryRecipeOf(recipes: RecipeRow[]): RecipeRow | undefined {
-  return recipes[0]
+// The deck a guide's like/save are keyed to, exactly as toGuideFile sets
+// GuidesV3GuideFile.deckId (see socialDeckIdOf).
+function primaryRecipeOf(guide: GuideRow, recipes: RecipeRow[]): RecipeRow | undefined {
+  const id = socialDeckIdOf(guide.primary_recipe_id, recipes.map((recipe) => recipe.id))
+  return recipes.find((recipe) => recipe.id === id)
+}
+
+// A recipe is a guide's inline deck only when both belong to the same user
+// (see recipes_inline_guide_owner_idx).
+function isInlineDeckOf(guide: Pick<GuideRow, 'id' | 'user_id'>, recipe: Pick<RecipeRow, 'inline_guide_id' | 'user_id'>) {
+  return recipe.inline_guide_id === guide.id && recipe.user_id === guide.user_id
 }
 
 function isGuidePublic(guide: GuideRow) {
@@ -534,6 +552,7 @@ function toDeck({
     isOwner: recipe.user_id === userId,
     accent: accentFor(recipe.id),
     createdAt: recipe.created_at ?? '',
+    isInline: Boolean(recipe.inline_guide_id),
     description: cleanText(recipe.description, `${stats?.cards ?? 0} cards · ${stats?.paints ?? 0} paints`),
     likeCount: social?.likeCount ?? 0,
     saveCount: social?.saveCount ?? 0,
@@ -563,7 +582,9 @@ function toGuideFile(
   userId: string
 ): GuidesV3GuideFile {
   const primaryDeck = memberDecks[0]
-  const social = socialByRecipeId.get(primaryDeck.id)
+  // Likes/saves follow the guide's pinned deck, not whichever deck is first.
+  const socialDeckId = socialDeckIdOf(guide.primary_recipe_id, memberDecks.map((deck) => deck.id))
+  const social = socialByRecipeId.get(socialDeckId)
   const totalCards = memberDecks.reduce((sum, deck) => sum + deck.cards, 0)
   const customDescription = guide.description?.trim()
 
@@ -576,14 +597,14 @@ function toGuideFile(
     image: guide.image_url
       ? getGuideDeckThumbnail(guide.image_url, fallbackImage)
       : primaryDeck.image,
-    decks: memberDecks.length,
+    decks: memberDecks.filter((deck) => !deck.isInline).length,
     cards: totalCards,
     level: totalCards > 5 ? 'Intermediate' : 'Beginner',
     ownedPercent: 0,
     palette: memberDecks.length
       ? memberDecks.slice(0, 5).map((deck) => deck.accent)
       : ['#d8bd83', '#d29631', '#17b9c2', '#7a5d37'],
-    deckId: primaryDeck.id,
+    deckId: socialDeckId,
     deckIds: memberDecks.map((deck) => deck.id),
     difficulty: guide.difficulty ?? null,
     tags: Array.isArray(guide.tags) ? guide.tags : [],
@@ -609,6 +630,8 @@ export const getGuidesV3Payload = cache(async (
           .from('recipes')
           .select(selection)
           .eq('user_id', userId)
+          // A guide's inline deck is part of that guide, never a deck of its own.
+          .is('inline_guide_id', null)
           .order('created_at', { ascending: false })
           .limit(deckLimit).returns<RecipeRow[]>())
         : Promise.resolve({ data: [] as RecipeRow[], error: null }),
@@ -676,13 +699,35 @@ export const getGuidesV3Payload = cache(async (
 
   if (savedGuidesResult.error) throw new Error(savedGuidesResult.error.message)
 
+  // An owned auto-guide with a card layout was customized, so it is not a
+  // plain mirror of its deck. If layouts can't be read, treat every auto-guide
+  // as customized: listing both is safer than hiding one.
+  const ownedAutoGuideIds = ownedGuides.filter((guide) => guide.is_auto).map((guide) => guide.id)
+  const customizedLayoutGuideIds = new Set<string>()
+  if (ownedAutoGuideIds.length) {
+    try {
+      const layoutRows = await selectInBatches<{ id: string; card_layout: unknown }>(ownedAutoGuideIds, (batch) =>
+        supabase.from('guides').select('id, card_layout').in('id', batch))
+      for (const row of layoutRows) {
+        if (!Array.isArray(row.card_layout) || row.card_layout.length > 0) customizedLayoutGuideIds.add(row.id)
+      }
+    } catch {
+      for (const id of ownedAutoGuideIds) customizedLayoutGuideIds.add(id)
+    }
+  }
+  function mirroredDeckId(guide: GuideRow, recipes: RecipeRow[]) {
+    if (guide.user_id !== userId || !guide.is_auto || recipes.length !== 1) return undefined
+    if (guide.description?.trim() || guide.image_url || customizedLayoutGuideIds.has(guide.id)) return undefined
+    return ownedRecipeIds.has(recipes[0].id) ? recipes[0].id : undefined
+  }
+
   // A saved deck can only ever be one the user could already see when they
   // saved it (public per `recipes`' own RLS) - re-assert that here rather
   // than trusting it blindly.
   const savedGuides = ((savedGuidesResult.data ?? []) as GuideRow[]).filter(
     (guide) => {
       if (!isGuidePublic(guide)) return false
-      const primary = primaryRecipeOf(memberRecipesOf(guide))
+      const primary = primaryRecipeOf(guide, memberRecipesOf(guide))
       return primary ? savedRecipeIds.has(primary.id) : false
     }
   )
@@ -794,6 +839,7 @@ export const getGuidesV3Payload = cache(async (
         ...toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId),
         // Saved guides from other creators show who made them.
         creator: guide.user_id === userId ? undefined : creatorsById.get(guide.user_id),
+        mirrorsDeckId: mirroredDeckId(guide, recipes),
       }
     })
     .filter((guide): guide is GuidesV3GuideFile => Boolean(guide))
@@ -878,7 +924,8 @@ function creatorCollectionGuides(guides: GuideRow[]) {
       guides.map((guide) => ({
         id: guide.id,
         isAuto: Boolean(guide.is_auto),
-        publicDeckIds: memberRecipesOf(guide).filter((deck) => deck.is_public).map((deck) => deck.id),
+        publicDeckIds: memberRecipesOf(guide).filter((deck) => deck.is_public && !isInlineDeckOf(guide, deck)).map((deck) => deck.id),
+        hasPublicInline: memberRecipesOf(guide).some((deck) => deck.is_public && isInlineDeckOf(guide, deck)),
       }))
     ).map((guide) => guide.id)
   )

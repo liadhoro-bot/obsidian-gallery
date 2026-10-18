@@ -6,7 +6,7 @@ import DeckCardViewer from '@/app/guides/decks/[id]/deck-card-viewer'
 import ViewCardsLink from '@/app/guides/shared/view-cards-link'
 import DeckShareMenu from '@/app/guides/shared/deck-share-menu'
 import { guideCardNodes } from '@/app/guides/shared/deck-card-entries'
-import { guideCardKey, isGuideIndexCard, resolveGuideCards } from '@/app/guides/shared/guide-card-layout'
+import { guideCardKey, isGuideOwnedCard, resolveGuideCards } from '@/app/guides/shared/guide-card-layout'
 import { getSharedGuideDetail } from '@/app/guides/guides-v3-detail-data'
 import { getFeatureGuidesForPage } from '@/app/components/feature-guide-data'
 import { guideDetailFeatureGuides } from '@/app/components/feature-guide-presets'
@@ -100,10 +100,10 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
 
   if (isCardView) {
     const resolved = resolveGuideCards(deckDetails, guide.cardLayout)
-    const entries = guideCardNodes(deckDetails, resolved)
+    const entries = guideCardNodes(deckDetails, resolved, { id: guide.id, title: guide.title, description: guide.subtitle, image: shared.coverImageUrl ?? guide.image, isPublic: true })
     const visible = resolved.filter(card => !card.hidden)
     const cards = visible.map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
-    const firstCard = visible.find(card => !isGuideIndexCard(card) && card.groupId === query.deck)
+    const firstCard = visible.find(card => !isGuideOwnedCard(card) && card.groupId === query.deck)
 
     return (
       <main>
@@ -151,7 +151,7 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
             </div>
           </div>
           <div className={detailStyles.statGrid}>
-            <span>{guide.decks} {guide.decks === 1 ? 'deck' : 'decks'}</span>
+            <span>{guide.decks} {guide.decks === 1 ? 'guide' : 'guides'} inside</span>
             <span>{guide.cards} {guide.cards === 1 ? 'card' : 'cards'}</span>
             <span>{guide.level}</span>
           </div>
@@ -164,10 +164,10 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
 
         <section className={`${detailStyles.panel} ${detailStyles.deckList}`}>
           <div className={detailStyles.panelHeader}>
-            <h2 className={detailStyles.sectionHeading}>Decks In This Guide</h2>
+            <h2 className={detailStyles.sectionHeading}>Guides Inside</h2>
           </div>
           <div className={detailStyles.rows}>
-            {guide.decksList.map((deck) => (
+            {guide.decksList.filter((deck) => !deck.isInline).map((deck) => (
               <div key={deck.id} className={detailStyles.deckRow}>
                 <Link href={`${basePath}?view=1&deck=${deck.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className={detailStyles.deckThumb}>

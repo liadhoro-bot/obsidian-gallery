@@ -7,8 +7,12 @@ import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { updatePaintOwnership } from '../../utils/paint-ownership/update-paint-ownership'
 import { getGuideDeckThumbnail } from './guides-v3-data'
+import { syncRecipeSteps } from './sync-recipe-steps'
+import { cardTypeDefaultBody, cardTypeLabel, isCardTypeId } from './shared/card-templates'
 
 export type CreateDeckCardInput = {
+  // The saved recipe_steps id when editing an existing card; absent for new cards.
+  id?: string
   paintAlignment?: 'left' | 'right'
   paintVerticalAlignment?: 'top' | 'center' | 'bottom'
   subtitle?: string | null
@@ -514,31 +518,6 @@ export async function updateDeckFromForge(
     throw new Error(recipeError?.message || 'Could not save deck')
   }
 
-  const { data: existingSteps, error: existingStepsError } = await supabase
-    .from('recipe_steps')
-    .select('id')
-    .eq('recipe_id', deckId)
-
-  if (existingStepsError) throw new Error(existingStepsError.message)
-
-  const existingStepIds = (existingSteps ?? []).map((step) => step.id)
-
-  if (existingStepIds.length) {
-    const { error: deleteStepPaintsError } = await supabase
-      .from('recipe_step_paints')
-      .delete()
-      .in('recipe_step_id', existingStepIds)
-
-    if (deleteStepPaintsError) throw new Error(deleteStepPaintsError.message)
-
-    const { error: deleteStepsError } = await supabase
-      .from('recipe_steps')
-      .delete()
-      .eq('recipe_id', deckId)
-
-    if (deleteStepsError) throw new Error(deleteStepsError.message)
-  }
-
   const stepCards = input.cards.filter((card) =>
     card.template !== 'title' && card.template !== 'cover'
   )
@@ -563,28 +542,79 @@ export async function updateDeckFromForge(
     }
   })
 
-  let insertedSteps: Array<{ id: string; step_number: number }> = []
+  const { data: existingSteps, error: existingStepsError } = await supabase
+    .from('recipe_steps')
+    .select('id')
+    .eq('recipe_id', deckId)
 
-  if (steps.length) {
-    const { data: stepRows, error: stepsError } = await insertRecipeSteps(
-      supabase,
-      steps
-    )
+  if (existingStepsError) throw new Error(existingStepsError.message)
 
-    if (stepsError) throw new Error(stepsError.message)
-    insertedSteps = stepRows ?? []
+  const existingStepIds = (existingSteps ?? []).map((step) => step.id)
+
+  // Keep step ids stable: guides reference cards by id (guides.card_layout),
+  // so reinserting every step would reset each guide's hidden cards and order.
+  const sync = await syncRecipeSteps(supabase, {
+    deckId,
+    existingIds: existingStepIds,
+    cardIds: stepCards.map((card) => card.id),
+    rows: steps,
+    insertSteps: (rows) => insertRecipeSteps(supabase, rows),
+  })
+
+  let stepIdByIndex: Array<string | undefined> = []
+
+  if (sync.status === 'synced') {
+    stepIdByIndex = sync.stepIds
+    const keptStepIds = sync.stepIds.filter((id) => existingStepIds.includes(id))
+    if (keptStepIds.length) {
+      const { error: deleteStepPaintsError } = await supabase
+        .from('recipe_step_paints')
+        .delete()
+        .in('recipe_step_id', keptStepIds)
+
+      if (deleteStepPaintsError) throw new Error(deleteStepPaintsError.message)
+    }
+  } else {
+    // Legacy save, for a database that accepts no recipe_steps updates.
+    if (existingStepIds.length) {
+      const { error: deleteStepPaintsError } = await supabase
+        .from('recipe_step_paints')
+        .delete()
+        .in('recipe_step_id', existingStepIds)
+
+      if (deleteStepPaintsError) throw new Error(deleteStepPaintsError.message)
+
+      const { error: deleteStepsError } = await supabase
+        .from('recipe_steps')
+        .delete()
+        .eq('recipe_id', deckId)
+
+      if (deleteStepsError) throw new Error(deleteStepsError.message)
+    }
+
+    if (steps.length) {
+      const { data: stepRows, error: stepsError } = await insertRecipeSteps(
+        supabase,
+        steps
+      )
+
+      if (stepsError) throw new Error(stepsError.message)
+      stepIdByIndex = steps.map((step) =>
+        stepRows?.find((row) => row.step_number === step.step_number)?.id
+      )
+    }
   }
 
   const stepPaintsToInsert = stepCards.flatMap((card, cardIndex) => {
-    const step = insertedSteps.find((row) => row.step_number === cardIndex + 1)
-    if (!step) return []
+    const stepId = stepIdByIndex[cardIndex]
+    if (!stepId) return []
 
     return (card.paints ?? []).flatMap((paint, paintIndex) => {
       const parsedPaint = parsePaintSelection(paint.id)
       if (!parsedPaint) return []
 
       return {
-        recipe_step_id: step.id,
+        recipe_step_id: stepId,
         user_id: user.id,
         paint_source: parsedPaint.paint_source,
         paint_catalog_id: parsedPaint.paint_catalog_id,
@@ -967,6 +997,117 @@ export async function updateGuideFromDecks(
   }
 
   return { id: guideId }
+}
+
+// A guide's direct cards live in its inline deck (recipes.inline_guide_id).
+// Returns that deck, creating it on first use and adding it to the guide's
+// decks - last, so likes, the cover and the first-deck fallbacks stay on the
+// guides reused inside. It starts with no cover card, and public only when
+// the guide already is.
+export async function ensureInlineGuideDeck(guideId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  if (!guideId) throw new Error('Missing guide id')
+
+  const { data: guide, error: guideError } = await supabase
+    .from('guides')
+    .select('id, title, guide_decks(recipe_id, position, recipes(is_public))')
+    .eq('id', guideId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (guideError) throw new Error(guideError.message)
+  if (!guide) throw new Error('Guide not found')
+
+  const { data: existing, error: existingError } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('inline_guide_id', guideId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (existingError) throw new Error(existingError.message)
+
+  const members = (guide.guide_decks ?? []) as { recipe_id: string; position: number | null; recipes: { is_public: boolean | null } | { is_public: boolean | null }[] | null }[]
+  let deckId = existing?.id as string | undefined
+  if (!deckId) {
+    const guideIsPublic = members.some((member) => {
+      const recipe = Array.isArray(member.recipes) ? member.recipes[0] : member.recipes
+      return recipe?.is_public === true
+    })
+    const { data: created, error: createError } = await supabase
+      .from('recipes')
+      .insert({
+        user_id: user.id,
+        name: cleanText(guide.title, 'Guide') + ' - cards',
+        description: null,
+        is_public: guideIsPublic,
+        cover_position: null,
+        inline_guide_id: guideId,
+      })
+      .select('id')
+      .single()
+    if (createError || !created) throw new Error(createError?.message || 'Could not add cards to this guide')
+    deckId = created.id as string
+  }
+
+  if (!members.some((member) => member.recipe_id === deckId)) {
+    const position = members.reduce((max, member) => Math.max(max, member.position ?? 0), -1) + 1
+    const { error: linkError } = await supabase
+      .from('guide_decks')
+      .insert({ guide_id: guideId, recipe_id: deckId, user_id: user.id, position })
+    if (linkError) throw new Error(linkError.message)
+  }
+
+  revalidatePath(`/guides/${guideId}`)
+  return { deckId }
+}
+
+// New Card in the guide editor: adds one card of the chosen type to the end
+// of the guide's own cards (creating its inline deck on first use) and
+// returns that deck's fresh detail so the editor can show it in place.
+export async function addInlineGuideCard(guideId: string, template: string) {
+  if (!isCardTypeId(template) || template === 'cover') throw new Error('Choose a card type.')
+  const { deckId } = await ensureInlineGuideDeck(guideId)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data: lastStep, error: lastStepError } = await supabase
+    .from('recipe_steps')
+    .select('step_number')
+    .eq('recipe_id', deckId)
+    .order('step_number', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (lastStepError) throw new Error(lastStepError.message)
+
+  const card: CreateDeckCardInput = {
+    template,
+    title: `${cardTypeLabel(template)} Card`,
+    body: cardTypeDefaultBody(template),
+    image: null,
+  }
+  const { data: inserted, error: insertError } = await insertRecipeSteps(supabase, [{
+    recipe_id: deckId,
+    user_id: user.id,
+    step_number: (lastStep?.step_number ?? 0) + 1,
+    title: card.title,
+    // Type B is restored from its OG_DECK_CARD_META instructions.
+    card_template: template === 'theme-alt' ? null : safeCardTemplate(template),
+    instructions: encodeDeckCardInstructions(card),
+    image_url: null,
+    youtube_url: null,
+    image_focal_x: 50,
+    image_focal_y: 50,
+    subtitle: safeThemeSubtitle(card),
+  }])
+  if (insertError || !inserted?.length) throw new Error(insertError?.message || 'Could not add this card.')
+
+  revalidatePath(`/guides/${guideId}`)
+  const { getGuidesV3DeckDetail } = await import('./guides-v3-detail-data')
+  const deck = await getGuidesV3DeckDetail(deckId, user.id)
+  if (!deck) throw new Error('Could not load the new card.')
+  return { deckId, stepId: inserted[0].id as string, deck }
 }
 
 export async function loadGuideEditorDeck(deckId: string) {

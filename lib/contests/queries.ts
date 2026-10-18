@@ -692,6 +692,7 @@ export async function getNominationPickerSources(
       .from('recipes')
       .select('id, name, description, created_at')
       .eq('user_id', userId)
+      .is('inline_guide_id', null)
       .order('created_at', { ascending: false })
 
     if (error) throw new Error(error.message)
@@ -863,7 +864,7 @@ export async function getPublicGuideCreatorLeaderboard(
   const profilesPromise = contestId ? getContestCreatorProfiles(contestId) : Promise.resolve(new Map<string, ContestCreatorProfile>())
   const { data: publicRecipes, error } = await supabase
     .from('recipes')
-    .select('id, user_id, image_url, created_at')
+    .select('id, user_id, image_url, created_at, inline_guide_id')
     .eq('is_public', true)
     .order('created_at', { ascending: false })
 
@@ -886,7 +887,16 @@ export async function getPublicGuideCreatorLeaderboard(
   const countByOwner = new Map<string, number>()
   const directImageByRecipeId = new Map<string, string>()
 
+  // A guide's inline deck (its direct cards) is not a deck in the collection;
+  // it makes its guide count instead (see creator-collection.ts).
+  const inlineGuideIdByRecipeId = new Map<string, string>()
   for (const recipe of recipes) {
+    if (!recipe.inline_guide_id) continue
+    inlineGuideIdByRecipeId.set(recipe.id, recipe.inline_guide_id)
+    if (!recipeIdsByOwner.has(recipe.user_id)) recipeIdsByOwner.set(recipe.user_id, [])
+  }
+
+  for (const recipe of recipes.filter((candidate) => !candidate.inline_guide_id)) {
     countByOwner.set(recipe.user_id, (countByOwner.get(recipe.user_id) ?? 0) + 1)
     const existing = recipeIdsByOwner.get(recipe.user_id) ?? []
     existing.push(recipe.id)
@@ -897,23 +907,28 @@ export async function getPublicGuideCreatorLeaderboard(
   // The count is the creator's whole collection - public decks plus
   // multi-deck guides - exactly what their creator page lists (both use
   // app/guides/shared/creator-collection.ts).
-  const publicRecipeIds = new Set(recipes.map((recipe) => recipe.id))
+  const publicRecipeIds = new Set(recipes.filter((recipe) => !recipe.inline_guide_id).map((recipe) => recipe.id))
   const { data: composedGuides, error: composedError } = await supabase
     .from('guides')
-    .select('id, user_id, guide_decks(recipe_id)')
+    .select('id, user_id, guide_decks(recipe_id, recipes(user_id))')
     .eq('is_auto', false)
     .in('user_id', Array.from(recipeIdsByOwner.keys()))
   if (composedError) throw new Error(composedError.message)
-  const composedByOwner = new Map<string, { publicDeckIds: string[] }[]>()
-  for (const guide of (composedGuides ?? []) as { user_id: string; guide_decks: { recipe_id: string }[] | null }[]) {
-    const publicDeckIds = (guide.guide_decks ?? []).map((deck) => deck.recipe_id).filter((id) => publicRecipeIds.has(id))
-    composedByOwner.set(guide.user_id, [...(composedByOwner.get(guide.user_id) ?? []), { publicDeckIds }])
+  const composedByOwner = new Map<string, { publicDeckIds: string[]; hasPublicInline: boolean }[]>()
+  for (const guide of (composedGuides ?? []) as { id: string; user_id: string; guide_decks: { recipe_id: string; recipes: { user_id: string } | { user_id: string }[] | null }[] | null }[]) {
+    const members = guide.guide_decks ?? []
+    const publicDeckIds = members.map((deck) => deck.recipe_id).filter((id) => publicRecipeIds.has(id))
+    const hasPublicInline = members.some((deck) => {
+      const owner = Array.isArray(deck.recipes) ? deck.recipes[0]?.user_id : deck.recipes?.user_id
+      return inlineGuideIdByRecipeId.get(deck.recipe_id) === guide.id && owner === guide.user_id
+    })
+    composedByOwner.set(guide.user_id, [...(composedByOwner.get(guide.user_id) ?? []), { publicDeckIds, hasPublicInline }])
   }
   for (const [ownerId, ownerRecipeIds] of recipeIdsByOwner) {
     countByOwner.set(ownerId, countCreatorCollection(ownerRecipeIds, composedByOwner.get(ownerId) ?? []))
   }
 
-  const allRecipeIds = recipes.map((recipe) => recipe.id)
+  const allRecipeIds = recipes.filter((recipe) => !recipe.inline_guide_id).map((recipe) => recipe.id)
   const { data: assets } = await supabase
     .from('image_assets')
     .select('entity_id, image_url, is_featured, created_at')

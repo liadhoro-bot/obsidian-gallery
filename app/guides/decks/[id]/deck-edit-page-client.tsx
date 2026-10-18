@@ -13,12 +13,20 @@ export default function DeckEditPageClient({
   featureGuides,
   initialInventoryNotes = '',
   initialExpertTips = '',
+  inlineGuide,
+  openAddCard = false,
+  openCardId,
 }: {
   deck: GuidesV3DeckDetail
   featureGuides: FeatureGuideEntry[]
   initialInventoryNotes?: string
   initialExpertTips?: string
+  // A guide's own cards: saving returns to that guide's Contents.
+  inlineGuide?: { id: string; title: string }
+  openAddCard?: boolean
+  openCardId?: string
 }) {
+  const guideContentsHref = inlineGuide ? `/guides/${inlineGuide.id}?preview=1&edit=1&editorTab=decks` : null
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -38,6 +46,7 @@ export default function DeckEditPageClient({
         inventoryRequired: payload.inventoryNotes,
         expertTips: payload.expertTips,
         cards: payload.cards.map((card) => ({
+          id: card.id,
           title: card.title,
           template: card.template,
           body: card.body,
@@ -55,7 +64,11 @@ export default function DeckEditPageClient({
         })),
       })
 
-      router.refresh()
+      if (guideContentsHref) {
+        completeEditorExit(() => router.replace(guideContentsHref))
+      } else {
+        router.refresh()
+      }
       return true
     } catch (error) {
       setSaveError(
@@ -80,12 +93,16 @@ export default function DeckEditPageClient({
   return (
     <DeckEditorClient
       deck={deck}
-      backHref="/guides?preview=1&tab=decks"
+      backHref={guideContentsHref ?? '/guides?preview=1&tab=guides'}
       featureGuides={featureGuides}
       initialInventoryNotes={initialInventoryNotes}
       initialExpertTips={initialExpertTips}
       isSaving={isSaving}
-      onDeleteDeck={handleDeleteDeck}
+      inlineGuide={inlineGuide}
+      openAddCard={openAddCard}
+      openCardId={openCardId}
+      onExit={guideContentsHref ? () => router.replace(guideContentsHref) : undefined}
+      onDeleteDeck={inlineGuide ? undefined : handleDeleteDeck}
       onSaveDraft={handleSaveDraft}
       onTogglePaintOwnership={handleTogglePaintOwnership}
       saveError={saveError}
