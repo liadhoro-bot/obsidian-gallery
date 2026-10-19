@@ -33,6 +33,12 @@ function isInlinePreviewImageUrl(value?: string | null) {
   return url.startsWith('blob:') || url.startsWith('data:image/')
 }
 
+// Copy the author broke into lines (lists, numbering, paragraphs) reads as a
+// centered block with left-aligned lines instead of ragged centered lines.
+function multilineCopyProps(text?: string | null) {
+  return text?.trim().includes('\n') ? { 'data-multiline': '' } : {}
+}
+
 function titleSizing(title: string, base: number, minimum: number) {
   const length = Math.max(title.trim().length, 14)
   return {
@@ -365,7 +371,7 @@ export function RecipeGuideCoverCard({
         </div>
         <ObsidianShareOrnament />
         {description ? (
-          <p className="recipe-guide-cover-description font-serif">
+          <p className="recipe-guide-cover-description font-serif" {...multilineCopyProps(description)}>
             {description}
           </p>
         ) : null}
@@ -411,7 +417,7 @@ export function RecipeGuideImageStepCard({
           <h2 className="recipe-guide-image-card-title font-serif" style={titleSizing(step.title, 4.6, 2.75)}>
             {step.title}
           </h2>
-          <p className="recipe-guide-image-card-copy">
+          <p className="recipe-guide-image-card-copy" {...multilineCopyProps(step.instructions)}>
             {step.instructions}
           </p>
         </section>
@@ -458,7 +464,7 @@ export function RecipeGuideSmallImageStepCard({
           </div>
           <ObsidianShareOrnament />
           <div className="recipe-guide-small-image-copy-panel min-h-0 flex-1">
-            <p className="recipe-guide-small-image-copy font-serif">
+            <p className="recipe-guide-small-image-copy font-serif" {...multilineCopyProps(step.instructions)}>
               {step.instructions}
             </p>
           </div>
@@ -716,7 +722,7 @@ export function RecipeGuideDescriptiveStepCard({
       <PaintsUsed paints={paints} />
       <ObsidianShareOrnament />
       <div className="recipe-guide-long-description grid min-h-0 flex-1 place-items-start text-center">
-        <p className="recipe-guide-long-copy max-h-full overflow-hidden font-serif">
+        <p className="recipe-guide-long-copy max-h-full overflow-hidden font-serif" {...multilineCopyProps(step.instructions)}>
           {step.instructions}
         </p>
       </div>
@@ -818,7 +824,7 @@ export function RecipeGuidePaintsCard({
         {footerText ? (
           <footer className="recipe-guide-paint-list-footer shrink-0 text-center">
             <ObsidianShareOrnament />
-            <p className="recipe-guide-paint-list-footer-copy font-serif">
+            <p className="recipe-guide-paint-list-footer-copy font-serif" {...multilineCopyProps(footerText)}>
               {footerText}
             </p>
           </footer>
@@ -901,7 +907,7 @@ export function RecipeGuideVideoCard({
         {footerText ? (
           <section className="recipe-guide-video-description min-h-0 flex-1">
             <div className="recipe-guide-video-description-divider" aria-hidden="true" />
-            <p className="recipe-guide-video-description-copy">
+            <p className="recipe-guide-video-description-copy" {...multilineCopyProps(footerText)}>
               {footerText}
             </p>
           </section>

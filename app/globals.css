@@ -1415,6 +1415,35 @@ button:disabled {
   line-height: 1.23;
 }
 
+/* Keep author line breaks (lists, numbering, paragraphs) in card body copy. */
+.recipe-guide-cover-description,
+.recipe-guide-image-card-copy,
+.recipe-guide-small-image-copy,
+.recipe-guide-long-copy,
+.recipe-guide-alt-theme-footer,
+.recipe-guide-paint-list-footer-copy,
+.recipe-guide-video-description-copy {
+  white-space: pre-line;
+}
+
+/* Multi-line copy: centered block, left-aligned lines, so lists line up. */
+.recipe-guide-cover-description[data-multiline],
+.recipe-guide-image-card-copy[data-multiline],
+.recipe-guide-small-image-copy[data-multiline],
+.recipe-guide-long-copy[data-multiline],
+.recipe-guide-paint-list-footer-copy[data-multiline],
+.recipe-guide-video-description-copy[data-multiline] {
+  width: fit-content;
+  margin-inline: auto;
+  justify-self: center;
+  text-align: left;
+  text-wrap: pretty;
+}
+
+.recipe-guide-cover-description[data-multiline] {
+  max-width: min(84%, 680px);
+}
+
 .recipe-guide-paints-card {
   display: flex;
   min-height: 0;
