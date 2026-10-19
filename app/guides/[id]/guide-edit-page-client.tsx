@@ -2,10 +2,11 @@
 
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useState } from 'react'
+import { completeEditorExit } from '@/app/components/navigation-feedback/unsaved-changes'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import type { GuidesV3Deck } from '../guides-v3-data'
 import type { GuidesV3DeckDetail, GuidesV3GuideDetail } from '../guides-v3-detail-data'
-import { updateGuideFromDecks } from '../actions'
+import { deleteGuide, updateGuideFromDecks } from '../actions'
 import GuideEditorClient, { type GuideEditorSavePayload } from './guide-editor-client'
 
 export default function GuideEditPageClient({
@@ -54,6 +55,11 @@ export default function GuideEditPageClient({
     }
   }
 
+  async function handleDeleteGuide() {
+    await deleteGuide(guide.id)
+    completeEditorExit(() => router.replace('/guides?preview=1&tab=guides'))
+  }
+
   return (
     <GuideEditorClient
       guide={guide}
@@ -65,6 +71,7 @@ export default function GuideEditPageClient({
       featureGuides={featureGuides}
       isSaving={isSaving}
       onSaveDraft={handleSaveDraft}
+      onDeleteGuide={handleDeleteGuide}
       saveError={saveError}
       saveLabel="Save"
     />

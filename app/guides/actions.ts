@@ -600,6 +600,96 @@ export async function deleteDeck(deckId: string) {
   revalidatePath('/dashboard')
 }
 
+// Deletes a guide and its own cards. Guides reused inside it are their own
+// guides and stay. If another guide reuses this guide's own cards, those
+// cards stay too (they are only released from this guide), so deleting here
+// never empties someone else's guide.
+export async function deleteGuide(guideId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('Not authenticated')
+  if (!guideId) throw new Error('Missing guide id')
+
+  const { data: guide, error: guideError } = await supabase
+    .from('guides')
+    .select('id')
+    .eq('id', guideId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (guideError) throw new Error(guideError.message)
+  if (!guide) throw new Error('Guide not found')
+
+  const { data: ownCards, error: ownCardsError } = await supabase
+    .from('recipes')
+    .select('id')
+    .eq('inline_guide_id', guideId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (ownCardsError) throw new Error(ownCardsError.message)
+
+  let deletedOwnCards = false
+  if (ownCards) {
+    const { data: otherUses, error: otherUsesError } = await supabase
+      .from('guide_decks')
+      .select('guide_id')
+      .eq('recipe_id', ownCards.id)
+      .neq('guide_id', guideId)
+      .limit(1)
+
+    if (otherUsesError) throw new Error(otherUsesError.message)
+
+    if (!otherUses?.length) {
+      // Also removes this guide once it has no decks left.
+      await deleteDeck(ownCards.id)
+      deletedOwnCards = true
+    }
+  }
+
+  // Decks still pointing here (released own cards, or an auto-guide's deck)
+  // keep their content; they just stop naming this guide.
+  const { error: releaseInlineError } = await supabase
+    .from('recipes')
+    .update({ inline_guide_id: null })
+    .eq('inline_guide_id', guideId)
+    .eq('user_id', user.id)
+
+  if (releaseInlineError) throw new Error(releaseInlineError.message)
+
+  const { error: releaseAutoError } = await supabase
+    .from('recipes')
+    .update({ auto_guide_id: null })
+    .eq('auto_guide_id', guideId)
+    .eq('user_id', user.id)
+
+  if (releaseAutoError) throw new Error(releaseAutoError.message)
+
+  // guide_decks and content_assignments rows cascade with the guide.
+  const { error: deleteGuideError } = await supabase
+    .from('guides')
+    .delete()
+    .eq('id', guideId)
+    .eq('user_id', user.id)
+
+  if (deleteGuideError) throw new Error(deleteGuideError.message)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'guide_deleted',
+    properties: {
+      guide_id: guideId,
+      deleted_own_cards: deletedOwnCards,
+    },
+  })
+
+  revalidatePath('/guides')
+  revalidatePath('/dashboard')
+}
+
 export async function toggleDeckPaintOwnership(formData: FormData) {
   const supabase = await createClient()
   const {

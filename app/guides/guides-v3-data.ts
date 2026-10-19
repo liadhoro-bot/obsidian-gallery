@@ -1,4 +1,5 @@
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
+import { guideDifficulty } from './shared/guide-difficulty'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
@@ -604,7 +605,7 @@ function toGuideFile(
       : primaryDeck.image,
     decks: memberDecks.filter((deck) => !deck.inlineGuideId || deck.inlineGuideId !== guide.id).length,
     cards: totalCards,
-    level: totalCards > 5 ? 'Intermediate' : 'Beginner',
+    level: guideDifficulty(guide.difficulty, totalCards),
     ownedPercent: 0,
     palette: memberDecks.length
       ? memberDecks.slice(0, 5).map((deck) => deck.accent)

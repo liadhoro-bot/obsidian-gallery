@@ -76,13 +76,13 @@ export type DeckEditorSavePayload = {
 
 type EditorCard = CardEditorCard
 
-type EditorImage = {
+export type EditorImage = {
   id: string
   url: string
   alt: string
 }
 
-type DropTarget = {
+export type DropTarget = {
   edge: 'before' | 'after'
   id: string
 }
@@ -836,7 +836,7 @@ export default function DeckEditorClient({
   )
 }
 
-function DeckGallery({
+export function DeckGallery({
   cameraInputRef,
   draggingImageId,
   dropTarget,
@@ -1079,7 +1079,19 @@ function DeckGallery({
 
 type DeckDeleteStage = 'idle' | 'armed' | 'confirming'
 
-function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
+// The guide editor reuses this with noun="guide" and its own copy.
+export function DeckDeleteFailsafe({
+  onDelete,
+  noun = 'deck',
+  summary = 'Removes this deck with its cards, paints, and gallery images.',
+  detail = 'The deck and all of its cards, paints, and gallery images will be removed and cannot be recovered.',
+}: {
+  onDelete: () => Promise<void>
+  noun?: 'deck' | 'guide'
+  summary?: string
+  detail?: string
+}) {
+  const Noun = noun === 'guide' ? 'Guide' : 'Deck'
   const [stage, setStage] = useState<DeckDeleteStage>('idle')
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -1096,7 +1108,7 @@ function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
     try {
       await onDelete()
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : 'Could not delete deck.')
+      setDeleteError(error instanceof Error ? error.message : `Could not delete ${noun}.`)
       setIsDeleting(false)
     }
   }
@@ -1105,7 +1117,7 @@ function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
     <section className={styles.deletePanel} data-deck-editor="delete-deck">
       <div className={styles.deletePanelCopy}>
         <p className={styles.deleteEyebrow}>Danger Zone</p>
-        <p>Removes this deck with its cards, paints, and gallery images.</p>
+        <p>{summary}</p>
       </div>
       <button
         type="button"
@@ -1113,7 +1125,7 @@ function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
         data-delete-armed={stage !== 'idle' ? 'true' : 'false'}
         onClick={() => setStage((current) => (current === 'idle' ? 'armed' : 'confirming'))}
       >
-        {stage === 'idle' ? 'Delete Deck' : 'Press Again to Delete'}
+        {stage === 'idle' ? `Delete ${Noun}` : 'Press Again to Delete'}
       </button>
 
       {stage === 'confirming' ? (
@@ -1132,10 +1144,9 @@ function DeckDeleteFailsafe({ onDelete }: { onDelete: () => Promise<void> }) {
         >
           <section className={styles.deleteDialog}>
             <p className={styles.deleteEyebrow}>Confirm Deletion</p>
-            <h2 id="deck-delete-title">Delete this deck?</h2>
+            <h2 id="deck-delete-title">Delete this {noun}?</h2>
             <p id="deck-delete-description">
-              Deleting is permanent. The deck and all of its cards, paints, and gallery
-              images will be removed and cannot be recovered.
+              Deleting is permanent. {detail}
             </p>
             {deleteError ? <p className={styles.saveError}>{deleteError}</p> : null}
             <div className={styles.deleteDialogActions}>

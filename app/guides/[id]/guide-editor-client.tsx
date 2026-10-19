@@ -6,18 +6,19 @@ import GuideBackButton from '@/app/guides/shared/guide-back-button'
 import { useEditorTab } from '@/app/guides/shared/use-editor-tab'
 import { addInlineGuideCard, createDeckFromForge, deleteInlineGuideCard, loadGuideEditorDeck, updateInlineGuideCard } from '../actions'
 import { AddContentSheet, CardTypeSheet } from '../shared/card-type-sheet'
-import { CardEditorSheet, cardEditingHandlers, editorCardFromStep, type CardEditorCard } from '../shared/card-editor-sheet'
+import { CardEditorSheet, cardEditingHandlers, editorCardFromStep, uploadDeckEditorImage, type CardEditorCard } from '../shared/card-editor-sheet'
+import { DeckDeleteFailsafe, DeckGallery, type EditorImage } from '../decks/[id]/deck-editor-client'
 import { hasUnuploadedImage } from '../shared/deck-save-values'
 import { addableCardTypes, cardTypeLabel, isCardTypeId, type CardTypeId } from '../shared/card-templates'
 
 import Image from 'next/image'
-import { useMemo, useState, type DragEvent, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react'
 import { guideCardNodes } from '../shared/deck-card-entries'
 import { forGuide, flattenGuideContentItems, newGuideCoverCardId, newGuideIndexCardId, guideCardKey, guideContentItems, isGuideCoverCard, isGuideIndexCard, isGuideOwnedCard, resolveGuideCards, type GuideCardPlacement, type GuideContentItem } from '../shared/guide-card-layout'
 import { GuideCardNavigationContext } from '../shared/guide-card-navigation'
+import { GUIDE_DIFFICULTIES, guideDifficulty, type GuideDifficulty } from '../shared/guide-difficulty'
 import { MAX_GUIDE_TAGS, normalizeGuideTag, normalizeGuideTags } from '../shared/guide-tags'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
-import GalleryPager, { useGalleryPages } from '../../components/gallery/gallery-pager'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
 import type { GuidesV3Deck } from '../guides-v3-data'
 import type { GuidesV3DeckDetail, GuidesV3GuideDetail } from '../guides-v3-detail-data'
@@ -29,7 +30,6 @@ function cardTypeName(template: string | null | undefined) {
 }
 
 type GuideEditorTab = 'details' | 'decks' | 'preview'
-type GuideDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
 type GuideStatus = 'Draft' | 'Private' | 'Public'
 type DropTarget = { edge: 'before' | 'after'; id: string }
 
@@ -46,14 +46,8 @@ export type GuideEditorSavePayload = {
   tags: string[]
 }
 
-const difficultyOptions: GuideDifficulty[] = ['Beginner', 'Intermediate', 'Advanced']
+const difficultyOptions = GUIDE_DIFFICULTIES
 const statusOptions: GuideStatus[] = ['Draft', 'Private', 'Public']
-
-function inferDifficulty(cardCount: number): GuideDifficulty {
-  if (cardCount >= 12) return 'Advanced'
-  if (cardCount >= 6) return 'Intermediate'
-  return 'Beginner'
-}
 
 const editorTabs = ['details', 'decks', 'preview'] as const
 // The tab ids stay put so existing ?editorTab= links keep working.
@@ -69,6 +63,7 @@ export default function GuideEditorClient({
   backHref,
   isSaving = false,
   onSaveDraft,
+  onDeleteGuide,
   saveError,
   saveLabel = 'Save',
 }: {
@@ -81,6 +76,7 @@ export default function GuideEditorClient({
   backHref: string
   isSaving?: boolean
   onSaveDraft?: (payload: GuideEditorSavePayload) => void | Promise<boolean>
+  onDeleteGuide?: () => Promise<void>
   saveError?: string | null
   saveLabel?: string
 }) {
@@ -96,9 +92,8 @@ export default function GuideEditorClient({
   const [status, setStatus] = useState<GuideStatus>(
     deckDetails.some((deck) => deck.isPublic) ? 'Public' : 'Private'
   )
-  const [difficulty, setDifficulty] = useState<GuideDifficulty>(
-    (guide.difficulty as GuideDifficulty) ||
-      inferDifficulty(memberDecks.reduce((sum, deck) => sum + deck.cards, 0))
+  const [difficulty, setDifficulty] = useState<GuideDifficulty>(() =>
+    guideDifficulty(guide.difficulty, guide.cards)
   )
   const [draggingDeckId, setDraggingDeckId] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
@@ -129,9 +124,6 @@ export default function GuideEditorClient({
     [deckDetails, loadedDecks, guide.id]
   )
 
-  const selectedDecks = selectedDeckIds
-    .map((id) => deckById.get(id))
-    .filter((deck): deck is GuidesV3Deck => Boolean(deck))
   const selectedDetails = selectedDeckIds.map(id => deckDetailById.get(id)).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
   const resolvedCards = resolveGuideCards(selectedDetails, cardLayout)
   // Cover cards show the guide's current title, description and cover image.
@@ -202,11 +194,76 @@ export default function GuideEditorClient({
     `${deck.title} ${deck.category}`.toLowerCase().includes(normalizedDeckSearch)
   )
   // The guide's own cards deck has no cover of its own to offer.
-  const coverImageCandidates = selectedDecks.filter((deck) => !deckDetailById.get(deck.id)?.isInline).map((deck) => ({
-    id: deck.id,
-    image: deckDetailById.get(deck.id)?.fullImage || deckDetailById.get(deck.id)?.image || deck.image,
-  }))
-  const coverPages = useGalleryPages(coverImageCandidates)
+  const [gallery, setGallery] = useState<EditorImage[]>(() => initialGuideGallery(initialCoverImage, deckDetails, title))
+  const [heroImageId, setHeroImageId] = useState(() => gallery.find((image) => image.url === initialCoverImage)?.id ?? gallery[0]?.id ?? '')
+  const [isEditingGallery, setIsEditingGallery] = useState(false)
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([])
+  const [draggingImageId, setDraggingImageId] = useState<string | null>(null)
+  const [galleryDropTarget, setGalleryDropTarget] = useState<DropTarget | null>(null)
+  const [expandedImage, setExpandedImage] = useState<EditorImage | null>(null)
+  const [pendingImageUploads, setPendingImageUploads] = useState(0)
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+
+  function selectHeroImage(image: EditorImage) {
+    setHeroImageId(image.id)
+    setCoverImage(image.url)
+  }
+
+  async function addGalleryFiles(event: ChangeEvent<HTMLInputElement>, source: 'camera' | 'gallery') {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    if (!files.length) return
+    const uploads = files.map((file, index) => ({
+      id: `${source}:${Date.now()}:${index}:${file.name}`,
+      url: URL.createObjectURL(file),
+      alt: file.name,
+      file,
+    }))
+    setGallery((current) => [...current, ...uploads.map(({ id, url, alt }) => ({ id, url, alt }))])
+    setImageUploadError(null)
+    setPendingImageUploads((count) => count + uploads.length)
+    await Promise.all(uploads.map(async ({ id, url, file }) => {
+      try {
+        const uploadedUrl = await uploadDeckEditorImage(file)
+        setGallery((current) => current.map((image) => (image.id === id ? { ...image, url: uploadedUrl } : image)))
+      } catch (error) {
+        setGallery((current) => current.filter((image) => image.id !== id))
+        setImageUploadError(error instanceof Error ? error.message : 'Could not upload image.')
+      } finally {
+        URL.revokeObjectURL(url)
+        setPendingImageUploads((count) => Math.max(0, count - 1))
+      }
+    }))
+  }
+
+  function toggleImageSelection(imageId: string) {
+    setSelectedImageIds((current) => current.includes(imageId) ? current.filter((id) => id !== imageId) : [...current, imageId])
+  }
+
+  function deleteSelectedImages() {
+    const next = gallery.filter((image) => !selectedImageIds.includes(image.id))
+    if (!next.some((image) => image.id === heroImageId) && next[0]) selectHeroImage(next[0])
+    setGallery(next)
+    setSelectedImageIds([])
+    setIsEditingGallery(false)
+  }
+
+  function reorderGalleryImage(imageId: string, targetId: string, edge: DropTarget['edge']) {
+    if (imageId === targetId) return
+    setGallery((current) => {
+      const fromIndex = current.findIndex((image) => image.id === imageId)
+      const toIndex = current.findIndex((image) => image.id === targetId)
+      if (fromIndex < 0 || toIndex < 0) return current
+      const next = [...current]
+      const [moved] = next.splice(fromIndex, 1)
+      if (!moved) return current
+      const adjustedIndex = fromIndex < toIndex ? toIndex - 1 : toIndex
+      next.splice(adjustedIndex + (edge === 'after' ? 1 : 0), 0, moved)
+      return next
+    })
+  }
 
   function contentItemKey(item: GuideContentItem) {
     return item.kind === 'guide' ? `guide:${item.deckId}` : `card:${guideCardKey(item.card)}`
@@ -347,6 +404,10 @@ export default function GuideEditorClient({
   }
 
   function handleSave() {
+    if (pendingImageUploads > 0) {
+      setImageUploadError('Wait for the image upload to finish before saving.')
+      return
+    }
     void saveChanges(() => onSaveDraft?.({
       title,
       description,
@@ -494,35 +555,39 @@ export default function GuideEditorClient({
               </div>
             </section>
 
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
-                <h2>Gallery</h2>
-                <span>From guides inside</span>
-              </div>
-              <div className={styles.galleryGrid} {...coverPages.swipeHandlers}>
-                {coverPages.pageItems.map((candidate) => (
-                  <button
-                    key={candidate.id}
-                    type="button"
-                    className={styles.galleryTile}
-                    style={
-                      coverImage === candidate.image
-                        ? { borderColor: 'var(--og-brass-500)', boxShadow: '0 0 0 2px color-mix(in srgb, var(--og-brass-500) 42%, transparent)' }
-                        : undefined
-                    }
-                    onClick={() => setCoverImage(candidate.image)}
-                  >
-                    <Image src={candidate.image} alt="" fill sizes="120px" className="object-cover" />
-                  </button>
-                ))}
-              </div>
-              <GalleryPager
-                page={coverPages.page}
-                pageCount={coverPages.pageCount}
-                onPageChange={coverPages.goToPage}
-                label="Cover image pages"
+            <DeckGallery
+              cameraInputRef={cameraInputRef}
+              draggingImageId={draggingImageId}
+              dropTarget={galleryDropTarget}
+              galleryInputRef={galleryInputRef}
+              heroImageId={heroImageId}
+              images={gallery}
+              isEditing={isEditingGallery}
+              selectedImageIds={selectedImageIds}
+              onAddFiles={addGalleryFiles}
+              onClearSelection={() => setSelectedImageIds([])}
+              onDeleteSelected={deleteSelectedImages}
+              onExpandImage={setExpandedImage}
+              onReorderImage={reorderGalleryImage}
+              onSetDraggingImageId={setDraggingImageId}
+              onSetDropTarget={setGalleryDropTarget}
+              onSetHeroImage={selectHeroImage}
+              onToggleEdit={() => {
+                setIsEditingGallery((current) => !current)
+                setSelectedImageIds([])
+              }}
+              onToggleSelection={toggleImageSelection}
+            />
+            {imageUploadError ? <p role="alert" className={styles.saveError}>{imageUploadError}</p> : null}
+
+            {onDeleteGuide ? (
+              <DeckDeleteFailsafe
+                noun="guide"
+                onDelete={onDeleteGuide}
+                summary="Removes this guide with its own cards. Guides you reused inside it are kept."
+                detail="The guide and its own cards, paints, and gallery images will be removed and cannot be recovered. Guides reused inside it are not deleted."
               />
-            </section>
+            ) : null}
           </div>
         ) : null}
 
@@ -758,6 +823,24 @@ export default function GuideEditorClient({
         {saveError ? <p className={styles.saveError}>{saveError}</p> : null}
       </div>
 
+      {expandedImage ? (
+        <div
+          className={styles.imageLightbox}
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setExpandedImage(null)
+          }}
+        >
+          <button type="button" className={styles.lightboxClose} onClick={() => setExpandedImage(null)}>
+            Close
+          </button>
+          <div className={styles.lightboxImage}>
+            <Image src={expandedImage.url} alt={expandedImage.alt} width={1200} height={1200} sizes="100vw" unoptimized />
+          </div>
+        </div>
+      ) : null}
+
       {addSheet === 'menu' ? (
         <AddContentSheet
           options={[
@@ -964,6 +1047,26 @@ function GuidePreview({ nodes, cards }: { nodes: Map<string, ReactNode>; cards: 
 // top-level sequence. Same row as a card inside a nested guide - preview,
 // type over title, Hide/Unhide - on its own surface. Tapping the card opens
 // it in the card editor.
+// The guide's gallery: its current cover, then each guide's cover and every
+// card photo inside it, without repeats.
+function initialGuideGallery(cover: string, decks: GuidesV3DeckDetail[], title: string): EditorImage[] {
+  const images: EditorImage[] = [
+    { id: 'guide:cover', url: cover, alt: title },
+    ...decks.flatMap((deck) => [
+      { id: `${deck.id}:cover`, url: deck.fullImage ?? deck.image, alt: deck.title },
+      ...deck.steps
+        .filter((step) => Boolean(step.rawImage ?? step.image))
+        .map((step) => ({ id: `${step.id}:image`, url: (step.rawImage ?? step.image) as string, alt: step.title })),
+    ]),
+  ]
+  const seen = new Set<string>()
+  return images.filter((image) => {
+    if (!image.url || seen.has(image.url)) return false
+    seen.add(image.url)
+    return true
+  })
+}
+
 function TopLevelCardRow({
   label,
   typeLabel,
