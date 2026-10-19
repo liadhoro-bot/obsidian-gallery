@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
-import { getGuidesV3Payload } from './guides-v3-data'
+import { getGuideFilesByIds, getGuidesV3Payload } from './guides-v3-data'
 
 export type AssignableContentType = 'guide' | 'deck'
 export type AssignmentTargetType = 'project' | 'unit'
@@ -159,6 +159,12 @@ export async function getTargetAssignmentLibrary(
       ...payload.libraryGuides.filter((guide) => selected.has(`guide:${guide.id}`)),
     ].map((guide) => [guide.id, guide])
   )
+  // An assigned guide stays here after its owner pulls it back to private
+  // or draft (it is no longer in Discover's list).
+  const unlistedAssignedIds = (assignmentResult.data ?? [])
+    .filter((row) => row.content_type === 'guide' && row.guide_id && !guideMap.has(row.guide_id))
+    .map((row) => row.guide_id as string)
+  for (const guide of (await getGuideFilesByIds(user.id, unlistedAssignedIds)).guides) guideMap.set(guide.id, guide)
   const deckMap = new Map(
     [
       ...payload.decks,

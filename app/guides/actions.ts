@@ -2,6 +2,7 @@
 
 import { parseGuideCardLayout, type GuideCardPlacement } from './shared/guide-card-layout'
 import { normalizeGuideTags } from './shared/guide-tags'
+import { visibilityFromStatus } from './shared/guide-visibility'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
@@ -723,11 +724,10 @@ export type CreateGuideInput = {
   description: string
   image: string | null
   deckIds: string[]
-  // A guide's own visibility is derived from its member decks' `is_public`
-  // (see isGuidePublic in guides-v3-data.ts) - there is no separate
-  // guides.status column. Setting status to 'Public' here publishes every
-  // member deck in the same save; 'Draft'/'Private' leave decks untouched
-  // rather than surprising the owner by un-publishing them.
+  // Draft/Private/Public, saved as guides.visibility (default Draft). Only
+  // Public guides are listed. 'Public' also publishes every member deck so
+  // viewers can read the cards; 'Draft'/'Private' only unlist the guide and
+  // leave decks as they are, so people who saved or assigned it keep it.
   status?: string
   difficulty?: string
 }
@@ -787,6 +787,7 @@ export async function createGuideFromDecks(
     image_url: image,
     difficulty,
     is_auto: false,
+    visibility: visibilityFromStatus(input.status),
     ...(input.tags === undefined ? {} : { tags }),
   }
   const { data: guide, error: guideError } = await supabase
@@ -864,10 +865,11 @@ export async function updateGuideFromDecks(
   let { error: guideError } = await supabase.rpc('save_guide_layout', {
     p_guide_id: guideId, p_title: title, p_description: description, p_image: image,
     p_difficulty: difficulty, p_deck_ids: deckIds, p_card_layout: cardLayout, p_tags: tags, p_publish: input.status === 'Public',
+    p_visibility: visibilityFromStatus(input.status),
   })
   const missingTaggedSignature = guideError && (
     guideError.code === 'PGRST202' ||
-    /save_guide_layout.*p_tags|function public\.save_guide_layout.*does not exist/i.test(guideError.message)
+    /save_guide_layout.*p_(tags|visibility)|function public\.save_guide_layout.*does not exist/i.test(guideError.message)
   )
   if (missingTaggedSignature) {
     const fallback = await supabase.rpc('save_guide_layout', {
@@ -908,7 +910,7 @@ export async function upgradeDeckToGuide(deckId: string) {
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
-    .select('id, name, description, auto_guide_id, inline_guide_id')
+    .select('id, name, description, is_public, auto_guide_id, inline_guide_id')
     .eq('id', deckId)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -944,7 +946,7 @@ export async function upgradeDeckToGuide(deckId: string) {
   if (!guideId) {
     const { data: guide, error: guideError } = await supabase
       .from('guides')
-      .insert({ user_id: user.id, title, description: recipe.description?.trim() || null, is_auto: false })
+      .insert({ user_id: user.id, title, description: recipe.description?.trim() || null, is_auto: false, visibility: recipe.is_public ? 'public' : 'private' })
       .select('id')
       .single()
     if (guideError || !guide) throw new Error(guideError?.message || 'Could not open this guide')

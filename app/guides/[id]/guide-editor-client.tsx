@@ -16,6 +16,7 @@ import { useMemo, useRef, useState, type ChangeEvent, type DragEvent, type React
 import { guideCardNodes } from '../shared/deck-card-entries'
 import { forGuide, flattenGuideContentItems, newGuideCoverCardId, newGuideIndexCardId, guideCardKey, guideContentItems, isGuideCoverCard, isGuideIndexCard, isGuideOwnedCard, resolveGuideCards, type GuideCardPlacement, type GuideContentItem } from '../shared/guide-card-layout'
 import { GuideCardNavigationContext } from '../shared/guide-card-navigation'
+import { GUIDE_STATUSES, guideVisibilityOf, statusFromVisibility, type GuideStatus } from '../shared/guide-visibility'
 import { GUIDE_DIFFICULTIES, guideDifficulty, type GuideDifficulty } from '../shared/guide-difficulty'
 import { MAX_GUIDE_TAGS, normalizeGuideTag, normalizeGuideTags } from '../shared/guide-tags'
 import FeatureGuideLauncher from '../../components/feature-guide-launcher'
@@ -30,7 +31,6 @@ function cardTypeName(template: string | null | undefined) {
 }
 
 type GuideEditorTab = 'details' | 'decks' | 'preview'
-type GuideStatus = 'Draft' | 'Private' | 'Public'
 type DropTarget = { edge: 'before' | 'after'; id: string }
 
 
@@ -47,7 +47,7 @@ export type GuideEditorSavePayload = {
 }
 
 const difficultyOptions = GUIDE_DIFFICULTIES
-const statusOptions: GuideStatus[] = ['Draft', 'Private', 'Public']
+const statusOptions = GUIDE_STATUSES
 
 const editorTabs = ['details', 'decks', 'preview'] as const
 // The tab ids stay put so existing ?editorTab= links keep working.
@@ -89,9 +89,7 @@ export default function GuideEditorClient({
   const [selectedDeckIds, setSelectedDeckIds] = useState<string[]>(
     () => guide.deckIds ?? memberDecks.map((deck) => deck.id)
   )
-  const [status, setStatus] = useState<GuideStatus>(
-    deckDetails.some((deck) => deck.isPublic) ? 'Public' : 'Private'
-  )
+  const [status, setStatus] = useState<GuideStatus>(() => statusFromVisibility(guideVisibilityOf(guide.visibility)))
   const [difficulty, setDifficulty] = useState<GuideDifficulty>(() =>
     guideDifficulty(guide.difficulty, guide.cards)
   )

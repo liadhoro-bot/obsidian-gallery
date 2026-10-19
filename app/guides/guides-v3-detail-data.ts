@@ -7,6 +7,7 @@ import { createSharedReadClient } from './shared-read-client'
 import { getRecipeSocialState } from '../components/social/data'
 import {
   getGuideDeckThumbnail,
+  getGuideFilesByIds,
   getGuidesV3Payload,
   getSharedGuideFile,
   type GuidesV3Deck,
@@ -538,11 +539,32 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
   }
 }
 
+async function isAssignedGuide(guideId: string, userId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('content_assignments')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('content_type', 'guide')
+    .eq('guide_id', guideId)
+    .limit(1)
+  if (error) return false
+  return (data ?? []).length > 0
+}
+
 export const getGuidesV3GuideDetail = cache(
   async (guideId: string, userId: string) => {
     const payload = await getGuidesV3Payload(userId)
     const allGuides = [...payload.guideFiles, ...payload.libraryGuides]
-    const guide = allGuides.find((item) => item.id === guideId)
+    let guide = allGuides.find((item) => item.id === guideId)
+    // Not listed and not saved: still open it for a viewer who assigned it
+    // to one of their units or projects before its owner unlisted it.
+    let assignedDecks: GuidesV3Deck[] = []
+    if (!guide && await isAssignedGuide(guideId, userId)) {
+      const assigned = await getGuideFilesByIds(userId, [guideId])
+      guide = assigned.guides[0]
+      assignedDecks = assigned.decks
+    }
 
     if (!guide) return null
 
@@ -555,7 +577,7 @@ export const getGuidesV3GuideDetail = cache(
     const deckById = new Map(
       // nestableDecks: the viewer's decks including upgraded ones (guides' own
       // cards), which other guides still reuse as nested guides.
-      [...payload.nestableDecks, ...payload.decks, ...payload.libraryDecks].map((deck) => [deck.id, deck])
+      [...assignedDecks, ...payload.nestableDecks, ...payload.decks, ...payload.libraryDecks].map((deck) => [deck.id, deck])
     )
     const decksList = forGuide((guide.deckIds ?? [])
       .map((deckId) => deckById.get(deckId))

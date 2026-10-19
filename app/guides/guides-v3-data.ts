@@ -1,5 +1,6 @@
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { guideDifficulty } from './shared/guide-difficulty'
+import { guideVisibilityOf, type GuideVisibility } from './shared/guide-visibility'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
@@ -46,6 +47,8 @@ export type GuidesV3GuideFile = {
   // Public creator identity, shown on Discover cards. Only the username and
   // avatar are exposed - display_name can hold a real name.
   creator?: GuidesV3Creator
+  // guides.visibility: only 'public' guides are listed anywhere public.
+  visibility?: GuideVisibility
 }
 
 export type GuidesV3Creator = {
@@ -133,6 +136,7 @@ type GuideRow = {
   image_url: string | null
   difficulty: string | null
   is_auto: boolean | null
+  visibility?: string | null
   primary_recipe_id?: string | null
   created_at: string | null
   tags?: string[] | null
@@ -174,6 +178,7 @@ const guideWithDecksSelect = `
   difficulty,
   tags,
   is_auto,
+  visibility,
   primary_recipe_id,
   created_at,
   guide_decks (
@@ -284,7 +289,16 @@ function isInlineDeckOf(guide: Pick<GuideRow, 'id' | 'user_id'>, recipe: Pick<Re
   return recipe.inline_guide_id === guide.id && recipe.user_id === guide.user_id
 }
 
+// Listed publicly: the owner published the guide (guides.visibility) and it
+// has public content to show.
 function isGuidePublic(guide: GuideRow) {
+  return guide.visibility === 'public' && hasPublicContent(guide)
+}
+
+// Readable by people other than the owner. A guide pulled back to private or
+// draft keeps its public decks, so the people who saved or assigned it still
+// see it - it just isn't listed anywhere.
+function hasPublicContent(guide: GuideRow) {
   return memberRecipesOf(guide).some((recipe) => recipe.is_public === true)
 }
 
@@ -339,6 +353,7 @@ async function loadAllVisibleGuideRows(supabase: SupabaseClient) {
     const { data, error } = await selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
       .from('guides')
       .select(selection)
+      .eq('visibility', 'public')
       .order('created_at', { ascending: false })
       .order('id', { ascending: true })
       .range(offset, offset + publicGuidePageSize - 1)
@@ -620,6 +635,7 @@ function toGuideFile(
     viewerHasLiked: social?.viewerHasLiked ?? false,
     viewerHasSaved: social?.viewerHasSaved ?? false,
     createdAt: guide.created_at ?? '',
+    visibility: guideVisibilityOf(guide.visibility),
   }
 }
 
@@ -727,10 +743,11 @@ export const getGuidesV3Payload = cache(async (
 
   // A saved deck can only ever be one the user could already see when they
   // saved it (public per `recipes`' own RLS) - re-assert that here rather
-  // than trusting it blindly.
+  // than trusting it blindly. A saved guide stays saved after its owner
+  // pulls it back to private or draft.
   const savedGuides = ((savedGuidesResult.data ?? []) as GuideRow[]).filter(
     (guide) => {
-      if (!isGuidePublic(guide)) return false
+      if (!hasPublicContent(guide)) return false
       const primary = primaryRecipeOf(guide, memberRecipesOf(guide))
       return primary ? savedRecipeIds.has(primary.id) : false
     }
@@ -868,6 +885,42 @@ export const getGuidesV3Payload = cache(async (
     ),
   } satisfies GuidesV3Payload
 })
+
+// Guides by id, for the viewer's own and readable ones (RLS: own, or with a
+// public deck) whether or not they are listed - e.g. a guide the viewer
+// assigned to a unit or project before its owner pulled it back to private.
+// Returns their member decks too, for callers that resolve deck lists.
+export async function getGuideFilesByIds(userId: string, guideIds: string[]) {
+  const ids = Array.from(new Set(guideIds.filter(Boolean)))
+  if (!ids.length) return { guides: [] as GuidesV3GuideFile[], decks: [] as GuidesV3Deck[] }
+  const supabase = await createClient()
+  const rows = await selectInBatches<GuideRow>(ids, (batch) =>
+    supabase.from('guides').select(guideWithDecksSelect).in('id', batch).returns<GuideRow[]>())
+  const readable = rows.filter((guide) => guide.user_id === userId || hasPublicContent(guide))
+  const recipes = Array.from(new Map(readable.flatMap(memberRecipesOf).map((recipe) => [recipe.id, recipe])).values())
+  const recipeIds = recipes.map((recipe) => recipe.id)
+  const [statsByRecipeId, imageByRecipeId, socialByRecipeId, creatorsById] = await Promise.all([
+    loadRecipeStats(supabase, recipeIds),
+    loadRecipeImages(supabase, recipes),
+    loadRecipeSocialCounts(supabase, recipeIds, userId),
+    loadGuideCreators(readable.filter((guide) => guide.user_id !== userId).map((guide) => guide.user_id)),
+  ])
+  const deckById = new Map(recipes.map((recipe) => [recipe.id, toDeck({
+    recipe, imageByRecipeId, statsByRecipeId, socialByRecipeId, userId,
+    saved: socialByRecipeId.get(recipe.id)?.viewerHasSaved ?? recipe.user_id === userId,
+  })]))
+  const guides = readable.flatMap((guide) => {
+    const memberRecipes = memberRecipesOf(guide)
+    const memberDecks = memberRecipes.map((recipe) => deckById.get(recipe.id)).filter((deck): deck is GuidesV3Deck => Boolean(deck))
+    if (!memberDecks.length) return []
+    const primaryRecipe = memberRecipes.find((recipe) => recipe.is_public) ?? memberRecipes[0]
+    return [{
+      ...toGuideFile(guide, memberDecks, primaryRecipe, socialByRecipeId, userId),
+      creator: guide.user_id === userId ? undefined : creatorsById.get(guide.user_id),
+    }]
+  })
+  return { guides, decks: Array.from(deckById.values()) }
+}
 
 // Load the creator's entire public collection, independently of Discover's
 // global limit. Keep the same thumbnail, guide mapping and social state.
