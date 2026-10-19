@@ -340,9 +340,10 @@ test.describe('V3 Perf Test', () => {
     await switchTab(page, /library/i, 'guides', 'library', testInfo)
     await switchTab(page, /^guides$/i, 'guides', 'guides', testInfo)
 
-    await gotoMeasured(page, '/community?preview=1', 'community', 'contests', testInfo)
-    await switchTab(page, /news/i, 'community', 'news', testInfo)
+    await gotoMeasured(page, '/community?preview=1', 'community', 'events', testInfo)
     await switchTab(page, /contests/i, 'community', 'contests', testInfo)
+    await switchTab(page, /news/i, 'community', 'news', testInfo)
+    await switchTab(page, /events/i, 'community', 'events', testInfo)
   })
 
   test('settings and V3 subpages expose perf marks without route errors', async ({

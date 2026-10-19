@@ -233,7 +233,7 @@ export const onboardingTourSteps: TourStep[] = [
     route: '/community',
     section: 'Community',
     title: 'Three ways to join in',
-    body: "Contests has painting challenges you can enter. News brings updates, paint releases and creator posts. Events shows local meetups, hobby stores worth a visit and dates for your calendar.",
+    body: "Events shows local meetups, hobby stores worth a visit and dates for your calendar. Contests has painting challenges you can enter. News brings updates, paint releases and creator posts.",
     target: 'community.tabs',
     placement: 'bottom',
   },

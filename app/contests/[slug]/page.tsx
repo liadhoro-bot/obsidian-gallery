@@ -84,7 +84,7 @@ export default async function ContestDetailPage({
     <main className={styles.contestSilver}>
       <div className={styles.pageRail}>
         <ContestHeader
-          backHref="/community"
+          backHref="/community?tab=contests"
           backLabel="Back"
           contest={contest}
           manageHref={canManage ? `/contests/manage/${contest.id}` : undefined}

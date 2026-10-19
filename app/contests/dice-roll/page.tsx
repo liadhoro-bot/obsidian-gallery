@@ -13,7 +13,7 @@ export default function CampaignDiceRollPage() {
       <div className={`${styles.pageRail} ${styles.narrowRail}`}>
         <header className={styles.diceHeader}>
           <Link
-            href="/community"
+            href="/community?tab=contests"
             className={styles.backLink}
           >
             Back to community

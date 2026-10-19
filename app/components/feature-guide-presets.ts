@@ -50,12 +50,13 @@ export const guidesFeatureGuides = [
 ]
 
 export const communityFeatureGuides = [
-  guide('community.page', 'Community', 'Community gathers contests and news so painters can join events, see updates, and find what the wider hobby scene is doing.', 100),
+  guide('community.page', 'Community', 'Community gathers contests, news, and local events so painters can join events, see updates, and find what the wider hobby scene is doing.', 100),
+  guide('community.tabs.events', 'Events Tab', 'Events highlights a featured local event, hobby stores worth visiting, and upcoming dates on the calendar.', 105),
   guide('community.tabs.contests', 'Contests Tab', 'Contests shows active challenges, featured events, and your saved or submitted entries.', 110),
   guide('community.tabs.news', 'News Tab', 'News shows app updates, hobby stories, paint announcements, creator posts, and other community updates.', 120),
-  guide('community.hero', 'Featured Card', 'The featured card spotlights the most important contest or story in the current tab.', 130),
-  guide('community.primary_list', 'Main List', 'The main list contains the current tab’s active challenges or latest news items.', 140, 'top'),
-  guide('community.secondary_list', 'Saved and For You', 'The lower cards hold saved entries, creator spotlights, or personalized recommendations depending on the tab.', 150, 'top'),
+  guide('community.hero', 'Featured Card', 'The featured card spotlights the most important contest, story, or event in the current tab.', 130),
+  guide('community.primary_list', 'Main List', 'The main list contains the current tab’s active challenges, latest news, or upcoming events.', 140, 'top'),
+  guide('community.secondary_list', 'Saved and For You', 'The lower cards hold saved entries, store spotlights, creator spotlights, or personalized recommendations depending on the tab.', 150, 'top'),
 ]
 
 export const projectDetailFeatureGuides = [
