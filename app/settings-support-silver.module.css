@@ -284,6 +284,64 @@
   gap: var(--og-space-2);
 }
 
+.planHeadline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+}
+
+/* Paper inset, like the badge: the ebonized texture is a small control
+   tile and shows visible seams when stretched over a tall box. */
+.planRows {
+  display: grid;
+  margin-block-start: var(--og-space-3);
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: color-mix(in srgb, var(--og-paper-50) 40%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  padding: 2px 14px;
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.planRows > div {
+  padding-block: 11px;
+}
+
+.planRows > div + div {
+  border-block-start: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 36%, var(--og-border-subtle));
+}
+
+.planRowLabel {
+  color: color-mix(in srgb, var(--og-brass-500) 78%, var(--og-ink-950));
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.planRowValue {
+  margin-block-start: 2px;
+  color: var(--og-text-primary);
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.planConfirm {
+  display: grid;
+  gap: var(--og-space-3);
+  margin-block-start: var(--og-space-4);
+}
+
+/* .dangerButton is declared later in this file; outrank its top margin. */
+.planConfirm .planConfirmDanger {
+  margin-block-start: 0;
+}
+
+.planMessage {
+  margin-block-start: var(--og-space-3);
+}
+
 .secondaryButton {
   background-image: var(--og-material-ebonized-control);
   color: var(--og-paper-100);
