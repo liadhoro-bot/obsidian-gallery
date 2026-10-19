@@ -528,7 +528,20 @@ export default function GuideEditorClient({
 
         {activeTab === 'decks' ? (
           <section className={styles.panel}>
-            <p>Changes here affect this guide only. The source guide stays unchanged.</p>
+            <header className={styles.contentsHeader}>
+              <div>
+                <h2>Guide Contents</h2>
+                <p>Cards and guides, arranged in one sequence.</p>
+              </div>
+              <button
+                type="button"
+                className={styles.contentsAddButton}
+                aria-haspopup="dialog"
+                onClick={() => setAddSheet('menu')}
+              >
+                + Add
+              </button>
+            </header>
             <div className={styles.cardList}>
               {contentItems.map((item, itemIndex) => {
                 if (item.kind === 'card') {
@@ -548,14 +561,15 @@ export default function GuideEditorClient({
                       typeLabel={isIndex ? 'Index' : isGuideCover || isDeckCover ? 'Cover' : cardTypeName(step?.template)}
                       hidden={card.hidden}
                       preview={cardNodes.get(key)}
-                      onEdit={!isIndex && !isGuideCover && step ? () => setEditingDirectCard({ deckId: card.deckId, stepId: card.cardId }) : undefined}
-                      onRemove={isIndex || isGuideCover ? { label: isIndex ? 'Remove index' : 'Remove cover', run: () => removeGuideIndex(key) } : undefined}
+                      meta={isIndex ? 'Table of contents' : isGuideCover ? 'Opening card' : card.hidden ? 'Hidden in this guide' : undefined}
+                      onEdit={isGuideCover ? () => setActiveTab('details') : !isIndex && step ? () => setEditingDirectCard({ deckId: card.deckId, stepId: card.cardId }) : undefined}
+                      onRemove={isIndex || isGuideCover ? () => removeGuideIndex(key) : undefined}
                       isDragging={draggingDeckId === itemKey}
                       dropEdge={dropTarget?.id === itemKey ? dropTarget.edge : null}
                       canMoveUp={itemIndex > 0}
                       canMoveDown={itemIndex < contentItems.length - 1}
                       onMove={(direction) => moveTopLevel(itemKey, direction)}
-                      onToggleHidden={() => toggleCardHidden(key)}
+                      onToggleHidden={isIndex || isGuideCover ? undefined : () => toggleCardHidden(key)}
                       onDragStart={(event) => {
                         setDraggingDeckId(itemKey)
                         event.dataTransfer.effectAllowed = 'move'
@@ -582,6 +596,11 @@ export default function GuideEditorClient({
                 const deck = deckById.get(item.deckId)
                 if (!deck) return null
                 const rowKey = contentItemKey(item)
+                const isExpanded = expandedDecks.includes(deck.id)
+                const deckCards = resolvedCards.filter(card => card.groupId === deck.id && !isGuideOwnedCard(card))
+                const hiddenCount = deckCards.filter(card => card.hidden).length
+                const shownCount = deckCards.length - hiddenCount
+                const sourceHref = deck.inlineGuideId ? `/guides/${deck.inlineGuideId}?preview=1` : `/guides/decks/${deck.id}?preview=1`
                 return (
                 <article
                   key={deck.id}
@@ -589,6 +608,8 @@ export default function GuideEditorClient({
                     styles.cardRow,
                     styles.guideDeckRow,
                     styles.guideDeckRowUnnumbered,
+                    styles.contentsRow,
+                    styles.contentsGuideRow,
                     draggingDeckId === rowKey ? styles.cardRowDragging : '',
                     dropTarget?.id === rowKey && dropTarget.edge === 'before'
                       ? styles.cardRowDropBefore
@@ -635,24 +656,30 @@ export default function GuideEditorClient({
                   >
                     <DragHandleIcon />
                   </span>
-                  <span className={styles.cardInfo}>
-                    <span className={styles.cardTypeLabel}>Guide</span>
-                    <span className={styles.cardName}>{deck.title}</span>
+                  <span className={styles.contentsThumb} aria-hidden="true">
+                    {deck.image ? <Image src={deck.image} alt="" fill sizes="64px" className="object-cover" /> : null}
                   </span>
-                  <span className={styles.cardRowActions}>
-                    <button type="button" className={styles.editButton} aria-label={expandedDecks.includes(deck.id) ? 'Hide cards' : 'Show cards'} aria-expanded={expandedDecks.includes(deck.id)} aria-controls={`guide-cards-${deck.id}`} onClick={() => setExpandedDecks(current => current.includes(deck.id) ? current.filter(id => id !== deck.id) : [...current, deck.id])}>
-                      <span aria-hidden="true">{expandedDecks.includes(deck.id) ? '▴' : '▾'}</span> Cards
+                  <span className={styles.cardInfo}>
+                    <span className={styles.cardTypeLabel}>Guide · Nested</span>
+                    <span className={styles.cardName}>{deck.title}</span>
+                    <span className={styles.contentsMeta}>
+                      {shownCount} {shownCount === 1 ? 'card' : 'cards'}{hiddenCount ? ` · ${hiddenCount} hidden` : ''}
+                    </span>
+                  </span>
+                  <span className={styles.contentsActions}>
+                    <button type="button" className={styles.contentsButton} aria-label={isExpanded ? 'Hide cards' : 'Show cards'} aria-expanded={isExpanded} aria-controls={`guide-cards-${deck.id}`} onClick={() => setExpandedDecks(current => current.includes(deck.id) ? current.filter(id => id !== deck.id) : [...current, deck.id])}>
+                      <ChevronIcon open={isExpanded} />{isExpanded ? 'Hide cards' : 'Show cards'}
                     </button>
                     <button
                       type="button"
-                      className={styles.dangerButton}
+                      className={`${styles.contentsButton} ${styles.contentsRemove}`}
                       aria-label={`Remove ${deck.title} from guide`}
                       onClick={() => removeDeck(deck.id)}
                     >
-                      x
+                      Remove
                     </button>
                   </span>
-                  {expandedDecks.includes(deck.id) ? <div id={`guide-cards-${deck.id}`} className={styles.guideCardList}>
+                  {isExpanded ? <div id={`guide-cards-${deck.id}`} className={styles.guideCardList}>
                     {resolvedCards.filter(card => card.groupId === deck.id).map(card => {
                       const key = guideCardKey(card)
                       const isIndex = isGuideIndexCard(card)
@@ -709,19 +736,17 @@ export default function GuideEditorClient({
                       </div>
                     })}
                     {!resolvedCards.some(card => card.groupId === deck.id) ? <p>No cards in this guide.</p> : null}
+                    <div className={styles.contentsSourceNote}>
+                      <p>Changes here affect this guide only. The source guide stays unchanged.</p>
+                      <a href={sourceHref} target="_blank" rel="noopener noreferrer" className={styles.contentsButton}>
+                        <OpenSourceIcon />Open source guide
+                      </a>
+                    </div>
                   </div> : null}
                 </article>
                 )
               })}
             </div>
-            <button
-              type="button"
-              className={styles.addCardButton}
-              aria-haspopup="dialog"
-              onClick={() => setAddSheet('menu')}
-            >
-              + Add
-            </button>
             {cardLoadError && !addSheet ? <p role="alert" className={styles.saveError}>{cardLoadError}</p> : null}
           </section>
         ) : null}
@@ -944,6 +969,7 @@ function TopLevelCardRow({
   typeLabel,
   hidden,
   preview,
+  meta,
   onEdit,
   onRemove,
   isDragging,
@@ -962,14 +988,15 @@ function TopLevelCardRow({
   typeLabel: string
   hidden: boolean
   preview: ReactNode
+  meta?: string
   onEdit?: () => void
-  onRemove?: { label: string; run: () => void }
+  onRemove?: () => void
   isDragging: boolean
   dropEdge: DropTarget['edge'] | null
   canMoveUp: boolean
   canMoveDown: boolean
   onMove: (direction: -1 | 1) => void
-  onToggleHidden: () => void
+  onToggleHidden?: () => void
   onDragStart: (event: DragEvent<HTMLElement>) => void
   onDragOver: (event: DragEvent<HTMLElement>) => void
   onDragLeave: () => void
@@ -982,6 +1009,7 @@ function TopLevelCardRow({
       className={[
         styles.guideCardRow,
         styles.topLevelCardRow,
+        styles.contentsRow,
         isDragging ? styles.cardRowDragging : '',
         dropEdge === 'before' ? styles.cardRowDropBefore : '',
         dropEdge === 'after' ? styles.cardRowDropAfter : '',
@@ -1001,19 +1029,26 @@ function TopLevelCardRow({
         <span className={styles.guideCardPreview} aria-hidden="true">{previewBox}</span>
       )}
       <span className={styles.guideCardInfo}>
-        <span className={styles.cardTypeLabel}>{typeLabel}</span>
+        <span className={styles.cardTypeLabel}>Card · {typeLabel}</span>
         <strong data-guide-card-title>{label}</strong>
-        {onRemove ? <button type="button" className={styles.guideIndexRemove} onClick={onRemove.run}>{onRemove.label}</button> : null}
+        {meta ? <span className={styles.contentsMeta}>{meta}</span> : null}
       </span>
-      <span className={styles.topLevelCardActions}>
+      <span className={styles.contentsActions}>
         {onEdit ? (
-          <button type="button" className={styles.visibilityButton} aria-label={`Edit ${label}`} onClick={onEdit}>
+          <button type="button" className={styles.contentsButton} aria-label={`Edit ${label}`} onClick={onEdit}>
             <EditPencilIcon />Edit
           </button>
         ) : null}
-        <button className={styles.visibilityButton} type="button" aria-pressed={hidden} aria-label={`${hidden ? 'Unhide' : 'Hide'} ${label}`} onClick={onToggleHidden}>
-          <VisibilityIcon hidden={hidden} />{hidden ? 'Unhide' : 'Hide'}
-        </button>
+        {onToggleHidden ? (
+          <button className={styles.contentsButton} type="button" aria-pressed={hidden} aria-label={`${hidden ? 'Unhide' : 'Hide'} ${label}`} onClick={onToggleHidden}>
+            <VisibilityIcon hidden={hidden} />{hidden ? 'Unhide' : 'Hide'}
+          </button>
+        ) : null}
+        {onRemove ? (
+          <button type="button" className={`${styles.contentsButton} ${styles.contentsRemove}`} aria-label={`Remove ${label}`} onClick={onRemove}>
+            Remove
+          </button>
+        ) : null}
       </span>
       <span className={styles.keyboardMoveActions}>
         <button type="button" disabled={!canMoveUp} aria-label={`Move ${label} up`} onClick={() => onMove(-1)}>↑</button>
@@ -1147,6 +1182,22 @@ function EditPencilIcon() {
     <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" />
       <path d="m14 7 3 3" />
+    </svg>
+  )
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d={open ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} />
+    </svg>
+  )
+}
+
+function OpenSourceIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
     </svg>
   )
 }

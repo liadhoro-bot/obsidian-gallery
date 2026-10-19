@@ -191,9 +191,9 @@ test('direct cards sit between nested guides, reorder at top level, and never sh
   await page.getByRole('button',{name:'Add New Card',exact:true}).click()
   await page.getByRole('dialog',{name:'Add New Card'}).getByRole('button',{name:/Cover Card/}).click()
   const coverRow=page.locator('[data-top-level-card]').first()
-  assert.equal(await coverRow.locator('[class*="cardTypeLabel"]').textContent(),'Cover')
+  assert.equal(await coverRow.locator('[class*="cardTypeLabel"]').textContent(),'Card · Cover')
   assert.equal(await coverRow.locator('[data-guide-card-title]').textContent(),'Guide')
-  assert.equal(await coverRow.getByRole('button',{name:'Remove cover'}).count(),1)
+  assert.equal(await coverRow.getByRole('button',{name:'Remove Guide',exact:true}).count(),1)
   // Edit sits above Hide on a direct card.
   const last=rows.last()
   const editBox=await last.getByRole('button',{name:'Edit Step Card'}).boundingBox()

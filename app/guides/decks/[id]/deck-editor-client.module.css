@@ -1793,3 +1793,194 @@
     grid-column: 4;
   }
 }
+
+/* Guide editor Contents: one row shape for cards and nested guides - drag
+   handle, preview, type over name, then stacked labelled actions - so every
+   row sits at the same height. */
+.contentsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.contentsHeader h2 {
+  margin: 0;
+  color: var(--og-text-primary);
+  font: 600 26px/1.05 var(--og-font-display);
+}
+
+.contentsHeader p {
+  margin: 4px 0 0;
+  color: var(--og-text-secondary);
+  font: 500 13px/1.3 var(--og-font-ui);
+}
+
+.contentsAddButton {
+  flex: none;
+  min-height: 42px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-500) 72%, var(--og-walnut-700));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--og-ink-950) 30%, transparent);
+  color: var(--og-ink-950);
+  padding: 0 18px;
+  font: 800 15px/1 var(--og-font-ui);
+  white-space: nowrap;
+}
+
+.cardList > .contentsRow {
+  display: grid;
+  grid-template-columns: 16px 56px minmax(0, 1fr) 106px;
+  align-items: center;
+  gap: 8px;
+  min-height: 98px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 36%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: color-mix(in srgb, var(--og-paper-50) 38%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  padding: 10px 10px 10px 8px;
+}
+
+.contentsRow > .guideCardPreview,
+.contentsThumb {
+  position: relative;
+  width: 56px;
+  height: 74px;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 40%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background: var(--og-walnut-950);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--og-ink-950) 25%, transparent);
+  padding: 0;
+}
+
+.contentsRow > .guideCardPreview .guideCardPreviewStage {
+  transform: scale(.14);
+}
+
+.contentsRow > .cardInfo,
+.contentsRow > .guideCardInfo {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.contentsRow > * > .cardTypeLabel {
+  font-size: 10.5px;
+  letter-spacing: .08em;
+}
+
+.contentsRow > .cardInfo .cardName,
+.contentsRow > .guideCardInfo strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--og-text-primary);
+  font: 600 18px/1.12 var(--og-font-display);
+  white-space: normal;
+}
+
+.contentsMeta {
+  overflow: hidden;
+  color: var(--og-text-secondary);
+  font: 500 12px/1.25 var(--og-font-ui);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contentsActions {
+  display: grid;
+  gap: 6px;
+  align-content: center;
+}
+
+.contentsButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 42%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: color-mix(in srgb, var(--og-paper-50) 50%, var(--og-surface-primary));
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  padding: 0 6px;
+  font: 700 12px/1 var(--og-font-ui);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.contentsButton svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.contentsButton.contentsRemove {
+  border-color: color-mix(in srgb, var(--og-status-danger) 64%, var(--og-brass-700));
+  background: color-mix(in srgb, var(--og-status-danger) 72%, var(--og-ink-950));
+  color: var(--og-paper-50);
+}
+
+.contentsRow[data-hidden="true"] > .guideCardPreview,
+.contentsRow[data-hidden="true"] > .guideCardInfo { opacity: .5; }
+
+/* Expanded nested guide: its cards and the source note sit inside the row. */
+.contentsGuideRow .guideCardList {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding: 2px 10px 10px;
+}
+
+
+.contentsSourceNote {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--og-border-subtle);
+  padding-top: 10px;
+}
+
+.contentsSourceNote p {
+  margin: 0;
+  color: var(--og-text-secondary);
+  font: italic 500 12px/1.35 var(--og-font-ui);
+}
+
+@media (max-width: 420px) {
+  .cardList > .contentsRow {
+    grid-template-columns: 12px 48px minmax(0, 1fr) 100px;
+    gap: 7px;
+  }
+
+  .contentsButton {
+    padding: 0 5px;
+    font-size: 11px;
+  }
+
+  .contentsRow > .guideCardPreview,
+  .contentsThumb {
+    width: 48px;
+    height: 64px;
+  }
+
+  .contentsRow > .guideCardPreview .guideCardPreviewStage {
+    transform: scale(.12);
+  }
+
+  .contentsRow > .cardInfo .cardName,
+  .contentsRow > .guideCardInfo strong {
+    font-size: 16px;
+  }
+
+  .contentsSourceNote {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
