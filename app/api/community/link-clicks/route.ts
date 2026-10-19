@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getCommunityEvent } from '../../../community/events-queries'
-import {
-  storeSpotlights,
-  type PartnerLinkClick,
-  type PartnerLinkKind,
-} from '../../../community/events-data'
+import type { PartnerLinkClick, PartnerLinkKind } from '../../../community/events-data'
+import { getStore, storeHref } from '../../../community/stores-data'
 import { captureServerEvent } from '../../../../utils/analytics/server'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 
 const LINK_KINDS: PartnerLinkKind[] = [
   'event_page',
+  'store_page',
   'website',
   'registration',
   'phone',
@@ -23,11 +21,17 @@ type ResolvedTarget = { name: string; destination: string | null }
 // log only ever holds links that are actually on the page.
 async function resolveTarget(click: PartnerLinkClick): Promise<ResolvedTarget | null> {
   if (click.targetType === 'store') {
-    const store = storeSpotlights.find((entry) => entry.id === click.targetId)
-    if (!store || store.hidden) return null
+    const store = getStore(click.targetId)
+    if (!store) return null
+    const destinations: Partial<Record<PartnerLinkKind, string | null>> = {
+      store_page: storeHref(store),
+      website: store.url,
+      phone: store.phone,
+      social: store.instagram ?? store.facebook,
+    }
     return {
       name: store.city ? `${store.name} (${store.city})` : store.name,
-      destination: click.linkKind === 'website' ? store.url : null,
+      destination: destinations[click.linkKind] ?? null,
     }
   }
 

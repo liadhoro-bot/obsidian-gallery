@@ -1,16 +1,15 @@
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
-import { TrackedAnchor, TrackedLink } from './tracked-link'
+import { TrackedLink } from './tracked-link'
 import {
   formatEventDay,
   formatEventMonth,
   formatEventWeekday,
   getEventSummary,
   DEFAULT_EVENT_IMAGE,
-  withReferralParams,
-  type StoreSpotlight,
   type CommunityEvent,
 } from './events-data'
+import { storeHref, type StoreSpotlight } from './stores-data'
 
 export function eventHref(event: CommunityEvent) {
   return `/community/events/${event.id}`
@@ -62,30 +61,12 @@ export function EventHero({ event }: { event: CommunityEvent }) {
 }
 
 export function StoreRow({ store }: { store: StoreSpotlight }) {
-  if (!store.url) {
-    return (
-      <article data-v3-community-indicator="store-row">
-        <StoreRowContent store={store} />
-      </article>
-    )
-  }
-
   return (
-    <TrackedAnchor
-      href={withReferralParams(store.url)}
-      click={{ targetType: 'store', targetId: store.id, linkKind: 'website', source: 'events_tab_stores' }}
-      target="_blank"
-      rel="noopener"
+    <TrackedLink
+      href={storeHref(store)}
+      click={{ targetType: 'store', targetId: store.id, linkKind: 'store_page', source: 'events_tab_stores' }}
       data-v3-community-indicator="store-row"
     >
-      <StoreRowContent store={store} />
-    </TrackedAnchor>
-  )
-}
-
-function StoreRowContent({ store }: { store: StoreSpotlight }) {
-  return (
-    <>
       <span
         data-v3-community-indicator="store-photo"
         data-logo={store.imageIsLogo ? 'true' : undefined}
@@ -110,7 +91,7 @@ function StoreRowContent({ store }: { store: StoreSpotlight }) {
           {store.description}
         </span>
       </span>
-    </>
+    </TrackedLink>
   )
 }
 

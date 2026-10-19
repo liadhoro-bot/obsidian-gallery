@@ -34,78 +34,10 @@ export type CommunityEvent = {
 
 export const DEFAULT_EVENT_IMAGE = '/onboarding/problem-desk.jpeg'
 
-export type StoreSpotlight = {
-  // Stable id: partner_link_clicks.target_id refers to it, so never reuse one.
-  id: string
-  name: string
-  city: string | null
-  // null = no website yet; the card shows but isn't a link.
-  url: string | null
-  description: string
-  image: string
-  // Logos are shown whole on a light mount instead of cropped like photos.
-  imageIsLogo?: boolean
-  // Kept for later but not shown in Store Spotlights.
-  hidden?: boolean
-}
-
-// city null = online-only store.
-export const storeSpotlights: StoreSpotlight[] = [
-  {
-    id: 'syrolynia-jerusalem',
-    name: 'Syrolynia',
-    city: 'Jerusalem',
-    url: 'https://sirolynia.com/il',
-    description: 'Trading cards, board games and dice, with play tables for open game nights.',
-    image: '/community/stores/syrolynia.webp',
-  },
-  {
-    id: 'the-kingdom-hod-hasharon',
-    name: 'The Kingdom',
-    city: 'Hod Hasharon',
-    url: 'https://thekingdom.co.il/',
-    description: 'Shelves packed with board games, from party picks to strategy heavyweights.',
-    image: '/community/stores/the-kingdom.jpg',
-    hidden: true,
-  },
-  {
-    id: 'akitaija-beersheba',
-    name: 'Akitaija',
-    city: 'Beersheba',
-    url: null,
-    description: 'Board games, trading cards and miniatures for gamers in the south.',
-    image: '/community/stores/akitaija.webp',
-  },
-  {
-    id: 'mythic-games-eilat',
-    name: 'Mythic Games',
-    city: 'Eilat',
-    url: 'https://mythic.co.il/',
-    description: 'VAT-free Eilat shop for Magic, Pokémon and Warhammer, with Commander nights in store.',
-    image: '/community/stores/mythic-games.webp',
-  },
-  {
-    id: 'hobbytech-online',
-    name: 'Hobbytech',
-    city: null,
-    url: 'https://hobbytech.co.il/',
-    description: 'Paints, airbrushes and diorama supplies from Vallejo, AK and AMMO.',
-    image: '/community/stores/hobbytech.png',
-    imageIsLogo: true,
-  },
-  {
-    id: 'modeltrains-online',
-    name: 'ModelTrains',
-    city: null,
-    url: 'https://modeltrains.co.il/',
-    description: 'Märklin, Piko and Minitrix trains, track and scenery in H0 and N scale.',
-    image: '/community/stores/modeltrains.webp',
-  },
-]
-
 // Partner link click tracking (see /api/community/link-clicks).
 export type PartnerLinkKind =
   | 'event_page'
+  | 'store_page'
   | 'website'
   | 'registration'
   | 'phone'

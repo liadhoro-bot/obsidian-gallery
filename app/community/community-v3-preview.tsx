@@ -11,7 +11,8 @@ import { communityFeatureGuides } from '../components/feature-guide-presets'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './community-v3-silver.module.css'
 import { EventHero, StoreRow, UpcomingEventRow } from './event-components'
-import { pickFeaturedEvent, storeSpotlights, type CommunityEvent } from './events-data'
+import { pickFeaturedEvent, type CommunityEvent } from './events-data'
+import { getVisibleStores } from './stores-data'
 
 type CommunityTab = 'events' | 'contests' | 'news'
 
@@ -296,11 +297,9 @@ function EventsTab({
       {featuredEvent ? <EventHero event={featuredEvent} /> : null}
 
       <SectionCard title="Store Spotlights">
-        {storeSpotlights
-          .filter((store) => !store.hidden)
-          .map((store) => (
-            <StoreRow key={store.id} store={store} />
-          ))}
+        {getVisibleStores().map((store) => (
+          <StoreRow key={store.id} store={store} />
+        ))}
       </SectionCard>
 
       <SectionCard
@@ -310,7 +309,7 @@ function EventsTab({
       >
         {events.length > 0 ? (
           events
-            .slice(0, 4)
+            .slice(0, 6)
             .map((event) => (
               <UpcomingEventRow key={event.id} event={event} source="events_tab_upcoming" />
             ))
