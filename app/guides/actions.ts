@@ -195,8 +195,8 @@ export async function createDeckFromForge(
 
   if (!user) throw new Error('Not authenticated')
 
-  const title = cleanText(input.title, 'New Deck')
-  const description = cleanText(input.description, 'A custom painting deck.')
+  const title = cleanText(input.title, 'New Guide')
+  const description = cleanText(input.description, 'A custom painting guide.')
   const coverIndex = input.cards.findIndex((card) =>
     card.template === 'title' || card.template === 'cover'
   )
@@ -228,7 +228,7 @@ export async function createDeckFromForge(
     .single()
 
   if (recipeError || !recipe) {
-    throw new Error(recipeError?.message || 'Could not create deck')
+    throw new Error(recipeError?.message || 'Could not create guide')
   }
 
   const stepCards = input.cards.filter((card) =>
@@ -312,10 +312,10 @@ export async function updateDeckFromForge(
   } = await supabase.auth.getUser()
 
   if (!user) throw new Error('Not authenticated')
-  if (!deckId) throw new Error('Missing deck id')
+  if (!deckId) throw new Error('Missing guide id')
 
-  const title = cleanText(input.title, 'New Deck')
-  const description = cleanText(input.description, 'A custom painting deck.')
+  const title = cleanText(input.title, 'New Guide')
+  const description = cleanText(input.description, 'A custom painting guide.')
   const coverIndex = input.cards.findIndex((card) =>
     card.template === 'title' || card.template === 'cover'
   )
@@ -347,7 +347,7 @@ export async function updateDeckFromForge(
     .single()
 
   if (recipeError || !recipe) {
-    throw new Error(recipeError?.message || 'Could not save deck')
+    throw new Error(recipeError?.message || 'Could not save guide')
   }
 
   const stepCards = input.cards.filter((card) =>
@@ -481,7 +481,7 @@ export async function deleteDeck(deckId: string) {
   } = await supabase.auth.getUser()
 
   if (!user) throw new Error('Not authenticated')
-  if (!deckId) throw new Error('Missing deck id')
+  if (!deckId) throw new Error('Missing guide id')
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
@@ -491,7 +491,7 @@ export async function deleteDeck(deckId: string) {
     .maybeSingle()
 
   if (recipeError) throw new Error(recipeError.message)
-  if (!recipe) throw new Error('Deck not found')
+  if (!recipe) throw new Error('Guide not found')
 
   const [{ data: steps, error: stepsError }, { data: guideLinks, error: guideLinksError }] =
     await Promise.all([
@@ -750,7 +750,7 @@ async function verifyOwnedDeckIds(
   if (error) throw new Error(error.message)
 
   if (!ownedRecipes || ownedRecipes.length !== deckIds.length) {
-    throw new Error('You can only add your own decks to a guide.')
+    throw new Error('You can only add guides you made.')
   }
 }
 
@@ -766,7 +766,7 @@ export async function createGuideFromDecks(
 
   const deckIds = Array.from(new Set(input.deckIds.filter(Boolean)))
   if (deckIds.length === 0) {
-    throw new Error('Choose at least one deck for this guide.')
+    throw new Error('Choose at least one guide to include.')
   }
 
   await verifyOwnedDeckIds(supabase, user.id, deckIds)
@@ -774,7 +774,7 @@ export async function createGuideFromDecks(
   const title = cleanText(input.title, 'New Guide')
   const description = cleanText(
     input.description,
-    'A custom guide assembled from decks in your collection.'
+    'A custom guide assembled from guides in your collection.'
   )
   const image = safePersistedImage(input.image)
   const difficulty = input.difficulty || null
@@ -846,7 +846,7 @@ export async function updateGuideFromDecks(
 
   const deckIds = Array.from(new Set(input.deckIds.filter(Boolean)))
   if (deckIds.length === 0) {
-    throw new Error('Choose at least one deck for this guide.')
+    throw new Error('Choose at least one guide to include.')
   }
 
   await verifyOwnedDeckIds(supabase, user.id, deckIds)
@@ -854,7 +854,7 @@ export async function updateGuideFromDecks(
   const title = cleanText(input.title, 'New Guide')
   const description = cleanText(
     input.description,
-    'A custom guide assembled from decks in your collection.'
+    'A custom guide assembled from guides in your collection.'
   )
   const image = safePersistedImage(input.image)
   const difficulty = input.difficulty || null
@@ -902,11 +902,11 @@ export async function updateGuideFromDecks(
 // around the deck. Guides that already reuse the deck keep showing it as a
 // nested guide. Safe to call twice: the first caller wins and a duplicate
 // guide is removed.
-export async function upgradeDeckToGuide(deckId: string) {
+export async function upgradeDeckToGuide(deckId: string, newGuideVisibility?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
-  if (!deckId) throw new Error('Missing deck id')
+  if (!deckId) throw new Error('Missing guide id')
 
   const { data: recipe, error: recipeError } = await supabase
     .from('recipes')
@@ -946,7 +946,7 @@ export async function upgradeDeckToGuide(deckId: string) {
   if (!guideId) {
     const { data: guide, error: guideError } = await supabase
       .from('guides')
-      .insert({ user_id: user.id, title, description: recipe.description?.trim() || null, is_auto: false, visibility: recipe.is_public ? 'public' : 'private' })
+      .insert({ user_id: user.id, title, description: recipe.description?.trim() || null, is_auto: false, visibility: recipe.is_public ? 'public' : newGuideVisibility === 'draft' ? 'draft' : 'private' })
       .select('id')
       .single()
     if (guideError || !guide) throw new Error(guideError?.message || 'Could not open this guide')
@@ -1103,7 +1103,7 @@ export async function loadGuideEditorDeck(deckId: string) {
   if (!user) throw new Error('Not authenticated')
   const { getGuidesV3DeckDetail } = await import('./guides-v3-detail-data')
   const deck = await getGuidesV3DeckDetail(deckId, user.id)
-  if (!deck?.isOwner) throw new Error('You can only add your own decks to a guide.')
+  if (!deck?.isOwner) throw new Error('You can only add guides you made.')
   return deck
 }
 

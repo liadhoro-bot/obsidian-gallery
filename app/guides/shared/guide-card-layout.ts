@@ -117,7 +117,7 @@ export function parseGuideCardLayout(value: unknown): GuideCardPlacement[] {
 }
 
 // Placeholder loadDeckDetail substitutes for a missing deck description.
-export const EMPTY_DECK_DESCRIPTION = 'No description has been added to this deck yet.'
+export const EMPTY_DECK_DESCRIPTION = 'No description has been added to this guide yet.'
 
 export type GuideIndexEntry = { deckId: string; title: string; subtitle: string | null; targetKey: string }
 // One row per nested guide, in top-level order, that still has a visible

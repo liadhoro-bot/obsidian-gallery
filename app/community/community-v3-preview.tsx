@@ -31,7 +31,7 @@ const newsItems = [
   },
   {
     title: 'Guide of the Week',
-    text: 'Master rust and verdigris with a new step-by-step deck.',
+    text: 'Master rust and verdigris with a new step-by-step guide.',
     time: '4 days ago',
     tag: 'Guides',
     image: '/onboarding/pains/pile-of-shame.jpeg',

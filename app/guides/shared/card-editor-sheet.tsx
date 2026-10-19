@@ -238,8 +238,8 @@ function getYoutubeEmbedUrl(url: string | null) {
 const templateLabel = (template: CardTemplate) => cardTypeLabel(template)
 
 function templateEditorSubtitle(template: CardTemplate) {
-  if (template === 'cover') return 'Cover image, title, and deck description'
-  if (template === 'paints') return 'Choose deck paints and show ownership status'
+  if (template === 'cover') return 'Cover image, title, and guide description'
+  if (template === 'paints') return 'Choose the guide\'s paints and show ownership status'
   if (template === 'video') return 'YouTube link and a short caption'
   if (template === 'image') return 'Large image card with a compact title and instruction panel'
   if (template === 'small-image') return 'Small image card with a top reference image and more room for text'
@@ -827,7 +827,7 @@ export function CardEditorSheet({
         {isPaintsList ? (
           <section className={styles.paintEditor}>
             <div className={styles.paintEditorHeader}>
-              <h3>Deck Paints</h3>
+              <h3>Guide Paints</h3>
               <button type="button" onClick={onAddPaint}>
                 Add Paint
               </button>

@@ -131,7 +131,7 @@ export default function DeckCardViewer({
         <FeatureGuideLauncher
           buttonClassName={styles.helpButton}
           guides={featureGuides}
-          label="Show deck detail explanation"
+          label="Show guide detail explanation"
         />
       </div>
 
