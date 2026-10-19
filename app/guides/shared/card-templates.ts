@@ -31,18 +31,18 @@ export function cardTypeDescription(template: CardTypeId) {
   if (template === 'theme-alt') return 'Textured paint daubs with compact glass labels'
   if (template === 'image') return 'Full-card image with a small title and notes panel'
   if (template === 'small-image') return 'Cover-style image above title and longer notes'
-  if (template === 'paints') return 'Deck paints and current ownership status'
+  if (template === 'paints') return 'The guide\'s paints and current ownership status'
   if (template === 'video') return 'YouTube walkthrough with a short caption'
   return 'Instruction, paints, ratios, and optional image'
 }
 
 // Starting text for a freshly added card of each type.
 export function cardTypeDefaultBody(template: CardTypeId) {
-  if (template === 'cover') return 'Describe the deck at a glance: subject, style, and promise.'
+  if (template === 'cover') return 'Describe the guide at a glance: subject, style, and promise.'
   if (template === 'theme' || template === 'theme-alt') return 'Describe the palette, mood, finish, and visual intent.'
   if (template === 'image') return 'Add the visual checkpoint notes for this card.'
   if (template === 'small-image') return 'Add the reference notes, comparison cues, or longer explanation for this image.'
-  if (template === 'paints') return 'The full palette for this deck, at a glance.'
+  if (template === 'paints') return 'The full palette for this guide, at a glance.'
   if (template === 'video') return 'Add a short caption for the video.'
   return 'Describe the painting action, timing, and result to check.'
 }

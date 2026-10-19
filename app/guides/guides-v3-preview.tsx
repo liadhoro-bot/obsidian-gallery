@@ -1,6 +1,6 @@
 'use client'
 
-import { confirmLeaveEditor, useUnsavedChanges } from '@/app/components/navigation-feedback/unsaved-changes'
+import { completeEditorExit, confirmLeaveEditor, useUnsavedChanges } from '@/app/components/navigation-feedback/unsaved-changes'
 
 import ViewCardsLink from './shared/view-cards-link'
 import Image from 'next/image'
@@ -12,7 +12,9 @@ import { findVisibleFeatureGuideIndex } from '../components/feature-guide-naviga
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './guides-v3-silver.module.css'
 import { capturePostHog } from '../../utils/analytics/client'
-import { createDeckFromForge, createGuideFromDecks } from './actions'
+import { createDeckFromForge, createGuideFromDecks, upgradeDeckToGuide } from './actions'
+import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
+import { visibilityFromStatus } from './shared/guide-visibility'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
 import type {
   GuidesV3Deck,
@@ -506,7 +508,7 @@ const cardTemplateOptions: Array<{
   {
     template: 'title',
     title: 'Title',
-    body: 'Opening card with the deck name, promise, and hero reference.',
+    body: 'Opening card with the guide name, promise, and hero reference.',
   },
   {
     template: 'step',
@@ -531,7 +533,7 @@ const cardTemplateOptions: Array<{
   {
     template: 'paints',
     title: 'Paints',
-    body: 'Deck paints and current ownership status, at a glance.',
+    body: 'The guide\'s paints and current ownership status, at a glance.',
   },
   {
     template: 'video',
@@ -562,7 +564,7 @@ function makeForgeCard(title: string, index: number): ForgeCard {
       template === 'title'
         ? 'Introduce the technique and what the finished model should feel like.'
         : template === 'theme'
-          ? 'Capture the palette, finish, and visual intent for this deck.'
+          ? 'Capture the palette, finish, and visual intent for this guide.'
           : template === 'image'
             ? 'Use this card as a visual checkpoint for comparison.'
             : template === 'small-image'
@@ -600,7 +602,7 @@ function makeDeckGallery(seed: string): ForgeDeckImage[] {
     {
       id: `${seed}-gallery-hero`,
       url: '/onboarding/pains/tough-choices.jpeg',
-      alt: 'Main deck reference',
+      alt: 'Main guide reference',
     },
     {
       id: `${seed}-gallery-palette`,
@@ -680,7 +682,7 @@ const defaultForgeDecks: ForgeDeck[] = [
   {
     id: 'palette-card',
     title: 'Palette Card',
-    description: 'A compact color reference for the deck.',
+    description: 'A compact color reference for the guide.',
     difficulty: 'Beginner',
     status: 'Draft',
     type: 'Palette',
@@ -763,7 +765,7 @@ export default function GuidesV3Preview({
   const seedLibraryGuides = initialPayload?.libraryGuides ?? []
   const [activeTab, setActiveTab] = useState<GuideTab>('library')
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
-  const [decks, setDecks] = useState<Deck[]>(seedDecks)
+  const [decks] = useState<Deck[]>(seedDecks)
   const [query, setQuery] = useState('')
   const [librarySortMode, setLibrarySortMode] = useState<GuideSortMode>('new-old')
   const [libraryVisibleCount, setLibraryVisibleCount] = useState(LIBRARY_PAGE_SIZE)
@@ -799,7 +801,7 @@ export default function GuidesV3Preview({
     window.history.replaceState({ ...window.history.state, guidesBrowse: { query, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount } }, '', url)
   }, [browseRestored, activeTab, query, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount])
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
-  const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false)
+  const router = useRouter()
   const [forgeMode, setForgeMode] = useState<ForgeMode>('guide')
   const [forgeScreen, setForgeScreen] = useState<ForgeScreen | null>(null)
   const [sourceKind, setSourceKind] = useState<SourceKind>('unit')
@@ -916,14 +918,16 @@ export default function GuidesV3Preview({
     forgeScreen === 'build' &&
     (forgeMode === 'deck' || sourceKind === 'blank' || sourceKind === 'scratch')
 
+  // One way to create: the guide starters (template, unit, project, photos,
+  // paints or blank). Assembling existing guides happens in the guide
+  // editor's + Add > Existing Guide.
   function openCreateChoice() {
     setActiveGuideIndex(null)
-    setIsCreateChoiceOpen(true)
+    startCreate('deck')
   }
 
   function startFeatureTour() {
     if (!featureGuides.length) return
-    setIsCreateChoiceOpen(false)
     setActiveGuideIndex(findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0)
   }
 
@@ -945,7 +949,6 @@ export default function GuidesV3Preview({
 
   function startCreate(mode: ForgeMode) {
     setForgeMode(mode)
-    setIsCreateChoiceOpen(false)
     if (mode === 'guide') {
       setSourceKind('unit')
       setSelectedGuideDeckIds(new Set())
@@ -1019,8 +1022,8 @@ export default function GuidesV3Preview({
     const baseDecks: ForgeDeck[] = [
       {
         id: deckId,
-        title: 'New Deck',
-        description: 'A deck built entirely from scratch.',
+        title: 'New Guide',
+        description: 'A guide built entirely from scratch.',
         difficulty: 'Beginner',
         status: 'Draft',
         type: 'Steps',
@@ -1041,12 +1044,12 @@ export default function GuidesV3Preview({
     setForgeMode('deck')
     const deckTitle =
       sourceKind === 'unit'
-        ? `${selectedUnit.title} Deck`
+        ? `${selectedUnit.title} Guide`
         : sourceKind === 'project'
-          ? `${selectedProject.title} Deck`
+          ? `${selectedProject.title} Guide`
           : sourceKind === 'photos'
-            ? 'Photo Sequence Deck'
-            : 'Paint List Deck'
+            ? 'Photo Sequence Guide'
+            : 'Paint List Guide'
     const cards: ForgeCard[] = [
       'Title Card',
       'Theme Card',
@@ -1057,7 +1060,7 @@ export default function GuidesV3Preview({
       {
         id: `draft-deck-${sourceKind}`,
         title: deckTitle,
-        description: `A working deck built from ${sourceKind} source material.`,
+        description: `A working guide built from ${sourceKind} source material.`,
         difficulty: 'Intermediate',
         status: 'Draft',
         type: sourceKind === 'photos' ? 'Image + Steps' : 'Steps',
@@ -1126,7 +1129,7 @@ export default function GuidesV3Preview({
   function saveGuideForgePayload() {
     if (isSavingForge || isSavingForgeRef.current) return
     if (!selectedGuideDecks.length) {
-      setSaveError('Choose at least one deck for this guide.')
+      setSaveError('Choose at least one guide to include.')
       return
     }
 
@@ -1135,7 +1138,7 @@ export default function GuidesV3Preview({
     const guideName_ = guideName.trim() || 'New Guide'
     const guideDescription_ =
       guideDescription.trim() ||
-      'A custom guide assembled from decks in your collection.'
+      'A custom guide assembled from guides in your collection.'
     const guideDeckIds = selectedGuideDecks.map((deck) => deck.id)
     const inferredDifficulty =
       cardTotal >= 12 ? 'Advanced' : cardTotal >= 6 ? 'Intermediate' : 'Beginner'
@@ -1220,16 +1223,16 @@ export default function GuidesV3Preview({
           })),
         })
 
-        setDecks((current) => [
-          savedDeck,
-          ...current.filter((deck) => deck.id !== savedDeck.id && !deck.draft),
-        ])
-        setActiveTab('guides')
+        // What was built becomes the guide's own cards; open it in the
+        // guide editor, where everything else (nesting guides, Index and
+        // Cover cards) is available.
+        const { guideId } = await upgradeDeckToGuide(savedDeck.id, visibilityFromStatus(payload.status))
         resetDeckForge()
         closeForge(true)
+        completeEditorExit(() => router.push(`/guides/${guideId}?preview=1&edit=1&editorTab=decks`))
       } catch (error) {
         setSaveError(
-          error instanceof Error ? error.message : 'Could not save deck.'
+          error instanceof Error ? error.message : 'Could not save guide.'
         )
       } finally {
         isSavingForgeRef.current = false
@@ -1341,8 +1344,8 @@ export default function GuidesV3Preview({
   function addDeckToDraft() {
     const nextDeck: ForgeDeck = {
       id: `added-deck-${Date.now()}`,
-      title: 'New Optional Deck',
-      description: 'A new optional deck section.',
+      title: 'New Optional Section',
+      description: 'A new optional section.',
       difficulty: 'Beginner',
       status: 'Draft',
       type: 'Steps',
@@ -1531,6 +1534,7 @@ export default function GuidesV3Preview({
             deck={toEditorDeckDetail(editingDeck)}
             featureGuides={featureGuides}
             initialCards={toEditorCards(editingDeck)}
+            initialStatus={editingDeck.status}
             isSaving={isSavingForge}
             onBack={backFromBuild}
             onSaveDraft={saveDeckEditorPayload}
@@ -1561,7 +1565,6 @@ export default function GuidesV3Preview({
         {forgeScreen === 'deck-editor' ? (
           <DeckEditorScreen
             deck={editingDeck}
-            forgeMode={forgeMode}
             onAddCard={() => setIsAddCardOpen(true)}
             onCardEdit={setEditingCardId}
             isSaving={isSavingForge}
@@ -1666,12 +1669,6 @@ export default function GuidesV3Preview({
         ) : null}
       </div>
 
-      {isCreateChoiceOpen ? (
-        <CreateChoiceSheet
-          onClose={() => setIsCreateChoiceOpen(false)}
-          onStartCreate={startCreate}
-        />
-      ) : null}
 
       {activeGuide !== null && activeGuideIndex !== null ? (
         <FeatureGuideTour
@@ -1691,15 +1688,15 @@ export default function GuidesV3Preview({
 function getForgeScreenTitle(screen: ForgeScreen, mode: ForgeMode) {
   if (screen === 'guide-decks') return 'Create Guide'
   if (screen === 'guide-compose') return 'Guide Details'
-  if (screen === 'source') return 'Create Deck'
+  if (screen === 'source') return 'Create Guide'
   if (screen === 'unit') return 'Choose Source Unit'
   if (screen === 'project') return 'Choose Source Project'
   if (screen === 'photos') return 'Build From Photos'
   if (screen === 'paints') return 'Build From Paints'
   if (screen === 'blank') return 'Choose a Template'
-  if (screen === 'draft') return 'Deck Draft'
-  if (screen === 'build') return 'Deck Details'
-  return mode === 'deck' ? 'Edit Deck' : 'Deck Editor'
+  if (screen === 'draft') return 'Guide Draft'
+  if (screen === 'build') return 'Guide Details'
+  return mode === 'deck' ? 'Edit Guide' : 'Guide Editor'
 }
 
 function TopNav({
@@ -1742,7 +1739,7 @@ function TopNav({
         </button>
         <button
           type="button"
-          aria-label="Create guide or deck"
+          aria-label="Create guide"
           onClick={onCreate}
           data-feature-guide-target="guides.create_button"
         >
@@ -1835,7 +1832,7 @@ function GuideDeckPickerScreen({
       </section>
 
       <SearchInput
-        placeholder="Search your decks..."
+        placeholder="Search your guides..."
         value={query}
         onChange={onQueryChange}
       />
@@ -1843,7 +1840,7 @@ function GuideDeckPickerScreen({
       <section className="overflow-hidden rounded-[10px] border border-white/10 bg-[#111821]">
         <div className="flex items-center justify-between px-4 py-3">
           <h2 className="text-[10px] font-black uppercase tracking-[0.2em]">
-            Deck Collection
+            Your Guides
           </h2>
           <span className="text-[10px] font-black text-[color:var(--og-brass-700)]">
             {selectedDecks.length} selected
@@ -2080,14 +2077,14 @@ function GuideComposeScreen({
       <section className="overflow-hidden rounded-[10px] border border-white/10 bg-[#111821]">
         <div className="flex items-center justify-between px-4 py-3">
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">
-            Deck Order
+            Guide Order
           </h3>
           <button
             type="button"
             onClick={onManageDecks}
             className="text-[10px] font-black uppercase tracking-[0.14em] text-[color:var(--og-brass-700)] underline-offset-2 hover:underline"
           >
-            Add / Remove Decks
+            Add / Remove Guides
           </button>
         </div>
         <div className="divide-y divide-white/[0.06]">
@@ -2143,89 +2140,6 @@ function GuideComposeScreen({
   )
 }
 
-function CreateChoiceSheet({
-  onClose,
-  onStartCreate,
-}: {
-  onClose: () => void
-  onStartCreate: (mode: ForgeMode) => void
-}) {
-  return (
-    <div className="fixed inset-0 z-[60] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
-      <section
-        className="w-full max-w-md rounded-[14px] border border-white/10 bg-[#10161d] p-4 shadow-2xl shadow-black/50"
-        data-v3-guides-indicator="create-choice-sheet"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] text-white/58"
-            aria-label="Close create"
-          >
-            x
-          </button>
-          <h2 className="text-xl font-black">Create New</h2>
-          <span className="h-9 w-9" />
-        </div>
-        <div className="grid gap-3">
-          <ChoiceCard
-            title="Create Deck"
-            body="Build a reusable deck of cards."
-            image="/onboarding/pains/paint-management.jpeg"
-            onClick={() => onStartCreate('deck')}
-          />
-          <ChoiceCard
-            title="Create Guide"
-            body="Collect decks into a complete guide."
-            image="/onboarding/pains/tough-choices.jpeg"
-            onClick={() => onStartCreate('guide')}
-          />
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 rounded-[10px] border border-white/10 bg-white/[0.04] text-sm font-black text-white/58"
-          >
-            Cancel
-          </button>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function ChoiceCard({
-  body,
-  image,
-  onClick,
-  title,
-}: {
-  body: string
-  image: string
-  onClick: () => void
-  title: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-v3-guides-indicator="choice-card"
-      className="grid grid-cols-[72px_1fr_auto] items-center gap-3 rounded-[10px] border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-cyan-300/45"
-    >
-      <span className="relative h-16 overflow-hidden rounded-[8px] bg-black">
-        <Image unoptimized src={image} alt="" fill sizes="72px" className="object-cover" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-black text-white">{title}</span>
-        <span className="mt-1 block text-xs font-semibold text-white/45">
-          {body}
-        </span>
-      </span>
-      <span className="text-white/40">&gt;</span>
-    </button>
-  )
-}
-
 const sourceChoices: {
   id: SourceKind
   title: string
@@ -2240,13 +2154,13 @@ const sourceChoices: {
   {
     id: 'unit',
     title: 'From Unit',
-    body: 'Turn a completed unit into a reusable deck.',
+    body: 'Turn a completed unit into a reusable guide.',
     disabled: true,
   },
   {
     id: 'project',
     title: 'From Project',
-    body: 'Build a deck from units and shared palette.',
+    body: 'Build a guide from units and shared palette.',
     disabled: true,
   },
   {
@@ -2264,7 +2178,7 @@ const sourceChoices: {
   {
     id: 'scratch',
     title: 'From Blank',
-    body: 'Start with an empty deck and build everything yourself.',
+    body: 'Start with an empty guide and build everything yourself.',
   },
 ]
 
@@ -2276,7 +2190,7 @@ function SourcePicker({
   return (
     <section className="grid gap-3">
       <p className="text-sm font-semibold leading-6 text-white/48">
-        Start a deck from existing data or begin from scratch.
+        Start a guide from existing data or begin from scratch.
       </p>
       {sourceChoices.map(({ id, title, body, disabled }) => (
         <button
@@ -2348,7 +2262,7 @@ function UnitSourceScreen({
           />
         ))}
       </div>
-      <PrimaryButton onClick={onContinue}>Build Deck from Unit</PrimaryButton>
+      <PrimaryButton onClick={onContinue}>Build Guide from Unit</PrimaryButton>
     </section>
   )
 }
@@ -2418,7 +2332,7 @@ function ProjectSourceScreen({
           ))}
         </div>
       </section>
-      <PrimaryButton onClick={onContinue}>Build Deck from Project</PrimaryButton>
+      <PrimaryButton onClick={onContinue}>Build Guide from Project</PrimaryButton>
     </section>
   )
 }
@@ -2513,7 +2427,7 @@ function PaintSourceScreen({
           </button>
         ))}
       </div>
-      <PrimaryButton onClick={onContinue}>Build Deck from Paints</PrimaryButton>
+      <PrimaryButton onClick={onContinue}>Build Guide from Paints</PrimaryButton>
     </section>
   )
 }
@@ -2585,7 +2499,7 @@ function DraftReviewScreen({
       <section className="rounded-[10px] border border-white/10 bg-[#111821]">
         <div className="flex items-center justify-between px-4 py-3">
           <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/28">
-            Draft Deck
+            Draft Sections
           </h2>
         </div>
         <div className="divide-y divide-white/[0.06]">
@@ -2598,10 +2512,10 @@ function DraftReviewScreen({
           onClick={onAddDeck}
           className="h-11 w-full border-t border-white/[0.06] text-sm font-black text-cyan-300"
         >
-          + Add Deck
+          + Add Section
         </button>
       </section>
-      <PrimaryButton onClick={onContinue}>Continue to Deck</PrimaryButton>
+      <PrimaryButton onClick={onContinue}>Continue to Guide</PrimaryButton>
     </section>
   )
 }
@@ -2654,7 +2568,7 @@ function GuideBuildScreen({
       <div
         className="grid grid-cols-3 rounded-[8px] bg-white/[0.055] p-0.5"
         role="tablist"
-        aria-label="Deck editor sections"
+        aria-label="Guide editor sections"
       >
         {(['details', 'cards', 'preview'] as const).map((tab) => (
           <button
@@ -2769,7 +2683,7 @@ function DeckEditorHero({
             onClick={onHelp}
             data-v3-guides-indicator="hero-icon-action"
             className="grid h-10 w-10 place-items-center rounded-full"
-            aria-label="Show deck editor help"
+            aria-label="Show guide editor help"
           >
             ?
           </button>
@@ -2780,7 +2694,7 @@ function DeckEditorHero({
             type="button"
             data-v3-guides-indicator="hero-icon-action"
             className="grid h-10 w-10 place-items-center rounded-full"
-            aria-label="Save deck to favorites"
+            aria-label="Save guide to favorites"
           >
             <HeartIcon />
           </button>
@@ -2797,7 +2711,7 @@ function DeckEditorHero({
 
         <div className="absolute inset-x-0 bottom-0 z-10 p-5">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-white/62">
-            Deck
+            Guide
           </p>
           <h2 className="mt-1 text-3xl font-black leading-tight text-white">
             {deck.title}
@@ -3116,7 +3030,6 @@ function DeckPreview({ deck }: { deck: ForgeDeck }) {
 
 function DeckEditorScreen({
   deck,
-  forgeMode,
   isSaving,
   onAddCard,
   onCardEdit,
@@ -3125,7 +3038,6 @@ function DeckEditorScreen({
   saveError,
 }: {
   deck: ForgeDeck
-  forgeMode: ForgeMode
   isSaving: boolean
   onAddCard: () => void
   onCardEdit: (cardId: string) => void
@@ -3183,7 +3095,7 @@ function DeckEditorScreen({
         </p>
       ) : null}
       <PrimaryButton onClick={onSave} disabled={isSaving}>
-        {isSaving ? 'Saving Deck...' : forgeMode === 'deck' ? 'Save Deck' : 'Save Deck'}
+        {isSaving ? 'Saving Guide...' : 'Save Guide'}
       </PrimaryButton>
     </section>
   )
@@ -3211,7 +3123,7 @@ function AddCardSheet({
           >
             x
           </button>
-          <h2 className="text-xl font-black">Add Card to Deck</h2>
+          <h2 className="text-xl font-black">Add Card</h2>
         </div>
         <div className="grid gap-3">
           {cardTemplateOptions.map((card) => (

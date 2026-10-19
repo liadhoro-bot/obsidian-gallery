@@ -208,6 +208,7 @@ export default function DeckEditorClient({
   featureGuides,
   initialCards,
   initialInventoryNotes = '',
+  initialStatus,
   initialExpertTips = '',
   inlineGuide,
   isSaving = false,
@@ -225,6 +226,8 @@ export default function DeckEditorClient({
   featureGuides: FeatureGuideEntry[]
   initialCards?: DeckEditorInitialCard[]
   initialInventoryNotes?: string
+  // A new guide from the Create Guide starters opens with its chosen status (Draft).
+  initialStatus?: DeckStatus
   initialExpertTips?: string
   // Set when these are a guide's own cards (recipes.inline_guide_id).
   inlineGuide?: { id: string; title: string }
@@ -250,7 +253,7 @@ export default function DeckEditorClient({
   const [difficulty, setDifficulty] = useState<DeckDifficulty>(
     (deck.difficulty as DeckDifficulty) || inferDifficulty(deck.cards)
   )
-  const [status, setStatus] = useState<DeckStatus>(deck.isPublic ? 'Public' : 'Private')
+  const [status, setStatus] = useState<DeckStatus>(initialStatus ?? (deck.isPublic ? 'Public' : 'Private'))
   const [cards, setCards] = useState<EditorCard[]>(() =>
     initialCards
       ? initialCards.map((card) => ({
@@ -534,7 +537,7 @@ export default function DeckEditorClient({
             <div className={styles.heroActions}>
               <FeatureGuideLauncher
                 guides={featureGuides}
-                label="Deck editor help"
+                label="Guide editor help"
                 buttonClassName={styles.iconButton}
               />
               <button
@@ -564,7 +567,7 @@ export default function DeckEditorClient({
           </div>
         </header>
 
-        <div className={styles.tabs} role="tablist" aria-label="Deck editor tabs">
+        <div className={styles.tabs} role="tablist" aria-label="Guide editor tabs">
           {(inlineGuide ? inlineEditorTabs : editorTabs).map((tab) => (
             <button
               key={tab}
@@ -781,7 +784,7 @@ export default function DeckEditorClient({
             : addCardTemplateOptions}
           guideIndex={inlineGuide ? undefined : {
             disabled: true,
-            note: 'Lists the guides inside - available once this deck is upgraded to a full guide.',
+            note: 'Lists the guides inside - available after you save this guide.',
             onAdd: () => {},
           }}
           onAddCard={addCard}
@@ -793,8 +796,8 @@ export default function DeckEditorClient({
         <AddContentSheet
           options={[
             { key: 'card', kind: 'Card', title: 'New Card', note: 'Add a card to this guide.' },
-            { key: 'existing', kind: 'Guide', title: 'Existing Guide', note: 'Available once this deck is upgraded to a full guide.', disabled: true },
-            { key: 'new', kind: 'Guide', title: 'New Guide', note: 'Available once this deck is upgraded to a full guide.', disabled: true },
+            { key: 'existing', kind: 'Guide', title: 'Existing Guide', note: 'Available after you save this guide.', disabled: true },
+            { key: 'new', kind: 'Guide', title: 'New Guide', note: 'Available after you save this guide.', disabled: true },
           ]}
           onChoose={(key) => {
             setIsAddMenuOpen(false)
@@ -1186,7 +1189,7 @@ type DeckPreviewProps = {
 
 function DeckPreview(props: DeckPreviewProps) {
   return (
-    <section className={styles.previewStack} aria-label="Deck preview">
+    <section className={styles.previewStack} aria-label="Guide preview">
       {props.cards.map((card) => (
         <div key={card.id} className={styles.previewShareMount}>
           <DeckPreviewCardNode card={card} {...props} />
@@ -1227,7 +1230,7 @@ function renderDeckPreviewCard({
 }) {
   const recipe: Recipe = {
     id: deck.id,
-    name: title || 'Untitled Deck',
+    name: title || 'Untitled Guide',
     description,
     inventory_required: null,
     expert_tips: null,

@@ -502,7 +502,7 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
 
     return {
       id: typedRecipe.id,
-      title: clean(typedRecipe.name, 'Untitled Deck'),
+      title: clean(typedRecipe.name, 'Untitled Guide'),
       category: categoryFor(typedRecipe),
       cards: normalizedSteps.length + (typedRecipe.cover_position === null ? 0 : 1),
       paints: paints.length,
@@ -522,13 +522,13 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
       ),
       isPublic: typedRecipe.is_public === true,
       inlineGuideId: typedRecipe.inline_guide_id ?? null,
-      ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public deck',
+      ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public guide',
       steps: normalizedSteps,
       paintList: paints,
       // A logged-out read bypasses RLS, so the wrapping guide may be private.
       guideId: userId ? wrappedGuide?.id ?? null : null,
       guideTitle: userId && wrappedGuide
-        ? clean(wrappedGuide.title, `${clean(typedRecipe.name, 'Untitled Deck')} Guide`)
+        ? clean(wrappedGuide.title, `${clean(typedRecipe.name, 'Untitled Guide')} Guide`)
         : null,
       likeCount: socialState.likeCount,
       saveCount: socialState.saveCount,

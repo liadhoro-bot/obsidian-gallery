@@ -44,9 +44,9 @@ export const guidesFeatureGuides = [
   guide('guides.page', 'Guides', 'Guides is your painting knowledge library. It holds the guides you made, the guides you saved, and the public library for discovering new techniques.', 100),
   guide('guides.tabs.guides', 'My Guides Tab', 'My Guides holds every guide you made. A guide is made of cards, and it can also reuse other guides inside it.', 110),
   guide('guides.tabs.saved', 'Saved Tab', 'Saved holds the public guides from other painters that you bookmarked.', 120),
-  guide('guides.tabs.library', 'Library Tab', 'Library is for finding shared public guides and decks, using search and tags to narrow the collection.', 130),
-  guide('guides.library_search', 'Library Search', 'Search filters guides and decks in the library so you can find a technique, paint effect, or recipe quickly.', 140),
-  guide('guides.deck_save', 'Deck Edit', 'The edit control opens the deck editor where the deck description, card order, and cards can be changed.', 150, 'left'),
+  guide('guides.tabs.library', 'Library Tab', 'Library is for finding shared public guides, using search and tags to narrow the collection.', 130),
+  guide('guides.library_search', 'Library Search', 'Search filters guides in the library so you can find a technique, paint effect, or recipe quickly.', 140),
+  guide('guides.deck_save', 'Guide Edit', 'The edit control opens the guide editor where the description, card order, and cards can be changed.', 150, 'left'),
 ]
 
 export const communityFeatureGuides = [
@@ -92,7 +92,7 @@ export const guideDetailFeatureGuides = [
 ]
 
 export const deckDetailFeatureGuides = [
-  guide('guides.deck.page', 'Deck Detail', 'Deck Detail shows a painting deck in card form: cover card first, then each step card in order.', 100),
-  guide('guides.deck.cover', 'Cover Card', 'The cover card identifies the deck, its promise, step count, and paint count.', 110),
+  guide('guides.deck.page', 'Guide Detail', 'Guide Detail shows a painting guide in card form: cover card first, then each step card in order.', 100),
+  guide('guides.deck.cover', 'Cover Card', 'The cover card identifies the guide, its promise, step count, and paint count.', 110),
   guide('guides.deck.steps', 'Step Cards', 'Step cards explain the process one move at a time, with paints and images shown directly on the card when available.', 120, 'top'),
 ]

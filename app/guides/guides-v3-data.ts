@@ -559,7 +559,7 @@ function toDeck({
 
   return {
     id: recipe.id,
-    title: cleanText(recipe.name, 'Untitled Deck'),
+    title: cleanText(recipe.name, 'Untitled Guide'),
     category: inferCategory(recipe),
     cards: stats?.cards ?? 0,
     paints: stats?.paints ?? 0,
@@ -614,7 +614,7 @@ function toGuideFile(
     title: cleanText(guide.title, `${primaryDeck.title} Guide`),
     subtitle: customDescription
       ? customDescription
-      : formatSubtitle(primaryRecipe, 'Public guide assembled around this deck.'),
+      : formatSubtitle(primaryRecipe, 'A public painting guide.'),
     image: guide.image_url
       ? getGuideDeckThumbnail(guide.image_url, fallbackImage)
       : primaryDeck.image,

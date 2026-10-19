@@ -1456,7 +1456,7 @@ function UnitGuidesCard({
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-300">
-                  Guides & Decks
+                  Guides
                 </p>
                 <h2 id="unit-guide-picker-title" className="mt-1 text-2xl font-black">
                   Assign to unit
