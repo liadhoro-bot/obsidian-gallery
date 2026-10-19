@@ -79,6 +79,7 @@ export async function POST(request: Request) {
         firstName,
         lastName,
         phone,
+        action: 'create',
         plan: isMonthly ? 'monthly' : 'founders-pass',
       }),
     })
