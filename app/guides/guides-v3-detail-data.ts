@@ -1,4 +1,4 @@
-import { EMPTY_DECK_DESCRIPTION, isGuideOwnedCard, parseGuideCardLayout, resolveGuideCards, type GuideCardPlacement } from './shared/guide-card-layout'
+import { EMPTY_DECK_DESCRIPTION, forGuide, isGuideOwnedCard, parseGuideCardLayout, resolveGuideCards, type GuideCardPlacement } from './shared/guide-card-layout'
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { loadRecipeSteps } from './load-recipe-steps'
 import { cache } from 'react'
@@ -520,7 +520,7 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
         EMPTY_DECK_DESCRIPTION
       ),
       isPublic: typedRecipe.is_public === true,
-      isInline: Boolean(typedRecipe.inline_guide_id),
+      inlineGuideId: typedRecipe.inline_guide_id ?? null,
       ownerLabel: typedRecipe.user_id === userId ? 'Created by you' : 'Public deck',
       steps: normalizedSteps,
       paintList: paints,
@@ -553,11 +553,13 @@ export const getGuidesV3GuideDetail = cache(
     // preserve here. Dedupe in case the same deck shows up in both `decks`
     // and `libraryDecks` (e.g. the viewer owns a deck that's also public).
     const deckById = new Map(
-      [...payload.decks, ...payload.libraryDecks].map((deck) => [deck.id, deck])
+      // nestableDecks: the viewer's decks including upgraded ones (guides' own
+      // cards), which other guides still reuse as nested guides.
+      [...payload.nestableDecks, ...payload.decks, ...payload.libraryDecks].map((deck) => [deck.id, deck])
     )
-    const decksList = (guide.deckIds ?? [])
+    const decksList = forGuide((guide.deckIds ?? [])
       .map((deckId) => deckById.get(deckId))
-      .filter((deck): deck is GuidesV3Deck => Boolean(deck))
+      .filter((deck): deck is GuidesV3Deck => Boolean(deck)), guideId)
 
     const supabase = await createClient()
     const { data: layout, error: layoutError } = await supabase.from('guides').select('card_layout').eq('id', guideId).maybeSingle()
@@ -565,7 +567,7 @@ export const getGuidesV3GuideDetail = cache(
     if (layoutError && layoutError.code !== '42703' && layoutError.code !== 'PGRST204') throw new Error(layoutError.message)
     const cardLayout = parseGuideCardLayout(layout?.card_layout)
     const visibleCards = cardLayout.length
-      ? resolveGuideCards((await Promise.all(decksList.map(deck => getGuidesV3DeckDetail(deck.id, userId)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck)), cardLayout).filter(card => !card.hidden)
+      ? resolveGuideCards(forGuide((await Promise.all(decksList.map(deck => getGuidesV3DeckDetail(deck.id, userId)))).filter((deck): deck is NonNullable<typeof deck> => Boolean(deck)), guideId), cardLayout).filter(card => !card.hidden)
       : null
     return {
       ...guide,
@@ -592,7 +594,7 @@ export const getSharedGuideDetail = cache(async (guideId: string) => {
   if (layoutError && layoutError.code !== '42703' && layoutError.code !== 'PGRST204') throw new Error(layoutError.message)
 
   const cardLayout = parseGuideCardLayout(layout?.card_layout)
-  const details = deckDetails.filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
+  const details = forGuide(deckDetails.filter((deck): deck is NonNullable<typeof deck> => Boolean(deck)), guideId)
   const visibleCards = resolveGuideCards(details, cardLayout).filter(card => !card.hidden)
 
   return {
@@ -600,7 +602,7 @@ export const getSharedGuideDetail = cache(async (guideId: string) => {
       ...shared.guide,
       cards: visibleCards.length,
       cardLayout,
-      decksList: shared.decks.map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideOwnedCard(card)).length })),
+      decksList: forGuide(shared.decks, guideId).map(deck => ({ ...deck, cards: visibleCards.filter(card => card.groupId === deck.id && !isGuideOwnedCard(card)).length })),
     } satisfies GuidesV3GuideDetail,
     deckDetails: details,
     coverImageUrl: shared.coverImageUrl,

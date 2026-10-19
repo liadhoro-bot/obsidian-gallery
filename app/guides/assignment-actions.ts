@@ -162,6 +162,8 @@ export async function getTargetAssignmentLibrary(
   const deckMap = new Map(
     [
       ...payload.decks,
+      // A deck already assigned here stays listed after it's upgraded to a guide.
+      ...payload.nestableDecks.filter((deck) => selected.has(`deck:${deck.id}`)),
       ...payload.libraryDecks.filter((deck) => selected.has(`deck:${deck.id}`)),
     ].map((deck) => [deck.id, deck])
   )

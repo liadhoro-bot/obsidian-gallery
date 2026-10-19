@@ -77,7 +77,9 @@ export type GuidesV3Deck = {
   isOwner: boolean
   accent: string
   createdAt: string
-  // A guide's inline deck (its direct cards), never listed as a deck.
+  // Set when this deck is some guide's own cards (recipes.inline_guide_id).
+  inlineGuideId?: string | null
+  // True only in the context of that guide (see forGuide in guide-card-layout).
   isInline?: boolean
   description?: string
   likeCount?: number
@@ -89,6 +91,9 @@ export type GuidesV3Deck = {
 export type GuidesV3Payload = {
   guideFiles: GuidesV3GuideFile[]
   decks: GuidesV3Deck[]
+  // Everything the viewer can reuse inside another guide: their decks plus
+  // the own cards of their guides (titled by the guide).
+  nestableDecks: GuidesV3Deck[]
   libraryGuides: GuidesV3GuideFile[]
   libraryDecks: GuidesV3Deck[]
   savedDeckIds: string[]
@@ -552,7 +557,7 @@ function toDeck({
     isOwner: recipe.user_id === userId,
     accent: accentFor(recipe.id),
     createdAt: recipe.created_at ?? '',
-    isInline: Boolean(recipe.inline_guide_id),
+    inlineGuideId: recipe.inline_guide_id ?? null,
     description: cleanText(recipe.description, `${stats?.cards ?? 0} cards · ${stats?.paints ?? 0} paints`),
     likeCount: social?.likeCount ?? 0,
     saveCount: social?.saveCount ?? 0,
@@ -597,7 +602,7 @@ function toGuideFile(
     image: guide.image_url
       ? getGuideDeckThumbnail(guide.image_url, fallbackImage)
       : primaryDeck.image,
-    decks: memberDecks.filter((deck) => !deck.isInline).length,
+    decks: memberDecks.filter((deck) => !deck.inlineGuideId || deck.inlineGuideId !== guide.id).length,
     cards: totalCards,
     level: totalCards > 5 ? 'Intermediate' : 'Beginner',
     ownedPercent: 0,
@@ -626,12 +631,10 @@ export const getGuidesV3Payload = cache(async (
   const [myRecipesResult, savedRowsResult, publicGuidesResult, myGuidesResult] =
     await Promise.all([
       tab === 'decks' || tab === 'all'
-        ? selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, created_at, user_id', selection => supabase
+        ? selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, inline_guide_id, created_at, user_id', selection => supabase
           .from('recipes')
           .select(selection)
           .eq('user_id', userId)
-          // A guide's inline deck is part of that guide, never a deck of its own.
-          .is('inline_guide_id', null)
           .order('created_at', { ascending: false })
           .limit(deckLimit).returns<RecipeRow[]>())
         : Promise.resolve({ data: [] as RecipeRow[], error: null }),
@@ -741,7 +744,10 @@ export const getGuidesV3Payload = cache(async (
   // Decks are only the viewer's own creations. Saving someone else's public
   // deck saves it as a guide (every public deck has an auto guide), so it
   // surfaces through savedGuides in the Guides tab, never here.
-  const deckRecipes = myRecipes.slice(0, deckLimit)
+  // A guide's own-cards deck is part of that guide, never a deck of its own
+  // in the list; it stays reusable inside other guides (nestableDecks).
+  const ownedRecipes = myRecipes.slice(0, deckLimit)
+  const deckRecipes = ownedRecipes.filter((recipe) => !recipe.inline_guide_id)
 
   const publicRecipesByGuideId = new Map<string, RecipeRow[]>()
   for (const guide of publicGuides) {
@@ -758,7 +764,7 @@ export const getGuidesV3Payload = cache(async (
   const allRecipesForStats = Array.from(
     new Map(
       [
-        ...deckRecipes,
+        ...ownedRecipes,
         ...Array.from(publicRecipesByGuideId.values()).flat(),
         ...Array.from(myGuideRecipesByGuideId.values()).flat(),
       ].map((recipe) => [recipe.id, recipe])
@@ -786,6 +792,12 @@ export const getGuidesV3Payload = cache(async (
       userId,
     })
   )
+
+  const ownedGuideTitleById = new Map(ownedGuides.map((guide) => [guide.id, cleanText(guide.title, 'Untitled Guide')]))
+  const nestableDecks = ownedRecipes.map((recipe) => {
+    const deck = toDeck({ imageByRecipeId, recipe, saved: true, statsByRecipeId, socialByRecipeId, userId })
+    return recipe.inline_guide_id ? { ...deck, title: ownedGuideTitleById.get(recipe.inline_guide_id) ?? deck.title } : deck
+  })
 
   const libraryRecipeById = new Map(
     Array.from(publicRecipesByGuideId.values())
@@ -847,6 +859,7 @@ export const getGuidesV3Payload = cache(async (
   return {
     guideFiles,
     decks,
+    nestableDecks,
     libraryGuides,
     libraryDecks,
     savedDeckIds: Array.from(

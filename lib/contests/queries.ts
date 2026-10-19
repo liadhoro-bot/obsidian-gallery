@@ -692,7 +692,6 @@ export async function getNominationPickerSources(
       .from('recipes')
       .select('id, name, description, created_at')
       .eq('user_id', userId)
-      .is('inline_guide_id', null)
       .order('created_at', { ascending: false })
 
     if (error) throw new Error(error.message)
@@ -890,7 +889,12 @@ export async function getPublicGuideCreatorLeaderboard(
   // A guide's inline deck (its direct cards) is not a deck in the collection;
   // it makes its guide count instead (see creator-collection.ts).
   const inlineGuideIdByRecipeId = new Map<string, string>()
+  // Entry-card thumbnails come from every public recipe the creator has,
+  // including guides' own cards (e.g. a deck upgraded to a guide).
+  const imageRecipeIdsByOwner = new Map<string, string[]>()
   for (const recipe of recipes) {
+    imageRecipeIdsByOwner.set(recipe.user_id, [...(imageRecipeIdsByOwner.get(recipe.user_id) ?? []), recipe.id])
+    if (recipe.image_url) directImageByRecipeId.set(recipe.id, recipe.image_url)
     if (!recipe.inline_guide_id) continue
     inlineGuideIdByRecipeId.set(recipe.id, recipe.inline_guide_id)
     if (!recipeIdsByOwner.has(recipe.user_id)) recipeIdsByOwner.set(recipe.user_id, [])
@@ -901,13 +905,14 @@ export async function getPublicGuideCreatorLeaderboard(
     const existing = recipeIdsByOwner.get(recipe.user_id) ?? []
     existing.push(recipe.id)
     recipeIdsByOwner.set(recipe.user_id, existing)
-    if (recipe.image_url) directImageByRecipeId.set(recipe.id, recipe.image_url)
   }
 
   // The count is the creator's whole collection - public decks plus
   // multi-deck guides - exactly what their creator page lists (both use
   // app/guides/shared/creator-collection.ts).
-  const publicRecipeIds = new Set(recipes.filter((recipe) => !recipe.inline_guide_id).map((recipe) => recipe.id))
+  // Inline decks are judged per guide below: a guide's own cards don't count
+  // as one of its reused decks, but stay a deck for any other guide reusing them.
+  const publicRecipeIds = new Set(recipes.map((recipe) => recipe.id))
   const { data: composedGuides, error: composedError } = await supabase
     .from('guides')
     .select('id, user_id, guide_decks(recipe_id, recipes(user_id))')
@@ -917,18 +922,19 @@ export async function getPublicGuideCreatorLeaderboard(
   const composedByOwner = new Map<string, { publicDeckIds: string[]; hasPublicInline: boolean }[]>()
   for (const guide of (composedGuides ?? []) as { id: string; user_id: string; guide_decks: { recipe_id: string; recipes: { user_id: string } | { user_id: string }[] | null }[] | null }[]) {
     const members = guide.guide_decks ?? []
-    const publicDeckIds = members.map((deck) => deck.recipe_id).filter((id) => publicRecipeIds.has(id))
-    const hasPublicInline = members.some((deck) => {
+    const isOwnCards = (deck: (typeof members)[number]) => {
       const owner = Array.isArray(deck.recipes) ? deck.recipes[0]?.user_id : deck.recipes?.user_id
       return inlineGuideIdByRecipeId.get(deck.recipe_id) === guide.id && owner === guide.user_id
-    })
+    }
+    const publicDeckIds = members.filter((deck) => publicRecipeIds.has(deck.recipe_id) && !isOwnCards(deck)).map((deck) => deck.recipe_id)
+    const hasPublicInline = members.some((deck) => publicRecipeIds.has(deck.recipe_id) && isOwnCards(deck))
     composedByOwner.set(guide.user_id, [...(composedByOwner.get(guide.user_id) ?? []), { publicDeckIds, hasPublicInline }])
   }
   for (const [ownerId, ownerRecipeIds] of recipeIdsByOwner) {
     countByOwner.set(ownerId, countCreatorCollection(ownerRecipeIds, composedByOwner.get(ownerId) ?? []))
   }
 
-  const allRecipeIds = recipes.filter((recipe) => !recipe.inline_guide_id).map((recipe) => recipe.id)
+  const allRecipeIds = recipes.map((recipe) => recipe.id)
   const { data: assets } = await supabase
     .from('image_assets')
     .select('entity_id, image_url, is_featured, created_at')
@@ -968,7 +974,7 @@ export async function getPublicGuideCreatorLeaderboard(
     .map((ownerId) => {
       // A chosen cover guide leads the thumbnails and becomes the entry card image.
       const coverId = creatorProfiles.get(ownerId)?.coverRecipeId
-      const ownRecipeIds = recipeIdsByOwner.get(ownerId) ?? []
+      const ownRecipeIds = imageRecipeIdsByOwner.get(ownerId) ?? []
       const recipeIds = coverId && ownRecipeIds.includes(coverId)
         ? [coverId, ...ownRecipeIds.filter((id) => id !== coverId)]
         : ownRecipeIds

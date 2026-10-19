@@ -30,7 +30,7 @@ before(async () => {
           return <div>{cards.map(c=><div data-test-card={c.key} key={c.key} style={{width:'min(360px, 100vw)',aspectRatio:'9/16',margin:'20px auto'}}>{c.node}</div>)}</div>
         }
         if(location.pathname==='/inline') {
-          const own={...deck('own',[step('x'),step('y')]),title:'Own cards',coverPosition:null,isInline:true}; window.ownDeck=own;
+          const own={...deck('own',[step('x'),step('y')]),title:'Own cards',coverPosition:null,inlineGuideId:'g'}; window.ownDeck=own;
           const all=[...decks,own];
           const layout=[{deckId:'own',cardId:'x',groupId:'own',hidden:false},{deckId:'b',cardId:'cover',groupId:'b',hidden:false},{deckId:'b',cardId:'three',groupId:'b',hidden:false},{deckId:'own',cardId:'y',groupId:'own',hidden:false}];
           return <GuideEditor guide={{id:'g',title:'Guide',subtitle:'A guide',deckIds:['a','b','own'],cardLayout:layout}} memberDecks={all} availableDecks={availableDecks} deckDetails={all} initialCoverImage='/image.svg' featureGuides={[]} backHref='/guides' onSaveDraft={async payload=>{window.saved=payload;return true}} />
@@ -191,9 +191,9 @@ test('direct cards sit between nested guides, reorder at top level, and never sh
   await page.getByRole('button',{name:'Add New Card',exact:true}).click()
   await page.getByRole('dialog',{name:'Add New Card'}).getByRole('button',{name:/Cover Card/}).click()
   const coverRow=page.locator('[data-top-level-card]').first()
-  assert.equal(await coverRow.locator('[class*="cardTypeLabel"]').textContent(),'Cover')
+  assert.equal(await coverRow.locator('[class*="cardTypeLabel"]').textContent(),'Card · Cover')
   assert.equal(await coverRow.locator('[data-guide-card-title]').textContent(),'Guide')
-  assert.equal(await coverRow.getByRole('button',{name:'Remove cover'}).count(),1)
+  assert.equal(await coverRow.getByRole('button',{name:'Remove Guide',exact:true}).count(),1)
   // Edit sits above Hide on a direct card.
   const last=rows.last()
   const editBox=await last.getByRole('button',{name:'Edit Step Card'}).boundingBox()

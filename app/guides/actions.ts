@@ -803,6 +803,97 @@ export async function updateGuideFromDecks(
   return { id: guideId }
 }
 
+// One kind of guide: a deck opened for editing becomes a full guide whose own
+// cards are that deck (recipes.inline_guide_id), so it gets every guide
+// feature. A public deck's auto-guide becomes that guide - same id, links,
+// pinned likes/saves and contest standing; otherwise a guide is created
+// around the deck. Guides that already reuse the deck keep showing it as a
+// nested guide. Safe to call twice: the first caller wins and a duplicate
+// guide is removed.
+export async function upgradeDeckToGuide(deckId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  if (!deckId) throw new Error('Missing deck id')
+
+  const { data: recipe, error: recipeError } = await supabase
+    .from('recipes')
+    .select('id, name, description, auto_guide_id, inline_guide_id')
+    .eq('id', deckId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (recipeError) throw new Error(recipeError.message)
+  if (!recipe) throw new Error('Guide not found')
+  if (recipe.inline_guide_id) return { guideId: recipe.inline_guide_id as string }
+
+  const title = cleanText(recipe.name, 'Untitled Guide')
+  let guideId: string | null = null
+  let createdGuide = false
+
+  if (recipe.auto_guide_id) {
+    const { data: autoGuide, error: autoError } = await supabase
+      .from('guides')
+      .select('id, guide_decks(recipe_id)')
+      .eq('id', recipe.auto_guide_id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (autoError) throw new Error(autoError.message)
+    const members = (autoGuide?.guide_decks ?? []) as { recipe_id: string }[]
+    // Only an auto-guide that still wraps just this deck becomes its guide.
+    if (autoGuide && members.length > 0 && members.every((member) => member.recipe_id === deckId)) {
+      const { error: flipError } = await supabase
+        .from('guides')
+        .update({ is_auto: false, title })
+        .eq('id', autoGuide.id)
+        .eq('user_id', user.id)
+      if (flipError) throw new Error(flipError.message)
+      guideId = autoGuide.id as string
+    }
+  }
+
+  if (!guideId) {
+    const { data: guide, error: guideError } = await supabase
+      .from('guides')
+      .insert({ user_id: user.id, title, description: recipe.description?.trim() || null, is_auto: false })
+      .select('id')
+      .single()
+    if (guideError || !guide) throw new Error(guideError?.message || 'Could not open this guide')
+    guideId = guide.id as string
+    createdGuide = true
+    // The guide_decks trigger pins this deck as the guide's likes/saves deck.
+    const { error: linkError } = await supabase
+      .from('guide_decks')
+      .insert({ guide_id: guideId, recipe_id: deckId, user_id: user.id, position: 0 })
+    if (linkError) throw new Error(linkError.message)
+  }
+
+  const { data: claimed, error: claimError } = await supabase
+    .from('recipes')
+    .update({ inline_guide_id: guideId })
+    .eq('id', deckId)
+    .eq('user_id', user.id)
+    .is('inline_guide_id', null)
+    .select('id')
+  if (claimError) throw new Error(claimError.message)
+
+  if (!claimed?.length) {
+    // Upgraded concurrently (e.g. a second tab): keep the other guide.
+    if (createdGuide) await supabase.from('guides').delete().eq('id', guideId).eq('user_id', user.id)
+    const { data: current } = await supabase.from('recipes').select('inline_guide_id').eq('id', deckId).maybeSingle()
+    if (!current?.inline_guide_id) throw new Error('Could not open this guide')
+    return { guideId: current.inline_guide_id as string }
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'deck_upgraded_to_guide',
+    properties: { deck_id: deckId, guide_id: guideId, reused_auto_guide: !createdGuide },
+  })
+  revalidatePath('/guides')
+  revalidatePath(`/guides/${guideId}`)
+  return { guideId }
+}
+
 // A guide's direct cards live in its inline deck (recipes.inline_guide_id).
 // Returns that deck, creating it on first use and adding it to the guide's
 // decks - last, so likes, the cover and the first-deck fallbacks stay on the
