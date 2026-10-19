@@ -2,17 +2,21 @@
 
 import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
-import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, use, useState } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
 import FeatureGuideTour from '../components/feature-guide-tour'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import { communityFeatureGuides } from '../components/feature-guide-presets'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './community-v3-silver.module.css'
+import { EventHero, StoreRow, UpcomingEventRow } from './event-components'
+import { pickFeaturedEvent, storeSpotlights, type CommunityEvent } from './events-data'
 
-type CommunityTab = 'contests' | 'news'
+type CommunityTab = 'events' | 'contests' | 'news'
 
 const tabs: Array<{ id: CommunityTab; label: string }> = [
+  { id: 'events', label: 'Events' },
   { id: 'contests', label: 'Contests' },
   { id: 'news', label: 'News' },
 ]
@@ -58,8 +62,15 @@ const openChallenges = [
   },
 ]
 
-export default function CommunityV3Preview() {
-  const [activeTab, setActiveTab] = useState<CommunityTab>('contests')
+export default function CommunityV3Preview({
+  eventsPromise,
+}: {
+  eventsPromise: Promise<CommunityEvent[]>
+}) {
+  const requestedTab = useSearchParams().get('tab')
+  const [activeTab, setActiveTab] = useState<CommunityTab>(
+    tabs.find((tab) => tab.id === requestedTab)?.id ?? 'events'
+  )
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const activeGuide =
     activeGuideIndex === null
@@ -93,6 +104,11 @@ export default function CommunityV3Preview() {
 
         {activeTab === 'contests' ? <ContestsTab /> : null}
         {activeTab === 'news' ? <NewsTab /> : null}
+        {activeTab === 'events' ? (
+          <Suspense fallback={<EventsTabLoading />}>
+            <EventsTab eventsPromise={eventsPromise} />
+          </Suspense>
+        ) : null}
       </div>
 
       {activeGuide ? (
@@ -191,7 +207,7 @@ function Tabs({
 }) {
   return (
     <div
-      className="grid grid-cols-2"
+      className="grid grid-cols-3"
       role="tablist"
       aria-label="Community sections"
       data-v3-community-indicator="tabs"
@@ -264,6 +280,53 @@ function NewsTab() {
 
       <ForYouCard />
     </section>
+  )
+}
+
+function EventsTab({
+  eventsPromise,
+}: {
+  eventsPromise: Promise<CommunityEvent[]>
+}) {
+  const events = use(eventsPromise)
+  const featuredEvent = pickFeaturedEvent(events)
+
+  return (
+    <section className="grid gap-4">
+      {featuredEvent ? <EventHero event={featuredEvent} /> : null}
+
+      <SectionCard title="Store Spotlights">
+        {storeSpotlights.map((store) => (
+          <StoreRow key={store.id} store={store} />
+        ))}
+      </SectionCard>
+
+      <SectionCard
+        title="Upcoming Events"
+        action="View all"
+        href="/community/events"
+      >
+        {events.length > 0 ? (
+          events
+            .slice(0, 4)
+            .map((event) => (
+              <UpcomingEventRow key={event.id} event={event} source="events_tab_upcoming" />
+            ))
+        ) : (
+          <p data-v3-community-indicator="events-empty">
+            No upcoming events yet. Check back soon.
+          </p>
+        )}
+      </SectionCard>
+    </section>
+  )
+}
+
+function EventsTabLoading() {
+  return (
+    <p data-v3-community-indicator="events-empty" role="status">
+      Loading events…
+    </p>
   )
 }
 
@@ -429,7 +492,9 @@ function SectionCard({
   title: string
 }) {
   const featureTarget =
-    title === 'Open Challenges' || title === 'Latest News'
+    title === 'Open Challenges' ||
+    title === 'Latest News' ||
+    title === 'Upcoming Events'
       ? 'community.primary_list'
       : 'community.secondary_list'
 
