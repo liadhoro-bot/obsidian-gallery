@@ -62,6 +62,14 @@ export function EventHero({ event }: { event: CommunityEvent }) {
 }
 
 export function StoreRow({ store }: { store: StoreSpotlight }) {
+  if (!store.url) {
+    return (
+      <article data-v3-community-indicator="store-row">
+        <StoreRowContent store={store} />
+      </article>
+    )
+  }
+
   return (
     <TrackedAnchor
       href={withReferralParams(store.url)}
@@ -70,6 +78,14 @@ export function StoreRow({ store }: { store: StoreSpotlight }) {
       rel="noopener"
       data-v3-community-indicator="store-row"
     >
+      <StoreRowContent store={store} />
+    </TrackedAnchor>
+  )
+}
+
+function StoreRowContent({ store }: { store: StoreSpotlight }) {
+  return (
+    <>
       <span
         data-v3-community-indicator="store-photo"
         data-logo={store.imageIsLogo ? 'true' : undefined}
@@ -94,7 +110,7 @@ export function StoreRow({ store }: { store: StoreSpotlight }) {
           {store.description}
         </span>
       </span>
-    </TrackedAnchor>
+    </>
   )
 }
 

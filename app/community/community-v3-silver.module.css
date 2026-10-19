@@ -709,8 +709,8 @@
   text-decoration: none;
 }
 
-.communitySilver [data-v3-community-indicator="store-row"]:hover,
-.communitySilver [data-v3-community-indicator="store-row"]:focus-visible {
+.communitySilver a[data-v3-community-indicator="store-row"]:hover,
+.communitySilver a[data-v3-community-indicator="store-row"]:focus-visible {
   background-color: color-mix(in srgb, var(--og-paper-50) 22%, transparent);
   outline: none;
 }

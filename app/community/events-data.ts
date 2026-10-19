@@ -39,11 +39,14 @@ export type StoreSpotlight = {
   id: string
   name: string
   city: string | null
-  url: string
+  // null = no website yet; the card shows but isn't a link.
+  url: string | null
   description: string
   image: string
   // Logos are shown whole on a light mount instead of cropped like photos.
   imageIsLogo?: boolean
+  // Kept for later but not shown in Store Spotlights.
+  hidden?: boolean
 }
 
 // city null = online-only store.
@@ -63,6 +66,15 @@ export const storeSpotlights: StoreSpotlight[] = [
     url: 'https://thekingdom.co.il/',
     description: 'Shelves packed with board games, from party picks to strategy heavyweights.',
     image: '/community/stores/the-kingdom.jpg',
+    hidden: true,
+  },
+  {
+    id: 'akitaija-beersheba',
+    name: 'Akitaija',
+    city: 'Beersheba',
+    url: null,
+    description: 'Board games, trading cards and miniatures for gamers in the south.',
+    image: '/community/stores/akitaija.webp',
   },
   {
     id: 'mythic-games-eilat',

@@ -24,7 +24,7 @@ type ResolvedTarget = { name: string; destination: string | null }
 async function resolveTarget(click: PartnerLinkClick): Promise<ResolvedTarget | null> {
   if (click.targetType === 'store') {
     const store = storeSpotlights.find((entry) => entry.id === click.targetId)
-    if (!store) return null
+    if (!store || store.hidden) return null
     return {
       name: store.city ? `${store.name} (${store.city})` : store.name,
       destination: click.linkKind === 'website' ? store.url : null,

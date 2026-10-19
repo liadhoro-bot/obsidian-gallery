@@ -296,9 +296,11 @@ function EventsTab({
       {featuredEvent ? <EventHero event={featuredEvent} /> : null}
 
       <SectionCard title="Store Spotlights">
-        {storeSpotlights.map((store) => (
-          <StoreRow key={store.id} store={store} />
-        ))}
+        {storeSpotlights
+          .filter((store) => !store.hidden)
+          .map((store) => (
+            <StoreRow key={store.id} store={store} />
+          ))}
       </SectionCard>
 
       <SectionCard
