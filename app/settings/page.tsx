@@ -13,6 +13,7 @@ import {
 } from './settings-skeletons'
 import styles from '../settings-support-silver.module.css'
 import { getStartupPage } from '../../lib/startup-page'
+import { getPlanSummary } from '../../lib/subscription/billing'
 
 type SettingsPageProps = {
   searchParams?: Promise<{
@@ -43,8 +44,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       .eq('id', user.id)
       .maybeSingle()
 
+    const plan = await getPlanSummary(user).catch((error) => {
+      console.error('[settings] plan summary failed', error)
+      return null
+    })
+
     return (
       <SettingsV3Preview
+        plan={plan}
         user={{
           // The proxy-forwarded user comes from JWT claims, which omit
           // created_at, so fetch it here for "Member since".

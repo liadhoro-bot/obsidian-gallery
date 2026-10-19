@@ -18,7 +18,7 @@ import SubscribeClient from './subscribe-client'
 import SubscribeShell, { BookIcon, CrownIcon, ImageIcon, TrophyIcon } from './subscribe-shell'
 
 type SubscribePageProps = {
-  searchParams?: Promise<{ next?: string }>
+  searchParams?: Promise<{ next?: string; upgrade?: string }>
 }
 
 // Founding-member enrollment window: access always runs through the same
@@ -48,7 +48,12 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
       redirect(`/trial?next=${encodeURIComponent(nextPath)}`)
     }
 
-    if (hasAppAccess(access)) {
+    // A trial user can subscribe before the trial ends via ?upgrade=1
+    // (the Settings plan card links here).
+    const isEarlyUpgrade =
+      access.status === 'trialing' && resolvedSearchParams?.upgrade === '1'
+
+    if (hasAppAccess(access) && !isEarlyUpgrade) {
       if (user.email) {
         revalidateTag(getSubscriptionCacheTag(user.email), { expire: 0 })
       }
@@ -56,7 +61,13 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
       redirect(nextPath)
     }
 
-    return <TrialEndedView email={user.email ?? ''} nextPath={nextPath} />
+    return (
+      <TrialEndedView
+        email={user.email ?? ''}
+        nextPath={nextPath}
+        heading={isEarlyUpgrade ? 'Keep your workbench open' : 'Your free trial has ended'}
+      />
+    )
   }
 
   const status = await getSubscriptionStatus(user.email)
@@ -119,11 +130,19 @@ export default async function SubscribePage({ searchParams }: SubscribePageProps
   )
 }
 
-function TrialEndedView({ email, nextPath }: { email: string; nextPath: string }) {
+function TrialEndedView({
+  email,
+  nextPath,
+  heading,
+}: {
+  email: string
+  nextPath: string
+  heading: string
+}) {
   return (
     <SubscribeShell>
       <div className={styles.introBlock}>
-        <h1 className={styles.pageTitle}>Your free trial has ended</h1>
+        <h1 className={styles.pageTitle}>{heading}</h1>
         <p className={styles.pageCopy}>
           Continue for ₪10/month to keep full access to Obsidian Gallery.
         </p>
@@ -139,7 +158,7 @@ function TrialEndedView({ email, nextPath }: { email: string; nextPath: string }
           <span className={styles.passPrice}>₪10</span>
         </div>
 
-        <span className={styles.passSubtitle}>Continue for ₪10/month</span>
+        <span className={styles.passSubtitle}>Billed monthly · Cancel anytime in Settings</span>
 
         <div className={styles.benefitRow}>
           <div className={styles.benefitItem}>

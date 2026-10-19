@@ -20,21 +20,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
   }
 
-  // After the pricing v2 cutover the Make scenario behind this route still
-  // charges the ₪15 Founder's Pass, so refuse until monthly billing is wired.
-  if (isPricingV2Active() && !isMonthlyPaymentEnabled()) {
+  // After the pricing v2 cutover, only the monthly scenario may be used; the
+  // original MAKE_CREATE_PAYMENT_WEBHOOK_URL scenario sells the ₪15 Founder's Pass.
+  const isMonthly = isPricingV2Active()
+  if (isMonthly && !isMonthlyPaymentEnabled()) {
     return NextResponse.json(
       { error: 'Subscriptions are not open yet.' },
       { status: 403 }
     )
   }
 
-  const webhookUrl = process.env.MAKE_CREATE_PAYMENT_WEBHOOK_URL
+  const webhookEnvName = isMonthly
+    ? 'MAKE_CREATE_MONTHLY_PAYMENT_WEBHOOK_URL'
+    : 'MAKE_CREATE_PAYMENT_WEBHOOK_URL'
+  const webhookUrl = process.env[webhookEnvName]
   const sharedSecret = process.env.MAKE_WEBHOOK_SHARED_SECRET
 
   if (!webhookUrl) {
     return NextResponse.json(
-      { error: 'Payment is not configured yet (missing MAKE_CREATE_PAYMENT_WEBHOOK_URL).' },
+      { error: `Payment is not configured yet (missing ${webhookEnvName}).` },
       { status: 500 }
     )
   }
@@ -75,6 +79,7 @@ export async function POST(request: Request) {
         firstName,
         lastName,
         phone,
+        plan: isMonthly ? 'monthly' : 'founders-pass',
       }),
     })
   } catch {

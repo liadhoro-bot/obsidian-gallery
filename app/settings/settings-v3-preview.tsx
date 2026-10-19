@@ -6,6 +6,8 @@ import { useState, useTransition } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import AvatarUploadInput from './avatar-upload-input'
 import SettingsProfileEditor from './settings-profile-editor'
+import SettingsPlanCard from './settings-plan-card'
+import type { PlanSummary } from '../../lib/subscription/billing'
 import { logout, updateAvatar, updateStartupPage } from './settings-actions'
 import styles from '../settings-support-silver.module.css'
 import type { StartupPage } from '../../lib/startup-page'
@@ -58,7 +60,13 @@ const settingsRows = [
   },
 ]
 
-export default function SettingsV3Preview({ user }: { user: SettingsV3User }) {
+export default function SettingsV3Preview({
+  plan,
+  user,
+}: {
+  plan: PlanSummary | null
+  user: SettingsV3User
+}) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [startupPage, setStartupPage] = useState<StartupPage>(user.startupPage)
   const [startupPageError, setStartupPageError] = useState<string | null>(null)
@@ -88,6 +96,8 @@ export default function SettingsV3Preview({ user }: { user: SettingsV3User }) {
         <TopNav avatarUrl={user.avatarUrl} displayName={user.displayName} />
 
         <AccountCard user={user} />
+
+        {plan ? <SettingsPlanCard plan={plan} /> : null}
 
         <section className={`${styles.panel} ${styles.previewPanel}`}>
           <div className={styles.panelHeader}>
