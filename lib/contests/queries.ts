@@ -9,7 +9,7 @@ import {
 } from '../../utils/supabase/server'
 import { canViewContest } from './permissions'
 import { loadNominationGallery } from './nomination-gallery'
-import { countCreatorCollection } from '../../app/guides/shared/creator-collection'
+import { selectCreatorCollection, type CollectionGuide } from '../../app/guides/shared/creator-collection'
 import type {
   Contest,
   ContestBallot,
@@ -877,61 +877,58 @@ export async function getPublicGuideCreatorLeaderboard(
         Array.from(new Set(publicRecipes.map((recipe) => recipe.user_id as string)))
       )
     : null
-  const recipes = payingOwners
+  const payingRecipes = payingOwners
     ? publicRecipes.filter((recipe) => payingOwners.has(recipe.user_id))
     : publicRecipes
+  if (payingRecipes.length === 0) return []
+
+  // Only published guides (guides.visibility = 'public') make a creator's
+  // work an entry. A guide pulled back to private or draft keeps its decks
+  // public for the people who saved it, so public decks alone don't count.
+  const { data: listedGuideRows, error: listedError } = await supabase
+    .from('guides')
+    .select('id, user_id, is_auto, guide_decks(recipe_id, position)')
+    .eq('visibility', 'public')
+    .in('user_id', Array.from(new Set(payingRecipes.map((recipe) => recipe.user_id as string))))
+  if (listedError) throw new Error(listedError.message)
+  const listedGuides = (listedGuideRows ?? []) as { id: string; user_id: string; is_auto: boolean | null; guide_decks: { recipe_id: string; position: number | null }[] | null }[]
+  const listedRecipeIds = new Set(listedGuides.flatMap((guide) => (guide.guide_decks ?? []).map((deck) => deck.recipe_id)))
+  const recipes = payingRecipes.filter((recipe) => listedRecipeIds.has(recipe.id))
   if (recipes.length === 0) return []
 
-  const recipeIdsByOwner = new Map<string, string[]>()
   const countByOwner = new Map<string, number>()
   const directImageByRecipeId = new Map<string, string>()
+  const recipeById = new Map(recipes.map((recipe) => [recipe.id, recipe]))
 
-  // A guide's inline deck (its direct cards) is not a deck in the collection;
-  // it makes its guide count instead (see creator-collection.ts).
-  const inlineGuideIdByRecipeId = new Map<string, string>()
-  // Entry-card thumbnails come from every public recipe the creator has,
-  // including guides' own cards (e.g. a deck upgraded to a guide).
+  // Entry-card thumbnails come from every listed public recipe the creator
+  // has, including guides' own cards (e.g. a deck upgraded to a guide).
   const imageRecipeIdsByOwner = new Map<string, string[]>()
   for (const recipe of recipes) {
     imageRecipeIdsByOwner.set(recipe.user_id, [...(imageRecipeIdsByOwner.get(recipe.user_id) ?? []), recipe.id])
     if (recipe.image_url) directImageByRecipeId.set(recipe.id, recipe.image_url)
-    if (!recipe.inline_guide_id) continue
-    inlineGuideIdByRecipeId.set(recipe.id, recipe.inline_guide_id)
-    if (!recipeIdsByOwner.has(recipe.user_id)) recipeIdsByOwner.set(recipe.user_id, [])
   }
 
-  for (const recipe of recipes.filter((candidate) => !candidate.inline_guide_id)) {
-    countByOwner.set(recipe.user_id, (countByOwner.get(recipe.user_id) ?? 0) + 1)
-    const existing = recipeIdsByOwner.get(recipe.user_id) ?? []
-    existing.push(recipe.id)
-    recipeIdsByOwner.set(recipe.user_id, existing)
-  }
-
-  // The count is the creator's whole collection - public decks plus
-  // multi-deck guides - exactly what their creator page lists (both use
-  // app/guides/shared/creator-collection.ts).
-  // Inline decks are judged per guide below: a guide's own cards don't count
-  // as one of its reused decks, but stay a deck for any other guide reusing them.
-  const publicRecipeIds = new Set(recipes.map((recipe) => recipe.id))
-  const { data: composedGuides, error: composedError } = await supabase
-    .from('guides')
-    .select('id, user_id, guide_decks(recipe_id, recipes(user_id))')
-    .eq('is_auto', false)
-    .in('user_id', Array.from(recipeIdsByOwner.keys()))
-  if (composedError) throw new Error(composedError.message)
-  const composedByOwner = new Map<string, { publicDeckIds: string[]; hasPublicInline: boolean }[]>()
-  for (const guide of (composedGuides ?? []) as { id: string; user_id: string; guide_decks: { recipe_id: string; recipes: { user_id: string } | { user_id: string }[] | null }[] | null }[]) {
-    const members = guide.guide_decks ?? []
-    const isOwnCards = (deck: (typeof members)[number]) => {
-      const owner = Array.isArray(deck.recipes) ? deck.recipes[0]?.user_id : deck.recipes?.user_id
-      return inlineGuideIdByRecipeId.get(deck.recipe_id) === guide.id && owner === guide.user_id
+  // The count is the creator's whole collection - exactly what their creator
+  // page lists (both use selectCreatorCollection over published guides).
+  // A guide's own cards (its inline deck) make that guide count rather than
+  // counting as a deck of their own.
+  const collectionByOwner = new Map<string, CollectionGuide[]>()
+  for (const guide of listedGuides) {
+    const members = [...(guide.guide_decks ?? [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    const isOwnCards = (recipeId: string) => {
+      const recipe = recipeById.get(recipeId)
+      return recipe?.inline_guide_id === guide.id && recipe.user_id === guide.user_id
     }
-    const publicDeckIds = members.filter((deck) => publicRecipeIds.has(deck.recipe_id) && !isOwnCards(deck)).map((deck) => deck.recipe_id)
-    const hasPublicInline = members.some((deck) => publicRecipeIds.has(deck.recipe_id) && isOwnCards(deck))
-    composedByOwner.set(guide.user_id, [...(composedByOwner.get(guide.user_id) ?? []), { publicDeckIds, hasPublicInline }])
+    collectionByOwner.set(guide.user_id, [...(collectionByOwner.get(guide.user_id) ?? []), {
+      id: guide.id,
+      isAuto: Boolean(guide.is_auto),
+      publicDeckIds: members.filter((deck) => recipeById.has(deck.recipe_id) && !isOwnCards(deck.recipe_id)).map((deck) => deck.recipe_id),
+      hasPublicInline: members.some((deck) => recipeById.has(deck.recipe_id) && isOwnCards(deck.recipe_id)),
+    }])
   }
-  for (const [ownerId, ownerRecipeIds] of recipeIdsByOwner) {
-    countByOwner.set(ownerId, countCreatorCollection(ownerRecipeIds, composedByOwner.get(ownerId) ?? []))
+  for (const [ownerId, guides] of collectionByOwner) {
+    const count = selectCreatorCollection(guides).length
+    if (count > 0) countByOwner.set(ownerId, count)
   }
 
   const allRecipeIds = recipes.map((recipe) => recipe.id)

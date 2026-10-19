@@ -56,13 +56,13 @@ function fixture(rows, fail = false) {
     if (name.endsWith('supabase-image')) return { getSupabaseImageUrl: url => url }
     if (name === './select-difficulty-compatible') return { selectDifficultyCompatible: (selection, query) => query(selection) }
     // The collection rule and social key are the real modules under test.
-    if (name === './shared/creator-collection' || name === './shared/guide-social-deck') return loadModule(`../../app/guides/${name.slice(2)}.ts`)
+    if (['./shared/creator-collection', './shared/guide-social-deck', './shared/guide-difficulty', './shared/guide-visibility'].includes(name)) return loadModule(`../../app/guides/${name.slice(2)}.ts`)
     throw new Error(name)
   }, URL })
   return { load: exports.getCreatorPublicGuides, calls }
 }
-function guide(index, owner = 'creator', isPublic = true) {
-  return { id: `guide-${index}`, user_id: owner, title: `Guide ${index}`, guide_decks: [{ recipes: {
+function guide(index, owner = 'creator', isPublic = true, visibility = isPublic ? 'public' : 'private') {
+  return { id: `guide-${index}`, user_id: owner, title: `Guide ${index}`, visibility, guide_decks: [{ recipes: {
     id: `recipe-${index}`, user_id: owner, name: 'Guide', description: 'Description', image_url: '/guide.png', is_public: isPublic,
   } }] }
 }
@@ -82,6 +82,13 @@ test('creator collection excludes private guides and other creators, preserving 
   }
 })
 
+test('a guide pulled back to private or draft leaves the collection even though its decks stay public', async () => {
+  const f = fixture([guide(0), guide(1, 'creator', true, 'private'), guide(2, 'creator', true, 'draft')])
+  const result = await f.load('creator', 'viewer')
+  assert.equal(result.length, 1)
+  assert.equal(result[0].id, 'guide-0')
+})
+
 test('creator collection includes guides beyond Discover and database page limits', async () => {
   const f = fixture(Array.from({ length: 103 }, (_, index) => guide(index)))
   const result = await f.load('creator', 'viewer')
@@ -99,8 +106,8 @@ test('a guide with direct cards is listed once and its inline deck never counts 
   const deck = { id: 'deck-a', user_id: 'creator', name: 'Deck A', description: 'D', image_url: '/a.png', is_public: true }
   const inline = { id: 'inline-1', user_id: 'creator', name: 'Inline', description: 'I', image_url: null, is_public: true, inline_guide_id: 'with-cards' }
   const rows = [
-    { id: 'with-cards', user_id: 'creator', title: 'With cards', is_auto: false, guide_decks: [{ position: 0, recipes: deck }, { position: 1, recipes: inline }] },
-    { id: 'auto-a', user_id: 'creator', title: 'Deck A', is_auto: true, guide_decks: [{ position: 0, recipes: deck }] },
+    { id: 'with-cards', user_id: 'creator', title: 'With cards', is_auto: false, visibility: 'public', guide_decks: [{ position: 0, recipes: deck }, { position: 1, recipes: inline }] },
+    { id: 'auto-a', user_id: 'creator', title: 'Deck A', is_auto: true, visibility: 'public', guide_decks: [{ position: 0, recipes: deck }] },
   ]
   const { load } = fixture(rows)
   const guides = await load('creator', 'viewer')
