@@ -654,6 +654,7 @@
 }
 
 .guidesSilver [data-v3-guides-indicator="list-card-actions"] {
+  flex-wrap: wrap;
   color: var(--og-text-primary);
 }
 

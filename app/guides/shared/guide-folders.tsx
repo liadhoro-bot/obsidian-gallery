@@ -154,13 +154,13 @@ export function FolderedGuideList({
   if (!items.length && !visibleFolders.length) return <>{empty}</>
 
   return (
-    <div className="grid gap-2" data-v3-guides-indicator="folder-list">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-2" data-v3-guides-indicator="folder-list">
       {folders.error ? <p role="alert" className="px-2 text-xs font-bold" data-v3-guides-indicator="folder-error">{folders.error}</p> : null}
       {visibleFolders.map((folder) => {
         const folderItems = byFolder.get(folder.id) ?? []
         const isOpen = searching || openIds.has(folder.id)
         return (
-          <section key={folder.id} data-v3-guides-indicator="guide-folder" data-open={isOpen ? 'true' : undefined} {...dropProps(folder.id, folder.id)}>
+          <section key={folder.id} className="min-w-0" data-v3-guides-indicator="guide-folder" data-open={isOpen ? 'true' : undefined} {...dropProps(folder.id, folder.id)}>
             <div className="flex items-center gap-3 px-3 py-2.5">
               <FolderIcon />
               {renamingId === folder.id ? (
@@ -204,7 +204,7 @@ export function FolderedGuideList({
         )
       })}
       {loose.length || folders.folders.length ? (
-        <div data-v3-guides-indicator="folder-loose" {...dropProps('loose', null)}>
+        <div className="min-w-0" data-v3-guides-indicator="folder-loose" {...dropProps('loose', null)}>
           {folders.folders.length && loose.length ? (
             <p className="px-2 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Not in a folder · {loose.length}</p>
           ) : null}

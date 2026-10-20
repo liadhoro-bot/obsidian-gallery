@@ -3424,7 +3424,7 @@ function FolderLibraryCard({
     ))
     return viewMode === 'grid'
       ? <div data-v3-guides-indicator="guide-grid">{wrapped}</div>
-      : <div className="grid gap-2">{wrapped}</div>
+      : <div className="grid grid-cols-[minmax(0,1fr)] gap-2">{wrapped}</div>
   }
   return (
     <section
