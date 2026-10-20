@@ -2,7 +2,8 @@
 
 import { parseGuideCardLayout, type GuideCardPlacement } from './shared/guide-card-layout'
 import { normalizeGuideTags } from './shared/guide-tags'
-import { visibilityFromStatus } from './shared/guide-visibility'
+import { guideVisibilityOf, visibilityFromStatus } from './shared/guide-visibility'
+import { upgradedGuideVisibility } from './shared/guide-listing'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
@@ -921,11 +922,24 @@ export async function upgradeDeckToGuide(deckId: string, newGuideVisibility?: st
   const title = cleanText(recipe.name, 'Untitled Guide')
   let guideId: string | null = null
   let createdGuide = false
+  // Only the Forge passes a status; opening an existing deck does not.
+  const explicitVisibility = newGuideVisibility === undefined ? undefined : guideVisibilityOf(newGuideVisibility)
+
+  // A deck inside another guide is that guide's building block: being public
+  // so the parent's readers see its cards never lists it on its own.
+  const { data: parentRows, error: parentError } = await supabase
+    .from('guide_decks')
+    .select('guide_id, guides!inner(is_auto)')
+    .eq('recipe_id', deckId)
+    .eq('user_id', user.id)
+    .eq('guides.is_auto', false)
+  if (parentError) throw new Error(parentError.message)
+  const nestedInOtherGuide = (parentRows ?? []).length > 0
 
   if (recipe.auto_guide_id) {
     const { data: autoGuide, error: autoError } = await supabase
       .from('guides')
-      .select('id, guide_decks(recipe_id)')
+      .select('id, visibility, guide_decks(recipe_id)')
       .eq('id', recipe.auto_guide_id)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -933,9 +947,14 @@ export async function upgradeDeckToGuide(deckId: string, newGuideVisibility?: st
     const members = (autoGuide?.guide_decks ?? []) as { recipe_id: string }[]
     // Only an auto-guide that still wraps just this deck becomes its guide.
     if (autoGuide && members.length > 0 && members.every((member) => member.recipe_id === deckId)) {
+      const visibility = upgradedGuideVisibility({
+        explicit: explicitVisibility,
+        autoGuideVisibility: guideVisibilityOf(autoGuide.visibility),
+        nestedInOtherGuide,
+      })
       const { error: flipError } = await supabase
         .from('guides')
-        .update({ is_auto: false, title })
+        .update({ is_auto: false, title, visibility })
         .eq('id', autoGuide.id)
         .eq('user_id', user.id)
       if (flipError) throw new Error(flipError.message)
@@ -944,9 +963,10 @@ export async function upgradeDeckToGuide(deckId: string, newGuideVisibility?: st
   }
 
   if (!guideId) {
+    const visibility = upgradedGuideVisibility({ explicit: explicitVisibility, nestedInOtherGuide })
     const { data: guide, error: guideError } = await supabase
       .from('guides')
-      .insert({ user_id: user.id, title, description: recipe.description?.trim() || null, is_auto: false, visibility: recipe.is_public ? 'public' : newGuideVisibility === 'draft' ? 'draft' : 'private' })
+      .insert({ user_id: user.id, title, description: recipe.description?.trim() || null, is_auto: false, visibility })
       .select('id')
       .single()
     if (guideError || !guide) throw new Error(guideError?.message || 'Could not open this guide')

@@ -5,6 +5,7 @@ import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import { selectCreatorCollection } from './shared/creator-collection'
+import { withoutNestedAutoGuides } from './shared/guide-listing'
 import { socialDeckIdOf } from './shared/guide-social-deck'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
 import { createSharedReadClient } from './shared-read-client'
@@ -384,6 +385,29 @@ async function loadAllVisibleGuideRows(supabase: SupabaseClient) {
   return { data: rows, error: null }
 }
 
+// The composed guides containing each listed auto-guide's deck. A parent that
+// is private (or another owner's) is hidden by RLS, yet still makes the deck
+// a building block, so read just these ids with the service role.
+async function composedGuideIdsByDeck(guides: GuideRow[]) {
+  const byDeck = new Map<string, Set<string>>()
+  const deckIds = Array.from(new Set(
+    guides.filter((guide) => guide.is_auto).flatMap((guide) => (guide.guide_decks ?? []).map((deck) => deck.recipe_id))
+  ))
+  if (!deckIds.length) return byDeck
+  const service = createServiceRoleClient()
+  const rows = await selectInBatches<{ recipe_id: string; guide_id: string; guides: { is_auto: boolean | null } | { is_auto: boolean | null }[] | null }>(
+    deckIds,
+    (batch) => service.from('guide_decks').select('recipe_id, guide_id, guides!inner(is_auto)').in('recipe_id', batch)
+  )
+  for (const row of rows) {
+    if (firstValue(row.guides)?.is_auto) continue
+    const parents = byDeck.get(row.recipe_id) ?? new Set<string>()
+    parents.add(row.guide_id)
+    byDeck.set(row.recipe_id, parents)
+  }
+  return byDeck
+}
+
 // Profiles are private under RLS, so read just the public username and
 // avatar for the creators of guides the viewer can already see.
 async function loadGuideCreators(userIds: string[]) {
@@ -712,9 +736,11 @@ export const getGuidesV3Payload = cache(async (
   const savedRecipeIds = new Set(savedRows.map((row) => row.recipe_id))
   const ownedRecipeIds = new Set(myRecipes.map((recipe) => recipe.id))
 
-  const publicGuides = withoutRedundantAutoGuides(
+  // Building blocks never list on their own (see shared/guide-listing).
+  const listedGuides = withoutRedundantAutoGuides(
     ((publicGuidesResult.data ?? []) as GuideRow[]).filter(isGuidePublic)
   )
+  const publicGuides = withoutNestedAutoGuides(listedGuides, await composedGuideIdsByDeck(listedGuides))
   const ownedGuides = ((myGuidesResult.data ?? []) as GuideRow[]).filter(
     (guide) => guide.user_id === userId
   )
