@@ -29,6 +29,10 @@ import DeckEditorClient, {
 import { CompactGuideCard, GuideCardSummary, LibrarySection } from './shared/discover-guide-list'
 import GuideSocialActions from './shared/guide-social-actions'
 import { buildMyGuidesItems, type MyGuidesItem, type MyGuidesSortMode } from './shared/my-guides-items'
+import { FolderedGuideList, FolderItem, FoldersIcon, MoveToFolderSheet, NewFolderButton, SortIcon, useGuideFolders, type FolderListItem, type GuideFolders } from './shared/guide-folders'
+import type { GuideFolderScope, GuideFoldersSnapshot } from './shared/guide-folder-types'
+
+const noGuideFolders: GuideFoldersSnapshot = { folders: [], assignments: {} }
 
 // 'guides' is My Guides (the viewer's guides and decks); 'saved' is other
 // creators' guides they saved. The retired ?tab=decks opens My Guides.
@@ -752,12 +756,17 @@ const defaultForgeDecks: ForgeDeck[] = [
 type GuidesV3PreviewProps = {
   featureGuides?: FeatureGuideEntry[]
   initialPayload?: GuidesV3Payload
+  guideFolders?: Record<GuideFolderScope, GuideFoldersSnapshot>
 }
 
 export default function GuidesV3Preview({
   featureGuides = [],
   initialPayload,
+  guideFolders,
 }: GuidesV3PreviewProps) {
+  // Held here, not in the tabs, so folder changes survive switching tabs.
+  const myGuideFolders = useGuideFolders('mine', guideFolders?.mine ?? noGuideFolders)
+  const savedGuideFolders = useGuideFolders('saved', guideFolders?.saved ?? noGuideFolders)
   // Never seed from sample content: its ids don't exist, so every sample card
   // 404s. An empty list renders the tab's empty state instead.
   const seedGuideFiles: GuideFile[] = initialPayload?.guideFiles ?? []
@@ -1624,6 +1633,7 @@ export default function GuidesV3Preview({
             onCreate={openCreateChoice}
             onOpenDraft={editDraftGuide}
             onEditDraftDeck={editDraftDeck}
+            folders={myGuideFolders}
             query={guidesQuery}
             onQueryChange={setGuidesQuery}
             sortMode={myGuidesSort}
@@ -1637,6 +1647,7 @@ export default function GuidesV3Preview({
             guideFiles={sortedSavedGuideFiles}
             total={savedGuideFiles.length}
             onOpenDraft={editDraftGuide}
+            folders={savedGuideFolders}
             query={savedQuery}
             onQueryChange={setSavedQuery}
             sortMode={savedSortMode}
@@ -3281,6 +3292,7 @@ function MyGuidesTab({
   onCreate,
   onOpenDraft,
   onEditDraftDeck,
+  folders,
   query,
   onQueryChange,
   sortMode,
@@ -3288,6 +3300,7 @@ function MyGuidesTab({
   viewMode,
   onViewModeChange,
 }: {
+  folders: GuideFolders
   items: MyGuidesItem<GuideFile, Deck>[]
   // Unfiltered by search, for the section counter.
   total: number
@@ -3302,12 +3315,37 @@ function MyGuidesTab({
   onViewModeChange: (mode: GuideViewMode) => void
 }) {
   // Decks render with their existing row and routes; they read as guides.
+  const [showFolders, setShowFolders] = useState(true)
+  const [moving, setMoving] = useState<{ key: string; title: string } | null>(null)
   const empty = (
     <EmptyPanel
       title={query.trim() ? 'No matching guides' : 'No guides of your own yet'}
       text={query.trim() ? 'Try a different search.' : 'Create a guide with the + button. Every previous recipe appears here too.'}
     />
   )
+  const listItems: FolderListItem[] = items.map((item) => {
+    const title = item.kind === 'guide' ? item.guide.title : item.deck.title
+    const node = viewMode === 'grid'
+      ? item.kind === 'guide' ? (
+        <GuideGridTile
+          image={item.guide.image}
+          title={item.guide.title}
+          href={item.guide.draft ? undefined : `/guides/${item.guide.id}?preview=1&view=1`}
+          onClick={item.guide.draft ? () => onOpenDraft(item.guide) : undefined}
+        />
+      ) : (
+        <GuideGridTile
+          image={item.deck.image}
+          title={item.deck.title}
+          href={item.deck.draft ? undefined : `/guides/decks/${item.deck.id}?preview=1`}
+          onClick={item.deck.draft ? () => onEditDraftDeck(item.deck) : undefined}
+        />
+      )
+      : item.kind === 'guide'
+        ? <GuideFileCard guide={item.guide} onOpenDraft={onOpenDraft} />
+        : <DeckRow deck={item.deck} onEditDraftDeck={onEditDraftDeck} />
+    return { key: item.key, title, node }
+  })
   return (
     <section className="grid gap-3">
       <GuideSearchSortBar
@@ -3318,59 +3356,100 @@ function MyGuidesTab({
         onSortChange={onSortChange}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
+        showFolders={showFolders}
+        onFoldersToggle={() => setShowFolders((open) => !open)}
       />
-      {viewMode === 'grid' ? (
-        <div data-v3-guides-indicator="guide-grid" aria-label="My guides" data-feature-guide-target="guides.tabs.guides">
-          {items.length ? items.map((item) => item.kind === 'guide' ? (
-            <GuideGridTile
-              key={item.key}
-              image={item.guide.image}
-              editHref={item.guide.isOwner ? `/guides/${item.guide.id}?preview=1&edit=1` : undefined}
-              title={item.guide.title}
-              href={item.guide.draft ? undefined : `/guides/${item.guide.id}?preview=1&view=1`}
-              onClick={item.guide.draft ? () => onOpenDraft(item.guide) : undefined}
-            />
-          ) : (
-            <GuideGridTile
-              key={item.key}
-              image={item.deck.image}
-              editHref={item.deck.isOwner ? `/guides/decks/${item.deck.id}?preview=1&edit=1` : undefined}
-              title={item.deck.title}
-              href={item.deck.draft ? undefined : `/guides/decks/${item.deck.id}?preview=1`}
-              onClick={item.deck.draft ? () => onEditDraftDeck(item.deck) : undefined}
-            />
-          )) : empty}
-        </div>
-      ) : (
-        <section
-          className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
-          data-v3-guides-indicator="library-section"
-        >
-          <div className="flex items-center justify-between px-4 py-3">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
-              My Guides • {total}
-            </h2>
-            <button
-              type="button"
-              onClick={onCreate}
-              className="rounded-full px-2 py-1 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-300/10"
-            >
-              Add Guide +
-            </button>
-          </div>
-          <div
-            className="grid gap-2 p-2"
-            aria-label="My guides"
-            data-v3-guides-indicator="guides-section-mine"
-            data-feature-guide-target="guides.tabs.guides"
+      <FolderLibraryCard
+        title={`My Guide Library • ${total}`}
+        items={listItems}
+        folders={folders}
+        showFolders={showFolders}
+        searching={Boolean(query.trim())}
+        viewMode={viewMode}
+        onMove={(key, title) => setMoving({ key, title })}
+        empty={empty}
+        ariaLabel="My guides"
+        sectionIndicator="guides-section-mine"
+        featureGuideTarget="guides.tabs.guides"
+        action={
+          <button
+            type="button"
+            onClick={onCreate}
+            className="rounded-full px-2 py-1 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-300/10"
           >
-            {items.length ? items.map((item) => item.kind === 'guide'
-              ? <GuideFileCard key={item.key} guide={item.guide} onOpenDraft={onOpenDraft} />
-              : <DeckRow key={item.key} deck={item.deck} onEditDraftDeck={onEditDraftDeck} />
-            ) : empty}
-          </div>
-        </section>
-      )}
+            Add Guide +
+          </button>
+        }
+      />
+      {moving ? <MoveToFolderSheet itemKey={moving.key} title={moving.title} folders={folders} onClose={() => setMoving(null)} /> : null}
+    </section>
+  )
+}
+
+// The big library card on My Guides and Saved. In folders mode it lists the
+// folders (each opens to its guides) then the guides in no folder; with
+// folders off it is the plain list, like Projects' Units tab.
+function FolderLibraryCard({
+  title,
+  items,
+  folders,
+  showFolders,
+  searching,
+  viewMode,
+  onMove,
+  empty,
+  action,
+  ariaLabel,
+  sectionIndicator,
+  featureGuideTarget,
+}: {
+  title: string
+  items: FolderListItem[]
+  folders: GuideFolders
+  showFolders: boolean
+  searching: boolean
+  viewMode: GuideViewMode
+  onMove: (key: string, title: string) => void
+  empty: ReactNode
+  action?: ReactNode
+  ariaLabel: string
+  sectionIndicator: string
+  featureGuideTarget: string
+}) {
+  const renderItems = (group: FolderListItem[]) => {
+    const wrapped = group.map((item) => (
+      <FolderItem key={item.key} itemKey={item.key} title={item.title} folders={folders} onMove={onMove}>
+        {item.node}
+      </FolderItem>
+    ))
+    return viewMode === 'grid'
+      ? <div data-v3-guides-indicator="guide-grid">{wrapped}</div>
+      : <div className="grid gap-2">{wrapped}</div>
+  }
+  return (
+    <section
+      className="overflow-hidden rounded-[8px] border border-white/[0.06] bg-[#111821]"
+      data-v3-guides-indicator="library-section"
+    >
+      <div className="flex items-center justify-between gap-2 px-4 py-3">
+        <h2 className="text-[10px] font-black uppercase tracking-[0.24em] text-white/28">
+          {title}
+        </h2>
+        <div className="flex items-center gap-1">
+          {showFolders ? <NewFolderButton folders={folders} /> : null}
+          {action}
+        </div>
+      </div>
+      <div
+        className="p-2"
+        aria-label={ariaLabel}
+        data-v3-guides-indicator={sectionIndicator}
+        data-feature-guide-target={featureGuideTarget}
+      >
+        {showFolders ? (
+          <FolderedGuideList items={items} folders={folders} searching={searching} renderItems={renderItems} empty={empty} />
+        ) : items.length ? renderItems(items) : empty}
+      </div>
     </section>
   )
 }
@@ -3379,6 +3458,7 @@ function SavedTab({
   guideFiles,
   total,
   onOpenDraft,
+  folders,
   query,
   onQueryChange,
   sortMode,
@@ -3386,6 +3466,7 @@ function SavedTab({
   viewMode,
   onViewModeChange,
 }: {
+  folders: GuideFolders
   guideFiles: GuideFile[]
   // Unfiltered by search, for the section counter.
   total: number
@@ -3397,6 +3478,20 @@ function SavedTab({
   viewMode: GuideViewMode
   onViewModeChange: (mode: GuideViewMode) => void
 }) {
+  const [showFolders, setShowFolders] = useState(true)
+  const [moving, setMoving] = useState<{ key: string; title: string } | null>(null)
+  const listItems: FolderListItem[] = guideFiles.map((guide) => ({
+    key: `guide:${guide.id}`,
+    title: guide.title,
+    node: viewMode === 'grid' ? (
+      <GuideGridTile
+        image={guide.image}
+        title={guide.title}
+        href={guide.draft ? undefined : `/guides/${guide.id}?preview=1&view=1`}
+        onClick={guide.draft ? () => onOpenDraft(guide) : undefined}
+      />
+    ) : <GuideFileCard guide={guide} onOpenDraft={onOpenDraft} />,
+  }))
   return (
     <section className="grid gap-3">
       <GuideSearchSortBar
@@ -3407,67 +3502,29 @@ function SavedTab({
         onSortChange={onSortChange}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
+        showFolders={showFolders}
+        onFoldersToggle={() => setShowFolders((open) => !open)}
       />
-      <LibrarySection title={`Saved Guides • ${total}`}>
-        <div data-v3-guides-indicator="guides-section-saved">
-          {guideFiles.length ? (
-            <GuideFileList
-              guides={guideFiles}
-              onOpenDraft={onOpenDraft}
-              viewMode={viewMode}
-              featureGuideTarget="guides.tabs.saved"
-            />
-          ) : (
-            <EmptyPanel
-              title={query.trim() ? 'No matching saved guides' : 'No saved guides yet'}
-              text={query.trim() ? 'Try a different search.' : 'Save a public guide from Discover and it will appear here.'}
-            />
-          )}
-        </div>
-      </LibrarySection>
+      <FolderLibraryCard
+        title={`Saved Guides • ${total}`}
+        items={listItems}
+        folders={folders}
+        showFolders={showFolders}
+        searching={Boolean(query.trim())}
+        viewMode={viewMode}
+        onMove={(key, title) => setMoving({ key, title })}
+        empty={
+          <EmptyPanel
+            title={query.trim() ? 'No matching saved guides' : 'No saved guides yet'}
+            text={query.trim() ? 'Try a different search.' : 'Save a public guide from Discover and it will appear here.'}
+          />
+        }
+        ariaLabel="Saved guides"
+        sectionIndicator="guides-section-saved"
+        featureGuideTarget="guides.tabs.saved"
+      />
+      {moving ? <MoveToFolderSheet itemKey={moving.key} title={moving.title} folders={folders} onClose={() => setMoving(null)} /> : null}
     </section>
-  )
-}
-
-function GuideFileList({
-  guides,
-  onOpenDraft,
-  viewMode,
-  featureGuideTarget,
-}: {
-  guides: GuideFile[]
-  onOpenDraft: (guide: GuideFile) => void
-  viewMode: GuideViewMode
-  featureGuideTarget?: string
-}) {
-  return viewMode === 'grid' ? (
-    <div
-      data-v3-guides-indicator="guide-grid"
-      aria-label="Guide files"
-      data-feature-guide-target={featureGuideTarget}
-    >
-      {guides.map((guide) => (
-        <GuideGridTile
-          key={guide.id}
-          image={guide.image}
-          editHref={guide.isOwner ? `/guides/${guide.id}?preview=1&edit=1` : undefined}
-          title={guide.title}
-          href={guide.draft ? undefined : `/guides/${guide.id}?preview=1&view=1`}
-          onClick={guide.draft ? () => onOpenDraft(guide) : undefined}
-        />
-      ))}
-    </div>
-  ) : (
-    <div
-      className="grid gap-3"
-      aria-label="Guide files"
-      data-v3-guides-indicator="guides-list"
-      data-feature-guide-target={featureGuideTarget}
-    >
-      {guides.map((guide) => (
-        <GuideFileCard key={guide.id} guide={guide} onOpenDraft={onOpenDraft} />
-      ))}
-    </div>
   )
 }
 
@@ -3514,7 +3571,6 @@ function LibraryTab({
               <GuideGridTile
                 key={guide.id}
                 image={guide.image}
-                editHref={guide.isOwner ? `/guides/${guide.id}?preview=1&edit=1` : undefined}
                 title={guide.title}
                 href={`/guides/${guide.id}?preview=1&view=1`}
               />
@@ -3559,6 +3615,8 @@ function GuideSearchSortBar({
   tags,
   onTagClick,
   sortOptions = guideSortOptions,
+  showFolders,
+  onFoldersToggle,
 }: {
   placeholder: string
   query: string
@@ -3570,6 +3628,9 @@ function GuideSearchSortBar({
   tags?: string[]
   onTagClick?: (tag: string) => void
   sortOptions?: { value: GuideSortMode; label: string }[]
+  // My Guides and Saved: shows or hides the folders in the library card.
+  showFolders?: boolean
+  onFoldersToggle?: () => void
 }) {
   const [isTagsOpen, setIsTagsOpen] = useState(false)
   const [isSortOpen, setIsSortOpen] = useState(false)
@@ -3579,7 +3640,7 @@ function GuideSearchSortBar({
     <div data-v3-guides-indicator="search-sort-toolbar">
       <div
         className={
-          hasTags
+          hasTags || onFoldersToggle
             ? 'grid grid-cols-[minmax(0,1fr)_64px_64px] gap-2'
             : 'grid grid-cols-[minmax(0,1fr)_64px] gap-2'
         }
@@ -3607,6 +3668,20 @@ function GuideSearchSortBar({
             Tags
           </button>
         ) : null}
+        {onFoldersToggle ? (
+          <button
+            type="button"
+            aria-pressed={showFolders}
+            data-active={showFolders ? 'true' : undefined}
+            onClick={onFoldersToggle}
+            title={showFolders ? 'Hide folders and list every guide' : 'Show folders'}
+            className="flex h-12 flex-col items-center justify-center gap-0.5 text-[11px] font-black"
+            data-v3-guides-indicator="folders-toggle"
+          >
+            <FoldersIcon />
+            Folders
+          </button>
+        ) : null}
         <button
           type="button"
           aria-expanded={isSortOpen}
@@ -3614,8 +3689,9 @@ function GuideSearchSortBar({
             setIsTagsOpen(false)
             setIsSortOpen((open) => !open)
           }}
-          className="flex h-12 items-center justify-center text-xs font-black"
+          className={onFoldersToggle ? 'flex h-12 flex-col items-center justify-center gap-0.5 text-[11px] font-black' : 'flex h-12 items-center justify-center text-xs font-black'}
         >
+          {onFoldersToggle ? <SortIcon /> : null}
           Sort
         </button>
       </div>
@@ -3732,13 +3808,11 @@ function GridViewIcon() {
 }
 
 function GuideGridTile({
-  editHref,
   href,
   image,
   title,
   onClick,
 }: {
-  editHref?: string
   href?: string
   image: string
   title: string
@@ -3766,7 +3840,6 @@ function GuideGridTile({
           {inner}
         </button>
       )}
-      {href ? <div className="flex flex-wrap items-center gap-2 py-2"><ViewCardsLink href={href} title={title} />{editHref ? <Link href={editHref} className="text-xs font-bold">Edit</Link> : null}</div> : null}
     </div>
   )
 }
