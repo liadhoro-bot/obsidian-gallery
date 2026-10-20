@@ -70,7 +70,7 @@ function addMonths(date: Date, months: number) {
   return next
 }
 
-async function notifyAdmin(subject: string, lines: string[]) {
+export async function notifyAdmin(subject: string, lines: string[]) {
   const adminEmail = process.env.ADMIN_REPORT_EMAIL
   const resendKey = process.env.RESEND_API_KEY
   const text = lines.join('\n')

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
-import { recordMonthlyPayment } from '../../../../lib/subscription/billing'
+import {
+  notifyAdmin,
+  recordMonthlyPayment,
+} from '../../../../lib/subscription/billing'
 
 // Called by the Make scenario "OG - Monthly Payment Notify" after it has
 // approved a Grow transaction. Grow fires a notification on the first
@@ -32,6 +35,20 @@ export async function POST(request: Request) {
       { error: 'Missing transactionId or email.' },
       { status: 400 }
     )
+  }
+
+  // The live Grow notify webhook also receives payments from older links
+  // (e.g. a Founder's Pass link created before Oct 4). Only links made by the
+  // monthly scenario carry cField2 = "monthly"; never record others as monthly.
+  if (asText(body.cField2) !== 'monthly') {
+    await notifyAdmin(`Non-monthly Grow payment received: ${email}`, [
+      'Grow reported a payment that did not come from a monthly link, so it was not recorded.',
+      'Grant access by hand if needed.',
+      '',
+      `Grow transaction: ${transactionId}`,
+      `Sum: ${asText(body.sum) ?? 'unknown'}`,
+    ])
+    return NextResponse.json({ status: 'ignored' })
   }
 
   const sum = Number.parseFloat(String(body.sum ?? ''))
