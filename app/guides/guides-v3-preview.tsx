@@ -3740,9 +3740,9 @@ function GuideSearchSortBar({
             setIsTagsOpen(false)
             setIsSortOpen((open) => !open)
           }}
-          className={onFoldersToggle ? 'flex h-12 flex-col items-center justify-center gap-0.5 text-[11px] font-black' : 'flex h-12 items-center justify-center text-xs font-black'}
+          className="flex h-12 flex-col items-center justify-center gap-0.5 text-[11px] font-black"
         >
-          {onFoldersToggle ? <SortIcon /> : null}
+          <SortIcon />
           Sort
         </button>
       </div>
