@@ -1,4 +1,5 @@
 import { EventsPageHeader, UpcomingEventRow } from '../event-components'
+import EventsCalendar from '../events-calendar'
 import { getUpcomingCommunityEvents } from '../events-queries'
 import styles from '../community-v3-silver.module.css'
 
@@ -16,6 +17,8 @@ export default async function CommunityEventsPage() {
           backLabel="Back to community"
           title="Events"
         />
+
+        <EventsCalendar events={events} />
 
         <section data-v3-community-indicator="section-card" className="overflow-hidden">
           <div className="px-4 py-3">
