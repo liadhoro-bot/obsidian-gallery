@@ -104,7 +104,6 @@ export const storeSpotlights: StoreSpotlight[] = [
     ...noContactYet,
     image: '/community/stores/the-kingdom.jpg',
     photos: ['/community/stores/the-kingdom.jpg'],
-    hidden: true,
   },
   {
     id: 'akitaija-beersheba',
