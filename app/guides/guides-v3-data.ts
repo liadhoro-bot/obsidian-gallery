@@ -154,7 +154,6 @@ type RecipeStepPaintRow = {
   custom_paint_id: string | null
 }
 
-const deckLimit = 36
 const fallbackImage = '/onboarding/pains/tough-choices.jpeg'
 const accents = [
   '#d8bd83',
@@ -339,6 +338,26 @@ async function selectInBatches<Row>(
     rows.push(...(data ?? []))
   }
   return rows
+}
+
+// My Guides and Saved list everything the viewer owns or saved: a fixed cap
+// (36) once hid a big creator's older guides, and folders now organize long
+// lists anyway. Pages stay under PostgREST's per-request row limit; the
+// ceiling only guards against a runaway loop.
+const ownListPageSize = 500
+const maxOwnListRows = 10000
+
+async function loadAllPages<Row>(
+  query: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>
+): Promise<{ data: Row[] | null; error: { message: string } | null }> {
+  const rows: Row[] = []
+  for (let offset = 0; offset < maxOwnListRows; offset += ownListPageSize) {
+    const { data, error } = await query(offset, offset + ownListPageSize - 1)
+    if (error) return { data: null, error }
+    rows.push(...(data ?? []))
+    if ((data ?? []).length < ownListPageSize) break
+  }
+  return { data: rows, error: null }
 }
 
 // Discover lists every public guide. Only fetching the newest N rows hid
@@ -648,19 +667,21 @@ export const getGuidesV3Payload = cache(async (
   const [myRecipesResult, savedRowsResult, publicGuidesResult, myGuidesResult] =
     await Promise.all([
       tab === 'decks' || tab === 'all'
-        ? selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, inline_guide_id, created_at, user_id', selection => supabase
+        ? loadAllPages<RecipeRow>((from, to) => selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, inline_guide_id, created_at, user_id', selection => supabase
           .from('recipes')
           .select(selection)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .limit(deckLimit).returns<RecipeRow[]>())
+          .order('id', { ascending: true })
+          .range(from, to).returns<RecipeRow[]>()))
         : Promise.resolve({ data: [] as RecipeRow[], error: null }),
-      supabase
+      loadAllPages<SavedRecipeRow>((from, to) => supabase
         .from('saved_recipes')
         .select('recipe_id')
         .eq('user_id', userId)
-        .limit(deckLimit)
-        .returns<SavedRecipeRow[]>(),
+        .order('recipe_id', { ascending: true })
+        .range(from, to)
+        .returns<SavedRecipeRow[]>()),
       // Public library: RLS on `guides` already restricts selects to "own
       // or has a public member deck", so this is effectively "every guide
       // with at least one public deck, plus my own (possibly private)
@@ -671,12 +692,13 @@ export const getGuidesV3Payload = cache(async (
       // My Guides: guides I own (draft/private/public alike, per RLS's
       // "own" clause).
       tab === 'guides' || tab === 'all'
-        ? selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
+        ? loadAllPages<GuideRow>((from, to) => selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
           .from('guides')
           .select(selection)
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .limit(deckLimit).returns<GuideRow[]>())
+          .order('id', { ascending: true })
+          .range(from, to).returns<GuideRow[]>()))
         : Promise.resolve({ data: [] as GuideRow[], error: null }),
     ])
 
@@ -705,19 +727,23 @@ export const getGuidesV3Payload = cache(async (
   // `guide_decks` embed intact (filtering `guide_decks` directly would trim
   // a multi-deck guide down to just its saved decks).
   const savedRecipeIdList = Array.from(savedRecipeIds)
-  const savedGuidesResult =
+  // Batched so a long saved list never overflows the request URL; a guide
+  // matched by more than one batch is kept once, newest first.
+  const savedGuideRows =
     (tab === 'guides' || tab === 'all') && savedRecipeIdList.length > 0
-      ? await selectDifficultyCompatible(
+      ? await selectInBatches<GuideRow>(savedRecipeIdList, (batch) => selectDifficultyCompatible(
           `${guideWithDecksSelect.trim()}, saved_match:guide_decks!inner(recipe_id)`,
           selection => supabase
             .from('guides')
             .select(selection)
             .neq('user_id', userId)
-            .in('saved_match.recipe_id', savedRecipeIdList)
-            .order('created_at', { ascending: false }).returns<GuideRow[]>())
-      : { data: [] as GuideRow[], error: null }
-
-  if (savedGuidesResult.error) throw new Error(savedGuidesResult.error.message)
+            .in('saved_match.recipe_id', batch)
+            .returns<GuideRow[]>()))
+      : []
+  const savedGuidesResult = {
+    data: Array.from(new Map(savedGuideRows.map((guide) => [guide.id, guide])).values())
+      .sort((first, second) => (second.created_at ?? '').localeCompare(first.created_at ?? '')),
+  }
 
   // An owned auto-guide with a card layout was customized, so it is not a
   // plain mirror of its deck. If layouts can't be read, treat every auto-guide
@@ -764,7 +790,7 @@ export const getGuidesV3Payload = cache(async (
   // surfaces through savedGuides in the Guides tab, never here.
   // A guide's own-cards deck is part of that guide, never a deck of its own
   // in the list; it stays reusable inside other guides (nestableDecks).
-  const ownedRecipes = myRecipes.slice(0, deckLimit)
+  const ownedRecipes = myRecipes
   const deckRecipes = ownedRecipes.filter((recipe) => !recipe.inline_guide_id)
 
   const publicRecipesByGuideId = new Map<string, RecipeRow[]>()
