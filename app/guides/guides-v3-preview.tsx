@@ -31,6 +31,8 @@ import GuideSocialActions from './shared/guide-social-actions'
 import { buildMyGuidesItems, type MyGuidesItem, type MyGuidesSortMode } from './shared/my-guides-items'
 import { FolderedGuideList, FolderItem, FoldersIcon, MoveToFolderSheet, NewFolderButton, SortIcon, useGuideFolders, type FolderListItem, type GuideFolders } from './shared/guide-folders'
 import type { GuideFolderScope, GuideFoldersSnapshot } from './shared/guide-folder-types'
+import { buildTagLookup, canonicalTag, matchesTagFilters, type TagDirectoryEntry } from './shared/tag-directory'
+import { BrowseTagsPanel, buildBrowseTagSections, FunnelIcon, type BrowseTagSection } from './shared/browse-tags-panel'
 
 const noGuideFolders: GuideFoldersSnapshot = { folders: [], assignments: {} }
 
@@ -757,12 +759,16 @@ type GuidesV3PreviewProps = {
   featureGuides?: FeatureGuideEntry[]
   initialPayload?: GuidesV3Payload
   guideFolders?: Record<GuideFolderScope, GuideFoldersSnapshot>
+  tagDirectory?: TagDirectoryEntry[]
 }
+
+const noTagDirectory: TagDirectoryEntry[] = []
 
 export default function GuidesV3Preview({
   featureGuides = [],
   initialPayload,
   guideFolders,
+  tagDirectory = noTagDirectory,
 }: GuidesV3PreviewProps) {
   // Held here, not in the tabs, so folder changes survive switching tabs.
   const myGuideFolders = useGuideFolders('mine', guideFolders?.mine ?? noGuideFolders)
@@ -776,6 +782,7 @@ export default function GuidesV3Preview({
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks] = useState<Deck[]>(seedDecks)
   const [query, setQuery] = useState('')
+  const [libraryTagFilters, setLibraryTagFilters] = useState<string[]>([])
   const [librarySortMode, setLibrarySortMode] = useState<GuideSortMode>('new-old')
   const [libraryVisibleCount, setLibraryVisibleCount] = useState(LIBRARY_PAGE_SIZE)
   const [guidesQuery, setGuidesQuery] = useState('')
@@ -792,7 +799,7 @@ export default function GuidesV3Preview({
       const tab = new URLSearchParams(window.location.search).get('tab')
       setActiveTab(tabFromParam(tab))
       if (saved) {
-        setQuery(saved.query ?? ''); setGuidesQuery(saved.guidesQuery ?? ''); setSavedQuery(saved.savedQuery ?? '')
+        setQuery(saved.query ?? ''); setLibraryTagFilters(saved.libraryTagFilters ?? []); setGuidesQuery(saved.guidesQuery ?? ''); setSavedQuery(saved.savedQuery ?? '')
         setLibrarySortMode(saved.librarySortMode ?? 'new-old'); setGuidesSortMode(withoutSectionSort(saved.guidesSortMode ?? 'new-old')); setSavedSortMode(withoutSectionSort(saved.savedSortMode ?? 'new-old'))
         setGuidesViewMode(saved.guidesViewMode ?? 'card'); setSavedViewMode(saved.savedViewMode ?? 'card'); setLibraryViewMode(saved.libraryViewMode ?? 'card')
         setLibraryVisibleCount(saved.libraryVisibleCount ?? LIBRARY_PAGE_SIZE)
@@ -807,8 +814,8 @@ export default function GuidesV3Preview({
     if (!browseRestored) return
     const url = new URL(window.location.href)
     url.searchParams.set('tab', activeTab)
-    window.history.replaceState({ ...window.history.state, guidesBrowse: { query, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount } }, '', url)
-  }, [browseRestored, activeTab, query, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount])
+    window.history.replaceState({ ...window.history.state, guidesBrowse: { query, libraryTagFilters, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount } }, '', url)
+  }, [browseRestored, activeTab, query, libraryTagFilters, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount])
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
   const router = useRouter()
   const [forgeMode, setForgeMode] = useState<ForgeMode>('guide')
@@ -858,11 +865,33 @@ export default function GuidesV3Preview({
     performance.mark('v3-guides-hydrated')
   }, [])
 
+  // Browse Tags: a guide's tags are read through the directory, so an alias
+  // that slipped past save still matches its canonical tag. Skill Level tags
+  // also match the guide's difficulty.
+  const tagLookup = buildTagLookup(tagDirectory)
+  const libraryGuideTags = new Map(
+    seedLibraryGuides.map((guide) => [
+      guide.id,
+      new Set([...(guide.tags ?? []).map((tag) => canonicalTag(tag, tagLookup)), guide.level]),
+    ])
+  )
+  const libraryTagUsage = new Map<string, number>()
+  for (const guide of seedLibraryGuides) {
+    for (const tag of new Set((guide.tags ?? []).map((tag) => canonicalTag(tag, tagLookup)))) {
+      libraryTagUsage.set(tag, (libraryTagUsage.get(tag) ?? 0) + 1)
+    }
+  }
+  const browseTagSections = buildBrowseTagSections(tagDirectory, libraryTagUsage)
   const normalizedQuery = query.trim().toLowerCase()
-  const filteredLibraryGuides = seedLibraryGuides.filter((guide) =>
+  // The panel's live counts run over the guides the search already matches.
+  const searchedLibraryGuides = seedLibraryGuides.filter((guide) =>
     `${guide.title} ${guide.subtitle} ${guide.level} ${(guide.tags ?? []).join(' ')}`
       .toLowerCase()
       .includes(normalizedQuery)
+  )
+  const searchedGuideTags = searchedLibraryGuides.map((guide) => libraryGuideTags.get(guide.id) ?? new Set<string>())
+  const filteredLibraryGuides = searchedLibraryGuides.filter((guide) =>
+    matchesTagFilters(libraryGuideTags.get(guide.id) ?? new Set(), libraryTagFilters, tagLookup)
   )
   const sortedLibraryGuides = sortGuideFiles(filteredLibraryGuides, librarySortMode)
   const visibleLibraryGuides = sortedLibraryGuides.slice(0, libraryVisibleCount)
@@ -887,14 +916,6 @@ export default function GuidesV3Preview({
     savedGuideFiles.filter((guide) => guideMatches(guide, normalizedSavedQuery)),
     savedSortMode
   )
-  const libraryTags = Array.from(
-    new Map(
-      seedLibraryGuides
-        .flatMap((guide) => guide.tags ?? [])
-        .map((tag) => [tag.toLocaleLowerCase(), tag] as const)
-    ).values()
-  ).sort((left, right) => left.localeCompare(right))
-
   const normalizedGuideDeckSearch = guideDeckSearch.trim().toLowerCase()
   const filteredCollectionDecks = decks.filter((deck) =>
     `${deck.title} ${deck.category}`.toLowerCase().includes(normalizedGuideDeckSearch)
@@ -1658,7 +1679,14 @@ export default function GuidesV3Preview({
         ) : null}
         {activeTab === 'library' ? (
           <LibraryTab
-            tags={libraryTags}
+            tagSections={browseTagSections}
+            tagGuideTags={searchedGuideTags}
+            tagLookup={tagLookup}
+            tagFilters={libraryTagFilters}
+            onTagFiltersChange={(tags) => {
+              setLibraryTagFilters(tags)
+              setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
+            }}
             query={query}
             onQueryChange={(value) => {
               setQuery(value)
@@ -3530,7 +3558,11 @@ function SavedTab({
 
 function LibraryTab({
   guides,
-  tags,
+  tagSections,
+  tagGuideTags,
+  tagLookup,
+  tagFilters,
+  onTagFiltersChange,
   onQueryChange,
   query,
   sortMode,
@@ -3541,7 +3573,11 @@ function LibraryTab({
   onLoadMore,
 }: {
   guides: GuideFile[]
-  tags: string[]
+  tagSections: BrowseTagSection[]
+  tagGuideTags: Set<string>[]
+  tagLookup: Map<string, TagDirectoryEntry>
+  tagFilters: string[]
+  onTagFiltersChange: (tags: string[]) => void
   onQueryChange: (query: string) => void
   query: string
   sortMode: GuideSortMode
@@ -3561,8 +3597,19 @@ function LibraryTab({
         onSortChange={onSortChange}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
-        tags={tags}
-        onTagClick={onQueryChange}
+        activeTagCount={tagFilters.length}
+        tagsPanel={tagSections.length ? (close) => (
+          <BrowseTagsPanel
+            sections={tagSections}
+            applied={tagFilters}
+            guideTags={tagGuideTags}
+            lookup={tagLookup}
+            onApply={(tags) => {
+              onTagFiltersChange(tags)
+              close()
+            }}
+          />
+        ) : undefined}
       />
       {viewMode === 'grid' ? (
         <div data-v3-guides-indicator="guide-grid">
@@ -3576,7 +3623,7 @@ function LibraryTab({
               />
             ))
           ) : (
-            <EmptyPanel title="No public guides found" text="Try another search." />
+            <EmptyPanel title="No public guides found" text={tagFilters.length ? 'Try other tags, or clear the tag filters.' : 'Try another search.'} />
           )}
         </div>
       ) : (
@@ -3586,7 +3633,7 @@ function LibraryTab({
               <CompactGuideCard key={guide.id} guide={guide} />
             ))
           ) : (
-            <EmptyPanel title="No public guides found" text="Try another search." />
+            <EmptyPanel title="No public guides found" text={tagFilters.length ? 'Try other tags, or clear the tag filters.' : 'Try another search.'} />
           )}
         </LibrarySection>
       )}
@@ -3612,8 +3659,8 @@ function GuideSearchSortBar({
   onSortChange,
   viewMode,
   onViewModeChange,
-  tags,
-  onTagClick,
+  tagsPanel,
+  activeTagCount = 0,
   sortOptions = guideSortOptions,
   showFolders,
   onFoldersToggle,
@@ -3625,8 +3672,9 @@ function GuideSearchSortBar({
   onSortChange: (mode: GuideSortMode) => void
   viewMode: GuideViewMode
   onViewModeChange: (mode: GuideViewMode) => void
-  tags?: string[]
-  onTagClick?: (tag: string) => void
+  // Discover only: renders the Browse Tags panel; close() hides it.
+  tagsPanel?: (close: () => void) => ReactNode
+  activeTagCount?: number
   sortOptions?: { value: GuideSortMode; label: string }[]
   // My Guides and Saved: shows or hides the folders in the library card.
   showFolders?: boolean
@@ -3634,7 +3682,7 @@ function GuideSearchSortBar({
 }) {
   const [isTagsOpen, setIsTagsOpen] = useState(false)
   const [isSortOpen, setIsSortOpen] = useState(false)
-  const hasTags = Boolean(tags?.length)
+  const hasTags = Boolean(tagsPanel)
 
   return (
     <div data-v3-guides-indicator="search-sort-toolbar">
@@ -3663,9 +3711,12 @@ function GuideSearchSortBar({
               setIsSortOpen(false)
               setIsTagsOpen((open) => !open)
             }}
-            className="flex h-12 items-center justify-center text-xs font-black"
+            data-active={activeTagCount ? 'true' : undefined}
+            data-v3-guides-indicator="tags-toggle"
+            className="flex h-12 flex-col items-center justify-center gap-0.5 text-[11px] font-black"
           >
-            Tags
+            <FunnelIcon />
+            {activeTagCount ? `Tags · ${activeTagCount}` : 'Tags'}
           </button>
         ) : null}
         {onFoldersToggle ? (
@@ -3696,26 +3747,7 @@ function GuideSearchSortBar({
         </button>
       </div>
 
-      {isTagsOpen && tags?.length ? (
-        <div
-          className="mt-2 flex flex-wrap gap-2"
-          data-v3-guides-indicator="tags-panel"
-        >
-          {tags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => {
-                onTagClick?.(tag)
-                setIsTagsOpen(false)
-              }}
-              className="rounded-full px-3 py-1.5 text-[10px] font-black"
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-      ) : null}
+      {isTagsOpen && tagsPanel ? tagsPanel(() => setIsTagsOpen(false)) : null}
 
       {isSortOpen ? (
         <div className="mt-2" data-v3-guides-indicator="sort-panel">

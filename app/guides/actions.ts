@@ -1,7 +1,8 @@
 'use server'
 
 import { parseGuideCardLayout, type GuideCardPlacement } from './shared/guide-card-layout'
-import { normalizeGuideTags } from './shared/guide-tags'
+import { buildTagLookup, canonicalGuideTags } from './shared/tag-directory'
+import { loadTagDirectory } from './tag-directory-data'
 import { guideVisibilityOf, visibilityFromStatus } from './shared/guide-visibility'
 import { upgradedGuideVisibility } from './shared/guide-listing'
 import { revalidatePath } from 'next/cache'
@@ -779,7 +780,7 @@ export async function createGuideFromDecks(
   )
   const image = safePersistedImage(input.image)
   const difficulty = input.difficulty || null
-  const tags = normalizeGuideTags(input.tags)
+  const tags = canonicalGuideTags(input.tags, buildTagLookup(await loadTagDirectory()))
 
   const guideInsert = {
     user_id: user.id,
@@ -859,7 +860,7 @@ export async function updateGuideFromDecks(
   )
   const image = safePersistedImage(input.image)
   const difficulty = input.difficulty || null
-  const tags = normalizeGuideTags(input.tags)
+  const tags = canonicalGuideTags(input.tags, buildTagLookup(await loadTagDirectory()))
 
   const cardLayout = input.cardLayout === undefined ? null : parseGuideCardLayout(input.cardLayout)
   if (input.cardLayout !== undefined && cardLayout?.length !== input.cardLayout.length) throw new Error('Invalid guide card layout.')
