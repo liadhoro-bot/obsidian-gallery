@@ -228,6 +228,15 @@
   filter: grayscale(0.25);
 }
 
+.fieldHint {
+  margin-block-start: 6px;
+  color: color-mix(in srgb, var(--og-paper-50) 74%, transparent);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-shadow: 0 2px 4px color-mix(in srgb, var(--og-walnut-950) 72%, transparent);
+}
+
 .secureNote {
   display: flex;
   align-items: center;

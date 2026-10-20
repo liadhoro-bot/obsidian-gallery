@@ -223,8 +223,14 @@ export default function SubscribeClient({
               inputMode="numeric"
               className={styles.inputLight}
               placeholder="0501234567"
+              aria-describedby="subscribe-phone-hint"
             />
           </div>
+          {/* Grow's payment page shows this number locked; it can't be fixed there. */}
+          <p id="subscribe-phone-hint" className={styles.fieldHint}>
+            Double-check it: your receipt goes to this number, and it
+            can&apos;t be changed on the payment screen.
+          </p>
         </div>
 
         <button
