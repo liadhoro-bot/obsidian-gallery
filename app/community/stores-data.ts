@@ -135,6 +135,7 @@ export const storeSpotlights: StoreSpotlight[] = [
     ...noContactYet,
     image: '/community/stores/mythic-games.webp',
     photos: ['/community/stores/mythic-games.webp'],
+    hidden: true,
   },
   {
     id: 'hobbytech-online',
