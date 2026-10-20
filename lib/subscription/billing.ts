@@ -222,8 +222,11 @@ export type CancelResult =
 type GrowCancelOutcome = 'synced' | 'manual' | 'failed'
 
 async function cancelInGrow(row: SubscriptionRow): Promise<GrowCancelOutcome> {
-  // Same webhook as the monthly create-link flow; see the `action` note below.
-  const webhookUrl = process.env.MAKE_CREATE_MONTHLY_PAYMENT_WEBHOOK_URL
+  // Unset for now: Grow's Make "Make an API Call" module fails before
+  // reaching Grow (IML error in the module itself), so cancellations go to
+  // the admin email fallback. Set this only to a scenario that answers with
+  // Grow's updateDirectDebit status; never to the create-link webhook.
+  const webhookUrl = process.env.GROW_CANCEL_WEBHOOK_URL
   if (!webhookUrl || !row.grow_transaction_id || !row.grow_transaction_token || !row.grow_asmachta) {
     return 'manual'
   }
@@ -236,8 +239,6 @@ async function cancelInGrow(row: SubscriptionRow): Promise<GrowCancelOutcome> {
         'Content-Type': 'application/json',
         ...(sharedSecret ? { 'x-webhook-secret': sharedSecret } : {}),
       },
-      // The Make free plan allows two active scenarios, so create-link and
-      // cancel share one webhook; the router branches on `action`.
       body: JSON.stringify({
         action: 'cancel',
         email: row.email,
