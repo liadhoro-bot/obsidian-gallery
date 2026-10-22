@@ -48,6 +48,8 @@ export type StoreSpotlight = {
   offerings: StoreOffering[]
   address: string | null
   hours: string[] | null
+  // Person to ask for, shown next to the phone number.
+  contactName?: string
   phone: string | null
   whatsapp: string | null
   instagram: string | null
@@ -62,6 +64,16 @@ export type StoreSpotlight = {
   photos: string[]
   // Kept for later but not shown in Store Spotlights.
   hidden?: boolean
+  // Members-only offer: the Events tab hero card, plus a code card on the store page.
+  promo?: StorePromo
+}
+
+export type StorePromo = {
+  title: string
+  text: string
+  image: string
+  // Shown on the store page for members to use at checkout.
+  code: string
 }
 
 const noContactYet = {
@@ -77,18 +89,32 @@ const noContactYet = {
 export const storeSpotlights: StoreSpotlight[] = [
   {
     id: 'syrolynia-jerusalem',
-    name: 'Syrolynia',
+    name: 'Sirolynia',
     city: 'Jerusalem',
     url: 'https://sirolynia.com/il',
-    description: 'Trading cards, board games and dice, with play tables for open game nights.',
-    tagline: 'Trading cards, board games & game nights',
+    description: 'Trading cards, board games and Warhammer, with play tables for open game nights.',
+    tagline: 'Trading cards, board games & Warhammer',
     about:
-      'Syrolynia is a Jerusalem game store for trading cards, board games and dice, with play tables where the community meets for open game nights.',
+      'Sirolynia is a Jerusalem game store for trading cards, board games, Warhammer miniatures and Citadel paints, with play tables where the community meets for open game nights.',
     highlights: ['Play tables', 'Game nights'],
-    offerings: ['trading_cards', 'board_games', 'dice', 'play_tables'],
+    offerings: ['trading_cards', 'board_games', 'miniatures', 'paints', 'play_tables'],
     ...noContactYet,
+    address: 'Shmaryahu Levin 74',
+    hours: ['Sun–Thu: 10:00–22:00'],
+    contactName: 'Yarden',
+    phone: '+972 52-298-3446',
     image: '/community/stores/syrolynia.webp',
-    photos: ['/community/stores/syrolynia.webp'],
+    photos: [
+      '/community/stores/syrolynia.webp',
+      '/community/stores/sirolynia-warhammer.jpg',
+      '/community/stores/sirolynia-play-tables.jpg',
+    ],
+    promo: {
+      title: '5% off at Sirolynia',
+      text: 'Get your members-only discount code on the store page.',
+      image: '/community/stores/sirolynia-warhammer.jpg',
+      code: 'Obsidian-Gallery-5',
+    },
   },
   {
     id: 'the-kingdom-hod-hasharon',
@@ -173,6 +199,10 @@ export const storeSpotlights: StoreSpotlight[] = [
 
 export function getVisibleStores() {
   return storeSpotlights.filter((store) => !store.hidden)
+}
+
+export function getStorePromo() {
+  return getVisibleStores().find((store) => store.promo) ?? null
 }
 
 export function getStore(id: string) {

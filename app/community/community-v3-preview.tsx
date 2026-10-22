@@ -10,9 +10,9 @@ import { findVisibleFeatureGuideIndex } from '../components/feature-guide-naviga
 import { communityFeatureGuides } from '../components/feature-guide-presets'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './community-v3-silver.module.css'
-import { EventHero, StoreRow, UpcomingEventRow } from './event-components'
+import { EventHero, StorePromoHero, StoreRow, UpcomingEventRow } from './event-components'
 import { pickFeaturedEvent, type CommunityEvent } from './events-data'
-import { getVisibleStores } from './stores-data'
+import { getStorePromo, getVisibleStores } from './stores-data'
 
 type CommunityTab = 'events' | 'contests' | 'news'
 
@@ -291,10 +291,16 @@ function EventsTab({
 }) {
   const events = use(eventsPromise)
   const featuredEvent = pickFeaturedEvent(events)
+  // An active store offer takes the hero spot; otherwise feature an event.
+  const promoStore = getStorePromo()
 
   return (
     <section className="grid gap-4">
-      {featuredEvent ? <EventHero event={featuredEvent} /> : null}
+      {promoStore ? (
+        <StorePromoHero store={promoStore} />
+      ) : featuredEvent ? (
+        <EventHero event={featuredEvent} />
+      ) : null}
 
       <SectionCard title="Store Spotlights">
         {getVisibleStores().map((store) => (

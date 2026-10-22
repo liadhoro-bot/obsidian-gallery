@@ -8,6 +8,7 @@ import { createClient, getSessionUser } from '../../../../utils/supabase/server'
 const LINK_KINDS: PartnerLinkKind[] = [
   'event_page',
   'store_page',
+  'promo_code',
   'website',
   'registration',
   'phone',
@@ -25,6 +26,7 @@ async function resolveTarget(click: PartnerLinkClick): Promise<ResolvedTarget | 
     if (!store) return null
     const destinations: Partial<Record<PartnerLinkKind, string | null>> = {
       store_page: storeHref(store),
+      promo_code: store.promo?.code ?? null,
       website: store.url,
       phone: store.phone,
       social: store.instagram ?? store.facebook,

@@ -571,6 +571,10 @@
   object-position: 70% center;
 }
 
+.communitySilver [data-v3-community-indicator="event-hero"][data-variant="promo"] img {
+  object-position: center 38%;
+}
+
 .communitySilver [data-v3-community-indicator="event-hero-shade"] {
   position: absolute;
   inset: 0;
@@ -1274,6 +1278,86 @@
   font-family: var(--og-font-display);
   font-size: 1rem;
   font-weight: 700;
+}
+
+/* Store page discount code */
+.communitySilver [data-v3-community-indicator="promo-code-card"] {
+  display: grid;
+  gap: 8px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  box-shadow: var(--og-shadow-constructed-card);
+  padding: 14px 16px 16px;
+  text-align: center;
+}
+
+.communitySilver [data-v3-community-indicator="promo-code-eyebrow"] {
+  color: var(--og-brass-500);
+  font-family: var(--og-font-ui);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: var(--og-tracking-label);
+  text-transform: uppercase;
+}
+
+.communitySilver [data-v3-community-indicator="promo-code-card"] [data-v3-community-indicator="promo-code-title"] {
+  color: var(--og-paper-50);
+  font-family: var(--og-font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.communitySilver [data-v3-community-indicator="promo-code-plate"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 2px dashed color-mix(in srgb, var(--og-brass-500) 70%, transparent);
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 260px auto, 100% 100%;
+  padding: 10px 10px 10px 14px;
+}
+
+.communitySilver [data-v3-community-indicator="promo-code-value"] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--og-ink-950);
+  font-family: var(--og-font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: start;
+  user-select: all;
+}
+
+.communitySilver [data-v3-community-indicator="promo-code-plate"] button {
+  flex: none;
+  min-height: 34px;
+  border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
+  border-radius: var(--og-radius-round);
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  box-shadow: var(--og-shadow-brass-plate);
+  color: var(--og-ink-950);
+  font-family: var(--og-font-ui);
+  font-size: 0.76rem;
+  font-weight: 800;
+  padding: 0 16px;
+}
+
+.communitySilver [data-v3-community-indicator="promo-code-hint"] {
+  color: var(--og-paper-200);
+  font-size: 0.76rem;
 }
 
 @media (max-width: 390px) {

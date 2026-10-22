@@ -60,6 +60,54 @@ export function EventHero({ event }: { event: CommunityEvent }) {
   )
 }
 
+// Members-only store offer; takes the featured card's place on the Events tab.
+export function StorePromoHero({ store }: { store: StoreSpotlight }) {
+  if (!store.promo) return null
+
+  return (
+    <article
+      data-v3-community-indicator="event-hero"
+      data-variant="promo"
+      data-feature-guide-target="community.hero"
+    >
+      <Image
+        src={store.promo.image}
+        alt=""
+        fill
+        priority
+        sizes="(max-width: 640px) 100vw, 448px"
+        className="object-cover"
+      />
+      <div data-v3-community-indicator="event-hero-shade" aria-hidden="true" />
+      <div data-v3-community-indicator="event-hero-body">
+        <span data-v3-community-indicator="event-hero-tag">
+          Exclusive for Obsidian Gallery users
+        </span>
+        <h2 data-v3-community-indicator="event-hero-title">{store.promo.title}</h2>
+        <p data-v3-community-indicator="event-hero-meta">
+          {store.city ? <PinIcon /> : <GlobeIcon />}
+          {store.city ?? 'Online store'}
+        </p>
+        <span data-v3-community-indicator="event-hero-divider" aria-hidden="true" />
+        <p data-v3-community-indicator="event-hero-text">{store.promo.text}</p>
+        <TrackedLink
+          href={storeHref(store)}
+          click={{
+            targetType: 'store',
+            targetId: store.id,
+            linkKind: 'store_page',
+            source: 'events_tab_promo',
+          }}
+          data-v3-community-indicator="event-hero-action"
+        >
+          View store
+          <ChevronIcon />
+        </TrackedLink>
+      </div>
+    </article>
+  )
+}
+
 export function StoreRow({ store }: { store: StoreSpotlight }) {
   return (
     <TrackedLink

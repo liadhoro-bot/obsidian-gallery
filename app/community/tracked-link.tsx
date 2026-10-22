@@ -8,7 +8,7 @@ const CLICK_ENDPOINT = '/api/community/link-clicks'
 
 // sendBeacon survives the page navigating away; fetch keepalive is the
 // fallback for browsers without it.
-function recordPartnerLinkClick(click: PartnerLinkClick) {
+export function recordPartnerLinkClick(click: PartnerLinkClick) {
   const body = JSON.stringify(click)
   try {
     if (navigator.sendBeacon?.(CLICK_ENDPOINT, new Blob([body], { type: 'application/json' }))) {

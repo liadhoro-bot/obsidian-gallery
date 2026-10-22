@@ -19,6 +19,7 @@ import {
 } from '../../store-icons'
 import { getStore, storeOfferingLabels } from '../../stores-data'
 import { TrackedAnchor } from '../../tracked-link'
+import PromoCodeCard from '../../promo-code-card'
 import styles from '../../community-v3-silver.module.css'
 
 const MIN_PHOTO_SLOTS = 3
@@ -33,15 +34,10 @@ export default async function CommunityStorePage({
   const store = getStore(id)
   if (!store) notFound()
 
-  // Events aren't linked to stores yet, so show what's on in the store's
-  // city, or the next community events for online stores and quiet cities.
-  const upcoming = await getUpcomingCommunityEvents()
-  const localEvents = store.city
-    ? upcoming.filter((event) => event.city === store.city)
-    : []
-  const events = (localEvents.length > 0 ? localEvents : upcoming).slice(0, 3)
-  const eventsTitle =
-    localEvents.length > 0 ? `Events in ${store.city}` : 'Upcoming community events'
+  // Only events this store hosts (community_events.store_id).
+  const events = (await getUpcomingCommunityEvents()).filter(
+    (event) => event.storeId === store.id
+  )
 
   const photoSlots = Math.max(MIN_PHOTO_SLOTS, store.photos.length)
   const website = store.url ? withReferralParams(store.url) : null
@@ -89,10 +85,12 @@ export default async function CommunityStorePage({
               </ul>
             ) : null}
             <div data-v3-community-indicator="store-hero-actions">
-              <a href="#store-events" data-v3-community-indicator="event-hero-action">
-                View events
-                <ChevronIcon />
-              </a>
+              {events.length > 0 ? (
+                <a href="#store-events" data-v3-community-indicator="event-hero-action">
+                  View events
+                  <ChevronIcon />
+                </a>
+              ) : null}
               {website ? (
                 <TrackedAnchor
                   href={website}
@@ -107,6 +105,15 @@ export default async function CommunityStorePage({
             </div>
           </div>
         </article>
+
+        {store.promo ? (
+          <PromoCodeCard
+            code={store.promo.code}
+            storeId={store.id}
+            storeName={store.name}
+            title={store.promo.title}
+          />
+        ) : null}
 
         <StoreSection title="About the store">
           <p data-v3-community-indicator="store-about">{store.about}</p>
@@ -134,6 +141,7 @@ export default async function CommunityStorePage({
               )}
             </InfoItem>
             <InfoItem icon={<InfoPhoneIcon />} label="Contact">
+              {store.contactName ? <span>{store.contactName}</span> : null}
               {store.phone ? (
                 <TrackedAnchor
                   href={`tel:${store.phone.replace(/[^\d+]/g, '')}`}
@@ -209,8 +217,8 @@ export default async function CommunityStorePage({
 
         <StoreSection
           id="store-events"
-          title={eventsTitle}
-          action={<Link href="/community/events">View all</Link>}
+          title={`Events at ${store.name}`}
+          action={<Link href="/community/events">All events</Link>}
         >
           <div className="divide-y">
             {events.length > 0 ? (
@@ -219,7 +227,7 @@ export default async function CommunityStorePage({
               ))
             ) : (
               <p data-v3-community-indicator="events-empty">
-                No upcoming events yet. Check back soon.
+                No upcoming events at {store.name} yet.
               </p>
             )}
           </div>

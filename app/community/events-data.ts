@@ -30,6 +30,8 @@ export type CommunityEvent = {
   contactUrl: string | null
   imageUrl: string | null
   isFeatured: boolean
+  // Hosting partner store (stores-data.ts id), if any.
+  storeId: string | null
 }
 
 export const DEFAULT_EVENT_IMAGE = '/onboarding/problem-desk.jpeg'
@@ -38,6 +40,7 @@ export const DEFAULT_EVENT_IMAGE = '/onboarding/problem-desk.jpeg'
 export type PartnerLinkKind =
   | 'event_page'
   | 'store_page'
+  | 'promo_code'
   | 'website'
   | 'registration'
   | 'phone'

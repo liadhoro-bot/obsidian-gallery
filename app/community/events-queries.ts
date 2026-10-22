@@ -3,7 +3,7 @@ import { createClient } from '../../utils/supabase/server'
 import type { CommunityEvent, CommunityEventType } from './events-data'
 
 const EVENT_COLUMNS =
-  'id, name, event_date, start_time, end_time, event_type, location_name, address, city, price, currency, description, contact_name, contact_email, contact_phone, contact_url, image_url, is_featured'
+  'id, name, event_date, start_time, end_time, event_type, location_name, address, city, price, currency, description, contact_name, contact_email, contact_phone, contact_url, image_url, is_featured, store_id'
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -26,6 +26,7 @@ type CommunityEventRow = {
   contact_phone: string | null
   contact_url: string | null
   image_url: string | null
+  store_id: string | null
   is_featured: boolean
 }
 
@@ -48,6 +49,7 @@ function toCommunityEvent(row: CommunityEventRow): CommunityEvent {
     contactPhone: row.contact_phone,
     contactUrl: row.contact_url,
     imageUrl: row.image_url,
+    storeId: row.store_id,
     isFeatured: row.is_featured,
   }
 }
