@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import { submitBugReport, type ReportBugResult } from './actions'
 import styles from './report-bug.module.css'
-import { captureScrollDiagnostics, readScrollDiagnostics } from '@/utils/scroll-diagnostics'
 
 export default function ReportBugForm({
   initialPage,
@@ -14,12 +13,8 @@ export default function ReportBugForm({
   const [description, setDescription] = useState('')
   const [result, setResult] = useState<ReportBugResult | null>(null)
   const [isPending, startTransition] = useTransition()
-  const [includeDiagnostics, setIncludeDiagnostics] = useState(true)
 
   function handleSubmit(formData: FormData) {
-    if (includeDiagnostics) {
-      try { formData.set('scrollDiagnostics', readScrollDiagnostics() || captureScrollDiagnostics()) } catch { /* Send the report even if diagnostics fail. */ }
-    }
     startTransition(async () => {
       const nextResult = await submitBugReport(formData)
       setResult(nextResult)
@@ -55,11 +50,6 @@ export default function ReportBugForm({
           className={styles.textarea}
           placeholder="What happened? What did you expect instead?"
         />
-      </label>
-
-      <label className={styles.fieldGroup}>
-        <span><input type="checkbox" checked={includeDiagnostics} onChange={event => setIncludeDiagnostics(event.target.checked)} /> Include device and scrolling details</span>
-        <span className={styles.fieldLabel}>Includes the app address, software version and page layout. Excludes page text and form entries.</span>
       </label>
 
       {result ? (

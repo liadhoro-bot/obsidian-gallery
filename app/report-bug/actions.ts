@@ -28,7 +28,6 @@ export async function submitBugReport(formData: FormData): Promise<ReportBugResu
 
   const buggedPage = String(formData.get('buggedPage') || '').trim()
   const description = String(formData.get('description') || '').trim()
-  const scrollDiagnostics = String(formData.get('scrollDiagnostics') || '').slice(0, 16000)
 
   if (!buggedPage || !description) {
     return {
@@ -42,7 +41,6 @@ export async function submitBugReport(formData: FormData): Promise<ReportBugResu
     '',
     'Description:',
     description,
-    ...(scrollDiagnostics ? ['', 'Device and scrolling details:', scrollDiagnostics] : []),
   ].join('\n')
 
   const { error } = await supabase.from('feedback').insert({
