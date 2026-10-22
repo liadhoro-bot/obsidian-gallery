@@ -1218,3 +1218,10 @@
     linear-gradient(180deg, rgba(255, 236, 190, 0.6) 0%, rgba(255, 236, 190, 0.25) 100%),
     linear-gradient(rgba(250, 246, 236, 0.4), rgba(250, 246, 236, 0.4));
 }
+
+/* Inside a folder a card sits two frames deep; trim its side padding so the
+   View / Info / Edit / like / save row keeps the proportions it has outside. */
+.guidesSilver [data-v3-guides-indicator="guide-folder-body"] [data-guide-folder-item] > [data-v3-guides-indicator="guide-card"],
+.guidesSilver [data-v3-guides-indicator="guide-folder-body"] [data-guide-folder-item] > [data-v3-guides-indicator="deck-row"] {
+  padding-inline: 10px;
+}

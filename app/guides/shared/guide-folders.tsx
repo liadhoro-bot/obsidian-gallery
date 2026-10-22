@@ -194,7 +194,9 @@ export function FolderedGuideList({
               )}
             </div>
             {isOpen ? (
-              <div className="px-2 pb-2">
+              // Slim side padding: guide cards inside a folder keep the width
+              // their action row needs, so likes/saves stay on one line.
+              <div className="px-1 pb-1" data-v3-guides-indicator="guide-folder-body">
                 {folderItems.length ? renderItems(folderItems) : (
                   <p className="px-2 pb-2 text-xs opacity-70">No guides here yet. Use the folder button on a guide, or drag one onto this folder.</p>
                 )}
