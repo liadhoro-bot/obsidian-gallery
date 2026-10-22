@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic'
 import { usePathname } from 'next/navigation'
 import MobileNav from '../components/MobileNav'
-import ScrollingHelp from '../components/scrolling-help'
 
 const ServiceWorkerRegistrar = dynamic(
   () => import('./service-worker-registrar'),
@@ -59,7 +58,6 @@ export default function ClientShell({
       {enableProductionTelemetry ? <PostHogUserIdentifier /> : null}
       {showMobileNav ? <MobileNav /> : null}
       {showMobileNav ? <OnboardingTour /> : null}
-      {showMobileNav ? <ScrollingHelp /> : null}
     </>
   )
 }
