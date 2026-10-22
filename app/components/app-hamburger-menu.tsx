@@ -6,6 +6,7 @@ import type { ButtonHTMLAttributes } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { logout } from '../settings/settings-actions'
 import styles from './app-hamburger-menu.module.css'
+import { captureScrollDiagnostics } from '@/utils/scroll-diagnostics'
 
 type AppHamburgerMenuProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   buttonClassName?: string
@@ -80,7 +81,9 @@ export default function AppHamburgerMenu({
             <HeartIcon />
             <span>Support us</span>
           </Link>
-          <Link href={reportHref} className={styles.menuItem} role="menuitem">
+          <Link href={reportHref} className={styles.menuItem} role="menuitem" onClick={() => {
+            try { captureScrollDiagnostics() } catch { /* Keep the report link usable. */ }
+          }}>
             <BugIcon />
             <span>Report a bug</span>
           </Link>
