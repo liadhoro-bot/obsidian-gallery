@@ -64,6 +64,14 @@ body {
 }
 
 @media (display-mode: standalone), (display-mode: fullscreen) {
+  html {
+    /* An installed iOS web view needs an explicit viewport scroll surface.
+       Keep clipping on the horizontal axis without relying on visible overflow
+       to create the native vertical scroller. */
+    overflow-x: hidden;
+    overflow-y: scroll;
+  }
+
   html,
   body {
     /* Keep native vertical scroll chaining in installed apps. The body grows

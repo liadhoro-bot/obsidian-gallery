@@ -27,6 +27,7 @@ for (const mode of ['browser', 'standalone', 'fullscreen']) {
         overflow: getComputedStyle(document.body).overflowY,
         chaining: getComputedStyle(document.body).overscrollBehaviorY,
       })), { overflow: 'visible', chaining: 'auto' })
+      assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).overflowY), mode === 'browser' ? 'visible' : 'scroll')
       const swipe = async (from, to) => {
         await session.send('Input.dispatchTouchEvent', {
           type: 'touchStart', touchPoints: [{ x: 195, y: from }],
@@ -51,20 +52,23 @@ for (const mode of ['browser', 'standalone', 'fullscreen']) {
   })
 }
 
-test('iPhone WebKit: Safari keeps the document as the vertical scroller', async () => {
+for (const mode of ['browser', 'standalone', 'fullscreen']) {
+test(`iPhone WebKit ${mode}: the viewport remains the vertical scroller`, async () => {
   const browser = await webkit.launch({ headless: true })
   try {
     const page = await browser.newPage({
       viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
     })
-    await page.setContent(`<!doctype html><html><head><style>${css}</style></head>
+    const modeCss = css.replaceAll('(display-mode: standalone)', mode === 'standalone' ? '(min-width: 0px)' : '(min-width: 99999px)')
+      .replaceAll('(display-mode: fullscreen)', mode === 'fullscreen' ? '(min-width: 0px)' : '(min-width: 99999px)')
+    await page.setContent(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>${modeCss}</style></head>
       <body style="display:flex;flex-direction:column">
       <main style="min-height:3200px;flex-shrink:0">Scrollable content</main>
       </body></html>`)
     assert.deepEqual(await page.evaluate(() => ({
       html: getComputedStyle(document.documentElement).overflowY,
       body: getComputedStyle(document.body).overflowY,
-    })), { html: 'visible', body: 'visible' })
+    })), { html: mode === 'browser' ? 'visible' : 'scroll', body: 'visible' })
     // WebKit's Playwright API does not expose native swipe injection. Verify
     // viewport scrolling and modal cleanup here; Chromium above covers swipes.
     await page.evaluate(() => window.scrollTo(0, 600))
@@ -80,3 +84,4 @@ test('iPhone WebKit: Safari keeps the document as the vertical scroller', async 
     await browser.close()
   }
 })
+}
