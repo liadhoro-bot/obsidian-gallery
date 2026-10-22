@@ -825,6 +825,9 @@ export type GuideCreatorLeaderboardEntry = {
 
 export type ContestCreatorProfile = {
   description: string | null
+  // The guide whose photo is the creator's entry card; coverRecipeId is the
+  // older per-deck choice, used when no guide is chosen.
+  coverGuideId: string | null
   coverRecipeId: string | null
   // Guide ids the organizer wants first on the creator page, in order.
   guideOrder: string[]
@@ -835,7 +838,7 @@ export type ContestCreatorProfile = {
 export async function getContestCreatorProfiles(contestId: string) {
   const { data, error } = await createServiceRoleClient()
     .from('contest_creator_profiles')
-    .select('owner_user_id, description, cover_recipe_id, guide_order')
+    .select('owner_user_id, description, cover_guide_id, cover_recipe_id, guide_order')
     .eq('contest_id', contestId)
   const profiles = new Map<string, ContestCreatorProfile>()
   if (error) {
@@ -845,6 +848,7 @@ export async function getContestCreatorProfiles(contestId: string) {
   for (const row of data ?? []) {
     profiles.set(row.owner_user_id, {
       description: row.description?.trim() || null,
+      coverGuideId: row.cover_guide_id,
       coverRecipeId: row.cover_recipe_id,
       guideOrder: row.guide_order ?? [],
     })
@@ -887,11 +891,11 @@ export async function getPublicGuideCreatorLeaderboard(
   // public for the people who saved it, so public decks alone don't count.
   const { data: listedGuideRows, error: listedError } = await supabase
     .from('guides')
-    .select('id, user_id, is_auto, guide_decks(recipe_id, position)')
+    .select('id, user_id, is_auto, image_url, created_at, guide_decks(recipe_id, position)')
     .eq('visibility', 'public')
     .in('user_id', Array.from(new Set(payingRecipes.map((recipe) => recipe.user_id as string))))
   if (listedError) throw new Error(listedError.message)
-  const listedGuides = (listedGuideRows ?? []) as { id: string; user_id: string; is_auto: boolean | null; guide_decks: { recipe_id: string; position: number | null }[] | null }[]
+  const listedGuides = (listedGuideRows ?? []) as { id: string; user_id: string; is_auto: boolean | null; image_url: string | null; created_at: string; guide_decks: { recipe_id: string; position: number | null }[] | null }[]
   const listedRecipeIds = new Set(listedGuides.flatMap((guide) => (guide.guide_decks ?? []).map((deck) => deck.recipe_id)))
   const recipes = payingRecipes.filter((recipe) => listedRecipeIds.has(recipe.id))
   if (recipes.length === 0) return []
@@ -926,9 +930,11 @@ export async function getPublicGuideCreatorLeaderboard(
       hasPublicInline: members.some((deck) => recipeById.has(deck.recipe_id) && isOwnCards(deck.recipe_id)),
     }])
   }
+  const collectionIdsByOwner = new Map<string, Set<string>>()
   for (const [ownerId, guides] of collectionByOwner) {
-    const count = selectCreatorCollection(guides).length
-    if (count > 0) countByOwner.set(ownerId, count)
+    const collection = selectCreatorCollection(guides)
+    if (collection.length > 0) countByOwner.set(ownerId, collection.length)
+    collectionIdsByOwner.set(ownerId, new Set(collection.map((guide) => guide.id)))
   }
 
   const allRecipeIds = recipes.map((recipe) => recipe.id)
@@ -966,18 +972,43 @@ export async function getPublicGuideCreatorLeaderboard(
     }
   }
 
+  // Site-relative images are the app's built-in placeholders (e.g. the
+  // colour wheel on decks without a photo); they never represent a creator.
+  const realImage = (url: string | null | undefined) => (url && !url.startsWith('/') ? url : null)
+  const deckImage = (recipeId: string) =>
+    realImage(assetImageByRecipeId.get(recipeId)) ?? realImage(directImageByRecipeId.get(recipeId))
+  const guideImage = (guide: (typeof listedGuides)[number]) =>
+    realImage(guide.image_url) ??
+    [...(guide.guide_decks ?? [])]
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .map((deck) => (recipeById.has(deck.recipe_id) ? deckImage(deck.recipe_id) : null))
+      .find((url): url is string => Boolean(url)) ??
+    null
+
   const creatorProfiles = await profilesPromise
   return ownerIds
     .map((ownerId) => {
-      // A chosen cover guide leads the thumbnails and becomes the entry card image.
-      const coverId = creatorProfiles.get(ownerId)?.coverRecipeId
-      const ownRecipeIds = imageRecipeIdsByOwner.get(ownerId) ?? []
-      const recipeIds = coverId && ownRecipeIds.includes(coverId)
-        ? [coverId, ...ownRecipeIds.filter((id) => id !== coverId)]
-        : ownRecipeIds
-      const guideImageUrls = recipeIds
-        .map((id) => assetImageByRecipeId.get(id) ?? directImageByRecipeId.get(id))
-        .filter((url): url is string => Boolean(url))
+      // Photos come from the creator's published guides, newest first - the
+      // same guides their creator page lists. The chosen cover guide (or the
+      // guide holding an older per-deck cover) leads and is the entry card.
+      const profile = creatorProfiles.get(ownerId)
+      const collectionIds = collectionIdsByOwner.get(ownerId) ?? new Set<string>()
+      const ownGuides = listedGuides
+        .filter((guide) => guide.user_id === ownerId && collectionIds.has(guide.id))
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      const coverGuide =
+        ownGuides.find((guide) => guide.id === profile?.coverGuideId) ??
+        (profile?.coverRecipeId
+          ? ownGuides.find((guide) => (guide.guide_decks ?? []).some((deck) => deck.recipe_id === profile.coverRecipeId))
+          : undefined)
+      const legacyCoverImage = !profile?.coverGuideId && profile?.coverRecipeId ? deckImage(profile.coverRecipeId) : null
+      const orderedGuides = coverGuide ? [coverGuide, ...ownGuides.filter((guide) => guide !== coverGuide)] : ownGuides
+      const fromGuides = orderedGuides.map(guideImage)
+      // Creators whose guides carry no photo fall back to their decks' images.
+      const fromDecks = (imageRecipeIdsByOwner.get(ownerId) ?? []).map(deckImage)
+      const guideImageUrls = Array.from(new Set(
+        [legacyCoverImage, ...fromGuides, ...fromDecks].filter((url): url is string => Boolean(url))
+      ))
 
       return {
         ownerId,
