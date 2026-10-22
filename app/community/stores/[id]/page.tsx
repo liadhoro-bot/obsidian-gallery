@@ -20,6 +20,7 @@ import {
 import { getStore, storeOfferingLabels } from '../../stores-data'
 import { TrackedAnchor } from '../../tracked-link'
 import PromoCodeCard from '../../promo-code-card'
+import StorePhotoGallery from '../../store-photo-gallery'
 import styles from '../../community-v3-silver.module.css'
 
 const MIN_PHOTO_SLOTS = 3
@@ -234,26 +235,11 @@ export default async function CommunityStorePage({
         </StoreSection>
 
         <StoreSection title="Store photos">
-          <ul data-v3-community-indicator="store-photos">
-            {Array.from({ length: photoSlots }, (_, index) => {
-              const photo = store.photos[index]
-              return (
-                <li key={photo ?? `placeholder-${index}`} data-placeholder={photo ? undefined : 'true'}>
-                  {photo ? (
-                    <Image
-                      src={photo}
-                      alt={`${store.name} photo ${index + 1}`}
-                      fill
-                      sizes="(max-width: 640px) 33vw, 150px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span>Photo coming soon</span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+          <StorePhotoGallery
+            photos={store.photos}
+            slots={photoSlots}
+            storeName={store.name}
+          />
         </StoreSection>
       </div>
     </main>

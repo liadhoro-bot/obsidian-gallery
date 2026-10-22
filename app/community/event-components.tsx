@@ -80,9 +80,9 @@ export function StorePromoHero({ store }: { store: StoreSpotlight }) {
       />
       <div data-v3-community-indicator="event-hero-shade" aria-hidden="true" />
       <div data-v3-community-indicator="event-hero-body">
-        <span data-v3-community-indicator="event-hero-tag">
+        <p data-v3-community-indicator="promo-hero-eyebrow">
           Exclusive for Obsidian Gallery users
-        </span>
+        </p>
         <h2 data-v3-community-indicator="event-hero-title">{store.promo.title}</h2>
         <p data-v3-community-indicator="event-hero-meta">
           {store.city ? <PinIcon /> : <GlobeIcon />}
