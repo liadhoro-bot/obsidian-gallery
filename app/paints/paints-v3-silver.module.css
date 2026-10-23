@@ -16,7 +16,7 @@
   margin-inline: auto;
   gap: 10px;
   /* Clears the fixed info pane and bottom nav so the last row and "Load more" can scroll fully into view. */
-  padding: 12px 14px calc(200px + env(safe-area-inset-bottom));
+  padding: 12px 14px calc(214px + env(safe-area-inset-bottom));
 }
 
 .paintsSilver [data-v3-paints-indicator="app-header"] {
@@ -590,6 +590,9 @@
 }
 
 .paintsSilver [data-v3-paints-indicator="paint-info-panel"] {
+  /* Sit above the bottom nav (69px + 1px border + safe-area inset). A fixed
+     bottom-16 tucked the pane under the nav, worst on Android gesture bars. */
+  bottom: calc(78px + env(safe-area-inset-bottom));
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
   border-radius: var(--og-radius-l);
   background-color: var(--og-surface-primary);
