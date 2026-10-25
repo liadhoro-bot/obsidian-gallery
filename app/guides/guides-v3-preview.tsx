@@ -31,8 +31,12 @@ import GuideSocialActions from './shared/guide-social-actions'
 import { buildMyGuidesItems, type MyGuidesItem, type MyGuidesSortMode } from './shared/my-guides-items'
 import { FolderedGuideList, FolderItem, FoldersIcon, MoveToFolderSheet, NewFolderButton, SortIcon, useGuideFolders, type FolderListItem, type GuideFolders } from './shared/guide-folders'
 import type { GuideFolderScope, GuideFoldersSnapshot } from './shared/guide-folder-types'
-import { buildTagLookup, canonicalTag, matchesTagFilters, type TagDirectoryEntry } from './shared/tag-directory'
-import { BrowseTagsPanel, buildBrowseTagSections, FunnelIcon, type BrowseTagSection } from './shared/browse-tags-panel'
+import { buildTagLookup, type TagDirectoryEntry } from './shared/tag-directory'
+import { BrowseTagsPanel, FunnelIcon, type BrowseTagSection } from './shared/browse-tags-panel'
+import { useDiscoverPage } from './shared/use-discover-page'
+import DiscoverTagsPanel from './shared/discover-tags-panel'
+import type { DiscoverPage } from './discover-data'
+import type { DiscoverQuery, DiscoverSort } from './shared/discover-query'
 
 const noGuideFolders: GuideFoldersSnapshot = { folders: [], assignments: {} }
 
@@ -756,6 +760,10 @@ const defaultForgeDecks: ForgeDeck[] = [
 ]
 
 type GuidesV3PreviewProps = {
+  initialTab?: GuideTab
+  initialCreate?: boolean
+  initialDiscover?: DiscoverPage
+  initialDiscoverQuery?: DiscoverQuery
   featureGuides?: FeatureGuideEntry[]
   initialPayload?: GuidesV3Payload
   guideFolders?: Record<GuideFolderScope, GuideFoldersSnapshot>
@@ -765,11 +773,16 @@ type GuidesV3PreviewProps = {
 const noTagDirectory: TagDirectoryEntry[] = []
 
 export default function GuidesV3Preview({
-  featureGuides = [],
+  featureGuides: initialFeatureGuides = [],
+  initialTab = 'library',
+  initialCreate = false,
+  initialDiscover,
+  initialDiscoverQuery,
   initialPayload,
   guideFolders,
   tagDirectory = noTagDirectory,
 }: GuidesV3PreviewProps) {
+  const [featureGuides, setFeatureGuides] = useState(initialFeatureGuides)
   // Held here, not in the tabs, so folder changes survive switching tabs.
   const myGuideFolders = useGuideFolders('mine', guideFolders?.mine ?? noGuideFolders)
   const savedGuideFolders = useGuideFolders('saved', guideFolders?.saved ?? noGuideFolders)
@@ -777,13 +790,12 @@ export default function GuidesV3Preview({
   // 404s. An empty list renders the tab's empty state instead.
   const seedGuideFiles: GuideFile[] = initialPayload?.guideFiles ?? []
   const seedDecks: Deck[] = initialPayload?.decks ?? []
-  const seedLibraryGuides = initialPayload?.libraryGuides ?? []
-  const [activeTab, setActiveTab] = useState<GuideTab>('library')
+  const [activeTab, setActiveTab] = useState<GuideTab>(initialTab)
   const [guideFiles, setGuideFiles] = useState(seedGuideFiles)
   const [decks] = useState<Deck[]>(seedDecks)
-  const [query, setQuery] = useState('')
-  const [libraryTagFilters, setLibraryTagFilters] = useState<string[]>([])
-  const [librarySortMode, setLibrarySortMode] = useState<GuideSortMode>('new-old')
+  const [query, setQuery] = useState(initialDiscoverQuery?.search ?? '')
+  const [libraryTagFilters, setLibraryTagFilters] = useState<string[]>(initialDiscoverQuery?.tags ?? [])
+  const [librarySortMode, setLibrarySortMode] = useState<GuideSortMode>(initialDiscoverQuery?.sort ?? 'new-old')
   const [libraryVisibleCount, setLibraryVisibleCount] = useState(LIBRARY_PAGE_SIZE)
   const [guidesQuery, setGuidesQuery] = useState('')
   const [guidesSortMode, setGuidesSortMode] = useState<GuideSortMode>('new-old')
@@ -814,6 +826,12 @@ export default function GuidesV3Preview({
     if (!browseRestored) return
     const url = new URL(window.location.href)
     url.searchParams.set('tab', activeTab)
+    if (activeTab === 'library') {
+      if (query) url.searchParams.set('q', query); else url.searchParams.delete('q')
+      url.searchParams.set('sort', librarySortMode)
+      url.searchParams.delete('tag')
+      libraryTagFilters.forEach(tag => url.searchParams.append('tag', tag))
+    }
     window.history.replaceState({ ...window.history.state, guidesBrowse: { query, libraryTagFilters, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount } }, '', url)
   }, [browseRestored, activeTab, query, libraryTagFilters, guidesQuery, savedQuery, librarySortMode, guidesSortMode, savedSortMode, guidesViewMode, savedViewMode, libraryViewMode, libraryVisibleCount])
   const [activeGuideIndex, setActiveGuideIndex] = useState<number | null>(null)
@@ -865,37 +883,24 @@ export default function GuidesV3Preview({
     performance.mark('v3-guides-hydrated')
   }, [])
 
+  useEffect(() => {
+    if (initialCreate) {
+      setForgeMode('deck')
+      setSourceKind('unit')
+      setForgeDecks([defaultForgeDecks[0]])
+      setEditingDeckId(defaultForgeDecks[0].id)
+      setForgeScreen('source')
+    }
+  }, [initialCreate])
+
   // Browse Tags: a guide's tags are read through the directory, so an alias
   // that slipped past save still matches its canonical tag. Skill Level tags
   // also match the guide's difficulty.
   const tagLookup = buildTagLookup(tagDirectory)
-  const libraryGuideTags = new Map(
-    seedLibraryGuides.map((guide) => [
-      guide.id,
-      new Set([...(guide.tags ?? []).map((tag) => canonicalTag(tag, tagLookup)), guide.level]),
-    ])
-  )
-  const libraryTagUsage = new Map<string, number>()
-  for (const guide of seedLibraryGuides) {
-    for (const tag of new Set((guide.tags ?? []).map((tag) => canonicalTag(tag, tagLookup)))) {
-      libraryTagUsage.set(tag, (libraryTagUsage.get(tag) ?? 0) + 1)
-    }
-  }
-  const browseTagSections = buildBrowseTagSections(tagDirectory, libraryTagUsage)
-  const normalizedQuery = query.trim().toLowerCase()
-  // The panel's live counts run over the guides the search already matches.
-  const searchedLibraryGuides = seedLibraryGuides.filter((guide) =>
-    `${guide.title} ${guide.subtitle} ${guide.level} ${(guide.tags ?? []).join(' ')}`
-      .toLowerCase()
-      .includes(normalizedQuery)
-  )
-  const searchedGuideTags = searchedLibraryGuides.map((guide) => libraryGuideTags.get(guide.id) ?? new Set<string>())
-  const filteredLibraryGuides = searchedLibraryGuides.filter((guide) =>
-    matchesTagFilters(libraryGuideTags.get(guide.id) ?? new Set(), libraryTagFilters, tagLookup)
-  )
-  const sortedLibraryGuides = sortGuideFiles(filteredLibraryGuides, librarySortMode)
-  const visibleLibraryGuides = sortedLibraryGuides.slice(0, libraryVisibleCount)
-  const hasMoreLibraryGuides = sortedLibraryGuides.length > libraryVisibleCount
+  const discover = useDiscoverPage(activeTab === 'library', {
+    search: query.trim(), sort: withoutSectionSort(librarySortMode) as DiscoverSort,
+    tags: libraryTagFilters, offset: 0,
+  }, initialDiscover, initialDiscoverQuery)
 
   // Anything the viewer didn't create is here because they saved it. Local
   // drafts are always their own.
@@ -952,12 +957,25 @@ export default function GuidesV3Preview({
   // paints or blank). Assembling existing guides happens in the guide
   // editor's + Add > Existing Guide.
   function openCreateChoice() {
+    if (initialTab === 'library') {
+      router.push('/guides?preview=1&tab=guides&create=1')
+      return
+    }
     setActiveGuideIndex(null)
     startCreate('deck')
   }
 
-  function startFeatureTour() {
-    if (!featureGuides.length) return
+  async function startFeatureTour() {
+    if (!featureGuides.length) {
+      try {
+        const response = await fetch('/api/guides/discover?mode=help')
+        if (!response.ok) return
+        const data = await response.json() as { guides: FeatureGuideEntry[] }
+        setFeatureGuides(data.guides)
+        setActiveGuideIndex(findVisibleFeatureGuideIndex(data.guides, null, 1) ?? 0)
+      } catch { /* Help is optional; browsing remains available. */ }
+      return
+    }
     setActiveGuideIndex(findVisibleFeatureGuideIndex(featureGuides, null, 1) ?? 0)
   }
 
@@ -1626,7 +1644,7 @@ export default function GuidesV3Preview({
     <main
       className={styles.guidesSilver}
       data-v3-guides-indicator="root"
-      data-v3-guides-source={initialPayload ? 'live' : 'fallback'}
+      data-v3-guides-source={initialPayload || initialDiscover ? 'live' : 'fallback'}
     >
       <V3PerfIndicator surface="guides" detail={activeTab} />
       <div
@@ -1643,8 +1661,8 @@ export default function GuidesV3Preview({
           if (tab === activeTab) return
           const url = new URL(window.location.href)
           url.searchParams.set('tab', tab)
-          window.history.pushState(window.history.state, '', url)
-          setActiveTab(tab)
+          url.searchParams.delete('create')
+          router.push(`${url.pathname}${url.search}`)
         }} />
 
         {activeTab === 'guides' ? (
@@ -1678,10 +1696,18 @@ export default function GuidesV3Preview({
           />
         ) : null}
         {activeTab === 'library' ? (
+          <div aria-busy={discover.busy} className="grid gap-3">
+          {discover.busy ? <p role="status">Loading guides…</p> : null}
+          {discover.error ? <p role="alert">{discover.error} <button type="button" onClick={discover.retry}>Try again</button></p> : null}
           <LibraryTab
-            tagSections={browseTagSections}
-            tagGuideTags={searchedGuideTags}
+            tagSections={[]}
+            tagGuideTags={[]}
             tagLookup={tagLookup}
+            renderTags={close => <DiscoverTagsPanel search={query} applied={libraryTagFilters} onApply={tags => {
+              setLibraryTagFilters(tags)
+              setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
+              close()
+            }} />}
             tagFilters={libraryTagFilters}
             onTagFiltersChange={(tags) => {
               setLibraryTagFilters(tags)
@@ -1692,11 +1718,9 @@ export default function GuidesV3Preview({
               setQuery(value)
               setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
             }}
-            guides={visibleLibraryGuides}
-            hasMore={hasMoreLibraryGuides}
-            onLoadMore={() =>
-              setLibraryVisibleCount((count) => count + LIBRARY_PAGE_SIZE)
-            }
+            guides={discover.guides}
+            hasMore={discover.hasMore && !discover.busy}
+            onLoadMore={() => { void discover.loadMore() }}
             viewMode={libraryViewMode}
             onViewModeChange={setLibraryViewMode}
             sortMode={librarySortMode}
@@ -1705,6 +1729,7 @@ export default function GuidesV3Preview({
               setLibraryVisibleCount(LIBRARY_PAGE_SIZE)
             }}
           />
+          </div>
         ) : null}
       </div>
 
@@ -3557,6 +3582,7 @@ function SavedTab({
 }
 
 function LibraryTab({
+  renderTags,
   guides,
   tagSections,
   tagGuideTags,
@@ -3572,6 +3598,7 @@ function LibraryTab({
   hasMore,
   onLoadMore,
 }: {
+  renderTags?: (close: () => void) => ReactNode
   guides: GuideFile[]
   tagSections: BrowseTagSection[]
   tagGuideTags: Set<string>[]
@@ -3598,7 +3625,7 @@ function LibraryTab({
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
         activeTagCount={tagFilters.length}
-        tagsPanel={tagSections.length ? (close) => (
+        tagsPanel={renderTags ?? (tagSections.length ? (close) => (
           <BrowseTagsPanel
             sections={tagSections}
             applied={tagFilters}
@@ -3609,7 +3636,7 @@ function LibraryTab({
               close()
             }}
           />
-        ) : undefined}
+        ) : undefined)}
       />
       {viewMode === 'grid' ? (
         <div data-v3-guides-indicator="guide-grid">
@@ -3864,7 +3891,7 @@ function GuideGridTile({
   return (
     <div data-v3-guides-indicator="guide-grid-tile">
       {href ? (
-        <Link href={href} aria-label={title}>
+        <Link prefetch={false} href={href} aria-label={title}>
           {inner}
         </Link>
       ) : (

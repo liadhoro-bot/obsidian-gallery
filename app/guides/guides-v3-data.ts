@@ -684,13 +684,13 @@ function toGuideFile(
 
 export const getGuidesV3Payload = cache(async (
   userId: string,
-  tab: GuidesV3Tab | 'all' = 'all'
+  tab: GuidesV3Tab | 'all' | 'collection' = 'all'
 ) => {
   const supabase = await createClient()
 
   const [myRecipesResult, savedRowsResult, publicGuidesResult, myGuidesResult] =
     await Promise.all([
-      tab === 'decks' || tab === 'all'
+      tab === 'decks' || tab === 'all' || tab === 'collection'
         ? loadAllPages<RecipeRow>((from, to) => selectDifficultyCompatible('id, name, description, image_url, is_public, difficulty, inline_guide_id, created_at, user_id', selection => supabase
           .from('recipes')
           .select(selection)
@@ -715,7 +715,7 @@ export const getGuidesV3Payload = cache(async (
         : Promise.resolve({ data: [] as GuideRow[], error: null }),
       // My Guides: guides I own (draft/private/public alike, per RLS's
       // "own" clause).
-      tab === 'guides' || tab === 'all'
+      tab === 'guides' || tab === 'all' || tab === 'collection'
         ? loadAllPages<GuideRow>((from, to) => selectDifficultyCompatible(guideWithDecksSelect, selection => supabase
           .from('guides')
           .select(selection)
@@ -756,7 +756,7 @@ export const getGuidesV3Payload = cache(async (
   // Batched so a long saved list never overflows the request URL; a guide
   // matched by more than one batch is kept once, newest first.
   const savedGuideRows =
-    (tab === 'guides' || tab === 'all') && savedRecipeIdList.length > 0
+    (tab === 'guides' || tab === 'all' || tab === 'collection') && savedRecipeIdList.length > 0
       ? await selectInBatches<GuideRow>(savedRecipeIdList, (batch) => selectDifficultyCompatible(
           `${guideWithDecksSelect.trim()}, saved_match:guide_decks!inner(recipe_id)`,
           selection => supabase

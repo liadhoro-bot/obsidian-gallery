@@ -16,8 +16,8 @@ export function CompactGuideCard({ guide }: { guide: GuidesV3GuideFile }) {
     <div className="mt-2 flex min-w-0 items-center gap-2 border-t border-black/10 pt-2" data-v3-guides-indicator="list-card-actions">
       <ViewCardsLink href={`/guides/${guide.id}?preview=1&view=1`} title={guide.title} />
       <span className="h-6 w-px shrink-0 bg-black/12" aria-hidden="true" />
-      <Link href={`/guides/${guide.id}?preview=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><InfoIcon /> Info</Link>
-      {guide.isOwner ? <Link href={`/guides/${guide.id}?preview=1&edit=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><EditIcon /> Edit</Link> : null}
+      <Link prefetch={false} href={`/guides/${guide.id}?preview=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><InfoIcon /> Info</Link>
+      {guide.isOwner ? <Link prefetch={false} href={`/guides/${guide.id}?preview=1&edit=1`} className="inline-flex min-h-9 items-center gap-1 px-1 text-xs font-bold"><EditIcon /> Edit</Link> : null}
       {guide.deckId ? <><span className="ml-auto h-6 w-px shrink-0 bg-black/12" aria-hidden="true" /><GuideSocialActions recipeId={guide.deckId} likeCount={guide.likeCount} saveCount={guide.saveCount} viewerHasLiked={guide.viewerHasLiked} viewerHasSaved={guide.viewerHasSaved} assignContentType="guide" assignContentId={guide.id} assignTitle={guide.title} size="sm" /></> : null}
     </div>
   </article>
@@ -52,7 +52,7 @@ export function GuideCardSummary({
   featureGuideTarget?: string
 }) {
   const open = (className: string, children: ReactNode, decorative = false) => href
-    ? <Link href={href} className={className} aria-hidden={decorative || undefined} tabIndex={decorative ? -1 : undefined}>{children}</Link>
+    ? <Link prefetch={false} href={href} className={className} aria-hidden={decorative || undefined} tabIndex={decorative ? -1 : undefined}>{children}</Link>
     : <button type="button" onClick={onClick} className={`${className} text-left`} aria-hidden={decorative || undefined} tabIndex={decorative ? -1 : undefined}>{children}</button>
   const thumbnail = <span className="relative block h-[76px] w-[76px] shrink-0 overflow-hidden rounded-[9px]"><Image unoptimized src={guide.image} alt="" fill sizes="76px" className="object-cover" /></span>
   const title = <span className="line-clamp-2 shrink-0 break-words font-serif text-base font-black leading-tight">{guide.title}</span>
@@ -87,7 +87,7 @@ function CreatorRow({ creator }: { creator: GuidesV3Creator }) {
   </>
   const className = 'flex min-w-0 items-center gap-2 self-start'
   return creator.href
-    ? <Link href={creator.href} className={`${className} hover:opacity-80`} data-v3-guides-indicator="guide-creator" aria-label={`See all guides by ${creator.username}`}>{content}</Link>
+    ? <Link prefetch={false} href={creator.href} className={`${className} hover:opacity-80`} data-v3-guides-indicator="guide-creator" aria-label={`See all guides by ${creator.username}`}>{content}</Link>
     : <span className={className} data-v3-guides-indicator="guide-creator">{content}</span>
 }
 

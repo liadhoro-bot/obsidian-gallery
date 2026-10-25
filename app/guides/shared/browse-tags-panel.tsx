@@ -1,6 +1,6 @@
 'use client'
 
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import styles from './browse-tags-panel.module.css'
 import { matchesTagFilters, TAG_CATEGORIES, type TagCategory, type TagDirectoryEntry } from './tag-directory'
 
@@ -84,6 +84,8 @@ export function BrowseTagsPanel({
   onApply,
   guideTags,
   lookup,
+  initialCounts,
+  resolveCounts,
 }: {
   sections: BrowseTagSection[]
   applied: string[]
@@ -92,16 +94,36 @@ export function BrowseTagsPanel({
   // the live counts.
   guideTags: Set<string>[]
   lookup: Map<string, TagDirectoryEntry>
+  initialCounts?: { counts: Record<string, number>; total: number }
+  resolveCounts?: (tags: string[]) => Promise<{ counts: Record<string, number>; total: number }>
 }) {
   const [draft, setDraft] = useState(applied)
   // null = every section. Tapping the open tab again returns here.
   const [activeTab, setActiveTab] = useState<TagCategory | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
   const draftKeys = useMemo(() => new Set(draft.map((tag) => tag.toLocaleLowerCase())), [draft])
+  const [initialDraft] = useState(() => JSON.stringify(applied))
+  const draftKey = JSON.stringify(draft)
+  const [remoteResult, setRemoteResult] = useState<{
+    key: string; value?: { counts: Record<string, number>; total: number }; error?: boolean
+  }>({ key: initialDraft, value: initialCounts })
+  const remoteCounts = draftKey === initialDraft ? initialCounts : remoteResult.key === draftKey ? remoteResult.value : undefined
+  const countsError = remoteResult.key === draftKey && Boolean(remoteResult.error)
+  const countsBusy = Boolean(resolveCounts && !remoteCounts && !countsError)
+  useEffect(() => {
+    if (!resolveCounts) return
+    if (draftKey === initialDraft) return
+    let cancelled = false
+    const timer = setTimeout(() => {
+      resolveCounts(JSON.parse(draftKey)).then(counts => { if (!cancelled) setRemoteResult({ key: draftKey, value: counts }) })
+        .catch(() => { if (!cancelled) setRemoteResult({ key: draftKey, error: true }) })
+    }, 150)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [draftKey, resolveCounts, initialDraft])
 
   // Each chip counts the guides carrying that tag, whatever else is
   // selected. Apply shows what the whole draft leaves.
-  const resultCount = guideTags.filter((tags) => matchesTagFilters(tags, draft, lookup)).length
+  const resultCount = remoteCounts?.total ?? guideTags.filter((tags) => matchesTagFilters(tags, draft, lookup)).length
   const chipCounts = new Map(
     sections.flatMap((section) => section.tags).map((tag) => [tag, guideTags.filter((tags) => tags.has(tag)).length])
   )
@@ -167,7 +189,7 @@ export function BrowseTagsPanel({
               })
             }
             isSelected={(tag) => draftKeys.has(tag.toLocaleLowerCase())}
-            countOf={(tag) => chipCounts.get(tag) ?? 0}
+            countOf={(tag) => (remoteCounts ?? initialCounts)?.counts[tag.toLocaleLowerCase()] ?? chipCounts.get(tag) ?? 0}
             onToggleTag={toggleTag}
           />
         ))}
@@ -182,10 +204,10 @@ export function BrowseTagsPanel({
           type="button"
           className={styles.apply}
           onClick={() => onApply(draft)}
-          disabled={Boolean(draft.length) && resultCount === 0}
+          disabled={countsBusy || (!countsError && Boolean(draft.length) && resultCount === 0)}
         >
           <FunnelIcon />
-          {draft.length ? `Show ${resultCount} ${resultCount === 1 ? 'guide' : 'guides'}` : 'Apply filters'}
+          {countsBusy ? 'Counting…' : countsError ? 'Apply filters' : draft.length ? `Show ${resultCount} ${resultCount === 1 ? 'guide' : 'guides'}` : 'Apply filters'}
         </button>
       </div>
     </div>
