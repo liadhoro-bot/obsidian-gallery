@@ -498,6 +498,7 @@ export default function GuideEditorClient({
                       <option key={option}>{option}</option>
                     ))}
                   </select>
+                  {status === 'Unlisted' ? <small>Anyone with the share link can view. Hidden from Discover and your public creator page.</small> : null}
                 </label>
               </div>
               <label className={styles.descriptionPanel}>
