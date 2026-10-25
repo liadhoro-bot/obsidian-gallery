@@ -1,9 +1,6 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
-import Link from '@/app/components/navigation-feedback/navigation-link'
 import { redirect } from 'next/navigation'
 import DeckCardViewer from '@/app/guides/decks/[id]/deck-card-viewer'
-import ViewCardsLink from '@/app/guides/shared/view-cards-link'
 import DeckShareMenu from '@/app/guides/shared/deck-share-menu'
 import { guideCardNodes } from '@/app/guides/shared/deck-card-entries'
 import { guideCardKey, isGuideOwnedCard, resolveGuideCards } from '@/app/guides/shared/guide-card-layout'
@@ -25,7 +22,7 @@ import styles from './shared-guide.module.css'
 
 type SharedGuidePageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ view?: string; deck?: string }>
+  searchParams?: Promise<{ deck?: string }>
 }
 
 export async function generateMetadata({ params }: SharedGuidePageProps): Promise<Metadata> {
@@ -50,15 +47,16 @@ export async function generateMetadata({ params }: SharedGuidePageProps): Promis
   }
 }
 
-// Public share link for a guide. Members are sent to the full in-app guide;
-// everyone else gets a fenced, read-only view (no app nav, no edit, no links
-// into the rest of the app) with a login or subscribe dialog over it.
+// Public share link for a guide. It always opens straight into the card
+// viewer (older ?view=1 links still work). Members are sent to the in-app
+// viewer; everyone else gets a fenced, read-only viewer (no app nav, no back
+// button, no links into the rest of the app) with a login, trial or
+// subscribe dialog over it.
 export default async function SharedGuidePage({ params, searchParams }: SharedGuidePageProps) {
   const [{ id }, query] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} as { view?: string; deck?: string }),
+    searchParams ?? Promise.resolve({} as { deck?: string }),
   ])
-  const isCardView = query.view === '1'
 
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
@@ -80,8 +78,7 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
     }
 
     if (isMember) {
-      const inApp = new URLSearchParams({ preview: '1' })
-      if (isCardView) inApp.set('view', '1')
+      const inApp = new URLSearchParams({ preview: '1', view: '1' })
       if (query.deck) inApp.set('deck', query.deck)
       redirect(`/guides/${id}?${inApp.toString()}`)
     }
@@ -95,95 +92,24 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
   if (!shared) return <GuideUnavailable />
 
   const { guide, deckDetails } = shared
-  const basePath = `/s/guides/${guide.id}`
-  const gate = <SharedGuideGate guideId={guide.id} variant={variant} />
-
-  if (isCardView) {
-    const resolved = resolveGuideCards(deckDetails, guide.cardLayout)
-    const entries = guideCardNodes(deckDetails, resolved, { id: guide.id, title: guide.title, description: guide.subtitle, image: shared.coverImageUrl ?? guide.image, isPublic: true })
-    const visible = resolved.filter(card => !card.hidden)
-    const cards = visible.map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
-    const firstCard = visible.find(card => !isGuideOwnedCard(card) && card.groupId === query.deck)
-
-    return (
-      <main>
-        <DeckCardViewer
-          initialCardKey={firstCard ? guideCardKey(firstCard) : undefined}
-          cards={cards}
-          title={guide.title}
-          backHref={basePath}
-          featureGuides={featureGuides}
-          heroActions={<>
-            <DeckShareMenu cards={cards} fileBaseName={guide.title} sharePath={basePath} />
-            {gate}
-          </>}
-        />
-      </main>
-    )
-  }
+  const resolved = resolveGuideCards(deckDetails, guide.cardLayout)
+  const entries = guideCardNodes(deckDetails, resolved, { id: guide.id, title: guide.title, description: guide.subtitle, image: shared.coverImageUrl ?? guide.image, isPublic: true })
+  const visible = resolved.filter(card => !card.hidden)
+  const cards = visible.map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
+  const firstCard = visible.find(card => !isGuideOwnedCard(card) && card.groupId === query.deck)
 
   return (
-    <main className={detailStyles.root}>
-      <div className={detailStyles.shell}>
-        <header className={detailStyles.topBar}>
-          <span className={styles.brand}>Obsidian Gallery</span>
-          {gate}
-        </header>
-
-        <div className="flex items-center gap-3 py-3">
-          <ViewCardsLink href={`${basePath}?view=1`} title={guide.title} />
-        </div>
-
-        <section className={detailStyles.heroCard}>
-          <div className={`${detailStyles.heroImage} ${detailStyles.guideHeroImage}`}>
-            <Image
-              src={guide.image}
-              alt=""
-              fill
-              sizes="(max-width: 480px) 100vw, 420px"
-              className="object-cover"
-              priority
-            />
-            <div className={detailStyles.heroScrim} />
-            <div className={detailStyles.heroContent}>
-              <p className={detailStyles.eyebrow}>Shared guide</p>
-              <h1 className={detailStyles.heroTitle}>{guide.title}</h1>
-            </div>
-          </div>
-          <div className={detailStyles.statGrid}>
-            <span>{guide.decks} {guide.decks === 1 ? 'guide' : 'guides'} inside</span>
-            <span>{guide.cards} {guide.cards === 1 ? 'card' : 'cards'}</span>
-            <span>{guide.level}</span>
-          </div>
-        </section>
-
-        <section className={detailStyles.panel}>
-          <h2 className={detailStyles.sectionHeading}>Description</h2>
-          <p className={detailStyles.bodyText}>{guide.subtitle}</p>
-        </section>
-
-        <section className={`${detailStyles.panel} ${detailStyles.deckList}`}>
-          <div className={detailStyles.panelHeader}>
-            <h2 className={detailStyles.sectionHeading}>Guides Inside</h2>
-          </div>
-          <div className={detailStyles.rows}>
-            {guide.decksList.filter((deck) => !deck.isInline).map((deck) => (
-              <div key={deck.id} className={detailStyles.deckRow}>
-                <Link href={`${basePath}?view=1&deck=${deck.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                  <span className={detailStyles.deckThumb}>
-                    <Image src={deck.image} alt="" fill sizes="48px" className="object-cover" />
-                  </span>
-                  <span className={detailStyles.deckText}>
-                    <span className={detailStyles.deckTitle}>{deck.title}</span>
-                    <span className={detailStyles.deckMeta}>{deck.cards} cards - {deck.paints} paints</span>
-                  </span>
-                </Link>
-                <ViewCardsLink href={`${basePath}?view=1&deck=${deck.id}`} title={deck.title} />
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
+    <main>
+      <DeckCardViewer
+        initialCardKey={firstCard ? guideCardKey(firstCard) : undefined}
+        cards={cards}
+        title={guide.title}
+        featureGuides={featureGuides}
+        heroActions={<>
+          <DeckShareMenu cards={cards} fileBaseName={guide.title} sharePath={`/s/guides/${guide.id}`} />
+          <SharedGuideGate guideId={guide.id} variant={variant} />
+        </>}
+      />
     </main>
   )
 }

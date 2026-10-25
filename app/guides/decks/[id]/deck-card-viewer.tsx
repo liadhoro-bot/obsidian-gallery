@@ -18,7 +18,8 @@ type DeckCardViewerProps = {
   initialCardKey?: string
   cards: DeckCardEntry[]
   title: string
-  backHref: string
+  // Omitted on the logged-out share route, which has nowhere to go back to.
+  backHref?: string
   featureGuides: FeatureGuideEntry[]
   heroActions?: ReactNode
 }
@@ -124,7 +125,7 @@ export default function DeckCardViewer({
 
   return (
     <div className={styles.viewer} role="group" aria-label={`${title} cards`}>
-      <GuideBackButton fallbackHref={backHref} className={styles.backButton} />
+      {backHref ? <GuideBackButton fallbackHref={backHref} className={styles.backButton} /> : null}
 
       <div className={styles.topRightGroup}>
         {heroActions}
