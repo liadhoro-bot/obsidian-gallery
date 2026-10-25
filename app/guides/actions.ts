@@ -3,7 +3,7 @@
 import { parseGuideCardLayout, type GuideCardPlacement } from './shared/guide-card-layout'
 import { buildTagLookup, canonicalGuideTags } from './shared/tag-directory'
 import { loadTagDirectory } from './tag-directory-data'
-import { guideVisibilityOf, visibilityFromStatus } from './shared/guide-visibility'
+import { allowsGuideShareLink, guideVisibilityOf, visibilityFromStatus } from './shared/guide-visibility'
 import { upgradedGuideVisibility } from './shared/guide-listing'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '../../utils/supabase/server'
@@ -813,7 +813,7 @@ export async function createGuideFromDecks(
 
   if (guideDecksError) throw new Error(guideDecksError.message)
 
-  if (input.status === 'Public') {
+  if (allowsGuideShareLink(visibilityFromStatus(input.status))) {
     const { error: publishError } = await supabase
       .from('recipes')
       .update({ is_public: true })
@@ -866,7 +866,7 @@ export async function updateGuideFromDecks(
   if (input.cardLayout !== undefined && cardLayout?.length !== input.cardLayout.length) throw new Error('Invalid guide card layout.')
   let { error: guideError } = await supabase.rpc('save_guide_layout', {
     p_guide_id: guideId, p_title: title, p_description: description, p_image: image,
-    p_difficulty: difficulty, p_deck_ids: deckIds, p_card_layout: cardLayout, p_tags: tags, p_publish: input.status === 'Public',
+    p_difficulty: difficulty, p_deck_ids: deckIds, p_card_layout: cardLayout, p_tags: tags, p_publish: allowsGuideShareLink(visibilityFromStatus(input.status)),
     p_visibility: visibilityFromStatus(input.status),
   })
   const missingTaggedSignature = guideError && (
@@ -874,6 +874,7 @@ export async function updateGuideFromDecks(
     /save_guide_layout.*p_(tags|visibility)|function public\.save_guide_layout.*does not exist/i.test(guideError.message)
   )
   if (missingTaggedSignature) {
+    if (input.status === 'Unlisted') throw new Error('Unlisted sharing requires the latest guide database migration.')
     const fallback = await supabase.rpc('save_guide_layout', {
       p_guide_id: guideId, p_title: title, p_description: description, p_image: image,
       p_difficulty: difficulty, p_deck_ids: deckIds, p_card_layout: cardLayout, p_publish: input.status === 'Public',
@@ -890,6 +891,7 @@ export async function updateGuideFromDecks(
 
   revalidatePath('/guides')
   revalidatePath(`/guides/${guideId}`)
+  revalidatePath(`/s/guides/${guideId}`)
   for (const deckId of deckIds) {
     revalidatePath(`/guides/decks/${deckId}`)
   }
@@ -1020,7 +1022,7 @@ export async function ensureInlineGuideDeck(guideId: string) {
 
   const { data: guide, error: guideError } = await supabase
     .from('guides')
-    .select('id, title, guide_decks(recipe_id, position, recipes(is_public))')
+    .select('id, title, visibility, guide_decks(recipe_id, position, recipes(is_public))')
     .eq('id', guideId)
     .eq('user_id', user.id)
     .maybeSingle()
@@ -1038,7 +1040,7 @@ export async function ensureInlineGuideDeck(guideId: string) {
   const members = (guide.guide_decks ?? []) as { recipe_id: string; position: number | null; recipes: { is_public: boolean | null } | { is_public: boolean | null }[] | null }[]
   let deckId = existing?.id as string | undefined
   if (!deckId) {
-    const guideIsPublic = members.some((member) => {
+    const guideIsPublic = allowsGuideShareLink(guide.visibility) || members.some((member) => {
       const recipe = Array.isArray(member.recipes) ? member.recipes[0] : member.recipes
       return recipe?.is_public === true
     })

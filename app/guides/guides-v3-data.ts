@@ -1,6 +1,6 @@
 import { selectDifficultyCompatible } from './select-difficulty-compatible'
 import { guideDifficulty } from './shared/guide-difficulty'
-import { guideVisibilityOf, type GuideVisibility } from './shared/guide-visibility'
+import { allowsGuideShareLink, guideVisibilityOf, type GuideVisibility } from './shared/guide-visibility'
 import { cache } from 'react'
 import { createClient } from '../../utils/supabase/server'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
@@ -1051,8 +1051,8 @@ function creatorCollectionGuides(guides: GuideRow[]) {
   return guides.filter((guide) => kept.has(guide.id))
 }
 
-// One public guide for the logged-out share route (/s/guides/[id]). Reads
-// bypass RLS (see createSharedReadClient), so the isGuidePublic and
+// One public or unlisted guide for the share route (/s/guides/[id]). Reads
+// bypass RLS (see createSharedReadClient), so the explicit visibility and
 // is_public member filters below are the only thing keeping private guides
 // and decks out. No viewer social state - visitors can't like or save.
 export const getSharedGuideFile = cache(async (guideId: string) => {
@@ -1067,7 +1067,7 @@ export const getSharedGuideFile = cache(async (guideId: string) => {
   // An invalid uuid surfaces as 22P02; treat it like a missing guide.
   if (error && error.code !== '22P02') throw new Error(error.message)
   const guide = data as GuideRow | null
-  if (!guide || !isGuidePublic(guide)) return null
+  if (!guide || !allowsGuideShareLink(guide.visibility)) return null
 
   const memberRecipes = [...(guide.guide_decks ?? [])]
     .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))

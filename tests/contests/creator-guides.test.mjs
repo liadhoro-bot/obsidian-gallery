@@ -29,16 +29,22 @@ function fixture(rows, fail = false) {
     const call = { table, filters: [], range: null }
     calls.push(call)
     const query = {
+      single: false,
       select() { return query },
       eq(key, value) { call.filters.push([key, value]); return query },
       in() { return query },
       order() { return query },
       range(start, end) { call.range = [start, end]; return query },
+      maybeSingle() { query.single = true; return query },
+      returns() { return query },
       then(resolve, reject) {
         let data = []
         if (table === 'guides') {
           const owner = call.filters.find(([key]) => key === 'user_id')?.[1]
-          data = rows.filter(row => row.user_id === owner).slice(call.range[0], call.range[1] + 1)
+          const id = call.filters.find(([key]) => key === 'id')?.[1]
+          data = rows.filter(row => (!owner || row.user_id === owner) && (!id || row.id === id))
+          if (call.range) data = data.slice(call.range[0], call.range[1] + 1)
+          if (query.single) data = data[0] ?? null
         } else if (table === 'recipe_likes' || table === 'saved_recipes') {
           data = [{ recipe_id: 'recipe-0' }]
         }
@@ -56,10 +62,10 @@ function fixture(rows, fail = false) {
     if (name.endsWith('supabase-image')) return { getSupabaseImageUrl: url => url }
     if (name === './select-difficulty-compatible') return { selectDifficultyCompatible: (selection, query) => query(selection) }
     // The collection rule and social key are the real modules under test.
-    if (['./shared/creator-collection', './shared/guide-social-deck', './shared/guide-difficulty', './shared/guide-visibility'].includes(name)) return loadModule(`../../app/guides/${name.slice(2)}.ts`)
+    if (['./shared/creator-collection', './shared/guide-listing', './shared/guide-social-deck', './shared/guide-difficulty', './shared/guide-visibility'].includes(name)) return loadModule(`../../app/guides/${name.slice(2)}.ts`)
     throw new Error(name)
   }, URL })
-  return { load: exports.getCreatorPublicGuides, calls }
+  return { load: exports.getCreatorPublicGuides, share: exports.getSharedGuideFile, calls }
 }
 function guide(index, owner = 'creator', isPublic = true, visibility = isPublic ? 'public' : 'private') {
   return { id: `guide-${index}`, user_id: owner, title: `Guide ${index}`, visibility, guide_decks: [{ recipes: {
@@ -87,6 +93,20 @@ test('a guide pulled back to private or draft leaves the collection even though 
   const result = await f.load('creator', 'viewer')
   assert.equal(result.length, 1)
   assert.equal(result[0].id, 'guide-0')
+})
+
+test('unlisted guides stay out of creator listings even for their owner', async () => {
+  const f = fixture([guide(0), guide(1, 'creator', true, 'unlisted')])
+  assert.equal(JSON.stringify((await f.load('creator', 'creator')).map(g => g.id)), JSON.stringify(['guide-0']))
+})
+
+test('direct share links allow unlisted content but reject private/draft and private decks', async () => {
+  for (const visibility of ['public', 'unlisted', 'draft', 'private']) {
+    const f = fixture([guide(0, 'creator', true, visibility)])
+    const shared = await f.share('guide-0')
+    assert.equal(Boolean(shared), visibility === 'public' || visibility === 'unlisted')
+  }
+  assert.equal(await fixture([guide(0, 'creator', false, 'unlisted')]).share('guide-0'), null)
 })
 
 test('creator collection includes guides beyond Discover and database page limits', async () => {

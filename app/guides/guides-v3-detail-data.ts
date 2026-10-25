@@ -566,6 +566,17 @@ export const getGuidesV3GuideDetail = cache(
       assignedDecks = assigned.decks
     }
 
+    // Unlisted guides are deliberately absent from the library payload, but
+    // members arriving through a direct link must still be able to open them.
+    // The share loader rejects draft/private guides and non-public decks.
+    if (!guide) {
+      const shared = await getSharedGuideFile(guideId)
+      if (shared) {
+        guide = shared.guide
+        assignedDecks = shared.decks
+      }
+    }
+
     if (!guide) return null
 
     // `guide.id` is now the real `guides.id` (not the old synthetic
