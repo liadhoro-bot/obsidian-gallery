@@ -488,14 +488,15 @@ export function evaluateRecommendationsV11(
 
   accepted.sort(compareRanked)
 
-  // One card per action on a target; "continue painting" and "update its
-  // stage" on the same unit are different actions and may both appear.
+  // One card per intent: "continue painting" and "update its stage" share
+  // the unit's work intent, so Show another moves on to a different unit
+  // instead of offering the same one twice.
   const seen = new Set<string>()
   const perRule = new Map<string, number>()
   const selected: RankedCandidate[] = []
 
   for (const candidate of accepted) {
-    const intent = `${candidate.actionType}:${candidate.targetId ?? 'none'}`
+    const intent = candidate.intentKey
     if (seen.has(intent)) {
       rejected.push({
         ruleId: candidate.ruleId,

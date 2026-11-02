@@ -5,7 +5,7 @@ import { buildUserContext, intentFit, projectAbandonmentRisk } from '../lib/reco
 import { evaluateRecommendations } from '../lib/recommended-action/engine'
 import { evaluateRecommendationsV11 } from '../lib/recommended-action/engine-v11'
 import { buildSuppression } from '../lib/recommended-action/feedback'
-import { parseActivity } from '../lib/recommended-action/snapshot'
+import { parseActivity, settleOpenSession } from '../lib/recommended-action/snapshot'
 import type {
   ActivitySummary,
   EngineSnapshot,
@@ -230,9 +230,16 @@ test('S4 regression: established painter is never sent to an old empty project',
   assert.ok(!result.recommendations.some((item) => item.ruleId === 'RA03'), 'RA03 must not be in the rotation')
   assert.deepEqual(rejectionsFor(result, 'RA03'), ['lifecycle_gate'])
   assert.equal(result.diagnostics.trace?.winner?.ruleId, 'RA09')
-  // Tomb Guard was painted after its last stage change: updating it is a
-  // genuine follow-up.
-  assert.ok(rules(result).includes(`RA07:${TOMB_GUARD}`))
+  // Tomb Guard was painted after its last stage change: updating it passes
+  // the check-in gate, but shares the unit's work intent with Continue, so
+  // the unit fills one slot.
+  assert.ok(!rules(result).includes(`RA07:${TOMB_GUARD}`))
+  assert.deepEqual(
+    result.diagnostics.rejected
+      .filter((entry) => entry.ruleId === 'RA07' && entry.targetId === TOMB_GUARD)
+      .map((entry) => entry.reason),
+    ['duplicate_intent']
+  )
 
   // The shadow comparison exists to catch exactly this: V1 picks the project.
   assert.equal(evaluateRecommendations(input).recommendations[0].ruleId, 'RA03')
@@ -322,6 +329,64 @@ test('S7 recent unlogged session is protected; an accidental 1-minute timer is n
   assert.deepEqual(rejectionsFor(accidental, 'RA10'), ['no_real_outcome'])
 })
 
+test('S7b a timer forgotten weeks ago is closed at the cap, not "running"', () => {
+  const forgotten = {
+    id: id(401),
+    unitId: TOMB_GUARD,
+    startedAt: ago(48 * DAY),
+    endedAt: null,
+    hasNotes: false,
+    durationSeconds: null,
+  }
+  const settled = settleOpenSession(forgotten, null, NOW_MS)
+  assert.equal(settled.activeSession, null)
+  assert.equal(settled.latestEndedSession?.endedAt, new Date(Date.parse(forgotten.startedAt) + 2 * HOUR).toISOString())
+  assert.equal(settled.latestEndedSession?.durationSeconds, 2 * 60 * 60)
+
+  // Lapsed painter whose last act was leaving that timer on: welcome them
+  // back to the unit, no "Finish your session" from 48 days ago.
+  const input = snapshot('paint_miniature', {
+    units: [unit(TOMB_GUARD, 'Tomb Guard', { lastSessionAt: ago(48 * DAY) })],
+    totals: { projects: 0, units: 1, guides: 0, sessions: 6, ownedPaints: 0, savedGuides: 0 },
+    activity: activity({
+      firstMeaningfulAt: ago(200 * DAY),
+      lastMeaningfulAt: ago(48 * DAY),
+      daysLifetime: 8,
+      actionsLifetime: 14,
+      families: families({ painting: { lifetime: 14 } }),
+      units: { [TOMB_GUARD]: unitStats({ lastActivityAt: ago(48 * DAY), lastSessionAt: ago(48 * DAY), sessionsTotal: 6 }) },
+    }),
+    ...settled,
+  })
+  const result = evaluateRecommendationsV11(input)
+  assert.equal(rules(result)[0], `RA09:${TOMB_GUARD}`)
+  assert.ok(!result.recommendations.some((item) => item.ruleId === 'RA10'))
+})
+
+test('S7c a timer started within the cap is still running and protected', () => {
+  const running = {
+    id: id(402),
+    unitId: TOMB_GUARD,
+    startedAt: ago(90 * 60 * 1000),
+    endedAt: null,
+    hasNotes: false,
+    durationSeconds: null,
+  }
+  const settled = settleOpenSession(running, null, NOW_MS)
+  assert.equal(settled.activeSession, running)
+
+  const input = { ...establishedPainter(), ...settled }
+  const result = evaluateRecommendationsV11(input)
+  assert.equal(result.recommendations[0].ruleId, 'RA10')
+  assert.equal(result.recommendations[0].title, 'Finish your session on Tomb Guard')
+})
+
+test('S7d a later ended session wins over an older capped timer', () => {
+  const capped = { id: id(403), unitId: GAUNT, startedAt: ago(10 * DAY), endedAt: null, hasNotes: false, durationSeconds: null }
+  const ended = { id: id(404), unitId: TOMB_GUARD, startedAt: ago(5 * HOUR), endedAt: ago(4 * HOUR), hasNotes: true, durationSeconds: 3600 }
+  assert.equal(settleOpenSession(capped, ended, NOW_MS).latestEndedSession, ended)
+})
+
 test('S8 a finished unit is never nagged with unit work', () => {
   const done = unit(TOMB_GUARD, 'Tomb Guard', { status: 'complete', lastDoneStepKey: 'done', hasAnyImage: false, imageUrl: null })
   const input = snapshot('paint_miniature', {
@@ -381,11 +446,13 @@ test('S10 the unit painted yesterday beats a nearly-done unit untouched for 100 
 
 test('S11 not interested removes that key; the next candidate takes over', () => {
   const input = establishedPainter()
-  const [first, second] = evaluateRecommendationsV11(input).recommendations
+  const [first] = evaluateRecommendationsV11(input).recommendations
   const after = evaluateRecommendationsV11(input, { dismissedKeys: [first.recommendationKey] })
 
   assert.ok(!after.recommendations.some((item) => item.recommendationKey === first.recommendationKey))
-  assert.equal(after.recommendations[0].recommendationKey, second.recommendationKey)
+  // Dismissal is per key: the unit's stage check-in, merged behind Continue
+  // until now, is the strongest remaining candidate.
+  assert.equal(rules(after)[0], `RA07:${TOMB_GUARD}`)
 })
 
 test('S12 remind me later hides for now and changes no relevance', () => {

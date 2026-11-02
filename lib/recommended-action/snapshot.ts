@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { MAX_TIMER_SESSION_SECONDS } from '../../utils/sessions/expire-unit-sessions'
 import { toExperienceLevel, toPersona } from './persona'
 import type {
   ActivitySummary,
@@ -107,6 +108,32 @@ function toSession(
         durationSeconds: row.duration_seconds ?? null,
       }
     : null
+}
+
+/**
+ * A timer left running past the cap is not a session in progress: the app
+ * closes it at exactly started_at + cap the next time a timer is touched
+ * (utils/sessions/expire-unit-sessions.ts). Read it the same way, so a timer
+ * forgotten weeks ago is neither "running" nor blocking Continue Painting.
+ */
+export function settleOpenSession(
+  open: SnapshotSession | null,
+  latestEnded: SnapshotSession | null,
+  nowMs: number
+): { activeSession: SnapshotSession | null; latestEndedSession: SnapshotSession | null } {
+  const startedMs = open ? Date.parse(open.startedAt) : NaN
+  if (!open || !Number.isFinite(startedMs) || nowMs - startedMs <= MAX_TIMER_SESSION_SECONDS * 1000) {
+    return { activeSession: open, latestEndedSession: latestEnded }
+  }
+
+  const closed: SnapshotSession = {
+    ...open,
+    endedAt: new Date(startedMs + MAX_TIMER_SESSION_SECONDS * 1000).toISOString(),
+    durationSeconds: MAX_TIMER_SESSION_SECONDS,
+  }
+  const endedLater =
+    latestEnded?.endedAt && Date.parse(latestEnded.endedAt) >= Date.parse(closed.endedAt!)
+  return { activeSession: null, latestEndedSession: endedLater ? latestEnded : closed }
 }
 
 const FAMILIES: readonly FeatureFamily[] = ['painting', 'paints', 'guides', 'discovery']
@@ -341,8 +368,11 @@ export async function loadEngineSnapshot(
     if (unitRows.length >= MAX_UNITS) break
     if (!unitRows.some((row) => row.id === unit.id)) unitRows.push(unit)
   }
-  const activeSession = toSession(activeSessionResult.data)
-  const latestEndedSession = toSession(endedSessionResult.data)
+  const { activeSession, latestEndedSession } = settleOpenSession(
+    toSession(activeSessionResult.data),
+    toSession(endedSessionResult.data),
+    now.getTime()
+  )
 
   // A running or just-ended session must be able to name its unit even when
   // that unit fell outside the recent-units window; so must the units the
