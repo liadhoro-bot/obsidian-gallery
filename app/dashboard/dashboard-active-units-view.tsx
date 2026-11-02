@@ -30,6 +30,7 @@ import styles from './dashboard-og.module.css'
 import { LoadingPanels } from '../components/navigation-feedback/loading-surface'
 import { WorkbenchShell } from '@/src/components/v3/composition/workbench-shell'
 import { clearDashboardReturn, rememberDashboardReturn } from './dashboard-return-store'
+import RecommendedActionCard, { type RecommendedActionCardProps } from './recommended-action-card'
 
 type ActiveTab = 'profile' | 'painting-table'
 
@@ -571,6 +572,7 @@ export default function DashboardActiveUnitsView({
   source = 'live',
   userId,
   returnHref,
+  recommendedAction,
 }: {
   featureGuides?: DashboardFeatureGuide[]
   initialTab: ActiveTab
@@ -579,6 +581,9 @@ export default function DashboardActiveUnitsView({
   source?: 'fixture' | 'live'
   userId?: string
   returnHref?: string
+  // Set when the Recommended Action card replaces the onboarding checklist
+  // (kill switch on for this user). The checklist code stays for later use.
+  recommendedAction?: RecommendedActionCardProps
 }) {
   const routePathname = usePathname()
   const pathname = returnHref ? '/dashboard' : routePathname
@@ -714,7 +719,11 @@ export default function DashboardActiveUnitsView({
       >
         {currentTab === 'painting-table' ? (
           <div className={styles.dashboardBody}>
-            <NextActionsObject nextActions={model.nextActions} />
+            {recommendedAction ? (
+              <RecommendedActionCard {...recommendedAction} />
+            ) : (
+              <NextActionsObject nextActions={model.nextActions} />
+            )}
             <FeaturedUnit unit={model.featuredUnit} />
             <ActiveUnitsPanel units={model.units} />
           </div>

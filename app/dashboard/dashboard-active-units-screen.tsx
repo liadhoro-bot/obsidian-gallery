@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
 import { createPerfTimer } from '../../utils/perf/server'
+import { createClient } from '../../utils/supabase/server'
+import { isRecommendedActionEnabledFor } from '../../lib/recommended-action/config'
+import { getDashboardRecommendations } from '../../lib/recommended-action/service'
 import {
   getDashboardFeaturedProject,
   getDashboardNextActions,
@@ -220,13 +223,19 @@ export async function DashboardActiveUnitsScreen({
     )
   }
 
-  const [feed, nextActions, featuredProject] = await perf.measure(
+  // The Recommended Action card replaces the onboarding checklist when the
+  // kill switch is on for this user; otherwise the checklist loads as before.
+  const useRecommendedAction = isRecommendedActionEnabledFor(userId)
+  const [feed, nextActions, featuredProject, recommendedAction] = await perf.measure(
     'active units view model',
     () =>
       Promise.all([
         getDashboardPaintingTableFeed(userId),
-        getDashboardNextActions(userId),
+        useRecommendedAction ? null : getDashboardNextActions(userId),
         getDashboardFeaturedProject(userId),
+        useRecommendedAction
+          ? createClient().then((supabase) => getDashboardRecommendations(supabase, userId))
+          : undefined,
       ])
   )
   perf.total()
@@ -238,6 +247,7 @@ export async function DashboardActiveUnitsScreen({
       initialTab={initialTab}
       model={createDashboardActiveUnitsViewModel({ feed, nextActions, featuredProject })}
       profilePanel={profilePanel}
+      recommendedAction={recommendedAction}
     />
   )
 }
