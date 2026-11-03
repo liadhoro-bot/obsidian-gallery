@@ -95,6 +95,8 @@ type UnitV3SessionRow = {
   ended_at: string | null
   id: string
   started_at: string
+  paused_at: string | null
+  paused_seconds: number | null
   duration_seconds: number | null
   notes: string | null
   entry_source: string | null
@@ -296,7 +298,7 @@ async function getUnitV3PreviewUnit(
   const sessionsPromise = shouldLoadPaintTab
     ? supabase
         .from('unit_sessions')
-        .select('id, started_at, ended_at, duration_seconds, notes, entry_source')
+        .select('id, started_at, ended_at, duration_seconds, notes, entry_source, paused_at, paused_seconds')
         .eq('unit_id', id)
         .eq('user_id', userId)
         .or('ended_at.is.null,duration_seconds.gt.0')

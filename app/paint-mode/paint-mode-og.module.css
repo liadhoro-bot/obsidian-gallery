@@ -49,9 +49,10 @@
     linear-gradient(180deg, rgb(18 12 9 / 0.34) 0%, transparent 32%, transparent 46%, rgb(18 12 9 / 0.86) 100%);
 }
 
+/* Above .heroBody, which spans the whole hero and would swallow the taps. */
 .heroTop {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   inset: var(--og-space-3) var(--og-space-3) auto;
   display: flex;
   justify-content: space-between;

@@ -33,8 +33,10 @@ import {
   uploadUnitGalleryImages,
 } from './actions'
 import type { GalleryUploadResult } from '../../../utils/images/gallery-upload'
+import { paintModeHref } from '../../paint-mode/paint-mode-href'
 import {
   capTimerSessionSeconds,
+  getPaintedSeconds,
   MAX_TIMER_SESSION_SECONDS,
 } from '../../../utils/sessions/expire-unit-sessions'
 import WorkbenchGallery from '../../components/gallery/workbench-gallery'
@@ -71,7 +73,7 @@ type PreviewUnit = {
   image: string
   galleryImages?: PreviewGalleryImage[]
   paintSessions?: UnitPaintSession[]
-  activeSession?: { id: string; started_at: string } | null
+  activeSession?: { id: string; started_at: string; paused_at?: string | null; paused_seconds?: number | null } | null
   scheduledSessions?: ScheduledPaintSession[]
   lastPainted?: string | null
   project: string
@@ -2032,11 +2034,12 @@ function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoS
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [activeSession])
-  // Timers stop counting at the two-hour cap; the server closes the session
-  // at exactly started_at + 2h.
+  // Timers stop counting at the two-hour cap of painted time (pauses from
+  // Paint Mode don't count); a paused session never reaches it here.
   useEffect(() => {
-    if (!activeSession || activeSession.id === 'optimistic') return
-    const stopAt = Date.parse(activeSession.started_at) + MAX_TIMER_SESSION_SECONDS * 1000
+    if (!activeSession || activeSession.id === 'optimistic' || activeSession.paused_at) return
+    const stopAt = Date.parse(activeSession.started_at) +
+      (MAX_TIMER_SESSION_SECONDS + (activeSession.paused_seconds ?? 0)) * 1000
     const timeout = setTimeout(() => {
       if (timerMutation.current) return
       timerMutation.current = true
@@ -2053,8 +2056,15 @@ function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoS
     return () => clearTimeout(timeout)
   }, [activeSession, router, startTransition, unit.id])
   const elapsed = activeSession
-    ? capTimerSessionSeconds(Math.floor((now - Date.parse(activeSession.started_at)) / 1000))
+    ? capTimerSessionSeconds(getPaintedSeconds(activeSession, now))
     : 0
+  const isSessionPaused = Boolean(activeSession?.paused_at)
+  const sessionSearchParams = useSearchParams()
+  const isPreview = sessionSearchParams.get('preview') === '1'
+  const paintModeLink = paintModeHref(unit.id, {
+    preview: isPreview,
+    returnPath: `/units/${unit.id}?tab=paint${isPreview ? '&preview=1' : ''}`,
+  })
   const runningClock = `${String(Math.floor(elapsed / 3600)).padStart(2, '0')}:${String(Math.floor(elapsed / 60) % 60).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`
   const [startPaintingError, setStartPaintingError] = useState<string | null>(
     null
@@ -2195,6 +2205,8 @@ function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoS
         } else {
           const saved = await startUnitSession(unit.id, startedAt)
           setActiveSession(saved)
+          // A started session continues in Paint Mode, which closes back here.
+          router.push(paintModeLink)
         }
         if (previousSession) router.refresh()
       } catch (error) {
@@ -2209,7 +2221,7 @@ function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoS
         setTimerPending(false)
       }
     })
-  }, [activeSession, router, startTransition, unit.id])
+  }, [activeSession, paintModeLink, router, startTransition, unit.id])
 
   useEffect(() => {
     if (!autoStartSession || autoStartHandled.current) return
@@ -2255,8 +2267,20 @@ function PaintTab({ unit, autoStartSession = false }: { unit: PreviewUnit; autoS
 
         {activeSession ? (
           <div data-v3-unit-indicator="session-clock" className="mt-4 rounded-[10px] border p-3">
-            <p className="text-xs font-bold text-cyan-300">Session Running{timerPending ? ' · Saving…' : ''}</p>
-            <p role="timer" aria-label="Painting session elapsed time" className="mt-1 text-2xl font-black tabular-nums text-white">{runningClock}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-cyan-300">{isSessionPaused ? 'Session Paused' : 'Session Running'}{timerPending ? ' · Saving…' : ''}</p>
+                <p role="timer" aria-label="Painting session elapsed time" className="mt-1 text-2xl font-black tabular-nums text-white">{runningClock}</p>
+              </div>
+              {activeSession.id !== 'optimistic' ? (
+                <Link
+                  href={paintModeLink}
+                  className="tap-press mt-1 rounded-full border border-[color:var(--og-brass-500)] px-3 py-1.5 text-xs font-black text-[color:var(--og-brass-500)]"
+                >
+                  Open Paint Mode
+                </Link>
+              ) : null}
+            </div>
           </div>
         ) : null}
         <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">

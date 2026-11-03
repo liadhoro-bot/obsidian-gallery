@@ -5,6 +5,8 @@ import type { ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { prefetchRoute } from '../components/route-prefetch'
+import { paintModeHref } from '../paint-mode/paint-mode-href'
+import { startUnitSession } from '../units/[id]/actions'
 import styles from './dashboard-og.module.css'
 
 export default function DashboardResumeButton({
@@ -19,9 +21,8 @@ export default function DashboardResumeButton({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isNavigating, setIsNavigating] = useState(false)
-  const href = `/units/${unitId}?session=started&autostart=1${
-    searchParams.get('preview') === '1' ? '&preview=1' : ''
-  }`
+  // Starts (or picks up) the unit's session, then paints in Paint Mode.
+  const href = paintModeHref(unitId, { preview: searchParams.get('preview') === '1' })
 
   return (
     <button
@@ -35,7 +36,12 @@ export default function DashboardResumeButton({
         }
 
         setIsNavigating(true)
-        router.push(href, { scroll: false })
+        void startUnitSession(unitId, new Date().toISOString())
+          .then(() => router.push(href, { scroll: false }))
+          .catch((error) => {
+            console.error('[dashboard] start painting', error)
+            setIsNavigating(false)
+          })
       }}
       className={styles.inlineLinkButton}
       disabled={isNavigating}
