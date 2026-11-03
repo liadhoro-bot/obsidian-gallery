@@ -97,3 +97,14 @@ export const deckDetailFeatureGuides = [
   guide('guides.deck.cover', 'Cover Card', 'The cover card identifies the guide, its promise, step count, and paint count.', 110),
   guide('guides.deck.steps', 'Step Cards', 'Step cards explain the process one move at a time, with paints and images shown directly on the card when available.', 120, 'top'),
 ]
+
+export const paintModeFeatureGuides = [
+  guide('paint-mode.hero', 'Paint Mode', 'Paint Mode keeps everything you need at the table on one screen while a painting session runs. Close it any time; your timer keeps going.', 100),
+  guide('paint-mode.unit-actions', 'Choose, Switch, Add', 'Choose a unit to start its timer. Switch Unit ends this session and starts one on another unit. Add Unit starts a second timer without ending this one.', 110),
+  guide('paint-mode.timer', 'Session Timer', 'The timer counts painted time for the unit on the table. Timers stop on their own at two hours.', 120),
+  guide('paint-mode.controls', 'End and Pause', 'Pause stops the clock without ending the session. End Session logs the time to the unit and closes Paint Mode.', 130),
+  guide('paint-mode.unit-tools', 'Note, Paints, Snapshot', 'Add Note writes on the unit itself. Paints Used logs a paint on the current stage and the unit palette. Take Snapshot saves a progress photo from this session.', 140, 'top'),
+  guide('paint-mode.reference-tools', 'Guide, Gallery, Palette', 'Open a guide, a gallery photo, or the unit palette on top of Paint Mode. Back returns you here.', 150, 'top'),
+  guide('paint-mode.progress-gallery', 'Progress Gallery', 'Every snapshot you take, in order, so you can see the unit come together.', 160, 'top'),
+  guide('paint-mode.metrics', 'Unit Metrics', 'Total painted time including this session, session count, when the unit was added, and its deadline.', 170, 'top'),
+]

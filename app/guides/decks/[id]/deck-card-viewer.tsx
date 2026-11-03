@@ -20,6 +20,9 @@ type DeckCardViewerProps = {
   title: string
   // Omitted on the logged-out share route, which has nowhere to go back to.
   backHref?: string
+  // Replaces the history-back button, for a viewer opened as an overlay
+  // (Paint Mode) rather than as its own page.
+  onBack?: () => void
   featureGuides: FeatureGuideEntry[]
   heroActions?: ReactNode
 }
@@ -29,6 +32,7 @@ export default function DeckCardViewer({
   initialCardKey,
   title,
   backHref,
+  onBack,
   featureGuides,
   heroActions,
 }: DeckCardViewerProps) {
@@ -125,7 +129,13 @@ export default function DeckCardViewer({
 
   return (
     <div className={styles.viewer} role="group" aria-label={`${title} cards`}>
-      {backHref ? <GuideBackButton fallbackHref={backHref} className={styles.backButton} /> : null}
+      {onBack ? (
+        <button type="button" className={styles.backButton} aria-label="Go back" onClick={onBack}>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m14 6-6 6 6 6" /></svg>
+        </button>
+      ) : backHref ? (
+        <GuideBackButton fallbackHref={backHref} className={styles.backButton} />
+      ) : null}
 
       <div className={styles.topRightGroup}>
         {heroActions}

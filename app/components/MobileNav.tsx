@@ -55,6 +55,7 @@ export default function MobileNav() {
     pathname.startsWith('/offline') ||
     pathname.startsWith('/support') ||
     pathname.startsWith('/settings/terms') ||
+    pathname.startsWith('/paint-mode') ||
     pathname.startsWith('/guides/decks')
 
   const getNavHref = useCallback((href: string) => href, [])

@@ -29,6 +29,8 @@ import { applyPaletteEdit, type PaletteEdit } from '../../../lib/palette/palette
 import {
   capTimerSessionSeconds,
   closeExpiredUnitSessions,
+  getPaintedSeconds,
+  getSessionEndedAt,
   MAX_TIMER_SESSION_SECONDS,
 } from '../../../utils/sessions/expire-unit-sessions'
 
@@ -380,7 +382,7 @@ export async function endUnitSession(unitId: string) {
 
   const { data: session, error: sessionError } = await supabase
     .from('unit_sessions')
-    .select('id, started_at')
+    .select('id, started_at, paused_at, paused_seconds')
     .eq('unit_id', unitId)
     .eq('user_id', user.id)
     .is('ended_at', null)
@@ -398,18 +400,19 @@ export async function endUnitSession(unitId: string) {
     return null
   }
 
-  const started = new Date(session.started_at).getTime()
-  const durationSeconds = capTimerSessionSeconds(
-    Math.floor((Date.now() - started) / 1000)
+  // Paused time is not painted time; a capped session ends when it hit the cap.
+  const durationSeconds = capTimerSessionSeconds(getPaintedSeconds(session))
+  const endedAt = getSessionEndedAt(
+    durationSeconds === MAX_TIMER_SESSION_SECONDS ? { ...session, paused_at: null } : session,
+    durationSeconds
   )
-
-  const endedAt = new Date(started + durationSeconds * 1000).toISOString()
 
   const { data: updatedSession, error } = await supabase
     .from('unit_sessions')
     .update({
       ended_at: endedAt,
       duration_seconds: durationSeconds,
+      paused_at: null,
       entry_source: 'timer',
     })
     .eq('id', session.id)
@@ -1106,6 +1109,25 @@ export async function uploadUnitGalleryImages(
     throw new Error('Unit not found')
   }
 
+  // Paint Mode snapshots: tie the photo to the running session and tag it
+  // with the stage being painted, so the Progress tab files it there too.
+  const snapshotSessionId = String(formData.get('unitSessionId') || '') || null
+  const snapshotStageKey = String(formData.get('stageKey') || '') || null
+
+  if (snapshotSessionId) {
+    const { data: snapshotSession } = await supabase
+      .from('unit_sessions')
+      .select('id')
+      .eq('id', snapshotSessionId)
+      .eq('unit_id', unitId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!snapshotSession) {
+      throw new Error('Painting session not found')
+    }
+  }
+
   const { data: existingFeatured } = await supabase
     .from('image_assets')
     .select('id')
@@ -1174,7 +1196,8 @@ export async function uploadUnitGalleryImages(
         storage_path: filePath,
         is_featured: shouldBeFeatured,
         sort_order: nextSortOrder++,
-        alt_text: null,
+        alt_text: snapshotStageKey ? `stage:${snapshotStageKey}` : null,
+        ...(snapshotSessionId ? { unit_session_id: snapshotSessionId } : null),
       })
       .select(
         'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path'
@@ -1545,7 +1568,7 @@ export async function expireUnitSessionAtTwoHours(unitId: string) {
 
   const { data: session, error: sessionError } = await supabase
     .from('unit_sessions')
-    .select('id, started_at')
+    .select('id, started_at, paused_at, paused_seconds')
     .eq('unit_id', unitId)
     .eq('user_id', user.id)
     .is('ended_at', null)
@@ -1557,18 +1580,21 @@ export async function expireUnitSessionAtTwoHours(unitId: string) {
     throw sessionError
   }
 
-  if (!session) {
+  // The unit page's timer calls this at two wall-clock hours; a session
+  // paused in Paint Mode has not painted that long yet.
+  // A few seconds of slack covers client/server clock drift.
+  if (!session || getPaintedSeconds(session) < MAX_TIMER_SESSION_SECONDS - 30) {
     return null
   }
 
-  const startedAt = new Date(session.started_at)
-  const forcedEndAt = new Date(startedAt.getTime() + MAX_TIMER_SESSION_SECONDS * 1000)
+  const forcedEndAt = getSessionEndedAt(session, MAX_TIMER_SESSION_SECONDS)
 
   const { error } = await supabase
     .from('unit_sessions')
     .update({
-      ended_at: forcedEndAt.toISOString(),
+      ended_at: forcedEndAt,
       duration_seconds: MAX_TIMER_SESSION_SECONDS,
+      paused_at: null,
     })
     .eq('id', session.id)
 
