@@ -18,7 +18,7 @@ const paints = {
   bone: fixturePaint('fx-bone', 'Wraithbone', 'Base', '#d9cba8'),
   blue: fixturePaint('fx-blue', 'Kantor Blue', 'Base', '#1f5a95'),
   violet: fixturePaint('fx-violet', 'Xereus Purple', 'Layer', '#5a2a8c', '2:1'),
-  gold: fixturePaint('fx-gold', 'Retributor Armour', 'Base', '#b88a3e'),
+  gold: { ...fixturePaint('fx-gold', 'Retributor Armour', 'Base', '#b88a3e'), isOwned: false },
 }
 
 // Used only when no real guide could be loaded (signed out): same shape as

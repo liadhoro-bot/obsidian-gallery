@@ -12,6 +12,8 @@ export type PaintModeSwatch = {
   line: string | null
   hex: string | null
   swatchImageUrl: string | null
+  // In the user's collection (custom paints always are).
+  owned: boolean
 }
 
 export type PaintModeImage = {
@@ -115,6 +117,7 @@ export function guidePaintSwatches(deck: GuidesV3DeckDetail): PaintModeSwatch[] 
     line: paint.line || null,
     hex: paint.color || null,
     swatchImageUrl: paint.swatchImageUrl,
+    owned: paint.isOwned,
   }))
 }
 

@@ -31,6 +31,7 @@ import {
   GuidesSheet,
   ImagesSheet,
   NoteSheet,
+  PaintsUsedSheet,
   PaletteSheet,
   UnitPickerSheet,
   type UnitPickerIntent,
@@ -45,6 +46,7 @@ type Overlay =
   | { type: 'end' }
   | { type: 'note' }
   | { type: 'palette' }
+  | { type: 'paints-used' }
   | { type: 'guide' }
   | { type: 'inspiration' }
   | { type: 'progress' }
@@ -276,6 +278,10 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
         openOverlay({ type: 'note' })
         return
       case 'paints-used':
+        if (focusUnit.stagePaints.length) openOverlay({ type: 'paints-used' })
+        else setPaintPickerOpen(true)
+        return
+      case 'paints-add':
         setPaintPickerOpen(true)
         return
       case 'snapshot':
@@ -322,6 +328,7 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
       line: paint.line,
       hex: paint.hex ?? paint.hex_approx ?? null,
       swatchImageUrl: paint.swatch_image_url,
+      owned: paint.source === 'custom' || Boolean(paint.is_owned),
     }
     const sameSwatch = (other: PaintModeSwatch) => other.id === swatch.id && other.source === swatch.source
     const alreadyOnStage = unit.stagePaints.some(sameSwatch)
@@ -494,6 +501,17 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
 
       {overlay?.type === 'palette' && focusUnit ? (
         <PaletteSheet unit={focusUnit} unitHref={unitHref} onClose={closeOverlay} />
+      ) : null}
+
+      {overlay?.type === 'paints-used' && focusUnit ? (
+        <PaintsUsedSheet
+          unit={focusUnit}
+          onAdd={() => {
+            closeOverlay()
+            setPaintPickerOpen(true)
+          }}
+          onClose={closeOverlay}
+        />
       ) : null}
 
       {overlay?.type === 'guide' && focusUnit ? (

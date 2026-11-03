@@ -71,6 +71,7 @@ function toSwatch(row: PaintRefRow): PaintModeSwatch {
       line: custom?.series || null,
       hex: custom?.color_hex || null,
       swatchImageUrl: null,
+      owned: true,
     }
   }
 
@@ -82,6 +83,7 @@ function toSwatch(row: PaintRefRow): PaintModeSwatch {
     line: catalog?.line || null,
     hex: catalog?.hex_approx || null,
     swatchImageUrl: catalog?.swatch_image_url || null,
+    owned: false,
   }
 }
 
@@ -224,6 +226,22 @@ async function loadPaintModeUnit(
     .slice()
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map(toSwatch)
+
+  // Catalog paints carry ownership from the user's collection.
+  const catalogIds = [...new Set([...stagePaints, ...themePaints].filter((paint) => paint.source === 'catalog').map((paint) => paint.id))]
+  if (catalogIds.length) {
+    const { data: ownershipRows, error: ownershipError } = await supabase
+      .from('user_paint_ownership')
+      .select('paint_catalog_id')
+      .eq('user_id', userId)
+      .eq('is_owned', true)
+      .in('paint_catalog_id', catalogIds)
+    if (ownershipError) throw new Error(ownershipError.message)
+    const ownedIds = new Set((ownershipRows ?? []).map((row) => row.paint_catalog_id as string))
+    for (const paint of [...stagePaints, ...themePaints]) {
+      if (paint.source === 'catalog') paint.owned = ownedIds.has(paint.id)
+    }
+  }
 
   // A guide assigned to several stages is listed once.
   const recipeIds = [...new Set((stageGuidesResult.data ?? []).map((row) => row.recipe_id as string))]

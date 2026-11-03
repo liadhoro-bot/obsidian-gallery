@@ -266,7 +266,13 @@ export function NoteSheet({
   )
 }
 
-function PaintList({ paints }: { paints: Array<Pick<PaintModeSwatch, 'id' | 'name' | 'brand' | 'hex' | 'swatchImageUrl'> & { line?: string | null; ratioText?: string | null }> }) {
+function PaintList({
+  paints,
+  showOwned = false,
+}: {
+  paints: Array<Pick<PaintModeSwatch, 'id' | 'name' | 'brand' | 'hex' | 'swatchImageUrl'> & { line?: string | null; ratioText?: string | null; owned?: boolean }>
+  showOwned?: boolean
+}) {
   return (
     <ul className={styles.paintList}>
       {paints.map((paint, index) => (
@@ -279,9 +285,35 @@ function PaintList({ paints }: { paints: Array<Pick<PaintModeSwatch, 'id' | 'nam
             ) : null}
           </div>
           {paint.ratioText ? <span className={styles.paintRatio}>{paint.ratioText}</span> : null}
+          {showOwned ? (
+            <span className={styles.ownedTag} data-owned={paint.owned ? 'true' : 'false'}>
+              {paint.owned ? 'Owned' : 'Not owned'}
+            </span>
+          ) : null}
         </li>
       ))}
     </ul>
+  )
+}
+
+export function PaintsUsedSheet({
+  unit,
+  onAdd,
+  onClose,
+}: {
+  unit: PaintModeUnit
+  onAdd: () => void
+  onClose: () => void
+}) {
+  return (
+    <Sheet title={unit.stage ? `Paints Used · ${unit.stage.label}` : 'Paints Used'} onClose={onClose}>
+      <PaintList paints={unit.stagePaints} showOwned />
+      <div className={styles.sheetActions}>
+        <button type="button" className={styles.actionButton} data-variant="primary" onClick={onAdd}>
+          Add paints
+        </button>
+      </div>
+    </Sheet>
   )
 }
 

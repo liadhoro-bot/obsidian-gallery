@@ -19,7 +19,6 @@ import {
 import {
   BrushIcon,
   CalendarIcon,
-  ChartIcon,
   ChevronIcon,
   ClockIcon,
   CloseIcon,
@@ -30,7 +29,6 @@ import {
   DeadlineIcon,
   GalleryIcon,
   HelmIcon,
-  HelpIcon,
   LayersIcon,
   MiniatureOutlineArt,
   PauseIcon,
@@ -46,6 +44,7 @@ export type PaintModeBusy = 'start' | 'switch' | 'add' | 'end' | 'pause' | null
 export type PaintModeTool =
   | 'note'
   | 'paints-used'
+  | 'paints-add'
   | 'snapshot'
   | 'guide'
   | 'inspiration'
@@ -121,16 +120,16 @@ export default function PaintModeView({
 
           <div className={styles.heroTop}>
             <button type="button" className={styles.roundButton} onClick={onClose} aria-label="Close Paint Mode">
-              <CloseIcon size={22} />
+              <CloseIcon size={20} />
             </button>
             <button
               type="button"
               className={styles.roundButton}
-              data-tone="help"
+              data-feature-guide-launcher-button="true"
               onClick={onHelp}
               aria-label="Tour Paint Mode"
             >
-              <HelpIcon size={22} />
+              ?
             </button>
           </div>
 
@@ -263,8 +262,8 @@ export default function PaintModeView({
               <span className={styles.dashed}><DashedNoteArt /></span>
             )}
           </Tile>
-          <Tile label="Paints Used" onClick={() => onTool('paints-used')}>
-            <SwatchStrip paints={unit?.stagePaints ?? []} withAdd />
+          <Tile label="Paints Used" onClick={() => onTool('paints-used')} split={Boolean(unit?.stagePaints.length)}>
+            <SwatchStrip paints={unit?.stagePaints ?? []} withAdd onAdd={() => onTool('paints-add')} />
           </Tile>
           <Tile label="Take Snapshot" onClick={() => onTool('snapshot')}>
             <Polaroids images={unit ? unit.snapshots.slice(-2) : []} placeholder />
@@ -299,7 +298,6 @@ export default function PaintModeView({
           onClick={() => onTool('progress')}
           data-feature-guide-target="paint-mode.progress-gallery"
         >
-          <span className={styles.rowIcon}><GalleryIcon size={24} /></span>
           <span className={styles.rowTitle}>Progress Gallery</span>
           <span className={styles.rowThumbs}>
             {Array.from({ length: 3 }, (_, index) => {
@@ -319,8 +317,7 @@ export default function PaintModeView({
           <ChevronIcon size={20} className={styles.chevron} />
         </button>
 
-        <section className={styles.row} aria-label="Unit metrics" data-feature-guide-target="paint-mode.metrics">
-          <span className={styles.rowIcon}><ChartIcon size={22} /></span>
+        <section className={styles.row} data-layout="stack" aria-label="Unit metrics" data-feature-guide-target="paint-mode.metrics">
           <span className={styles.metricsTitle}>Unit Metrics</span>
           <div className={styles.metrics}>
             <Metric
@@ -350,15 +347,29 @@ export default function PaintModeView({
   )
 }
 
+// split: the tile holds a second button (Paints Used +), so it is a frame
+// with a full-size hit button underneath instead of one button.
 function Tile({
   label,
   onClick,
   children,
+  split = false,
 }: {
   label: ReactNode
   onClick: () => void
   children: ReactNode
+  split?: boolean
 }) {
+  if (split) {
+    return (
+      <div className={styles.tile} data-split="true">
+        <button type="button" className={styles.tileHit} onClick={onClick} aria-label={typeof label === 'string' ? label : undefined} />
+        <span className={styles.tileVisual}>{children}</span>
+        <span className={styles.tileLabel} aria-hidden="true">{label}</span>
+      </div>
+    )
+  }
+
   return (
     <button type="button" className={styles.tile} onClick={onClick}>
       <span className={styles.tileVisual}>{children}</span>
@@ -377,7 +388,9 @@ export function Swatch({ paint, size }: { paint: Pick<PaintModeSwatch, 'hex' | '
   )
 }
 
-function SwatchStrip({ paints, withAdd = false }: { paints: PaintModeSwatch[]; withAdd?: boolean }) {
+// With onAdd and paints logged, + is its own button: the tile opens the list,
+// + opens the picker.
+function SwatchStrip({ paints, withAdd = false, onAdd }: { paints: PaintModeSwatch[]; withAdd?: boolean; onAdd?: () => void }) {
   if (!paints.length) {
     return <span className={styles.dashed}><DashedSwatchArt count={3} withAdd={withAdd} /></span>
   }
@@ -387,7 +400,11 @@ function SwatchStrip({ paints, withAdd = false }: { paints: PaintModeSwatch[]; w
       {paints.slice(0, 3).map((paint) => (
         <Swatch key={`${paint.source}-${paint.id}`} paint={paint} />
       ))}
-      {withAdd ? (
+      {withAdd && onAdd ? (
+        <button type="button" className={styles.addRing} onClick={onAdd} aria-label="Add paints used">
+          <PlusIcon size={16} />
+        </button>
+      ) : withAdd ? (
         <span className={styles.addRing}><PlusIcon size={16} /></span>
       ) : null}
     </span>
