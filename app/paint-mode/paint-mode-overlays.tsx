@@ -8,13 +8,16 @@ import {
   formatShortDate,
   formatTimer,
   type PaintModeGuide,
+  type PaintModeGuideCards,
   type PaintModeImage,
   type PaintModeProjectGroup,
   type PaintModeSwatch,
   type PaintModeUnit,
 } from './paint-mode-model'
+import { loadPaintModeGuideCards } from './actions'
 import DeckCardViewer from '../guides/decks/[id]/deck-card-viewer'
-import { deckCardEntries } from '../guides/shared/deck-card-entries'
+import { deckCardEntries, guideCardNodes } from '../guides/shared/deck-card-entries'
+import { guideCardKey, resolveGuideCards } from '../guides/shared/guide-card-layout'
 import { BackIcon, CheckIcon, ChevronIcon, CloseIcon } from './paint-mode-icons'
 import { Swatch } from './paint-mode-view'
 import styles from './paint-mode-og.module.css'
@@ -340,6 +343,21 @@ export function PaletteSheet({
   )
 }
 
+// The cards the guide's own view mode shows, in the same order.
+function guideViewerCards(guide: PaintModeGuide, { decks, layout }: PaintModeGuideCards) {
+  if (!layout) return deckCardEntries(decks[0])
+  const resolved = resolveGuideCards(decks, layout)
+  const nodes = guideCardNodes(decks, resolved, {
+    id: guide.id,
+    title: guide.title,
+    description: guide.subtitle,
+    image: guide.image,
+  })
+  return resolved
+    .filter((card) => !card.hidden)
+    .map((card) => ({ key: guideCardKey(card), node: nodes.get(guideCardKey(card)) }))
+}
+
 export function GuidesSheet({
   guides,
   initialGuideId,
@@ -353,8 +371,41 @@ export function GuidesSheet({
 }) {
   const [guideId, setGuideId] = useState<string | null>(initialGuideId)
   const guide = guides.find((item) => item.id === guideId) ?? null
+  const [fetchedCards, setFetchedCards] = useState<Record<string, PaintModeGuideCards>>({})
+  const [failedGuideId, setFailedGuideId] = useState<string | null>(null)
+  const cards = guide ? guide.cards ?? fetchedCards[guide.id] ?? null : null
+  const pendingGuideId = guide && !cards ? guide.id : null
+  const backFromGuide = guides.length > 1 ? () => setGuideId(null) : onClose
 
-  if (!guide) {
+  useEffect(() => {
+    if (!pendingGuideId) return
+    let stale = false
+    loadPaintModeGuideCards(pendingGuideId)
+      .then((loaded) => {
+        if (stale) return
+        if (loaded) setFetchedCards((current) => ({ ...current, [pendingGuideId]: loaded }))
+        else setFailedGuideId(pendingGuideId)
+      })
+      .catch((error) => {
+        console.error('[paint-mode] open guide', error)
+        if (!stale) setFailedGuideId(pendingGuideId)
+      })
+    return () => {
+      stale = true
+    }
+  }, [pendingGuideId])
+
+  if (guide && !cards) {
+    return (
+      <Sheet title={guide.title} onClose={backFromGuide}>
+        <p className={styles.sheetText} role="status">
+          {failedGuideId === guide.id ? 'This guide could not be opened. Check your connection and try again.' : 'Opening guide...'}
+        </p>
+      </Sheet>
+    )
+  }
+
+  if (!guide || !cards) {
     return (
       <Sheet title="Open Guide" onClose={onClose}>
         {guides.length ? (
@@ -370,14 +421,14 @@ export function GuidesSheet({
               </span>
               <span>
                 <span className={styles.paintName}>{item.title}</span>
-                <span className={styles.paintMeta}> {item.cardCount} cards</span>
+                {item.cardCount ? <span className={styles.paintMeta}> {item.cardCount} cards</span> : null}
               </span>
             </button>
           ))
         ) : (
           <p className={styles.sheetText}>
-            No guides are assigned to this unit yet. Assign one to a stage on the{' '}
-            <Link href={`${unitHref}&tab=progress`} className={styles.textLink}>unit page</Link>.
+            No guides are assigned to this unit yet. Add one from the Guides card on the{' '}
+            <Link href={unitHref} className={styles.textLink}>unit page</Link>.
           </p>
         )}
       </Sheet>
@@ -389,10 +440,10 @@ export function GuidesSheet({
   return (
     <div className={styles.guideViewerLayer}>
       <DeckCardViewer
-        cards={deckCardEntries(guide.deck)}
+        cards={guideViewerCards(guide, cards)}
         title={guide.title}
         backHref={unitHref}
-        onBack={guides.length > 1 ? () => setGuideId(null) : onClose}
+        onBack={backFromGuide}
         featureGuides={[]}
       />
     </div>

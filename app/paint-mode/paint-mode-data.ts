@@ -3,10 +3,12 @@ import 'server-only'
 import { createClient } from '../../utils/supabase/server'
 import { closeExpiredUnitSessions } from '../../utils/sessions/expire-unit-sessions'
 import { getSupabaseImageUrl } from '../../utils/images/supabase-image'
+import { getGuideFilesByIds } from '../guides/guides-v3-data'
 import { getGuidesV3DeckDetail } from '../guides/guides-v3-detail-data'
 import {
   PAINT_MODE_FALLBACK_HERO,
   toPaintModeGuide,
+  toPaintModeGuideFile,
   type PaintModeImage,
   type PaintModeProjectGroup,
   type PaintModeSwatch,
@@ -156,6 +158,7 @@ async function loadPaintModeUnit(
     stagePaintsResult,
     themeResult,
     stageGuidesResult,
+    assignedGuidesResult,
   ] = await Promise.all([
     supabase
       .from('units')
@@ -202,9 +205,16 @@ async function loadPaintModeUnit(
       .select('id, progress_step_id, recipe_id')
       .eq('unit_id', unitId)
       .eq('user_id', userId),
+    supabase
+      .from('content_assignments')
+      .select('content_type, guide_id, recipe_id')
+      .eq('target_type', 'unit')
+      .eq('unit_id', unitId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true }),
   ])
 
-  for (const result of [imagesResult, finishedResult, stepsResult, stagePaintsResult, themeResult, stageGuidesResult]) {
+  for (const result of [imagesResult, finishedResult, stepsResult, stagePaintsResult, themeResult, stageGuidesResult, assignedGuidesResult]) {
     if (result.error) throw new Error(result.error.message)
   }
   if (unitResult.error) throw new Error(unitResult.error.message)
@@ -250,8 +260,18 @@ async function loadPaintModeUnit(
 
   await markOwnedPaints(supabase, userId, [...stagePaints, ...themePaints])
 
-  // A guide assigned to several stages is listed once.
-  const recipeIds = [...new Set((stageGuidesResult.data ?? []).map((row) => row.recipe_id as string))]
+  // The unit's Guides card (content_assignments) plus guides set on a stage
+  // (unit_stage_recipes). A deck that is also part of a listed guide, or set on
+  // several stages, is listed once.
+  const assignments = assignedGuidesResult.data ?? []
+  const guideIds = assignments.flatMap((row) => (row.content_type === 'guide' && row.guide_id ? [row.guide_id as string] : []))
+  const { guides: guideFiles } = await getGuideFilesByIds(userId, guideIds)
+
+  const listedDeckIds = new Set(guideFiles.flatMap((guide) => guide.deckIds ?? []))
+  const recipeIds = [...new Set([
+    ...assignments.flatMap((row) => (row.content_type === 'deck' && row.recipe_id ? [row.recipe_id as string] : [])),
+    ...(stageGuidesResult.data ?? []).map((row) => row.recipe_id as string),
+  ])].filter((recipeId) => !listedDeckIds.has(recipeId))
   const decks = (await Promise.all(recipeIds.map((recipeId) => getGuidesV3DeckDetail(recipeId, userId))))
     .filter((deck): deck is NonNullable<typeof deck> => Boolean(deck))
 
@@ -274,7 +294,7 @@ async function loadPaintModeUnit(
     note: unit.notes?.trim() ?? '',
     stagePaints,
     palette: themePaints,
-    guides: decks.map(toPaintModeGuide),
+    guides: [...guideFiles.map(toPaintModeGuideFile), ...decks.map(toPaintModeGuide)],
     inspiration: images.filter((image) => !image.unit_session_id).map(toImage),
     snapshots,
     metrics: {

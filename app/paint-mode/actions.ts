@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { createClient, getSessionUser } from '../../utils/supabase/server'
 import { captureServerEvent } from '../../utils/analytics/server'
+import { getGuidesV3DeckDetail, getGuidesV3GuideDetail } from '../guides/guides-v3-detail-data'
+import { forGuide } from '../guides/shared/guide-card-layout'
+import type { PaintModeGuideCards } from './paint-mode-model'
 import {
   closeExpiredUnitSessions,
   getPaintedSeconds,
@@ -136,6 +139,19 @@ export async function resumePaintSession(unitId: string) {
 
   revalidatePath(`/units/${unitId}`)
   return toTiming(data)
+}
+
+// Open Guide: the cards of a guide assigned to a unit, loaded when it's opened.
+export async function loadPaintModeGuideCards(guideId: string): Promise<PaintModeGuideCards | null> {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+
+  const guide = await getGuidesV3GuideDetail(guideId, user.id)
+  if (!guide) return null
+
+  const details = await Promise.all((guide.deckIds ?? []).map((deckId) => getGuidesV3DeckDetail(deckId, user.id)))
+  const decks = forGuide(details.filter((deck): deck is NonNullable<typeof deck> => Boolean(deck)), guide.id)
+  return decks.length ? { decks, layout: guide.cardLayout ?? [] } : null
 }
 
 // The unit's own note (units.notes) - the same field the unit Details tab

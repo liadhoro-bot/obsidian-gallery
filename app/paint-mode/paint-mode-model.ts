@@ -2,7 +2,9 @@
 // fixtures (paint-mode-fixture.ts) both produce this shape, so the same
 // PaintModeView renders either - the fixture is not a separate fake screen.
 
+import type { GuidesV3GuideFile } from '../guides/guides-v3-data'
 import type { GuidesV3DeckDetail } from '../guides/guides-v3-detail-data'
+import type { GuideCardPlacement } from '../guides/shared/guide-card-layout'
 
 export type PaintModeSwatch = {
   id: string
@@ -23,15 +25,24 @@ export type PaintModeImage = {
   createdAt: string | null
 }
 
-// A guide assigned to the unit. `deck` is the same detail the guide's own
-// view mode renders, so Open Guide shows the real cards (deckCardEntries).
+// What Open Guide renders: the same detail the guide's own view mode uses.
+// `layout` is set for a guide (its card order, including its own cover and
+// index cards) and null for a plain deck.
+export type PaintModeGuideCards = {
+  decks: GuidesV3DeckDetail[]
+  layout: GuideCardPlacement[] | null
+}
+
+// A guide or deck assigned to the unit. A guide's `cards` stay null until it
+// is opened: building them reads the whole guide library, too slow for the
+// load of a screen people open to start a timer.
 export type PaintModeGuide = {
   id: string
   title: string
   subtitle: string
   image: string | null
-  cardCount: number
-  deck: GuidesV3DeckDetail
+  cardCount: number | null
+  cards: PaintModeGuideCards | null
 }
 
 export type PaintModeSessionTiming = {
@@ -103,7 +114,18 @@ export function toPaintModeGuide(deck: GuidesV3DeckDetail): PaintModeGuide {
     subtitle: deck.description,
     image: deck.image || null,
     cardCount: deck.steps.length + (deck.coverPosition === null ? 0 : 1),
-    deck,
+    cards: { decks: [deck], layout: null },
+  }
+}
+
+export function toPaintModeGuideFile(guide: GuidesV3GuideFile): PaintModeGuide {
+  return {
+    id: guide.id,
+    title: guide.title,
+    subtitle: guide.subtitle,
+    image: guide.image || null,
+    cardCount: null,
+    cards: null,
   }
 }
 
