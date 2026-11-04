@@ -1,0 +1,144 @@
+.dialog {
+  display: grid;
+  gap: var(--og-space-3);
+}
+
+.dialog header {
+  margin-bottom: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--og-text-muted);
+  font: 500 14px/1.4 var(--og-font-ui);
+}
+
+.textLink {
+  color: var(--og-text-primary);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.folders {
+  display: grid;
+  gap: var(--og-space-2);
+}
+
+.folder {
+  border-radius: var(--og-radius-m);
+  background: var(--og-material-paper-card);
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.folderHead,
+.unit {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--og-ink-950);
+  text-align: left;
+  cursor: pointer;
+}
+
+.folderHead {
+  gap: var(--og-space-3);
+  min-height: 60px;
+  padding: var(--og-space-2) var(--og-space-3);
+  font: 700 1.2rem/1.15 var(--og-font-display);
+}
+
+.count {
+  flex: none;
+  color: var(--og-ink-500);
+  font: 600 var(--og-type-caption) var(--og-font-ui);
+}
+
+.chevron {
+  flex: none;
+  transition: transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.folderHead[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+.units {
+  display: grid;
+  gap: 2px;
+  padding: 0 var(--og-space-2) var(--og-space-2);
+}
+
+.unit {
+  gap: var(--og-space-3);
+  min-height: 56px;
+  padding: 4px var(--og-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--og-radius-s);
+  font: 600 var(--og-type-body) var(--og-font-ui);
+}
+
+.unit:hover {
+  border-color: var(--og-border-subtle);
+  background: color-mix(in srgb, var(--og-paper-50) 50%, transparent);
+}
+
+.unit[aria-checked="true"] {
+  border-color: var(--og-border-brass);
+}
+
+.check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--og-border-brass);
+  border-radius: var(--og-radius-s);
+  background: var(--og-paper-50);
+  color: var(--og-ink-950);
+}
+
+.thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: var(--og-radius-s);
+  background: var(--og-material-leather);
+  box-shadow: var(--og-shadow-photo-mount);
+}
+
+.thumb img {
+  object-fit: cover;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Stays in reach however many folders are open. */
+.build {
+  position: sticky;
+  bottom: 0;
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  box-shadow: var(--og-shadow-brass-plate);
+  color: var(--og-ink-950);
+  font: 800 15px/1 var(--og-font-ui);
+  cursor: pointer;
+}
+
+.build:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}

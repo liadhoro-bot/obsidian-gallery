@@ -41,7 +41,7 @@ type CustomPaintRow = {
   color_hex: string | null
 }
 
-type PaintRefRow = {
+export type PaintRefRow = {
   id: string
   paint_source: string | null
   paint_catalog_id: string | null
@@ -51,14 +51,14 @@ type PaintRefRow = {
   custom_paint: CustomPaintRow | CustomPaintRow[] | null
 }
 
-const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
+export const unitThemeMarker = (unitId: string) => `[unit:${unitId}]`
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value ?? null
 }
 
-function toSwatch(row: PaintRefRow): PaintModeSwatch {
+export function toSwatch(row: PaintRefRow): PaintModeSwatch {
   const catalog = firstRelation(row.catalog_paint)
   const custom = firstRelation(row.custom_paint)
 
@@ -87,7 +87,7 @@ function toSwatch(row: PaintRefRow): PaintModeSwatch {
   }
 }
 
-const paintRefColumns = `
+export const paintRefColumns = `
   id,
   paint_source,
   paint_catalog_id,
@@ -101,7 +101,7 @@ const paintRefColumns = `
   )
 `
 
-const themePaintColumns = `
+export const themePaintColumns = `
   id,
   paint_source,
   paint_catalog_id,
@@ -114,6 +114,27 @@ const themePaintColumns = `
     id, name, manufacturer, series, color_hex
   )
 `
+
+// Catalog paints carry ownership from the user's collection.
+export async function markOwnedPaints(
+  supabase: SupabaseServerClient,
+  userId: string,
+  paints: PaintModeSwatch[]
+) {
+  const catalogIds = [...new Set(paints.filter((paint) => paint.source === 'catalog').map((paint) => paint.id))]
+  if (!catalogIds.length) return
+  const { data: ownershipRows, error: ownershipError } = await supabase
+    .from('user_paint_ownership')
+    .select('paint_catalog_id')
+    .eq('user_id', userId)
+    .eq('is_owned', true)
+    .in('paint_catalog_id', catalogIds)
+  if (ownershipError) throw new Error(ownershipError.message)
+  const ownedIds = new Set((ownershipRows ?? []).map((row) => row.paint_catalog_id as string))
+  for (const paint of paints) {
+    if (paint.source === 'catalog') paint.owned = ownedIds.has(paint.id)
+  }
+}
 
 function thumb(url: string, width: number, height: number) {
   return getSupabaseImageUrl(url, { width, height, resize: 'cover', quality: 76 }) ?? url
@@ -227,21 +248,7 @@ async function loadPaintModeUnit(
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map(toSwatch)
 
-  // Catalog paints carry ownership from the user's collection.
-  const catalogIds = [...new Set([...stagePaints, ...themePaints].filter((paint) => paint.source === 'catalog').map((paint) => paint.id))]
-  if (catalogIds.length) {
-    const { data: ownershipRows, error: ownershipError } = await supabase
-      .from('user_paint_ownership')
-      .select('paint_catalog_id')
-      .eq('user_id', userId)
-      .eq('is_owned', true)
-      .in('paint_catalog_id', catalogIds)
-    if (ownershipError) throw new Error(ownershipError.message)
-    const ownedIds = new Set((ownershipRows ?? []).map((row) => row.paint_catalog_id as string))
-    for (const paint of [...stagePaints, ...themePaints]) {
-      if (paint.source === 'catalog') paint.owned = ownedIds.has(paint.id)
-    }
-  }
+  await markOwnedPaints(supabase, userId, [...stagePaints, ...themePaints])
 
   // A guide assigned to several stages is listed once.
   const recipeIds = [...new Set((stageGuidesResult.data ?? []).map((row) => row.recipe_id as string))]

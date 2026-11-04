@@ -10,6 +10,7 @@ import {
 } from '@/lib/gamification/xp'
 import { addXP } from '@/lib/gamification/add-xp'
 import { captureServerEvent } from '../../../utils/analytics/server'
+import { withoutImagesUsedByGuides } from '../../../utils/images/guide-image-references'
 import {
   getSafeImageExtension,
   type GalleryUploadResult,
@@ -2475,7 +2476,7 @@ export async function deleteUnitImage(formData: FormData) {
 
   const { data: images, error: imageError } = await supabase
     .from('image_assets')
-    .select('id, storage_bucket, storage_path')
+    .select('id, image_url, storage_bucket, storage_path')
     .eq('entity_type', 'unit')
     .eq('entity_id', unitId)
     .eq('user_id', user.id)
@@ -2489,7 +2490,8 @@ export async function deleteUnitImage(formData: FormData) {
     throw new Error('Image not found')
   }
 
-  const storagePathsByBucket = images.reduce<Record<string, string[]>>(
+  const removableImages = await withoutImagesUsedByGuides(supabase, user.id, images)
+  const storagePathsByBucket = removableImages.reduce<Record<string, string[]>>(
     (acc, image) => {
       if (image.storage_bucket && image.storage_path) {
         acc[image.storage_bucket] = acc[image.storage_bucket] || []

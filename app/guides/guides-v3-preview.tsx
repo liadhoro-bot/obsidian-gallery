@@ -35,6 +35,8 @@ import { buildTagLookup, type TagDirectoryEntry } from './shared/tag-directory'
 import { BrowseTagsPanel, FunnelIcon, type BrowseTagSection } from './shared/browse-tags-panel'
 import { useDiscoverPage } from './shared/use-discover-page'
 import DiscoverTagsPanel from './shared/discover-tags-panel'
+import { UnitSourceDialog } from './shared/unit-source-dialog'
+import type { UnitGuideDraft } from './shared/unit-guide-draft'
 import type { DiscoverPage } from './discover-data'
 import type { DiscoverQuery, DiscoverSort } from './shared/discover-query'
 
@@ -52,7 +54,6 @@ type ForgeScreen =
   | 'guide-decks'
   | 'guide-compose'
   | 'source'
-  | 'unit'
   | 'project'
   | 'photos'
   | 'paints'
@@ -91,6 +92,9 @@ type ForgeDeck = {
   gallery: ForgeDeckImage[]
   heroImageId: string
   required: boolean
+  // Set when the guide starts from real data (From Unit): these open in the
+  // editor as they are, paints included, instead of being derived from `cards`.
+  editorCards?: DeckEditorInitialCard[]
 }
 
 type ForgeCard = {
@@ -640,6 +644,7 @@ function toEditorCard(card: ForgeCard): DeckEditorInitialCard {
 }
 
 function toEditorCards(deck: ForgeDeck): DeckEditorInitialCard[] {
+  if (deck.editorCards) return deck.editorCards
   const cards = deck.cards.map(toEditorCard)
   if (cards.some((card) => card.template === 'cover')) return cards
 
@@ -665,13 +670,14 @@ function toEditorDeckDetail(deck: ForgeDeck): GuidesV3DeckDetail {
     deck.gallery.find((image) => image.id === deck.heroImageId)?.url ??
     deck.gallery[0]?.url ??
     '/onboarding/pains/tough-choices.jpeg'
+  const startingPaints = deck.editorCards?.find((card) => card.template === 'paints')?.paints ?? []
 
   return {
     id: deck.id,
     title: deck.title,
     category: deck.type,
     cards: deck.cards.length,
-    paints: 0,
+    paints: startingPaints.length,
     usedIn: 0,
     image: heroImage,
     fullImage: heroImage,
@@ -683,7 +689,16 @@ function toEditorDeckDetail(deck: ForgeDeck): GuidesV3DeckDetail {
     isPublic: deck.status === 'Public',
     ownerLabel: 'Created by you',
     steps: [],
-    paintList: [],
+    paintList: startingPaints.map((paint) => ({
+      id: paint.id,
+      name: paint.name ?? 'Unnamed Paint',
+      brand: paint.brand ?? '',
+      line: paint.line ?? '',
+      color: paint.hex_approx ?? '#17b9c2',
+      swatchImageUrl: paint.swatch_image_url,
+      isOwned: paint.is_owned ?? false,
+      isWishlist: false,
+    })),
     createdAt: new Date().toISOString(),
   }
 }
@@ -839,7 +854,7 @@ export default function GuidesV3Preview({
   const [forgeMode, setForgeMode] = useState<ForgeMode>('guide')
   const [forgeScreen, setForgeScreen] = useState<ForgeScreen | null>(null)
   const [sourceKind, setSourceKind] = useState<SourceKind>('unit')
-  const [selectedUnitId, setSelectedUnitId] = useState(sourceUnits[0].id)
+  const [isUnitDialogOpen, setIsUnitDialogOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState(sourceProjects[0].id)
   const [selectedProjectUnitIds, setSelectedProjectUnitIds] = useState(
     () => new Set(sourceProjects[0].units.map((unit) => unit.id))
@@ -928,8 +943,6 @@ export default function GuidesV3Preview({
   const selectedGuideDecks = Array.from(selectedGuideDeckIds)
     .map((deckId) => decks.find((deck) => deck.id === deckId))
     .filter((deck): deck is Deck => Boolean(deck))
-  const selectedUnit =
-    sourceUnits.find((unit) => unit.id === selectedUnitId) ?? sourceUnits[0]
   const selectedProject =
     sourceProjects.find((project) => project.id === selectedProjectId) ??
     sourceProjects[0]
@@ -938,14 +951,12 @@ export default function GuidesV3Preview({
   const editingCard =
     editingDeck?.cards.find((card) => card.id === editingCardId) ?? null
   const forgeTitle =
-    sourceKind === 'unit'
-      ? selectedUnit.title
-      : sourceKind === 'project'
-        ? selectedProject.title
-        : sourceKind === 'photos'
-          ? 'Photo Built Guide'
-          : sourceKind === 'paints'
-            ? 'Paint List Guide'
+    sourceKind === 'project'
+      ? selectedProject.title
+      : sourceKind === 'photos'
+        ? 'Photo Built Guide'
+        : sourceKind === 'paints'
+          ? 'Paint List Guide'
           : selectedTemplate.name
   const activeGuide =
     activeGuideIndex === null ? null : featureGuides[activeGuideIndex] ?? null
@@ -1017,6 +1028,7 @@ export default function GuidesV3Preview({
   function closeForge(saved = false) {
     if (!saved && !confirmLeaveEditor()) return
     setForgeScreen(null)
+    setIsUnitDialogOpen(false)
     setIsAddCardOpen(false)
     setEditingCardId(null)
     setIsEditingDeckDetails(false)
@@ -1024,7 +1036,7 @@ export default function GuidesV3Preview({
     setBuildTab('details')
   }
 
-  function chooseSource(nextSource: Exclude<SourceKind, 'scratch'>) {
+  function chooseSource(nextSource: Exclude<SourceKind, 'scratch' | 'unit'>) {
     setSourceKind(nextSource)
     setForgeScreen(nextSource)
   }
@@ -1088,16 +1100,42 @@ export default function GuidesV3Preview({
     setForgeScreen('build')
   }
 
+  function startFromUnit(draft: UnitGuideDraft, unitId: string) {
+    void capturePostHog('guide_from_unit_used', { card_count: draft.cards.length })
+    setForgeMode('deck')
+    setSourceKind('unit')
+    const deckId = `draft-deck-unit-${unitId}`
+    const baseDecks: ForgeDeck[] = [
+      {
+        id: deckId,
+        title: draft.title,
+        description: draft.description,
+        difficulty: 'Beginner',
+        status: 'Draft',
+        type: 'Image + Steps',
+        cards: [],
+        editorCards: draft.cards,
+        gallery: draft.coverImage ? [{ id: `${deckId}-cover`, url: draft.coverImage, alt: draft.title }] : [],
+        heroImageId: `${deckId}-cover`,
+        required: true,
+      },
+    ]
+
+    setForgeDecks(baseDecks)
+    setEditingDeckId(baseDecks[0].id)
+    setBuildTab('details')
+    setIsUnitDialogOpen(false)
+    setForgeScreen('build')
+  }
+
   function continueToDraft() {
     setForgeMode('deck')
     const deckTitle =
-      sourceKind === 'unit'
-        ? `${selectedUnit.title} Guide`
-        : sourceKind === 'project'
-          ? `${selectedProject.title} Guide`
-          : sourceKind === 'photos'
-            ? 'Photo Sequence Guide'
-            : 'Paint List Guide'
+      sourceKind === 'project'
+        ? `${selectedProject.title} Guide`
+        : sourceKind === 'photos'
+          ? 'Photo Sequence Guide'
+          : 'Paint List Guide'
     const cards: ForgeCard[] = [
       'Title Card',
       'Theme Card',
@@ -1131,7 +1169,7 @@ export default function GuidesV3Preview({
 
   function backFromBuild() {
     if (!confirmLeaveEditor()) return
-    if (sourceKind === 'scratch') {
+    if (sourceKind === 'scratch' || sourceKind === 'unit') {
       setForgeScreen('source')
       return
     }
@@ -1457,7 +1495,7 @@ export default function GuidesV3Preview({
           else if (forgeScreen === 'guide-compose') setForgeScreen('guide-decks')
           else if (forgeScreen === 'source') closeForge()
           else if (forgeScreen === 'draft') {
-            setForgeScreen(sourceKind === 'scratch' ? 'source' : sourceKind)
+            setForgeScreen(sourceKind === 'scratch' || sourceKind === 'unit' ? 'source' : sourceKind)
           } else if (forgeScreen === 'build') {
             backFromBuild()
           } else if (forgeScreen === 'deck-editor') {
@@ -1502,15 +1540,18 @@ export default function GuidesV3Preview({
                 startBlankDeck()
                 return
               }
+              if (source === 'unit') {
+                setIsUnitDialogOpen(true)
+                return
+              }
               chooseSource(source)
             }}
           />
         ) : null}
-        {forgeScreen === 'unit' ? (
-          <UnitSourceScreen
-            selectedUnitId={selectedUnitId}
-            onSelectUnit={setSelectedUnitId}
-            onContinue={continueToDraft}
+        {forgeScreen === 'source' && isUnitDialogOpen ? (
+          <UnitSourceDialog
+            onBuild={startFromUnit}
+            onClose={() => setIsUnitDialogOpen(false)}
           />
         ) : null}
         {forgeScreen === 'project' ? (
@@ -1753,7 +1794,6 @@ function getForgeScreenTitle(screen: ForgeScreen, mode: ForgeMode) {
   if (screen === 'guide-decks') return 'Create Guide'
   if (screen === 'guide-compose') return 'Guide Details'
   if (screen === 'source') return 'Create Guide'
-  if (screen === 'unit') return 'Choose Source Unit'
   if (screen === 'project') return 'Choose Source Project'
   if (screen === 'photos') return 'Build From Photos'
   if (screen === 'paints') return 'Build From Paints'
@@ -2218,8 +2258,7 @@ const sourceChoices: {
   {
     id: 'unit',
     title: 'From Unit',
-    body: 'Turn a completed unit into a reusable guide.',
-    disabled: true,
+    body: "Start from a unit's photos, paints, notes and progress.",
   },
   {
     id: 'project',
@@ -2298,35 +2337,6 @@ function SourcePicker({
           {disabled ? null : <span className="text-white/36">&gt;</span>}
         </button>
       ))}
-    </section>
-  )
-}
-
-function UnitSourceScreen({
-  onContinue,
-  onSelectUnit,
-  selectedUnitId,
-}: {
-  onContinue: () => void
-  onSelectUnit: (id: string) => void
-  selectedUnitId: string
-}) {
-  return (
-    <section className="grid gap-4">
-      <SearchInput placeholder="Search units..." />
-      <div className="grid gap-2">
-        {sourceUnits.map((unit) => (
-          <SelectableMediaRow
-            key={unit.id}
-            image={unit.image}
-            meta={unit.meta}
-            selected={unit.id === selectedUnitId}
-            title={unit.title}
-            onClick={() => onSelectUnit(unit.id)}
-          />
-        ))}
-      </div>
-      <PrimaryButton onClick={onContinue}>Build Guide from Unit</PrimaryButton>
     </section>
   )
 }

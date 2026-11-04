@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '../../../utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { captureServerEvent } from '../../../utils/analytics/server'
+import { withoutImagesUsedByGuides } from '../../../utils/images/guide-image-references'
 import {
   extractPaletteFromImage,
   findNearestUniquePaints,
@@ -12,6 +13,7 @@ import { completeOnboardingAction } from '../../../lib/onboarding/completion'
 import { applyPaletteEdit, type PaletteEdit } from '../../../lib/palette/palette-edit'
 
 type StoredImageAsset = {
+  image_url: string | null
   storage_bucket: string | null
   storage_path: string | null
 }
@@ -139,14 +141,14 @@ export async function deleteProject(formData: FormData) {
   const [projectImagesResult, unitImagesResult] = await Promise.all([
     supabase
       .from('image_assets')
-      .select('storage_bucket, storage_path')
+      .select('image_url, storage_bucket, storage_path')
       .eq('entity_id', projectId)
       .eq('entity_type', 'project')
       .eq('user_id', user.id),
     unitIds.length > 0
       ? supabase
           .from('image_assets')
-          .select('storage_bucket, storage_path')
+          .select('image_url, storage_bucket, storage_path')
           .eq('entity_type', 'unit')
           .eq('user_id', user.id)
           .in('entity_id', unitIds)
@@ -161,10 +163,10 @@ export async function deleteProject(formData: FormData) {
     throw unitImagesResult.error
   }
 
-  await removeStoredImages(supabase, [
+  await removeStoredImages(supabase, await withoutImagesUsedByGuides(supabase, user.id, [
     ...((projectImagesResult.data ?? []) as StoredImageAsset[]),
     ...((unitImagesResult.data ?? []) as StoredImageAsset[]),
-  ])
+  ]))
 
   if (unitIds.length > 0) {
     await supabase
