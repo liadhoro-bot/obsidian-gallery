@@ -91,7 +91,7 @@ export async function loadUnitGuideDraft(unitId: string): Promise<UnitGuideDraft
       .order('created_at', { ascending: true }),
     supabase
       .from('unit_progress_steps')
-      .select('id, step_key, step_label')
+      .select('id, step_key, step_label, notes')
       .eq('unit_id', unitId)
       .order('step_order', { ascending: true }),
     supabase
@@ -155,6 +155,7 @@ export async function loadUnitGuideDraft(unitId: string): Promise<UnitGuideDraft
     stages: (stepsResult.data ?? []).map((step) => ({
       key: step.step_key,
       label: step.step_label,
+      notes: step.notes,
       paints: stagePaints.filter(({ stepId }) => stepId === step.id).map(({ paint }) => paint),
       guideTitles: guideRows
         .filter((row) => row.progress_step_id === step.id)

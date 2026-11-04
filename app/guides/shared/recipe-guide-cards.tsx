@@ -781,7 +781,7 @@ export function RecipeGuidePaintsCard({
   paints: RecipeGuidePaint[]
   showBrandMark?: boolean
 }) {
-  const paintCountLabel = `${paints.length} ${paints.length === 1 ? 'paint' : 'paints'} in this guide`
+  const paintCountLabel = `${paints.length} ${paints.length === 1 ? 'paint' : 'paints'}`
   const footerText = description.trim()
 
   return (

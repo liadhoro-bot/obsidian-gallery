@@ -24,6 +24,7 @@ export type UnitGuideImage = {
 export type UnitGuideStage = {
   key: string
   label: string
+  notes: string | null
   paints: UnitGuidePaint[]
   guideTitles: string[]
 }
@@ -82,18 +83,20 @@ function sessionDate(startedAt: string) {
 
 function stageBody(stage: UnitGuideStage) {
   const lines: string[] = []
+  const notes = stage.notes?.trim()
+  if (notes) lines.push(notes)
   if (stage.guideTitles.length) lines.push(`Guide used: ${stage.guideTitles.join(', ')}.`)
-  const overflow = uniquePaints(stage.paints).slice(STEP_PAINT_SLOTS)
-  if (overflow.length) lines.push(`Also used: ${overflow.map((paint) => paint.name).join(', ')}.`)
   return lines.join('\n') || cardTypeDefaultBody('step')
 }
 
 // Cover, the paints, the notes, then each stage that has anything in it
-// followed by its photos, then the rest of the gallery.
+// followed by its photos, then the rest of the gallery, closing on the hero.
 export function buildUnitGuideDraft(source: UnitGuideSource): UnitGuideDraft {
   const title = source.name.trim() || 'Untitled Unit'
   const description = `A painting guide for ${title}.`
-  const coverImage = (source.images.find((image) => image.isFeatured) ?? source.images[0])?.url ?? null
+  const hero = source.images.find((image) => image.isFeatured) ?? source.images[0]
+  const coverImage = hero?.url ?? null
+  const otherImages = source.images.filter((image) => image !== hero)
 
   const stageKeys = new Set(source.stages.map((stage) => stage.key))
   const stageOf = (image: UnitGuideImage) => {
@@ -134,16 +137,33 @@ export function buildUnitGuideDraft(source: UnitGuideSource): UnitGuideDraft {
     }))
   })
 
-  for (const stage of source.stages) {
-    const photos = source.images.filter((image) => stageOf(image) === stage.key)
-    if (!photos.length && !stage.paints.length && !stage.guideTitles.length) continue
+  // Old stage tags and stock alt text aren't captions a reader should see.
+  const galleryBody = (image: UnitGuideImage) => {
+    const caption = image.altText?.startsWith(STAGE_TAG) ? '' : image.altText?.trim()
+    return caption && caption !== title ? caption : `From the ${title} gallery.`
+  }
 
+  for (const stage of source.stages) {
+    const photos = otherImages.filter((image) => stageOf(image) === stage.key)
+    const stagePaints = uniquePaints(stage.paints)
+    if (!photos.length && !stagePaints.length && !stage.guideTitles.length && !stage.notes?.trim()) continue
+
+    // More paints than the step card holds move to a Paints card of their own.
+    const fitsOnStep = stagePaints.length <= STEP_PAINT_SLOTS
     cards.push(card(`stage:${stage.key}`, {
       title: stage.label,
       template: 'step',
       body: stageBody(stage),
-      paints: uniquePaints(stage.paints).slice(0, STEP_PAINT_SLOTS).map(editorPaint),
+      paints: fitsOnStep ? stagePaints.map(editorPaint) : [],
     }))
+    if (!fitsOnStep) {
+      cards.push(card(`stage:${stage.key}:paints`, {
+        title: `Paints for ${stage.label}`,
+        template: 'paints',
+        body: `Everything used in the ${stage.label} stage.`,
+        paints: stagePaints.map(editorPaint),
+      }))
+    }
     photos.forEach((photo, index) => {
       cards.push(card(`stage:${stage.key}:photo:${index}`, {
         title: photos.length > 1 ? `${stage.label} Photo ${index + 1}` : `${stage.label} Photo`,
@@ -154,18 +174,20 @@ export function buildUnitGuideDraft(source: UnitGuideSource): UnitGuideDraft {
     })
   }
 
-  source.images
+  otherImages
     .filter((image) => !stageOf(image))
     .forEach((image, index) => {
-      // Old stage tags and stock alt text aren't captions a reader should see.
-      const caption = image.altText?.startsWith(STAGE_TAG) ? '' : image.altText?.trim()
       cards.push(card(`photo:${index}`, {
         title: `Photo ${index + 1}`,
         template: 'image',
-        body: caption && caption !== title ? caption : `From the ${title} gallery.`,
+        body: galleryBody(image),
         image: image.url,
       }))
     })
+
+  if (hero) {
+    cards.push(card('hero', { title: 'Hero Shot', template: 'image', body: galleryBody(hero), image: hero.url }))
+  }
 
   return { title, description, coverImage, cards }
 }

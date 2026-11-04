@@ -27,7 +27,9 @@ test('the featured photo becomes the cover and every photo becomes a big image c
   assert.equal(draft.coverImage, 'https://cdn/b.jpg')
   assert.equal(draft.cards[0].image, 'https://cdn/b.jpg')
   const images = draft.cards.filter((card) => card.template === 'image')
+  // The hero closes the guide, whatever its place in the gallery.
   assert.deepEqual(images.map((card) => card.image), ['https://cdn/a.jpg', 'https://cdn/b.jpg'])
+  assert.equal(draft.cards.at(-1)?.title, 'Hero Shot')
   assert.equal(images[0].body, 'From the Ultramarine gallery.')
   assert.equal(images[1].body, 'Finished squad')
 })
@@ -44,7 +46,7 @@ test('palette and stage paints land once each on one paints card, in the ids the
   const draft = buildUnitGuideDraft({
     ...emptyUnit,
     palette: [paint('a'), paint('b', 'custom')],
-    stages: [{ key: 'base', label: 'Base', paints: [paint('a'), paint('c')], guideTitles: [] }],
+    stages: [{ key: 'base', label: 'Base', notes: null, paints: [paint('a'), paint('c')], guideTitles: [] }],
   })
   const paintCards = draft.cards.filter((card) => card.template === 'paints')
   assert.equal(paintCards.length, 1)
@@ -81,9 +83,10 @@ test('only stages with something in them become step cards, each followed by its
       { url: 'https://cdn/old.jpg', isFeatured: false, altText: 'stage:removed' },
     ],
     stages: [
-      { key: 'prep', label: 'Prep', paints: [], guideTitles: [] },
-      { key: 'base', label: 'Base Coat', paints: [], guideTitles: [] },
-      { key: 'detail', label: 'Details', paints: [], guideTitles: ['Silver Armour'] },
+      { key: 'prep', label: 'Prep', notes: '  ', paints: [], guideTitles: [] },
+      { key: 'base', label: 'Base Coat', notes: null, paints: [], guideTitles: [] },
+      { key: 'detail', label: 'Details', notes: null, paints: [], guideTitles: ['Silver Armour'] },
+      { key: 'edge', label: 'Edges', notes: ' Thin lines only. ', paints: [], guideTitles: ['Silver Armour'] },
     ],
   })
   assert.deepEqual(draft.cards.map((card) => card.title), [
@@ -92,23 +95,61 @@ test('only stages with something in them become step cards, each followed by its
     'Base Coat Photo 1',
     'Base Coat Photo 2',
     'Details',
+    'Edges',
     'Photo 1',
-    'Photo 2',
+    'Hero Shot',
   ])
+  assert.equal(draft.cards.find((card) => card.title === 'Edges')?.body, 'Thin lines only.\nGuide used: Silver Armour.')
   assert.equal(draft.cards.find((card) => card.title === 'Details')?.body, 'Guide used: Silver Armour.')
   // A photo tagged for a stage that's gone is still a photo, without the raw tag.
-  assert.equal(draft.cards.at(-1)?.image, 'https://cdn/old.jpg')
-  assert.equal(draft.cards.at(-1)?.body, 'From the Ultramarine gallery.')
+  const leftover = draft.cards.find((card) => card.title === 'Photo 1')
+  assert.equal(leftover?.image, 'https://cdn/old.jpg')
+  assert.equal(leftover?.body, 'From the Ultramarine gallery.')
+  assert.equal(draft.cards.at(-1)?.image, 'https://cdn/gallery.jpg')
 })
 
-test('a stage card holds four paints and names the rest', () => {
+test('a hero tagged for a stage still closes the guide and is not repeated in the stage', () => {
   const draft = buildUnitGuideDraft({
     ...emptyUnit,
-    stages: [{ key: 'base', label: 'Base', paints: ['a', 'b', 'c', 'd', 'e'].map((id) => paint(id)), guideTitles: [] }],
+    images: [{ url: 'https://cdn/base.jpg', isFeatured: true, altText: 'stage:base' }],
+    stages: [{ key: 'base', label: 'Base', notes: null, paints: [], guideTitles: [] }],
   })
-  const stage = draft.cards.find((card) => card.title === 'Base')
-  assert.equal(stage?.paints?.length, 4)
-  assert.equal(stage?.body, 'Also used: Paint e.')
+  assert.deepEqual(draft.cards.map((card) => card.title), ['Ultramarine', 'Hero Shot'])
+})
+
+test('up to four stage paints stay on the step card', () => {
+  const draft = buildUnitGuideDraft({
+    ...emptyUnit,
+    stages: [{ key: 'base', label: 'Base', notes: null, paints: ['a', 'b', 'c', 'd'].map((id) => paint(id)), guideTitles: [] }],
+  })
+  assert.equal(draft.cards.find((card) => card.title === 'Base')?.paints?.length, 4)
+  assert.equal(draft.cards.some((card) => card.title === 'Paints for Base'), false)
+})
+
+test('more than four stage paints move to a Paints card right after the step card', () => {
+  const draft = buildUnitGuideDraft({
+    ...emptyUnit,
+    images: [
+      { url: 'https://cdn/hero.jpg', isFeatured: true, altText: null },
+      { url: 'https://cdn/base.jpg', isFeatured: false, altText: 'stage:base' },
+    ],
+    stages: [{ key: 'base', label: 'Base', notes: 'Thin coats.', paints: ['a', 'b', 'c', 'd', 'e'].map((id) => paint(id)), guideTitles: [] }],
+  })
+  assert.deepEqual(draft.cards.map((card) => card.title), ['Ultramarine', 'Paint List', 'Base', 'Paints for Base', 'Base Photo', 'Hero Shot'])
+  const step = draft.cards.find((card) => card.title === 'Base')
+  assert.deepEqual(step?.paints, [])
+  assert.equal(step?.body, 'Thin coats.')
+  const stagePaints = draft.cards.find((card) => card.title === 'Paints for Base')
+  assert.equal(stagePaints?.template, 'paints')
+  assert.equal(stagePaints?.paints?.length, 5)
+})
+
+test('notes alone are enough for a stage to get a step card', () => {
+  const draft = buildUnitGuideDraft({
+    ...emptyUnit,
+    stages: [{ key: 'prep', label: 'Prep', notes: 'Scrub the mould lines.', paints: [], guideTitles: [] }],
+  })
+  assert.equal(draft.cards.find((card) => card.title === 'Prep')?.body, 'Scrub the mould lines.')
 })
 
 test('units fall into project folders, standalone last, and folders borrow a thumbnail', () => {

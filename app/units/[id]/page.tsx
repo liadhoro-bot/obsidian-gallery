@@ -117,6 +117,7 @@ type UnitV3ProgressStepRow = {
   step_order: number
   status: 'pending' | 'in_progress' | 'done'
   progress: number
+  notes: string | null
 }
 
 type UnitV3StageGuideRow = {
@@ -463,7 +464,7 @@ async function getUnitV3PreviewUnit(
         .order('name', { ascending: true }),
       supabase
         .from('unit_progress_steps')
-        .select('id, step_key, step_label, step_order, status, progress')
+        .select('id, step_key, step_label, step_order, status, progress, notes')
         .eq('unit_id', id)
         .order('step_order', { ascending: true }),
       previewStagePaintsPromise,

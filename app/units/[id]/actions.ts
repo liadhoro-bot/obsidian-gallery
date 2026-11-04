@@ -648,6 +648,24 @@ export async function updateProgressStep(
   revalidatePath(`/units/${unitId}`)
 }
 
+// A stage's Notes box. Saved as the creator types, so nothing else on the page
+// needs to refresh.
+export async function saveStageNote(unitId: string, stepId: string, notes: string) {
+  const supabase = await createClient()
+  await requireSessionUser(supabase)
+
+  const { data, error } = await supabase
+    .from('unit_progress_steps')
+    .update({ notes: notes.trim() || null })
+    .eq('id', stepId)
+    .eq('unit_id', unitId)
+    .select('id')
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) throw new Error('Step not found')
+}
+
 export async function setFeaturedUnitImage(unitId: string, imageId: string) {
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)

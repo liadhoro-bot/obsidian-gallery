@@ -19,6 +19,7 @@ import {
   expireUnitSessionAtTwoHours,
   logManualUnitSession,
   reorderUnitImages,
+  saveStageNote,
   scheduleUnitSession,
   updateUnitScheduledSession,
   setFeaturedUnit,
@@ -137,6 +138,7 @@ type PreviewProgressStep = {
   step_order: number
   status: 'pending' | 'in_progress' | 'done'
   progress: number
+  notes?: string | null
 }
 
 type PreviewStagePaint = {
@@ -2683,6 +2685,9 @@ function ProgressTab({
   const [, startTransition] = useTransition()
   const [openTool, setOpenTool] = useState<'photo' | 'paint' | 'note' | null>(null)
   const [stageNotes, setStageNotes] = useState<Record<string, string>>({})
+  const [noteStatus, setNoteStatus] = useState<{ stepId: string; state: 'saving' | 'saved' | 'error' } | null>(null)
+  const pendingNote = useRef<{ stepId: string; note: string } | null>(null)
+  const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const liveStages = useMemo(() => buildProgressStages(unit), [unit])
   const initialStageId =
     liveStages.find((stage) => stage.status !== 'complete')?.id ??
@@ -2704,7 +2709,42 @@ function ProgressTab({
     (image) => image.stageKey === selectedStepKey
   )
   const selectedNoteKey = selectedStepId ?? selectedStepKey
-  const selectedNote = stageNotes[selectedNoteKey] ?? ''
+  const selectedNote =
+    stageNotes[selectedNoteKey] ??
+    unit.progressSteps?.find((step) => step.id === selectedStepId)?.notes ??
+    ''
+
+  function flushStageNote() {
+    if (noteTimer.current) clearTimeout(noteTimer.current)
+    noteTimer.current = null
+    const pending = pendingNote.current
+    if (!pending) return
+    pendingNote.current = null
+    const { stepId, note } = pending
+    saveStageNote(unit.id, stepId, note)
+      // A newer edit keeps showing as saving until its own save lands.
+      .then(() => setNoteStatus((current) => (pendingNote.current?.stepId === stepId ? current : { stepId, state: 'saved' })))
+      .catch(() => setNoteStatus({ stepId, state: 'error' }))
+  }
+
+  function changeStageNote(note: string) {
+    setStageNotes((current) => ({ ...current, [selectedNoteKey]: note }))
+    if (!selectedStepId) return
+    if (pendingNote.current && pendingNote.current.stepId !== selectedStepId) flushStageNote()
+    pendingNote.current = { stepId: selectedStepId, note }
+    setNoteStatus({ stepId: selectedStepId, state: 'saving' })
+    if (noteTimer.current) clearTimeout(noteTimer.current)
+    noteTimer.current = setTimeout(flushStageNote, 800)
+  }
+
+  // Leaving the page mid-sentence still saves what was typed.
+  const unitId = unit.id
+  useEffect(() => () => {
+    if (noteTimer.current) clearTimeout(noteTimer.current)
+    const pending = pendingNote.current
+    pendingNote.current = null
+    if (pending) void saveStageNote(unitId, pending.stepId, pending.note).catch(() => {})
+  }, [unitId])
 
   function handleMarkComplete() {
     if (!selectedStepId || selectedStage.id === 'done') return
@@ -2950,15 +2990,16 @@ function ProgressTab({
               key={selectedNoteKey}
               rows={4}
               value={selectedNote}
-              onChange={(event) =>
-                setStageNotes((current) => ({
-                  ...current,
-                  [selectedNoteKey]: event.target.value,
-                }))
-              }
+              onChange={(event) => changeStageNote(event.target.value)}
+              onBlur={flushStageNote}
               placeholder={`Notes for ${selectedStage.title}`}
               className="w-full resize-none rounded-[10px] border border-white/10 bg-black/24 px-3 py-2 text-sm font-semibold text-white outline-none"
             />
+            {noteStatus?.stepId === selectedStepId ? (
+              <p role="status" className="mt-2 text-xs font-semibold text-white/42">
+                {noteStatus?.state === 'saving' ? 'Saving...' : noteStatus?.state === 'saved' ? 'Saved' : 'Could not save. Keep typing to try again.'}
+              </p>
+            ) : null}
           </div>
         ) : null}
 

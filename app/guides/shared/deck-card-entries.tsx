@@ -82,6 +82,8 @@ function toRecipePaints(step: GuidesV3DeckStep): DeckGuidePaint[] {
     hex_approx: paint.color,
     swatch_image_url: paint.swatchImageUrl,
     ratio_text: paint.ratioText,
+    is_owned: paint.isOwned,
+    is_wishlist: paint.isWishlist,
   }))
 }
 
