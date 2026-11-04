@@ -223,6 +223,29 @@ export function EndSessionDialog({
   )
 }
 
+export function SnapshotSheet({
+  onCamera,
+  onGallery,
+  onClose,
+}: {
+  onCamera: () => void
+  onGallery: () => void
+  onClose: () => void
+}) {
+  return (
+    <Sheet title="Take Snapshot" onClose={onClose}>
+      <div className={styles.sheetActions}>
+        <button type="button" className={styles.actionButton} onClick={onCamera}>
+          Take a photo
+        </button>
+        <button type="button" className={styles.actionButton} onClick={onGallery}>
+          Choose from gallery
+        </button>
+      </div>
+    </Sheet>
+  )
+}
+
 export function NoteSheet({
   unit,
   onSave,

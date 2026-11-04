@@ -33,6 +33,7 @@ import {
   NoteSheet,
   PaintsUsedSheet,
   PaletteSheet,
+  SnapshotSheet,
   UnitPickerSheet,
   type UnitPickerIntent,
 } from './paint-mode-overlays'
@@ -45,6 +46,7 @@ type Overlay =
   | { type: 'picker'; intent: UnitPickerIntent }
   | { type: 'end' }
   | { type: 'note' }
+  | { type: 'snapshot' }
   | { type: 'palette' }
   | { type: 'paints-used' }
   | { type: 'guide' }
@@ -76,7 +78,8 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
   const [toast, setToast] = useState<string | null>(null)
   const [tourIndex, setTourIndex] = useState<number | null>(null)
   const [nowMs, setNowMs] = useState(renderedAt)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const overlayPushedRef = useRef(false)
 
   // A server refresh (live mode) hands us a new model; adopt it.
@@ -285,7 +288,9 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
         setPaintPickerOpen(true)
         return
       case 'snapshot':
-        fileInputRef.current?.click()
+        // A computer has no camera to offer, so it goes straight to its file picker.
+        if (window.matchMedia('(pointer: coarse)').matches) openOverlay({ type: 'snapshot' })
+        else galleryInputRef.current?.click()
         return
       case 'guide':
         openOverlay({ type: 'guide' })
@@ -368,7 +373,7 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
     })()
   }
 
-  async function uploadSnapshots(fileList: FileList | null) {
+  async function uploadSnapshots(fileList: FileList | null, uploadSource: 'camera' | 'gallery_picker') {
     if (!focusUnit || !fileList?.length) return
     const unit = focusUnit
     const files = Array.from(fileList)
@@ -394,7 +399,7 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
     try {
       const formData = new FormData()
       formData.set('unitId', unit.unitId)
-      formData.set('uploadSource', 'camera')
+      formData.set('uploadSource', uploadSource)
       formData.set('unitSessionId', unit.session.id)
       if (unit.stage) formData.set('stageKey', unit.stage.stepKey)
       files.forEach((file) => formData.append('image', file))
@@ -452,7 +457,20 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
       />
 
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className={styles.srOnly}
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          void uploadSnapshots(event.target.files, 'camera')
+          event.target.value = ''
+        }}
+      />
+      <input
+        ref={galleryInputRef}
         type="file"
         accept="image/*"
         multiple
@@ -460,7 +478,7 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
         tabIndex={-1}
         aria-hidden="true"
         onChange={(event) => {
-          void uploadSnapshots(event.target.files)
+          void uploadSnapshots(event.target.files, 'gallery_picker')
           event.target.value = ''
         }}
       />
@@ -497,6 +515,20 @@ export default function PaintModeScreen({ initialModel, mode, returnHref, return
 
       {overlay?.type === 'note' && focusUnit ? (
         <NoteSheet key={focusUnit.unitId} unit={focusUnit} onSave={saveNote} onClose={closeOverlay} />
+      ) : null}
+
+      {overlay?.type === 'snapshot' && focusUnit ? (
+        <SnapshotSheet
+          onCamera={() => {
+            cameraInputRef.current?.click()
+            closeOverlay()
+          }}
+          onGallery={() => {
+            galleryInputRef.current?.click()
+            closeOverlay()
+          }}
+          onClose={closeOverlay}
+        />
       ) : null}
 
       {overlay?.type === 'palette' && focusUnit ? (
