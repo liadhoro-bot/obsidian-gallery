@@ -16,6 +16,7 @@ import {
   isSubscriptionGateEnabled,
 } from './lib/subscription/subscription-guard'
 import { isPricingV2Active } from './lib/subscription/pricing'
+import { isPublicNewsPath } from './lib/news/public-path'
 import {
   FORWARDED_USER_HEADER,
   serializeForwardedUser,
@@ -149,6 +150,8 @@ export default async function proxy(request: NextRequest) {
     ? isPrePaymentPage
     : isPrePaymentPage ||
     pathname.startsWith('/s/') ||
+    // News is free to read and shareable. It runs no Server Actions.
+    isPublicNewsPath(pathname) ||
     // Contest creator pages are shareable like /s/ links: visitors get a
     // read-only page with a login / trial dialog. Voting (a Server Action)
     // still goes through the gate, since only pre-payment pages run actions.

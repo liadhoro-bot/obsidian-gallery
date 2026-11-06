@@ -12,6 +12,10 @@ import V3PerfIndicator from '../components/v3-perf-indicator'
 import styles from './community-v3-silver.module.css'
 import { EventHero, StorePromoHero, StoreRow, UpcomingEventRow } from './event-components'
 import { pickFeaturedEvent, type CommunityEvent } from './events-data'
+import { NewsFeedTracker } from './news/news-client'
+import { NewsRow } from './news/news-components'
+import type { NewsArticle } from './news/news-data'
+import newsStyles from './news/news.module.css'
 import { getStorePromo, getVisibleStores } from './stores-data'
 
 type CommunityTab = 'events' | 'contests' | 'news'
@@ -20,30 +24,6 @@ const tabs: Array<{ id: CommunityTab; label: string }> = [
   { id: 'events', label: 'Events' },
   { id: 'contests', label: 'Contests' },
   { id: 'news', label: 'News' },
-]
-
-const newsItems = [
-  {
-    title: 'New Vallejo Xpress Colors',
-    text: 'New high-pigment acrylics are here, with a first look from the community.',
-    time: '2 days ago',
-    tag: 'Paints',
-    image: '/onboarding/pains/paint-management.jpeg',
-  },
-  {
-    title: 'Guide of the Week',
-    text: 'Master rust and verdigris with a new step-by-step guide.',
-    time: '4 days ago',
-    tag: 'Guides',
-    image: '/onboarding/pains/pile-of-shame.jpeg',
-  },
-  {
-    title: 'Community Contest Winners',
-    text: 'See the entries from the Summer Showcase.',
-    time: '1 week ago',
-    tag: 'Community',
-    image: '/onboarding/pains/fragmentation.jpeg',
-  },
 ]
 
 const openChallenges = [
@@ -64,9 +44,13 @@ const openChallenges = [
 ]
 
 export default function CommunityV3Preview({
+  canManageNewsPromise,
   eventsPromise,
+  newsPromise,
 }: {
+  canManageNewsPromise: Promise<boolean>
   eventsPromise: Promise<CommunityEvent[]>
+  newsPromise: Promise<NewsArticle[]>
 }) {
   const requestedTab = useSearchParams().get('tab')
   const [activeTab, setActiveTab] = useState<CommunityTab>(
@@ -104,7 +88,9 @@ export default function CommunityV3Preview({
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === 'contests' ? <ContestsTab /> : null}
-        {activeTab === 'news' ? <NewsTab /> : null}
+        {activeTab === 'news' ? (
+          <NewsTab canManageNewsPromise={canManageNewsPromise} newsPromise={newsPromise} />
+        ) : null}
         {activeTab === 'events' ? (
           <Suspense fallback={<EventsTabLoading />}>
             <EventsTab eventsPromise={eventsPromise} />
@@ -266,21 +252,64 @@ function ContestsTab() {
   )
 }
 
-function NewsTab() {
+function NewsTab({
+  canManageNewsPromise,
+  newsPromise,
+}: {
+  canManageNewsPromise: Promise<boolean>
+  newsPromise: Promise<NewsArticle[]>
+}) {
   return (
     <section className="grid gap-4">
+      <NewsFeedTracker surface="community_tab" />
       <V3LaunchHero />
 
-      <SectionCard title="Latest News" action="View all" preview>
-        {newsItems.map((item) => (
-          <NewsRow key={item.title} item={item} />
-        ))}
+      <SectionCard title="Latest News" action="View all" href="/community/news">
+        <Suspense
+          fallback={
+            <p data-v3-community-indicator="events-empty" role="status">
+              Loading news…
+            </p>
+          }
+        >
+          <LatestNews newsPromise={newsPromise} />
+        </Suspense>
       </SectionCard>
+
+      <Suspense fallback={null}>
+        <NewsroomLink canManageNewsPromise={canManageNewsPromise} />
+      </Suspense>
 
       <CreatorSpotlight />
 
       <ForYouCard />
     </section>
+  )
+}
+
+function LatestNews({ newsPromise }: { newsPromise: Promise<NewsArticle[]> }) {
+  const articles = use(newsPromise)
+
+  if (articles.length === 0) {
+    return (
+      <p data-v3-community-indicator="events-empty">No news yet. Check back soon.</p>
+    )
+  }
+
+  return articles.map((article) => <NewsRow key={article.id} article={article} />)
+}
+
+function NewsroomLink({
+  canManageNewsPromise,
+}: {
+  canManageNewsPromise: Promise<boolean>
+}) {
+  if (!use(canManageNewsPromise)) return null
+
+  return (
+    <Link href="/community/newsroom" className={newsStyles.adminLink}>
+      Open Newsroom
+    </Link>
   )
 }
 
@@ -544,28 +573,6 @@ function SectionCard({
         {children}
       </div>
     </section>
-  )
-}
-
-function NewsRow({ item }: { item: (typeof newsItems)[number] }) {
-  return (
-    <article
-      className="grid grid-cols-[64px_1fr_auto] items-center gap-3 px-4 py-3"
-      data-v3-community-indicator="news-row"
-    >
-      <span className="relative h-14 w-16 overflow-hidden rounded-[8px] bg-black">
-        <Image src={item.image} alt="" fill sizes="64px" className="object-cover" />
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-sm font-black">{item.title}</span>
-        <span className="mt-1 line-clamp-2 text-xs font-semibold leading-4 text-white/45">
-          {item.text}
-        </span>
-      </span>
-      <span className="text-right text-[10px] font-black text-white/34">
-        {item.time}
-      </span>
-    </article>
   )
 }
 
