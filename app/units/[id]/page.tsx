@@ -69,6 +69,14 @@ function isMissingScheduledSessionsTable(
   )
 }
 
+function isMissingUnitNotesTable(error: UnitQueryError | null | undefined) {
+  return (
+    error?.code === '42P01' ||
+    error?.code === 'PGRST205' ||
+    Boolean(error?.message?.includes('unit_notes'))
+  )
+}
+
 type ParentProject = {
   id: string
   name: string | null
@@ -281,6 +289,7 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
     availableProjectsResult,
     initialStepsResult,
     workflow,
+    unitNotesResult,
   ] = await Promise.all([
     supabase
       .from('image_assets')
@@ -381,6 +390,13 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
       .eq('unit_id', id)
       .order('step_order', { ascending: true }),
     getUnitWorkflow(supabase, id, userId),
+    supabase
+      .from('unit_notes')
+      .select('id, body, created_at, updated_at')
+      .eq('unit_id', id)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(200),
   ])
 
   if (imagesResult.error) {
@@ -405,6 +421,12 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
   }
   if (initialStepsResult.error) {
     throw new Error(initialStepsResult.error.message)
+  }
+  // unit_notes arrives with migration 20261109140000; until then the page
+  // works and Painting Notes only offers the unit and session notes.
+  const unitNotesAvailable = !isMissingUnitNotesTable(unitNotesResult.error as UnitQueryError | null)
+  if (unitNotesResult.error && unitNotesAvailable) {
+    throw new Error(unitNotesResult.error.message)
   }
 
   const linkedProject = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
@@ -569,6 +591,13 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
     selectedProjectIds,
     progressSteps,
     workflow,
+    unitNotesAvailable,
+    unitNotes: ((unitNotesResult.data ?? []) as { id: string; body: string; created_at: string; updated_at: string }[]).map((note) => ({
+      id: note.id,
+      body: note.body,
+      createdAt: note.created_at,
+      updatedAt: note.updated_at,
+    })),
   } satisfies UnitV3LiveUnit
 }
 

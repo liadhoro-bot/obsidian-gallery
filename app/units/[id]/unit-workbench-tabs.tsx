@@ -11,11 +11,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import {
+  addUnitNote,
+  deleteUnitNote,
   deleteUnitScheduledSession,
   logManualUnitSession,
   scheduleUnitSession,
   setGuideStepDone,
   startUnitSession,
+  updateUnitDetails,
+  updateUnitNote,
   updateUnitScheduledSession,
   updateUnitSession,
   updateUnitStatus,
@@ -261,7 +265,9 @@ function PaintCta({ unit, tab, autoStart }: { unit: PreviewUnit; tab: WorkbenchT
     return () => window.clearTimeout(timer)
   }, [autoStart]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const label = 'Resume Work'
+  // "Start" until the unit has a logged or running session, then "Resume".
+  const hasHistory = Boolean(activeSession) || (unit.paintSessions?.length ?? 0) > 0
+  const label = hasHistory ? 'Resume Now' : 'Start Now'
   const elapsed = activeSession ? capTimerSessionSeconds(getPaintedSeconds(activeSession, now)) : 0
 
   return (
@@ -270,7 +276,7 @@ function PaintCta({ unit, tab, autoStart }: { unit: PreviewUnit; tab: WorkbenchT
         <Link href={paintModeLink} className={styles.cta} data-v3-unit-indicator="resume-cta">
           <Icon name="play" className={styles.ctaIcon} />
           <span className={styles.ctaText}>
-            <span>Resume Work</span>
+            <span>Resume Now</span>
             <span className={styles.ctaSub} role="timer" aria-label="Painting session elapsed time">
               {activeSession.paused_at ? 'Paused' : 'Painting'} · {formatClock(elapsed)}
             </span>
@@ -291,10 +297,9 @@ function PaintCta({ unit, tab, autoStart }: { unit: PreviewUnit; tab: WorkbenchT
 /* OVERVIEW                                                            */
 /* ------------------------------------------------------------------ */
 
-export function OverviewTab({ unit, autoStart, onEditDetails, onEditGallery, onLocalUnitChange }: {
+export function OverviewTab({ unit, autoStart, onEditGallery, onLocalUnitChange }: {
   unit: PreviewUnit
   autoStart: boolean
-  onEditDetails: () => void
   onEditGallery: () => void
   onLocalUnitChange: LocalUnitUpdater
 }) {
@@ -302,14 +307,15 @@ export function OverviewTab({ unit, autoStart, onEditDetails, onEditGallery, onL
     <div className={styles.stack} data-v3-unit-indicator="overview">
       <PaintCta unit={unit} tab="overview" autoStart={autoStart} />
       <SessionOverviewCard unit={unit} />
-      <UnitDetailsCard unit={unit} onEditDetails={onEditDetails} onLocalUnitChange={onLocalUnitChange} />
+      <UnitDetailsCard unit={unit} onLocalUnitChange={onLocalUnitChange} />
       <GalleryCard unit={unit} onEditGallery={onEditGallery} />
     </div>
   )
 }
 
 function SessionOverviewCard({ unit }: { unit: PreviewUnit }) {
-  const last = formatShortDate(unit.lastPainted ?? unit.paintSessions?.[0]?.dateKey)
+  const hasSessions = (unit.paintSessions?.length ?? 0) > 0
+  const latest = formatShortDate(unit.lastPainted ?? unit.paintSessions?.[0]?.dateKey)
   return (
     <Card icon="calendar" title="Session Overview" indicator="session-overview">
       <div className={styles.statRow}>
@@ -317,14 +323,18 @@ function SessionOverviewCard({ unit }: { unit: PreviewUnit }) {
           <Icon name="timer" className={styles.statIcon} />
           <div className={styles.statText}>
             <p className={styles.statLabel}>Total time logged</p>
-            <p className={styles.statValue}>{unit.logged || '0m'}</p>
+            <p className={hasSessions ? styles.statValue : `${styles.statValue} ${styles.statEmpty}`}>
+              {hasSessions ? unit.logged || '0m' : 'No sessions yet'}
+            </p>
           </div>
         </div>
         <div className={styles.stat}>
           <Icon name="calendar" className={styles.statIcon} />
           <div className={styles.statText}>
-            <p className={styles.statLabel}>Last session</p>
-            <p className={styles.statValue}>{last ?? 'Not yet'}</p>
+            <p className={styles.statLabel}>Latest session</p>
+            <p className={latest ? styles.statValue : `${styles.statValue} ${styles.statEmpty}`}>
+              {latest ?? 'Your unit awaits'}
+            </p>
           </div>
         </div>
       </div>
@@ -334,25 +344,34 @@ function SessionOverviewCard({ unit }: { unit: PreviewUnit }) {
 
 type PaintingNote = {
   id: string
-  kind: 'unit' | 'session'
+  kind: 'note' | 'unit' | 'session'
   label: string
   body: string
   session?: UnitPaintSession
 }
 
-// The unit's own note (written in Paint Mode or here) first, then every
-// logged session's note, newest first.
+function formatNoteDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(date)
+}
+
+// Notes added on the unit page (newest first), then the unit's Paint Mode
+// note, then each logged session's note (newest first).
 function getPaintingNotes(unit: PreviewUnit): PaintingNote[] {
   const notes: PaintingNote[] = []
+  for (const note of unit.unitNotes ?? []) {
+    notes.push({ id: note.id, kind: 'note', label: formatNoteDate(note.createdAt), body: note.body })
+  }
   if (unit.notes?.trim()) {
-    notes.push({ id: 'unit-note', kind: 'unit', label: 'Unit note', body: unit.notes.trim() })
+    notes.push({ id: 'unit-note', kind: 'unit', label: 'Paint Mode note', body: unit.notes.trim() })
   }
   for (const session of unit.paintSessions ?? []) {
     if (session.notes?.trim()) {
       notes.push({
         id: session.id,
         kind: 'session',
-        label: `${formatShortDate(session.dateKey)} · ${session.durationSeconds ? formatSeconds(session.durationSeconds) : session.duration}`,
+        label: `Session · ${formatShortDate(session.dateKey)} · ${session.durationSeconds ? formatSeconds(session.durationSeconds) : session.duration}`,
         body: session.notes.trim(),
         session,
       })
@@ -361,26 +380,90 @@ function getPaintingNotes(unit: PreviewUnit): PaintingNote[] {
   return notes
 }
 
-function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
+type DetailsDraft = {
+  projectId: string
+  complexity: number
+  modelCount: string
+  deadline: string
+}
+
+function UnitDetailsCard({ unit, onLocalUnitChange }: {
   unit: PreviewUnit
-  onEditDetails: () => void
   onLocalUnitChange: LocalUnitUpdater
 }) {
   const router = useRouter()
   const [statusPending, startStatus] = useTransition()
-  const [statusError, setStatusError] = useState<string | null>(null)
+  const [savingDetails, startSavingDetails] = useTransition()
+  const [error, setError] = useState<string | null>(null)
   const [sheet, setSheet] = useState<'paints' | 'notes' | null>(null)
-  const primaryProjectId = unit.selectedProjectIds?.[0] ?? null
+  const [draft, setDraft] = useState<DetailsDraft | null>(null)
+  const editing = draft !== null
+  const selectedProjectIds = unit.selectedProjectIds ?? []
+  const primaryProjectId = selectedProjectIds[0] ?? null
+  const projects = unit.availableProjects ?? []
   const paints = unit.palettePaints ?? []
   const notes = useMemo(() => getPaintingNotes(unit), [unit])
   const visiblePaints = paints.length > 6 ? paints.slice(0, 5) : paints
   const overflow = paints.length - visiblePaints.length
   const rawStatus = unit.rawStatus ?? 'active'
 
+  function startEditing() {
+    setError(null)
+    setDraft({
+      projectId: primaryProjectId ?? '',
+      complexity: unit.complexity,
+      modelCount: String(unit.modelCount),
+      deadline: unit.rawDeadline ?? '',
+    })
+  }
+
+  function saveDetails() {
+    if (!draft) return
+    const modelCount = Number(draft.modelCount)
+    if (!Number.isFinite(modelCount) || modelCount < 1) {
+      setError('Model count must be 1 or more.')
+      return
+    }
+    // Only the primary project changes here; any other projects the unit
+    // also belongs to stay linked.
+    const others = selectedProjectIds.filter((projectId) => projectId !== primaryProjectId && projectId !== draft.projectId)
+    const projectIds = draft.projectId ? [draft.projectId, ...others] : others
+    const formData = new FormData()
+    formData.set('unitId', unit.id)
+    formData.set('complexity', String(draft.complexity))
+    formData.set('unit_size', String(Math.round(modelCount)))
+    formData.set('deadline', draft.deadline)
+    projectIds.forEach((projectId) => formData.append('projectIds', projectId))
+    setError(null)
+    startSavingDetails(async () => {
+      try {
+        await updateUnitDetails(formData)
+        const projectName = projects.find((project) => project.id === projectIds[0])?.name
+        onLocalUnitChange((current) =>
+          current
+            ? {
+                ...current,
+                complexity: draft.complexity,
+                modelCount: Math.round(modelCount),
+                rawDeadline: draft.deadline || null,
+                deadline: formatDeadline(draft.deadline || null),
+                selectedProjectIds: projectIds,
+                project: projectIds.length ? projectName || current.project : 'Standalone unit',
+              }
+            : current
+        )
+        setDraft(null)
+        router.refresh()
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Could not save the details.')
+      }
+    })
+  }
+
   function changeStatus(next: UnitStatus) {
     const previous = rawStatus
     const label = statusOptions.find((option) => option.value === next)?.label ?? unit.status
-    setStatusError(null)
+    setError(null)
     onLocalUnitChange((current) => (current ? { ...current, rawStatus: next, status: label } : current))
     startStatus(async () => {
       try {
@@ -388,10 +471,12 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
         router.refresh()
       } catch (cause) {
         onLocalUnitChange((current) => (current ? { ...current, rawStatus: previous } : current))
-        setStatusError(cause instanceof Error ? cause.message : 'Could not change the status.')
+        setError(cause instanceof Error ? cause.message : 'Could not change the status.')
       }
     })
   }
+
+  const complexityValue = draft?.complexity ?? unit.complexity
 
   return (
     <Card
@@ -399,18 +484,50 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
       title="Unit Details"
       indicator="unit-details-card"
       guideTarget="units.detail.details"
-      aside={<button type="button" onClick={onEditDetails} className={styles.smallButton}>Edit</button>}
+      aside={
+        editing ? (
+          <span className={styles.editActions}>
+            <button type="button" onClick={() => { setDraft(null); setError(null) }} disabled={savingDetails} className={styles.smallButtonQuiet}>Cancel</button>
+            <button type="button" onClick={saveDetails} disabled={savingDetails} className={styles.smallButton}>{savingDetails ? 'Saving…' : 'Save'}</button>
+          </span>
+        ) : (
+          <button type="button" onClick={startEditing} className={styles.smallButton}>Edit</button>
+        )
+      }
     >
-      <div className={styles.detailRows}>
+      <div className={styles.detailRows} data-editing={editing ? 'true' : undefined}>
         <div className={`${styles.detailRow} ${styles.detailRow2}`}>
           <div className={styles.detailCell}>
-            <p className={styles.label}>Parent project</p>
-            {primaryProjectId ? (
-              <Link href={`/projects/${primaryProjectId}?preview=1`} prefetch={false} className={styles.chip}>
-                {unit.project}
-              </Link>
+            {editing ? (
+              <>
+                <label className={styles.label} htmlFor={`unit-project-${unit.id}`}>Parent project</label>
+                <span className={styles.selectWrap} data-plain="true">
+                  <select
+                    id={`unit-project-${unit.id}`}
+                    value={draft.projectId}
+                    onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
+                    disabled={savingDetails}
+                    className={styles.select}
+                  >
+                    <option value="">Standalone unit</option>
+                    {projects.map((project) => (
+                      <option key={project.id} value={project.id}>{project.name || 'Untitled project'}</option>
+                    ))}
+                  </select>
+                  <Icon name="down" className={styles.selectChevron} />
+                </span>
+              </>
             ) : (
-              <span className={styles.chip}>{unit.project}</span>
+              <>
+                <p className={styles.label}>Parent project</p>
+                {primaryProjectId ? (
+                  <Link href={`/projects/${primaryProjectId}?preview=1`} prefetch={false} className={styles.chip}>
+                    {unit.project}
+                  </Link>
+                ) : (
+                  <span className={styles.chip}>{unit.project}</span>
+                )}
+              </>
             )}
           </div>
           <div className={styles.detailCell}>
@@ -436,20 +553,71 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
 
         <div className={`${styles.detailRow} ${styles.detailRow3}`}>
           <div className={styles.detailCell}>
-            <p className={styles.label}>Complexity</p>
-            <span className={styles.dots} aria-label={`Complexity ${unit.complexity} of 5`}>
-              {Array.from({ length: 5 }).map((_, index) => (
-                <span key={index} className={index < unit.complexity ? styles.dotOn : styles.dot} />
-              ))}
-            </span>
+            <p className={styles.label} id={`unit-complexity-${unit.id}`}>Complexity</p>
+            {editing ? (
+              <span className={styles.dots} role="radiogroup" aria-labelledby={`unit-complexity-${unit.id}`}>
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    role="radio"
+                    aria-checked={complexityValue === index + 1}
+                    aria-label={`Complexity ${index + 1} of 5`}
+                    disabled={savingDetails}
+                    onClick={() => setDraft({ ...draft, complexity: index + 1 })}
+                    className={`${styles.dotButton} ${index < complexityValue ? styles.dotOn : styles.dot}`}
+                  />
+                ))}
+              </span>
+            ) : (
+              <span className={styles.dots} aria-label={`Complexity ${unit.complexity} of 5`}>
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <span key={index} className={index < unit.complexity ? styles.dotOn : styles.dot} />
+                ))}
+              </span>
+            )}
           </div>
           <div className={styles.detailCell}>
-            <p className={styles.label}>Model count</p>
-            <p className={styles.detailValue}>{unit.modelCount}</p>
+            {editing ? (
+              <>
+                <label className={styles.label} htmlFor={`unit-models-${unit.id}`}>Model count</label>
+                <input
+                  id={`unit-models-${unit.id}`}
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={draft.modelCount}
+                  disabled={savingDetails}
+                  onChange={(event) => setDraft({ ...draft, modelCount: event.target.value })}
+                  className={styles.inlineInput}
+                />
+              </>
+            ) : (
+              <>
+                <p className={styles.label}>Model count</p>
+                <p className={styles.detailValue}>{unit.modelCount}</p>
+              </>
+            )}
           </div>
           <div className={styles.detailCell}>
-            <p className={styles.label}>Deadline</p>
-            <p className={styles.detailValue}>{unit.deadline}</p>
+            {editing ? (
+              <>
+                <label className={styles.label} htmlFor={`unit-deadline-${unit.id}`}>Deadline</label>
+                <input
+                  id={`unit-deadline-${unit.id}`}
+                  type="date"
+                  value={draft.deadline}
+                  disabled={savingDetails}
+                  onChange={(event) => setDraft({ ...draft, deadline: event.target.value })}
+                  className={styles.inlineInput}
+                />
+              </>
+            ) : (
+              <>
+                <p className={styles.label}>Deadline</p>
+                <p className={styles.detailValue}>{unit.deadline}</p>
+              </>
+            )}
           </div>
         </div>
 
@@ -501,7 +669,7 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
           </button>
         </div>
       </div>
-      {statusError ? <p role="alert" className={styles.error}>{statusError}</p> : null}
+      {error ? <p role="alert" className={styles.error}>{error}</p> : null}
 
       {sheet === 'paints' ? (
         <Sheet title="Assigned Paints" eyebrow={`${paints.length} paints`} onClose={() => { setSheet(null); router.refresh() }}>
@@ -517,28 +685,32 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
   )
 }
 
+function formatDeadline(deadline: string | null) {
+  if (!deadline) return 'No deadline'
+  const date = new Date(`${deadline}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return deadline
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
+}
+
 function NotesSheetBody({ unit, notes, onLocalUnitChange }: {
   unit: PreviewUnit
   notes: PaintingNote[]
   onLocalUnitChange: LocalUnitUpdater
 }) {
   const router = useRouter()
-  const [unitNote, setUnitNote] = useState(unit.notes ?? '')
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
-  const [sessionDraft, setSessionDraft] = useState('')
+  const [newNote, setNewNote] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [saving, startSaving] = useTransition()
-  const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const unitNoteChanged = unitNote.trim() !== (unit.notes ?? '').trim()
+  const canAdd = unit.unitNotesAvailable !== false
 
-  function saveUnitNoteText() {
+  function run(work: () => Promise<void>) {
     setError(null)
-    setSavedMessage(null)
     startSaving(async () => {
       try {
-        const saved = await saveUnitNote(unit.id, unitNote)
-        onLocalUnitChange((current) => (current ? { ...current, notes: saved.notes || null } : current))
-        setSavedMessage('Unit note saved')
+        await work()
         router.refresh()
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not save the note.')
@@ -546,107 +718,163 @@ function NotesSheetBody({ unit, notes, onLocalUnitChange }: {
     })
   }
 
-  function saveSessionNote(session: UnitPaintSession) {
-    const seconds = session.durationSeconds ?? 0
-    if (!seconds) {
-      setError('This session has no length yet; edit it from Recent Sessions first.')
-      return
-    }
-    const startedAt = new Date(session.startedAt)
-    const data = new FormData()
-    data.set('unitId', unit.id)
-    data.set('sessionId', session.id)
-    data.set('startedAt', startedAt.toISOString())
-    data.set('endedAt', new Date(startedAt.getTime() + seconds * 1000).toISOString())
-    data.set('notes', sessionDraft)
-    setError(null)
-    setSavedMessage(null)
-    startSaving(async () => {
-      try {
+  function add() {
+    const text = newNote.trim()
+    if (!text) return
+    run(async () => {
+      const saved = await addUnitNote(unit.id, text)
+      onLocalUnitChange((current) =>
+        current
+          ? {
+              ...current,
+              unitNotes: [
+                { id: saved.id, body: saved.body, createdAt: saved.created_at, updatedAt: saved.updated_at },
+                ...(current.unitNotes ?? []),
+              ],
+            }
+          : current
+      )
+      setNewNote('')
+    })
+  }
+
+  function save(note: PaintingNote) {
+    const text = draft.trim()
+    run(async () => {
+      if (note.kind === 'note') {
+        const saved = await updateUnitNote(unit.id, note.id, text)
+        onLocalUnitChange((current) =>
+          current
+            ? {
+                ...current,
+                unitNotes: (current.unitNotes ?? []).map((item) =>
+                  item.id === note.id ? { ...item, body: saved.body, updatedAt: saved.updated_at } : item
+                ),
+              }
+            : current
+        )
+      } else if (note.kind === 'unit') {
+        const saved = await saveUnitNote(unit.id, text)
+        onLocalUnitChange((current) => (current ? { ...current, notes: saved.notes || null } : current))
+      } else if (note.session) {
+        const seconds = note.session.durationSeconds ?? 0
+        if (!seconds) throw new Error('This session has no length yet; edit it from Recent Sessions first.')
+        const startedAt = new Date(note.session.startedAt)
+        const data = new FormData()
+        data.set('unitId', unit.id)
+        data.set('sessionId', note.session.id)
+        data.set('startedAt', startedAt.toISOString())
+        data.set('endedAt', new Date(startedAt.getTime() + seconds * 1000).toISOString())
+        data.set('notes', text)
         await updateUnitSession(data)
-        const trimmed = sessionDraft.trim()
         onLocalUnitChange((current) =>
           current
             ? {
                 ...current,
                 paintSessions: (current.paintSessions ?? []).map((item) =>
-                  item.id === session.id ? { ...item, notes: trimmed } : item
+                  item.id === note.session!.id ? { ...item, notes: text } : item
                 ),
               }
             : current
         )
-        setEditingSessionId(null)
-        setSavedMessage('Session note saved')
-        router.refresh()
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Could not save the note.')
       }
+      setEditingId(null)
     })
   }
 
-  const sessionNotes = notes.filter((note) => note.kind === 'session')
+  function remove(note: PaintingNote) {
+    run(async () => {
+      await deleteUnitNote(unit.id, note.id)
+      onLocalUnitChange((current) =>
+        current ? { ...current, unitNotes: (current.unitNotes ?? []).filter((item) => item.id !== note.id) } : current
+      )
+      setConfirmDeleteId(null)
+    })
+  }
 
   return (
     <>
-      <div className={styles.noteEditor}>
-        <label className={styles.field}>
-          Unit note
-          <textarea
-            rows={4}
-            value={unitNote}
-            onChange={(event) => setUnitNote(event.target.value)}
-            placeholder="What's done, what's next, mixes to remember…"
-            disabled={saving}
-          />
-        </label>
-        <div className={styles.noteActions}>
-          <span className={styles.muted}>Shown in Paint Mode too.</span>
-          <button type="button" onClick={saveUnitNoteText} disabled={saving || !unitNoteChanged} className={styles.smallButton}>
-            {saving && !editingSessionId ? 'Saving…' : 'Save note'}
-          </button>
+      {canAdd ? (
+        <div className={styles.noteEditor}>
+          <label className={styles.field}>
+            New note
+            <textarea
+              rows={3}
+              value={newNote}
+              onChange={(event) => setNewNote(event.target.value)}
+              placeholder="What's done, what's next, mixes to remember…"
+              disabled={saving}
+            />
+          </label>
+          <div className={styles.noteActions}>
+            <span />
+            <button type="button" onClick={add} disabled={saving || !newNote.trim()} className={styles.smallButton}>
+              <Icon name="plus" className={styles.iconSmall} /> Add note
+            </button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className={styles.muted}>Adding more notes turns on once the latest database update is applied.</p>
+      )}
 
-      {sessionNotes.length ? (
-        <div className={styles.checklistGroup}>
-          <p className={styles.label}>From painting sessions</p>
-          <ul className={styles.noteList}>
-            {sessionNotes.map((note) => (
-              <li key={note.id} className={styles.noteItem}>
-                <div className={styles.noteActions}>
-                  <p className={styles.label}>{note.label}</p>
-                  {editingSessionId === note.id ? null : (
+      {notes.length ? (
+        <ul className={styles.noteList}>
+          {notes.map((note) => (
+            <li key={`${note.kind}-${note.id}`} className={styles.noteItem} data-note-kind={note.kind}>
+              <div className={styles.noteActions}>
+                <p className={styles.label}>{note.label}</p>
+                {editingId === note.id ? null : (
+                  <span className={styles.editActions}>
                     <button
                       type="button"
-                      onClick={() => { setEditingSessionId(note.id); setSessionDraft(note.body); setError(null) }}
+                      onClick={() => { setEditingId(note.id); setDraft(note.body); setConfirmDeleteId(null); setError(null) }}
+                      disabled={saving}
                       className={styles.smallButtonQuiet}
                     >
                       Edit
                     </button>
-                  )}
-                </div>
-                {editingSessionId === note.id && note.session ? (
-                  <>
-                    <label className={styles.field}>
-                      <span className="sr-only">Session note</span>
-                      <textarea rows={3} value={sessionDraft} onChange={(event) => setSessionDraft(event.target.value)} disabled={saving} />
-                    </label>
-                    <div className={styles.noteActions}>
-                      <button type="button" onClick={() => setEditingSessionId(null)} disabled={saving} className={styles.smallButtonQuiet}>Cancel</button>
-                      <button type="button" onClick={() => saveSessionNote(note.session!)} disabled={saving} className={styles.smallButton}>
+                    {note.kind === 'note' ? (
+                      confirmDeleteId === note.id ? (
+                        <button type="button" onClick={() => remove(note)} disabled={saving} className={styles.smallButtonDanger}>
+                          Delete?
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => setConfirmDeleteId(note.id)} disabled={saving} className={styles.smallButtonQuiet}>
+                          Delete
+                        </button>
+                      )
+                    ) : null}
+                  </span>
+                )}
+              </div>
+              {editingId === note.id ? (
+                <>
+                  <label className={styles.field}>
+                    <span className="sr-only">Edit note</span>
+                    <textarea rows={3} value={draft} onChange={(event) => setDraft(event.target.value)} disabled={saving} />
+                  </label>
+                  <div className={styles.noteActions}>
+                    <span className={styles.muted}>{note.kind === 'unit' ? 'Also shown in Paint Mode.' : ''}</span>
+                    <span className={styles.editActions}>
+                      <button type="button" onClick={() => setEditingId(null)} disabled={saving} className={styles.smallButtonQuiet}>Cancel</button>
+                      <button
+                        type="button"
+                        onClick={() => save(note)}
+                        disabled={saving || (note.kind === 'note' && !draft.trim())}
+                        className={styles.smallButton}
+                      >
                         {saving ? 'Saving…' : 'Save'}
                       </button>
-                    </div>
-                  </>
-                ) : (
-                  <p className={styles.noteBody}>{note.body}</p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className={styles.noteBody}>{note.body}</p>
+              )}
+            </li>
+          ))}
+        </ul>
       ) : null}
-      {savedMessage ? <p role="status" className={styles.muted}>{savedMessage}</p> : null}
       {error ? <p role="alert" className={styles.error}>{error}</p> : null}
     </>
   )

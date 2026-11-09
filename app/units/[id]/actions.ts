@@ -2629,3 +2629,91 @@ export async function setGuideStepDone(unitId: string, recipeStepId: string, don
   revalidatePath(`/units/${unitId}`)
   return { done }
 }
+
+// Painting Notes: notes added from the unit page (unit_notes). The unit's
+// Paint Mode note (units.notes) and session notes are edited elsewhere.
+async function requireOwnedUnit(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  unitId: string,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from('units')
+    .select('id')
+    .eq('id', unitId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) throw new Error('Unit not found')
+}
+
+export async function addUnitNote(unitId: string, body: string) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+  const text = body.trim()
+  if (!unitId || !text) throw new Error('Write something first.')
+  await requireOwnedUnit(supabase, unitId, user.id)
+
+  const { data: openSession } = await supabase
+    .from('unit_sessions')
+    .select('id')
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+    .is('ended_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { data, error } = await supabase
+    .from('unit_notes')
+    .insert({ user_id: user.id, unit_id: unitId, body: text, unit_session_id: openSession?.id ?? null })
+    .select('id, body, created_at, updated_at')
+    .single()
+  if (error) throw new Error(error.message)
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: 'unit_note_added',
+    properties: { unit_id: unitId },
+  })
+  revalidatePath(`/units/${unitId}`)
+  return data
+}
+
+export async function updateUnitNote(unitId: string, noteId: string, body: string) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+  const text = body.trim()
+  if (!unitId || !noteId) throw new Error('Missing note')
+  if (!text) throw new Error('A note cannot be empty. Delete it instead.')
+
+  const { data, error } = await supabase
+    .from('unit_notes')
+    .update({ body: text, updated_at: new Date().toISOString() })
+    .eq('id', noteId)
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+    .select('id, body, created_at, updated_at')
+    .single()
+  if (error) throw new Error(error.message)
+
+  revalidatePath(`/units/${unitId}`)
+  return data
+}
+
+export async function deleteUnitNote(unitId: string, noteId: string) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+  if (!unitId || !noteId) throw new Error('Missing note')
+
+  const { error } = await supabase
+    .from('unit_notes')
+    .delete()
+    .eq('id', noteId)
+    .eq('unit_id', unitId)
+    .eq('user_id', user.id)
+  if (error) throw new Error(error.message)
+
+  revalidatePath(`/units/${unitId}`)
+  return { id: noteId }
+}

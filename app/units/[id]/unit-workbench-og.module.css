@@ -1670,3 +1670,107 @@ div.notesStrip {
     letter-spacing: 0.1em;
   }
 }
+
+/* ---------- Round 3: centred project/status, inline editing, notes ---------- */
+
+.detailRow2 .detailCell,
+.detailRow2 .detailCell:first-child,
+.detailRow2 .detailCell:last-child {
+  justify-items: center;
+  padding-inline: 10px;
+  text-align: center;
+}
+
+.detailRow2 .chip,
+.detailRow2 .selectWrap {
+  width: min(100%, 15rem);
+}
+
+.statEmpty {
+  color: var(--og-text-muted);
+  font-family: var(--og-font-display);
+  font-size: 1.12rem;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.stat .statValue.statEmpty {
+  font-size: 1.12rem;
+  font-weight: 600;
+  white-space: normal;
+}
+
+.editActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selectWrap[data-plain='true'] .select {
+  padding-inline-start: 12px;
+}
+
+.detailRows[data-editing='true'] .detailRow .detailCell {
+  background: color-mix(in srgb, var(--og-brass-500) 6%, transparent);
+}
+
+.inlineInput {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 6px;
+  border: var(--og-border-width) solid var(--og-border-medium);
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: center;
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.inlineInput:focus-visible,
+.dotButton:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus);
+  outline-offset: 2px;
+}
+
+.dotButton {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+.smallButtonDanger {
+  min-height: 32px;
+  padding: 4px 12px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-status-danger) 70%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  background: var(--og-status-danger);
+  color: var(--og-paper-50);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.noteItem[data-note-kind='unit'] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 50%, var(--og-border-subtle));
+}
+
+@media (max-width: 420px) {
+  .stat .statValue.statEmpty {
+    font-size: 1rem;
+  }
+
+  .detailRows[data-editing='true'] .detailRow3 .detailCell {
+    padding-inline: 4px;
+  }
+
+  .dotButton {
+    width: 15px;
+    height: 15px;
+  }
+}

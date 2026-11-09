@@ -72,6 +72,9 @@ export type PreviewUnit = {
   progressSteps?: PreviewProgressStep[]
   // Guide-driven checklist (Workflow tab).
   workflow?: UnitWorkflow
+  // Painting Notes added on the unit page (unit_notes), newest first.
+  unitNotes?: UnitNote[]
+  unitNotesAvailable?: boolean
   availableProjects?: PreviewProject[]
   selectedProjectIds?: string[]
 }
@@ -93,6 +96,13 @@ export type PreviewGalleryImage = {
   storageBucket?: string | null
   storagePath?: string | null
   isOptimistic?: boolean
+}
+
+export type UnitNote = {
+  id: string
+  body: string
+  createdAt: string
+  updatedAt: string
 }
 
 export type UnitPaintSession = {
@@ -548,7 +558,6 @@ export default function UnitV3Preview({
                 key={`overview-${unit.id}`}
                 unit={unit}
                 autoStart={autoStart}
-                onEditDetails={() => openLiveEditor('details')}
                 onEditGallery={() => openLiveEditor('gallery')}
                 onLocalUnitChange={setLocalUnit}
               />
