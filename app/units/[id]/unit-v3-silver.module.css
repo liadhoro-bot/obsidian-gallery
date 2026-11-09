@@ -168,7 +168,7 @@
 }
 
 .unitSilver [data-v3-unit-indicator="tab-content"] > section,
-.unitSilver [role="dialog"] {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 58%, var(--og-border-subtle));
   border-radius: var(--og-radius-m);
   background-color: var(--og-surface-primary);
@@ -201,8 +201,8 @@
 
 .unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child h2,
 .unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child p:first-child,
-.unitSilver [role="dialog"] label span,
-.unitSilver [role="dialog"] p:first-child {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) label span,
+.unitSilver [role="dialog"]:not([data-wb-sheet]) p:first-child {
   color: color-mix(in srgb, var(--og-status-warning) 80%, var(--og-ink-800));
   font-family: var(--og-font-ui);
   font-size: 0.68rem;
@@ -211,14 +211,14 @@
 }
 
 .unitSilver [data-v3-unit-indicator="tab-content"] button,
-.unitSilver [role="dialog"] button {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button {
   border-color: color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
 }
 
 .unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child button,
 .unitSilver [data-v3-unit-indicator="tab-content"] section > button,
 .unitSilver [data-v3-unit-indicator="tab-content"] > button,
-.unitSilver [role="dialog"] button,
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button,
 .unitSilver [data-v3-unit-indicator="tab-content"] :global(.tap-press) {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
   border-radius: var(--og-radius-s);
@@ -239,7 +239,7 @@
 .unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child button:hover,
 .unitSilver [data-v3-unit-indicator="tab-content"] section > button:hover,
 .unitSilver [data-v3-unit-indicator="tab-content"] > button:hover,
-.unitSilver [role="dialog"] button:hover {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button:hover {
   border-color: color-mix(in srgb, var(--og-brass-500) 72%, var(--og-ink-950));
   color: var(--og-paper-50);
 }
@@ -420,10 +420,10 @@
 
 .unitSilver [data-v3-unit-indicator="tab-content"] input,
 .unitSilver [data-v3-unit-indicator="tab-content"] textarea,
-.unitSilver [role="dialog"] input,
-.unitSilver [role="dialog"] textarea,
-.unitSilver [role="dialog"] select,
-.unitSilver [role="dialog"] label:has(input[type="checkbox"]) {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) input,
+.unitSilver [role="dialog"]:not([data-wb-sheet]) textarea,
+.unitSilver [role="dialog"]:not([data-wb-sheet]) select,
+.unitSilver [role="dialog"]:not([data-wb-sheet]) label:has(input[type="checkbox"]) {
   border: var(--og-border-width) solid var(--og-border-subtle);
   border-radius: var(--og-radius-s);
   background-color: var(--og-surface-secondary-light);
@@ -493,20 +493,20 @@
   color: #991b1b;
 }
 
-.unitSilver [role="dialog"] select option {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) select option {
   background-color: var(--og-surface-primary);
   color: var(--og-text-primary);
 }
 
-.unitSilver [role="dialog"] {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) {
   max-width: var(--og-workbench-compact-max-width);
 }
 
-.unitSilver [role="dialog"] h2 {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) h2 {
   font-size: 1.72rem;
 }
 
-.unitSilver [role="dialog"] button[type="submit"] {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button[type="submit"] {
   border-color: color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
   background-color: var(--og-walnut-950);
   background-image: var(--og-material-walnut-control);
@@ -546,7 +546,7 @@
   color: color-mix(in srgb, var(--og-text-secondary) 78%, #991b1b);
 }
 
-.unitSilver [role="dialog"] button[data-v3-unit-indicator="delete-unit-button"] {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button[data-v3-unit-indicator="delete-unit-button"] {
   border: var(--og-border-width) solid color-mix(in srgb, #ef4444 64%, var(--og-ink-950));
   border-radius: var(--og-radius-s);
   background-color: color-mix(in srgb, #7f1d1d 42%, var(--og-walnut-950));
@@ -555,7 +555,7 @@
   box-shadow: var(--og-shadow-control-built);
 }
 
-.unitSilver [role="dialog"] button[data-v3-unit-indicator="delete-unit-button"][data-delete-armed="true"] {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button[data-v3-unit-indicator="delete-unit-button"][data-delete-armed="true"] {
   border-color: color-mix(in srgb, #fca5a5 72%, var(--og-ink-950));
   background-color: #991b1b;
   color: var(--og-paper-50);

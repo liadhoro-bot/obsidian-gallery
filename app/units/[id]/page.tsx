@@ -19,8 +19,7 @@ import {
   unitPreviewFeatureGuides,
 } from '../../components/feature-guide-presets'
 import type { FeatureGuideEntry } from '../../components/feature-guide-types'
-import { getGuidesV3DeckDetail } from '../../guides/guides-v3-detail-data'
-import { getGuidesV3Payload } from '../../guides/guides-v3-data'
+import { getUnitWorkflow } from './unit-workflow-data'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -89,6 +88,7 @@ type UnitV3ImageRow = {
   alt_text: string | null
   storage_bucket: string | null
   storage_path: string | null
+  unit_session_id: string | null
 }
 
 type UnitV3SessionRow = {
@@ -108,6 +108,7 @@ type UnitV3ScheduledSessionRow = {
   focus: string
   notify: boolean
   status: string
+  planned_minutes?: number | null
 }
 
 type UnitV3ProgressStepRow = {
@@ -118,23 +119,6 @@ type UnitV3ProgressStepRow = {
   status: 'pending' | 'in_progress' | 'done'
   progress: number
   notes: string | null
-}
-
-type UnitV3StageGuideRow = {
-  id: string
-  progress_step_id: string
-  recipe_id: string
-  recipe?: {
-    id: string
-    name: string | null
-    description: string | null
-    image_url: string | null
-  }[] | {
-    id: string
-    name: string | null
-    description: string | null
-    image_url: string | null
-  } | null
 }
 
 type ProjectThemePaintRaw = {
@@ -262,17 +246,11 @@ function formatUnitV3Status(status: UnitDetailUnit['status']) {
   return 'Active'
 }
 
-async function getUnitV3PreviewUnit(
-  id: string,
-  userId: string,
-  initialTab: 'details' | 'paint' | 'progress'
-) {
+async function getUnitV3PreviewUnit(id: string, userId: string) {
   const supabase = await createClient()
   // Runs alongside the unit query; awaited before sessions are read so a
   // timer past the two-hour cap is shown as a finished session.
-  const expiredSessionsPromise = initialTab === 'paint'
-    ? closeExpiredUnitSessions(supabase, userId)
-    : Promise.resolve(0)
+  const expiredSessionsPromise = closeExpiredUnitSessions(supabase, userId)
 
   const { data: unit, error: unitError } = await supabase
     .from('units')
@@ -293,85 +271,6 @@ async function getUnitV3PreviewUnit(
 
   await expiredSessionsPromise
 
-  const shouldLoadPaintTab = initialTab === 'paint'
-  const shouldLoadProgressTab = initialTab === 'progress'
-
-  const sessionsPromise = shouldLoadPaintTab
-    ? supabase
-        .from('unit_sessions')
-        .select('id, started_at, ended_at, duration_seconds, notes, entry_source, paused_at, paused_seconds')
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-        .or('ended_at.is.null,duration_seconds.gt.0')
-        .order('started_at', { ascending: false })
-        .limit(50)
-    : Promise.resolve({ data: [], error: null })
-  const scheduledSessionsPromise = shouldLoadPaintTab
-    ? supabase
-        .from('unit_scheduled_sessions')
-        .select('id, scheduled_start_at, focus, notify, status')
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-        .eq('status', 'scheduled')
-        .order('scheduled_start_at', { ascending: true })
-        .limit(20)
-    : Promise.resolve({ data: [], error: null })
-  const previewStagePaintsPromise = shouldLoadProgressTab
-    ? supabase
-        .from('unit_stage_paints')
-        .select(
-          `
-          id,
-          unit_id,
-          progress_step_id,
-          paint_source,
-          paint_catalog_id,
-          custom_paint_id,
-          sort_order,
-          catalog_paint:paint_catalog (
-            id,
-            name,
-            brand,
-            line,
-            hex_approx,
-            swatch_image_url
-          ),
-          custom_paint:paints (
-            id,
-            name,
-            manufacturer,
-            series,
-            color_hex
-          )
-        `
-        )
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-        .order('sort_order', { ascending: true })
-    : Promise.resolve({ data: [], error: null })
-  const stageGuidesPromise = shouldLoadProgressTab
-    ? supabase
-        .from('unit_stage_recipes')
-        .select(
-          `
-          id,
-          progress_step_id,
-          recipe_id,
-          recipe:recipes (
-            id,
-            name,
-            description,
-            image_url
-          )
-        `
-        )
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-    : Promise.resolve({ data: [], error: null })
-  const guidesPayloadPromise = shouldLoadProgressTab
-    ? getGuidesV3Payload(userId)
-    : Promise.resolve(null)
-
   const [
     imagesResult,
     linkedProjectsResult,
@@ -381,96 +280,108 @@ async function getUnitV3PreviewUnit(
     scheduledSessionsResult,
     availableProjectsResult,
     initialStepsResult,
-    stagePaintsResult,
-    stageGuidesResult,
-    guidesPayload,
-  ] =
-    await Promise.all([
-      supabase
-        .from('image_assets')
-        .select(
-          'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path'
-        )
-        .eq('entity_type', 'unit')
-        .eq('entity_id', id)
-        .eq('user_id', userId)
-        // Manual gallery order (drag to reorder); ties fall back to upload order.
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('created_at', { ascending: true }),
-      supabase
-        .from('unit_projects')
-        .select(
-          `
-          project_id,
-          project:projects (
-            id,
-            name
-          )
+    workflow,
+  ] = await Promise.all([
+    supabase
+      .from('image_assets')
+      .select(
+        'id, image_url, is_featured, created_at, sort_order, alt_text, storage_bucket, storage_path, unit_session_id'
+      )
+      .eq('entity_type', 'unit')
+      .eq('entity_id', id)
+      .eq('user_id', userId)
+      // Manual gallery order (drag to reorder); ties fall back to upload order.
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('unit_projects')
+      .select(
         `
-        )
-        .eq('unit_id', id)
-        .eq('user_id', userId)
-        .limit(1),
-      unit.project_id
-        ? supabase
-            .from('projects')
-            .select('id, name')
-            .eq('id', unit.project_id)
-            .eq('user_id', userId)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-      supabase
-        .from('themes')
-        .select(
-          `
+        project_id,
+        project:projects (
           id,
-          name,
-          description,
-          theme_paints (
-            id,
-            sort_order,
-            paint_source,
-            paint_catalog_id,
-            custom_paint_id,
-            catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
-              id,
-              name,
-              brand,
-              line,
-              hex_approx,
-              swatch_image_url
-            ),
-            custom_paint:paints!theme_paints_custom_paint_id_fkey (
-              id,
-              name,
-              manufacturer,
-              series,
-              color_hex
-            )
-          )
-        `
+          name
         )
-        .eq('user_id', userId)
-        .ilike('description', `%${unitThemeMarker(id)}%`)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      sessionsPromise,
-      scheduledSessionsPromise,
-      supabase
-        .from('projects')
-        .select('id, name')
-        .eq('user_id', userId)
-        .order('name', { ascending: true }),
-      supabase
-        .from('unit_progress_steps')
-        .select('id, step_key, step_label, step_order, status, progress, notes')
-        .eq('unit_id', id)
-        .order('step_order', { ascending: true }),
-      previewStagePaintsPromise,
-      stageGuidesPromise,
-      guidesPayloadPromise,
-    ])
+      `
+      )
+      .eq('unit_id', id)
+      .eq('user_id', userId)
+      .limit(1),
+    unit.project_id
+      ? supabase
+          .from('projects')
+          .select('id, name')
+          .eq('id', unit.project_id)
+          .eq('user_id', userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase
+      .from('themes')
+      .select(
+        `
+        id,
+        name,
+        description,
+        theme_paints (
+          id,
+          sort_order,
+          paint_source,
+          paint_catalog_id,
+          custom_paint_id,
+          catalog_paint:paint_catalog!theme_paints_paint_catalog_id_fkey (
+            id,
+            name,
+            brand,
+            line,
+            hex_approx,
+            swatch_image_url
+          ),
+          custom_paint:paints!theme_paints_custom_paint_id_fkey (
+            id,
+            name,
+            manufacturer,
+            series,
+            color_hex
+          )
+        )
+      `
+      )
+      .eq('user_id', userId)
+      .ilike('description', `%${unitThemeMarker(id)}%`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('unit_sessions')
+      .select('id, started_at, ended_at, duration_seconds, notes, entry_source, paused_at, paused_seconds')
+      .eq('unit_id', id)
+      .eq('user_id', userId)
+      .or('ended_at.is.null,duration_seconds.gt.0')
+      .order('started_at', { ascending: false })
+      .limit(500),
+    supabase
+      .from('unit_scheduled_sessions')
+      // '*' so planned_minutes is read when present without failing before
+      // its migration is applied.
+      .select('*')
+      .eq('unit_id', id)
+      .eq('user_id', userId)
+      .eq('status', 'scheduled')
+      .gte('scheduled_start_at', new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString())
+      .order('scheduled_start_at', { ascending: true })
+      .limit(20),
+    supabase
+      .from('projects')
+      .select('id, name')
+      .eq('user_id', userId)
+      .order('name', { ascending: true }),
+    supabase
+      .from('unit_progress_steps')
+      .select('id, step_key, step_label, step_order, status, progress')
+      .eq('unit_id', id)
+      .order('step_order', { ascending: true }),
+    getUnitWorkflow(supabase, id, userId),
+  ])
 
   if (imagesResult.error) {
     throw new Error(imagesResult.error.message)
@@ -494,12 +405,6 @@ async function getUnitV3PreviewUnit(
   }
   if (initialStepsResult.error) {
     throw new Error(initialStepsResult.error.message)
-  }
-  if (stagePaintsResult.error) {
-    throw new Error(stagePaintsResult.error.message)
-  }
-  if (stageGuidesResult.error) {
-    throw new Error(stageGuidesResult.error.message)
   }
 
   const linkedProject = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
@@ -528,11 +433,18 @@ async function getUnitV3PreviewUnit(
           resize: 'cover',
           quality: 76,
         }) ?? image.image_url!,
-      alt: image.alt_text || unit.name || 'Unit image',
+      alt: image.alt_text?.startsWith('stage:')
+        ? `${unit.name || 'Unit'} snapshot`
+        : image.alt_text || unit.name || 'Unit image',
       isFeatured: image.is_featured === true,
       stageKey: image.alt_text?.startsWith('stage:')
         ? image.alt_text.replace('stage:', '')
         : null,
+      // Paint Mode snapshots (and the old per-stage photos) are progress;
+      // everything else uploaded to the unit is inspiration / art.
+      isSnapshot:
+        Boolean(image.unit_session_id) || Boolean(image.alt_text?.startsWith('stage:')),
+      sessionId: image.unit_session_id ?? null,
       createdAt: image.created_at,
       sortOrder: image.sort_order,
       storageBucket: image.storage_bucket,
@@ -542,10 +454,9 @@ async function getUnitV3PreviewUnit(
     galleryImages.find((image) => image.isFeatured) ?? galleryImages[0]
   const status = formatUnitV3Status(unit.status)
   const sessions = (sessionsResult.data ?? []) as UnitV3SessionRow[]
-  const totalLoggedSeconds = sessions.reduce(
-    (sum, session) => sum + (session.duration_seconds ?? 0),
-    0
-  )
+  const totalLoggedSeconds = sessions
+    .filter((session) => session.ended_at !== null)
+    .reduce((sum, session) => sum + (session.duration_seconds ?? 0), 0)
   const activeSession = sessions.find(session => session.ended_at === null) ?? null
   const paintSessions = sessions.filter(session => session.ended_at !== null).map((session) => ({
     id: session.id,
@@ -563,7 +474,8 @@ async function getUnitV3PreviewUnit(
           id: session.id,
           dateKey: formatUnitV3DateKey(session.scheduled_start_at),
           time: formatUnitV3Time(session.scheduled_start_at),
-          duration: '60',
+          scheduledStartAt: session.scheduled_start_at,
+          duration: session.planned_minutes ? String(session.planned_minutes) : '',
           focus: session.focus || 'Focused painting session',
           notes: '',
           notify: session.notify,
@@ -582,23 +494,12 @@ async function getUnitV3PreviewUnit(
       }
     : null
   const progressSteps = (initialStepsResult.data ?? []) as UnitV3ProgressStepRow[]
-  const stagePaints =
-    stagePaintsResult.data?.map((paint) => ({
-      ...paint,
-      catalog_paint: firstRelation(paint.catalog_paint),
-      custom_paint: firstRelation(paint.custom_paint),
-    })) ?? []
-  const assignedGuideRows = (stageGuidesResult.data ?? []) as UnitV3StageGuideRow[]
-  const assignedDeckDetails = shouldLoadProgressTab
-    ? (
-        await Promise.all(
-          assignedGuideRows.map(async (row) => {
-            const deck = await getGuidesV3DeckDetail(row.recipe_id, userId)
-            return deck ? { row, deck } : null
-          })
-        )
-      ).filter((item): item is NonNullable<typeof item> => Boolean(item))
-    : []
+  const workflowProgress =
+    unit.status === 'complete'
+      ? 100
+      : workflow.total
+        ? Math.round((workflow.completed / workflow.total) * 100)
+        : 0
 
   return {
     id: unit.id,
@@ -612,24 +513,8 @@ async function getUnitV3PreviewUnit(
     deadline: formatUnitV3Deadline(unit.deadline),
     status,
     rawStatus: unit.status,
-    progress:
-      unit.status === 'complete'
-        ? 100
-        : progressSteps.length
-          ? Math.round(
-              (progressSteps.filter((step) => step.status === 'done').length /
-                progressSteps.length) *
-                100
-            )
-          : 0,
-    stage: progressSteps.length
-      ? `Stage ${Math.min(
-          progressSteps.filter((step) => step.status === 'done').length + 1,
-          progressSteps.length
-        )}/${progressSteps.length}`
-      : unit.status === 'complete'
-        ? 'Stage 6/6'
-        : 'Stage 1/6',
+    progress: workflowProgress,
+    stage: workflow.total ? `${workflow.completed} of ${workflow.total} complete` : 'No steps yet',
     logged: formatUnitV3Duration(totalLoggedSeconds),
     lastPainted: paintSessions[0]?.dateKey ?? null,
     paintSessions,
@@ -647,7 +532,7 @@ async function getUnitV3PreviewUnit(
           paint.paint_source === 'custom'
             ? paint.custom_paint?.color_hex || '#d8bd83'
             : paint.catalog_paint?.hex_approx || '#d8bd83'
-        ) ?? ['#a92322', '#d6b84d', '#171821', '#e1c58d', '#72c888'],
+        ) ?? [],
     palettePaints:
       projectTheme?.theme_paints
         ?.slice()
@@ -683,41 +568,7 @@ async function getUnitV3PreviewUnit(
     availableProjects: availableProjectsResult.data ?? [],
     selectedProjectIds,
     progressSteps,
-    stagePaints,
-    assignedGuides: assignedDeckDetails.map(({ row, deck }) => ({
-      assignmentId: row.id,
-      progressStepId: row.progress_step_id,
-      id: deck.id,
-      title: deck.title,
-      subtitle: deck.description,
-      image: deck.image,
-      cards: deck.cards,
-      paints: deck.paints,
-      steps: deck.steps,
-      paintList: deck.paintList,
-    })),
-    availableGuideChoices: [
-      ...(guidesPayload?.guideFiles ?? []).map((guide) => ({
-        id: guide.id,
-        type: 'guide' as const,
-        title: guide.title,
-        subtitle: guide.subtitle,
-        image: guide.image,
-        cards: guide.cards,
-        paints: guide.palette.length,
-        recipeId: guide.deckId ?? '',
-      })),
-      ...(guidesPayload?.decks ?? []).map((deck) => ({
-        id: deck.id,
-        type: 'deck' as const,
-        title: deck.title,
-        subtitle: deck.category,
-        image: deck.image,
-        cards: deck.cards,
-        paints: deck.paints,
-        recipeId: deck.id,
-      })),
-    ],
+    workflow,
   } satisfies UnitV3LiveUnit
 }
 
@@ -1168,18 +1019,21 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
   }
 
   if (isPreview) {
-    const previewTab = resolvedSearchParams.autostart === '1' || resolvedSearchParams.session === 'started' ? 'paint' :
+    // Overview / Workflow. The old tab names still land somewhere sensible:
+    // painting sessions and progress both live in Workflow now.
+    const previewTab =
+      resolvedSearchParams.tab === 'workflow' ||
       resolvedSearchParams.tab === 'paint' ||
       resolvedSearchParams.tab === 'progress'
-        ? resolvedSearchParams.tab
-        : 'details'
+        ? 'workflow'
+        : 'overview'
     const initialEditTarget =
       resolvedSearchParams.edit === 'details' ||
       resolvedSearchParams.edit === 'header' ||
       resolvedSearchParams.edit === 'gallery'
         ? resolvedSearchParams.edit
         : null
-    const liveUnit = await getUnitV3PreviewUnit(id, user.id, previewTab)
+    const liveUnit = await getUnitV3PreviewUnit(id, user.id)
 
     if (!liveUnit) {
       notFound()

@@ -78,12 +78,12 @@ export const unitDetailFeatureGuides = [
 ]
 
 export const unitPreviewFeatureGuides = [
-  guide('units.detail.page', 'Unit Detail', 'Unit Detail is the workbench for one miniature or unit. It holds identity, painting sessions, progress stages, palette, gallery, and completion history.', 100),
-  guide('units.detail.tabs.details', 'Details Tab', 'Details contains the unit facts, parent project, status, palette, guide links, and gallery.', 110),
-  guide('units.detail.tabs.paint', 'Paint Tab', 'Paint tracks time, sessions, scheduling, and the painting calendar for this unit.', 120),
-  guide('units.detail.tabs.progress', 'Progress Tab', 'Progress breaks the miniature into painting stages so each step can be marked and documented.', 130),
-  guide('units.detail.details', 'Unit Details', 'Unit Details stores complexity, model count, deadline, parent project, and current status.', 140),
-  guide('units.detail.gallery', 'Gallery', 'Gallery stores photos for the unit, including the featured image used across the app.', 150, 'top'),
+  guide('units.detail.page', 'Unit Detail', 'Unit Detail is the home for one miniature or unit: what it is, how far along it is, and a one-tap way back to the painting table.', 100),
+  guide('units.detail.tabs.overview', 'Overview', 'Overview shows time logged, the unit facts, its paints, painting notes, and the gallery. Resume Painting opens Paint Mode.', 110),
+  guide('units.detail.tabs.workflow', 'Workflow', 'Workflow plans the work: schedule or log sessions, and follow the steps of the guides assigned to this unit.', 120),
+  guide('units.detail.details', 'Unit Details', 'Unit Details stores complexity, model count, deadline, parent project, status, assigned paints, and the notes you write while painting.', 130),
+  guide('units.detail.gallery', 'Gallery', 'Gallery keeps inspiration art apart from the progress snapshots you take in Paint Mode.', 140, 'top'),
+  guide('units.detail.workflow', 'Next Steps Plan', "The steps of every assigned guide become this unit's checklist. Tick them off here; the guide itself never changes.", 150, 'top'),
 ]
 
 export const guideDetailFeatureGuides = [

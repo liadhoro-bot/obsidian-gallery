@@ -286,22 +286,12 @@ test.describe('v3 login and dashboard wiring', () => {
     const heroImage = await hero.getAttribute('data-v3-unit-hero-image')
     expect(heroImage).toBeTruthy()
 
-    await page.getByRole('tab', { name: /^paint$/i }).click()
-    const calendarMonth = page.locator('[data-v3-unit-calendar-month]')
-    await expect(calendarMonth).toBeVisible()
-    const initialMonth = await calendarMonth.getAttribute(
-      'data-v3-unit-calendar-month'
-    )
+    await expect(page.getByRole('button', { name: /resume painting|return to paint mode/i }).or(page.getByRole('link', { name: /return to paint mode/i })).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: /session overview/i })).toBeVisible()
 
-    await page.getByRole('button', { name: /next month/i }).click()
-    await expect
-      .poll(() => calendarMonth.getAttribute('data-v3-unit-calendar-month'))
-      .not.toBe(initialMonth)
-
-    await page.getByRole('button', { name: /previous month/i }).click()
-    await expect
-      .poll(() => calendarMonth.getAttribute('data-v3-unit-calendar-month'))
-      .toBe(initialMonth)
+    await page.getByRole('tab', { name: /^workflow$/i }).click()
+    await expect(page.getByRole('heading', { name: /next steps plan/i })).toBeVisible()
+    await expect(page).toHaveURL(/tab=workflow/)
 
     expect(errors, 'v3 unit preview browser errors').toEqual([])
   })

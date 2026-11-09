@@ -1926,6 +1926,12 @@ function getScheduledSessionInput(formData: FormData) {
   const notifyRaw = formData.get('notify')
   const notify = notifyRaw === 'on' || notifyRaw === 'true'
   const scheduledStartAt = new Date(scheduledStartAtRaw)
+  const plannedMinutesRaw = Number(formData.get('plannedMinutes') || 0)
+  // Optional; stored in unit_scheduled_sessions.planned_minutes.
+  const plannedMinutes =
+    Number.isFinite(plannedMinutesRaw) && plannedMinutesRaw > 0
+      ? Math.min(24 * 60, Math.round(plannedMinutesRaw))
+      : null
 
   if (!unitId || !scheduledStartAtRaw) {
     throw new Error('Missing scheduled session details')
@@ -1940,6 +1946,7 @@ function getScheduledSessionInput(formData: FormData) {
     scheduledStartAt,
     focus: focus || 'Focused painting session',
     notify,
+    plannedMinutes,
   }
 }
 
@@ -1969,7 +1976,7 @@ async function verifyUserOwnsUnit(
 export async function scheduleUnitSession(formData: FormData) {
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)
-  const { unitId, scheduledStartAt, focus, notify } =
+  const { unitId, scheduledStartAt, focus, notify, plannedMinutes } =
     getScheduledSessionInput(formData)
 
   await verifyUserOwnsUnit(supabase, unitId, user.id)
@@ -1983,6 +1990,7 @@ export async function scheduleUnitSession(formData: FormData) {
       focus,
       notify,
       status: 'scheduled',
+      ...(plannedMinutes ? { planned_minutes: plannedMinutes } : {}),
     })
     .select(
       'id, unit_id, user_id, scheduled_start_at, focus, notify, status, created_at, updated_at'
@@ -2017,7 +2025,7 @@ export async function updateUnitScheduledSession(formData: FormData) {
   const supabase = await createClient()
   const user = await requireSessionUser(supabase)
   const scheduledSessionId = String(formData.get('scheduledSessionId') || '')
-  const { unitId, scheduledStartAt, focus, notify } =
+  const { unitId, scheduledStartAt, focus, notify, plannedMinutes } =
     getScheduledSessionInput(formData)
 
   if (!scheduledSessionId) {
@@ -2032,6 +2040,7 @@ export async function updateUnitScheduledSession(formData: FormData) {
       scheduled_start_at: scheduledStartAt.toISOString(),
       focus,
       notify,
+      ...(plannedMinutes ? { planned_minutes: plannedMinutes } : {}),
     })
     .eq('id', scheduledSessionId)
     .eq('unit_id', unitId)
@@ -2553,4 +2562,68 @@ export async function deleteUnitImage(formData: FormData) {
   })
 
   revalidatePath(`/units/${unitId}`)
+}
+
+// Workflow tab: tick a guide card off (or back on) for this unit only. The
+// source guide is never changed; completion lives in
+// unit_guide_step_completions, keyed by unit and recipe step.
+export async function setGuideStepDone(unitId: string, recipeStepId: string, done: boolean) {
+  const supabase = await createClient()
+  const user = await requireSessionUser(supabase)
+
+  if (!unitId || !recipeStepId) {
+    throw new Error('Missing unit or step')
+  }
+
+  const { data: unit, error: unitError } = await supabase
+    .from('units')
+    .select('id')
+    .eq('id', unitId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (unitError) throw new Error(unitError.message)
+  if (!unit) throw new Error('Unit not found')
+
+  if (done) {
+    const { data: openSession } = await supabase
+      .from('unit_sessions')
+      .select('id')
+      .eq('unit_id', unitId)
+      .eq('user_id', user.id)
+      .is('ended_at', null)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const { error } = await supabase
+      .from('unit_guide_step_completions')
+      .upsert(
+        {
+          user_id: user.id,
+          unit_id: unitId,
+          recipe_step_id: recipeStepId,
+          unit_session_id: openSession?.id ?? null,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: 'unit_id,recipe_step_id' }
+      )
+    if (error) throw new Error(error.message)
+  } else {
+    const { error } = await supabase
+      .from('unit_guide_step_completions')
+      .delete()
+      .eq('unit_id', unitId)
+      .eq('user_id', user.id)
+      .eq('recipe_step_id', recipeStepId)
+    if (error) throw new Error(error.message)
+  }
+
+  await captureServerEvent({
+    distinctId: user.id,
+    event: done ? 'unit_guide_step_completed' : 'unit_guide_step_reopened',
+    properties: { unit_id: unitId, recipe_step_id: recipeStepId },
+  })
+
+  revalidatePath(`/units/${unitId}`)
+  return { done }
 }

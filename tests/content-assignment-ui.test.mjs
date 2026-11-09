@@ -25,7 +25,7 @@ test('project and both unit details surfaces render the shared assignment card',
   const project = read('../app/projects/[id]/project-details-tab.tsx')
   const card = read('../app/guides/shared/assigned-content-card.tsx')
   const discoverCards = read('../app/guides/shared/discover-guide-list.tsx')
-  const currentUnit = read('../app/units/[id]/unit-v3-preview.tsx')
+  const currentUnit = read('../app/units/[id]/unit-workbench-tabs.tsx')
   const legacyUnit = read('../app/units/[id]/unit-detail-client.tsx')
 
   assert.match(project, /<AssignedContentCard targetType="project"/)
