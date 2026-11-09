@@ -131,7 +131,10 @@ export default async function CommunityStorePage({
                   <span>{store.city}</span>
                 </>
               ) : (
-                <span>Online store</span>
+                <>
+                  <span>Online store</span>
+                  {store.address ? <span>{store.address}</span> : null}
+                </>
               )}
             </InfoItem>
             <InfoItem icon={<InfoClockIcon />} label="Opening hours">
