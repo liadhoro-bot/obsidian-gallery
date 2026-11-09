@@ -999,6 +999,7 @@ function DirectCardEditor({
       paintAlignment: card.paintAlignment ?? 'left',
       paintVerticalAlignment: card.paintVerticalAlignment ?? 'top',
       subtitle: card.subtitle?.trim() || null,
+      workflowStep: card.workflowStep ?? null,
     }), onSaved)
   }
 

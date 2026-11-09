@@ -55,6 +55,7 @@ export default function DeckEditPageClient({
           paintAlignment: card.paintAlignment ?? 'left',
           paintVerticalAlignment: card.paintVerticalAlignment ?? 'top',
           subtitle: card.subtitle ?? null,
+          workflowStep: card.workflowStep ?? null,
           imageFocalX: card.imageFocalX,
           imageFocalY: card.imageFocalY,
           paints: card.paints?.map((paint) => ({

@@ -11,12 +11,14 @@ export type RecipeStepRow = {
   image_focal_x: number | null
   image_focal_y: number | null
   subtitle: string | null
+  // Workflow checklist opt-in/out (null = default for the card type).
+  workflow_step: boolean | null
 }
 
 // Keep compatibility with older schemas without retrying unrelated errors or
 // dropping an optional field that the database actually supports.
 export async function loadRecipeSteps(supabase: SupabaseClient, deckId: string) {
-  const optionalColumns = new Set(['card_template', 'youtube_url', 'image_focal_x', 'image_focal_y', 'subtitle'])
+  const optionalColumns = new Set(['card_template', 'youtube_url', 'image_focal_x', 'image_focal_y', 'subtitle', 'workflow_step'])
   for (;;) {
     const result = await supabase
       .from('recipe_steps')
@@ -45,6 +47,7 @@ export async function loadRecipeSteps(supabase: SupabaseClient, deckId: string) 
           image_focal_x: row.image_focal_x ?? null,
           image_focal_y: row.image_focal_y ?? null,
           subtitle: row.subtitle ?? null,
+          workflow_step: row.workflow_step ?? null,
         }
       }) ?? null,
     }

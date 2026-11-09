@@ -1842,6 +1842,8 @@ export async function updateUnitSession(formData: FormData) {
       started_at: started.toISOString(),
       ended_at: ended.toISOString(),
       duration_seconds: durationSeconds,
+      // Painting Notes edits a logged session's note; other callers omit it.
+      ...(formData.has('notes') ? { notes: String(formData.get('notes') ?? '').trim() || null } : {}),
     })
     .eq('id', sessionId)
     .eq('unit_id', unitId)

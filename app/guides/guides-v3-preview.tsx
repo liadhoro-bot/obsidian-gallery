@@ -1302,6 +1302,7 @@ export default function GuidesV3Preview({
             paintAlignment: card.paintAlignment ?? 'left',
             paintVerticalAlignment: card.paintVerticalAlignment ?? 'top',
             subtitle: card.subtitle ?? null,
+            workflowStep: card.workflowStep ?? null,
             paints: card.paints?.map((paint) => ({
               id: paint.id,
               ratio_text: paint.ratio_text ?? null,

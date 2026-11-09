@@ -19,6 +19,7 @@ export type SyncedStepRow = {
   image_focal_x: number
   image_focal_y: number
   subtitle?: string | null
+  workflow_step?: boolean | null
 }
 
 export type StepSyncPlan = {
@@ -49,7 +50,8 @@ export function planRecipeStepSync(existingIds: string[], cardIds: Array<string 
 // Kept steps park above any real step_number while cards are added and
 // removed, so a (recipe_id, step_number) uniqueness rule can never collide.
 const PARKED_STEP_NUMBER_OFFSET = 100000
-const optionalColumns = ['card_template', 'youtube_url'] as const
+// workflow_step: the Workflow step switch (migration 20261109130000).
+const optionalColumns = ['card_template', 'youtube_url', 'workflow_step'] as const
 
 type InsertSteps<Row> = (rows: Row[]) => PromiseLike<{
   data: Array<{ id: string; step_number: number }> | null

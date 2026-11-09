@@ -9,6 +9,7 @@ import {
   parseGuideCardLayout,
   resolveGuideCards,
 } from '../../guides/shared/guide-card-layout'
+import { resolveWorkflowStep } from '../../guides/shared/workflow-step'
 import type { UnitWorkflow, UnitWorkflowGuide, UnitWorkflowStep } from './unit-workflow-model'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
@@ -37,9 +38,10 @@ type StepRow = {
   subtitle?: string | null
   instructions: string | null
   card_template?: string | null
+  workflow_step?: boolean | null
 }
 
-type LeanStep = { id: string; number: number; title: string; template: string | null; hasText: boolean }
+type LeanStep = { id: string; number: number; title: string; tracked: boolean }
 type LeanDeck = {
   id: string
   title: string
@@ -51,18 +53,6 @@ type LeanDeck = {
 
 const FALLBACK_IMAGE = '/onboarding/pains/tough-choices.jpeg'
 const CARD_META_PREFIX = 'OG_DECK_CARD_META:'
-
-// Cards that carry no work to tick off: the cover, the paint list and title
-// dividers always; photo/theme/video cards only when they have no
-// instructions (a photo card with real instructions is still a step).
-const NEVER_TRACKED = new Set(['cover', 'paints', 'title'])
-const TRACKED_WITH_TEXT = new Set(['image', 'theme', 'theme-alt', 'video'])
-
-function isTrackableStep(step: LeanStep) {
-  if (step.template && NEVER_TRACKED.has(step.template)) return false
-  if (step.template && TRACKED_WITH_TEXT.has(step.template)) return step.hasText
-  return true
-}
 
 // Same card-meta convention as the guide viewer (guides-v3-detail-data):
 // an optional first line `OG_DECK_CARD_META:{"template":...}` before the body.
@@ -88,8 +78,9 @@ function toLeanStep(row: StepRow, index: number): LeanStep {
     id: row.id,
     number,
     title: row.title?.trim() || row.subtitle?.trim() || `Step ${number}`,
-    template: row.card_template ?? parsed.template,
-    hasText: Boolean(parsed.body.trim()),
+    // The creator's Workflow step switch; unset falls back to the card
+    // type (paint lists are reference, everything else is a step).
+    tracked: resolveWorkflowStep(row.workflow_step, row.card_template ?? parsed.template),
   }
 }
 
@@ -109,7 +100,7 @@ async function loadSteps(supabase: SupabaseServerClient, deckIds: string[]) {
   if (!deckIds.length) return [] as StepRow[]
   const full = await supabase
     .from('recipe_steps')
-    .select('id, recipe_id, step_number, title, subtitle, instructions, card_template')
+    .select('id, recipe_id, step_number, title, subtitle, instructions, card_template, workflow_step')
     .in('recipe_id', deckIds)
     .order('step_number', { ascending: true })
   if (!full.error) return (full.data ?? []) as StepRow[]
@@ -256,7 +247,7 @@ export async function getUnitWorkflow(
   const seenSteps = new Set<string>()
 
   function pushStep(guideKey: string, step: LeanStep) {
-    if (seenSteps.has(step.id) || !isTrackableStep(step)) return 0
+    if (seenSteps.has(step.id) || !step.tracked) return 0
     seenSteps.add(step.id)
     const doneAt = completedAt.get(step.id) ?? null
     steps.push({

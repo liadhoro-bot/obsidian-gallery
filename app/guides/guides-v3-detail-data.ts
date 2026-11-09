@@ -35,6 +35,8 @@ export type GuidesV3DeckStep = {
   // see GuidesV3DeckDetail.coverFocalX for the cover image's equivalent.
   imageFocalX: number
   imageFocalY: number
+  // recipe_steps.workflow_step: null = the card type's default.
+  workflowStep?: boolean | null
 }
 
 export type GuidesV3DeckPaint = {
@@ -128,6 +130,7 @@ type StepRow = {
   image_focal_x: number | null
   image_focal_y: number | null
   subtitle: string | null
+  workflow_step?: boolean | null
 }
 
 type StepPaintRow = {
@@ -497,6 +500,7 @@ async function loadDeckDetail(supabase: DetailClient, deckId: string, userId: st
         paintAlignment: parsedInstructions.paintAlignment,
         paintVerticalAlignment: parsedInstructions.paintVerticalAlignment,
         subtitle: step.subtitle?.trim() || null,
+        workflowStep: step.workflow_step ?? null,
       }
     })
 

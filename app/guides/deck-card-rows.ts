@@ -19,6 +19,8 @@ export type CreateDeckCardInput = {
   }>
   imageFocalX?: number
   imageFocalY?: number
+  // Workflow checklist opt-in/out; null/undefined leaves the stored value alone.
+  workflowStep?: boolean | null
 }
 
 // Theme card kicker (recipe_steps.subtitle). Null renders the default
@@ -171,6 +173,9 @@ export function deckCardStepFields(card: CreateDeckCardInput, index: number) {
     image_focal_x: safeFocalValue(card.imageFocalX),
     image_focal_y: safeFocalValue(card.imageFocalY),
     subtitle: safeThemeSubtitle(card),
+    // Only an explicit choice is written, so cards nobody toggled keep the
+    // card-type default (and saves work before the column exists).
+    ...(typeof card.workflowStep === 'boolean' ? { workflow_step: card.workflowStep } : {}),
   }
 }
 

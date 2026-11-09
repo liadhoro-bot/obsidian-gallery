@@ -59,6 +59,8 @@ export type DeckEditorInitialCard = {
   videoUrl?: string | null
   imageFocalX?: number
   imageFocalY?: number
+  // Workflow checklist opt-in/out; null = default for the card type.
+  workflowStep?: boolean | null
 }
 
 export type DeckEditorSavePayload = {
@@ -415,6 +417,7 @@ export default function DeckEditorClient({
         paintAlignment: card.paintAlignment ?? 'left',
         paintVerticalAlignment: card.paintVerticalAlignment ?? 'top',
         subtitle: card.subtitle?.trim() || null,
+        workflowStep: card.workflowStep ?? null,
       })),
     }))
   }

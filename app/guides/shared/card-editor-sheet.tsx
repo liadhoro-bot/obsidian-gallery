@@ -17,6 +17,7 @@ import type { GuidesV3DeckDetail, GuidesV3DeckStep } from '../guides-v3-detail-d
 import { ImageFocalPointField } from './image-focal-point-field'
 import { PaintAlignmentToggle, PaintVerticalAlignmentPicker } from './paint-alignment-toggle'
 import { cardTypeLabel } from './card-templates'
+import { resolveWorkflowStep } from './workflow-step'
 import styles from '../decks/[id]/deck-editor-client.module.css'
 
 export type CardEditorTemplate = 'cover' | 'step' | 'theme' | 'theme-alt' | 'image' | 'small-image' | 'paints' | 'video'
@@ -47,6 +48,8 @@ export type CardEditorCard = {
   videoUrl: string | null
   imageFocalX: number
   imageFocalY: number
+  // Workflow checklist opt-in/out; null = default for the card type.
+  workflowStep?: boolean | null
 }
 
 type CardTemplate = CardEditorTemplate
@@ -198,6 +201,7 @@ export function editorCardFromStep(step: GuidesV3DeckStep): CardEditorCard {
     paintAlignment: step.paintAlignment ?? 'left',
     paintVerticalAlignment: step.paintVerticalAlignment ?? 'top',
     subtitle: step.subtitle ?? null,
+    workflowStep: step.workflowStep ?? null,
   }
 }
 
@@ -582,6 +586,13 @@ export function CardEditorSheet({
           </button>
         </header>
 
+        {isCover ? null : (
+          <WorkflowStepToggle
+            value={resolveWorkflowStep(card.workflowStep, card.template)}
+            onChange={(workflowStep) => onChange({ workflowStep })}
+          />
+        )}
+
         <label className={styles.field}>
           <span>{isCover ? 'Cover Title' : 'Title'}</span>
           <input
@@ -950,6 +961,29 @@ function DeckPaintPickerField({
         source="deck_card_editor"
         initialPaints={initialPaints}
       />
+    </div>
+  )
+}
+
+// Units that use this guide get the card as a Workflow checklist step.
+function WorkflowStepToggle({ value, onChange }: { value: boolean; onChange: (value: boolean) => void }) {
+  return (
+    <div className={styles.workflowStepRow}>
+      <span>
+        <strong>Workflow step</strong>
+        <small>{value ? 'Shows as a step in the Workflow of units using this guide' : 'Reference only, not a Workflow step'}</small>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={value}
+        aria-label="Workflow step"
+        data-on={value ? 'true' : 'false'}
+        className={styles.workflowStepSwitch}
+        onClick={() => onChange(!value)}
+      >
+        <span aria-hidden="true" />
+      </button>
     </div>
   )
 }

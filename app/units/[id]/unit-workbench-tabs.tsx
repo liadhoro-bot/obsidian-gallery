@@ -21,6 +21,7 @@ import {
   updateUnitStatus,
 } from './actions'
 import { paintModeHref } from '../../paint-mode/paint-mode-href'
+import { saveUnitNote } from '../../paint-mode/actions'
 import {
   capTimerSessionSeconds,
   getPaintedSeconds,
@@ -260,7 +261,7 @@ function PaintCta({ unit, tab, autoStart }: { unit: PreviewUnit; tab: WorkbenchT
     return () => window.clearTimeout(timer)
   }, [autoStart]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const label = tab === 'overview' ? 'Resume Painting' : 'Resume Work'
+  const label = 'Resume Work'
   const elapsed = activeSession ? capTimerSessionSeconds(getPaintedSeconds(activeSession, now)) : 0
 
   return (
@@ -269,7 +270,7 @@ function PaintCta({ unit, tab, autoStart }: { unit: PreviewUnit; tab: WorkbenchT
         <Link href={paintModeLink} className={styles.cta} data-v3-unit-indicator="resume-cta">
           <Icon name="play" className={styles.ctaIcon} />
           <span className={styles.ctaText}>
-            <span>Return to Paint Mode</span>
+            <span>Resume Work</span>
             <span className={styles.ctaSub} role="timer" aria-label="Painting session elapsed time">
               {activeSession.paused_at ? 'Paused' : 'Painting'} · {formatClock(elapsed)}
             </span>
@@ -314,16 +315,16 @@ function SessionOverviewCard({ unit }: { unit: PreviewUnit }) {
       <div className={styles.statRow}>
         <div className={styles.stat}>
           <Icon name="timer" className={styles.statIcon} />
-          <div>
-            <p className={styles.label}>Total time logged</p>
+          <div className={styles.statText}>
+            <p className={styles.statLabel}>Total time logged</p>
             <p className={styles.statValue}>{unit.logged || '0m'}</p>
           </div>
         </div>
         <div className={styles.stat}>
           <Icon name="calendar" className={styles.statIcon} />
-          <div>
-            <p className={styles.label}>Last session</p>
-            <p className={styles.statValueSoft}>{last ?? 'Not yet'}</p>
+          <div className={styles.statText}>
+            <p className={styles.statLabel}>Last session</p>
+            <p className={styles.statValue}>{last ?? 'Not yet'}</p>
           </div>
         </div>
       </div>
@@ -331,20 +332,29 @@ function SessionOverviewCard({ unit }: { unit: PreviewUnit }) {
   )
 }
 
-type PaintingNote = { id: string; label: string; body: string; dateKey: string | null }
+type PaintingNote = {
+  id: string
+  kind: 'unit' | 'session'
+  label: string
+  body: string
+  session?: UnitPaintSession
+}
 
+// The unit's own note (written in Paint Mode or here) first, then every
+// logged session's note, newest first.
 function getPaintingNotes(unit: PreviewUnit): PaintingNote[] {
   const notes: PaintingNote[] = []
   if (unit.notes?.trim()) {
-    notes.push({ id: 'unit-note', label: 'Unit note', body: unit.notes.trim(), dateKey: null })
+    notes.push({ id: 'unit-note', kind: 'unit', label: 'Unit note', body: unit.notes.trim() })
   }
   for (const session of unit.paintSessions ?? []) {
     if (session.notes?.trim()) {
       notes.push({
         id: session.id,
-        label: `${formatShortDate(session.dateKey)} · ${session.duration}`,
+        kind: 'session',
+        label: `${formatShortDate(session.dateKey)} · ${session.durationSeconds ? formatSeconds(session.durationSeconds) : session.duration}`,
         body: session.notes.trim(),
-        dateKey: session.dateKey,
+        session,
       })
     }
   }
@@ -363,7 +373,7 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
   const primaryProjectId = unit.selectedProjectIds?.[0] ?? null
   const paints = unit.palettePaints ?? []
   const notes = useMemo(() => getPaintingNotes(unit), [unit])
-  const visiblePaints = paints.length > 5 ? paints.slice(0, 4) : paints
+  const visiblePaints = paints.length > 6 ? paints.slice(0, 5) : paints
   const overflow = paints.length - visiblePaints.length
   const rawStatus = unit.rawStatus ?? 'active'
 
@@ -391,56 +401,59 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
       guideTarget="units.detail.details"
       aside={<button type="button" onClick={onEditDetails} className={styles.smallButton}>Edit</button>}
     >
-      <div className={styles.detailGrid3}>
-        <div className={styles.detailCell}>
-          <p className={styles.label}>Complexity</p>
-          <span className={styles.dots} aria-label={`Complexity ${unit.complexity} of 5`}>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <span key={index} className={index < unit.complexity ? styles.dotOn : styles.dot} />
-            ))}
-          </span>
+      <div className={styles.detailRows}>
+        <div className={`${styles.detailRow} ${styles.detailRow2}`}>
+          <div className={styles.detailCell}>
+            <p className={styles.label}>Parent project</p>
+            {primaryProjectId ? (
+              <Link href={`/projects/${primaryProjectId}?preview=1`} prefetch={false} className={styles.chip}>
+                {unit.project}
+              </Link>
+            ) : (
+              <span className={styles.chip}>{unit.project}</span>
+            )}
+          </div>
+          <div className={styles.detailCell}>
+            <label className={styles.label} htmlFor={`unit-status-${unit.id}`}>Status</label>
+            <span className={styles.selectWrap} data-status={rawStatus}>
+              <span className={styles.statusDot} aria-hidden="true" />
+              <select
+                id={`unit-status-${unit.id}`}
+                value={rawStatus}
+                disabled={statusPending}
+                onChange={(event) => changeStatus(event.target.value as UnitStatus)}
+                className={styles.select}
+                data-v3-unit-indicator="unit-status-select"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <Icon name="down" className={styles.selectChevron} />
+            </span>
+          </div>
         </div>
-        <div className={styles.detailCell}>
-          <p className={styles.label}>Model count</p>
-          <p className={styles.detailValue}>{unit.modelCount}</p>
-        </div>
-        <div className={styles.detailCell}>
-          <p className={styles.label}>Deadline</p>
-          <p className={styles.detailValue}>{unit.deadline}</p>
-        </div>
-      </div>
 
-      <div className={styles.detailGrid2}>
-        <div className={styles.detailCell}>
-          <p className={styles.label}>Parent project</p>
-          {primaryProjectId ? (
-            <Link href={`/projects/${primaryProjectId}?preview=1`} prefetch={false} className={styles.chip}>
-              {unit.project}
-            </Link>
-          ) : (
-            <span className={styles.chip}>{unit.project}</span>
-          )}
-        </div>
-        <div className={styles.detailCell}>
-          <label className={styles.label} htmlFor={`unit-status-${unit.id}`}>Status</label>
-          <span className={styles.selectWrap} data-status={rawStatus}>
-            <span className={styles.statusDot} aria-hidden="true" />
-            <select
-              id={`unit-status-${unit.id}`}
-              value={rawStatus}
-              disabled={statusPending}
-              onChange={(event) => changeStatus(event.target.value as UnitStatus)}
-              className={styles.select}
-              data-v3-unit-indicator="unit-status-select"
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+        <div className={`${styles.detailRow} ${styles.detailRow3}`}>
+          <div className={styles.detailCell}>
+            <p className={styles.label}>Complexity</p>
+            <span className={styles.dots} aria-label={`Complexity ${unit.complexity} of 5`}>
+              {Array.from({ length: 5 }).map((_, index) => (
+                <span key={index} className={index < unit.complexity ? styles.dotOn : styles.dot} />
               ))}
-            </select>
-            <Icon name="down" className={styles.selectChevron} />
-          </span>
+            </span>
+          </div>
+          <div className={styles.detailCell}>
+            <p className={styles.label}>Model count</p>
+            <p className={styles.detailValue}>{unit.modelCount}</p>
+          </div>
+          <div className={styles.detailCell}>
+            <p className={styles.label}>Deadline</p>
+            <p className={styles.detailValue}>{unit.deadline}</p>
+          </div>
         </div>
-        <div className={`${styles.detailCell} ${styles.paintsCell}`}>
+
+        <div className={styles.inlineRow}>
           <p className={styles.label}>Assigned paints</p>
           <button
             type="button"
@@ -470,26 +483,25 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
             )}
           </button>
         </div>
+
+        <div className={styles.notesStrip} data-v3-unit-indicator="painting-notes">
+          <span className={styles.notesLabel}>
+            <Icon name="pencil" className={styles.iconSmall} />
+            <span className={styles.label}>Painting notes</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setSheet('notes')}
+            className={notes.length ? styles.notesSnippet : styles.notesEmpty}
+          >
+            {notes[0]?.body ?? 'No painting notes yet. Tap to add one.'}
+          </button>
+          <button type="button" onClick={() => setSheet('notes')} className={styles.notesCount}>
+            {notes.length ? <>Notes ({notes.length})</> : <>Add note</>} <Icon name={notes.length ? 'arrow' : 'plus'} className={styles.iconSmall} />
+          </button>
+        </div>
       </div>
       {statusError ? <p role="alert" className={styles.error}>{statusError}</p> : null}
-
-      <button
-        type="button"
-        onClick={() => setSheet('notes')}
-        className={styles.notesStrip}
-        data-v3-unit-indicator="painting-notes"
-      >
-        <span className={styles.notesLabel}>
-          <Icon name="pencil" />
-          <span className={styles.label}>Painting notes</span>
-        </span>
-        <span className={notes.length ? styles.notesSnippet : styles.notesEmpty}>
-          {notes[0]?.body ?? 'No painting notes yet'}
-        </span>
-        <span className={styles.notesCount}>
-          Notes ({notes.length}) <Icon name="arrow" className={styles.iconSmall} />
-        </span>
-      </button>
 
       {sheet === 'paints' ? (
         <Sheet title="Assigned Paints" eyebrow={`${paints.length} paints`} onClose={() => { setSheet(null); router.refresh() }}>
@@ -497,22 +509,146 @@ function UnitDetailsCard({ unit, onEditDetails, onLocalUnitChange }: {
         </Sheet>
       ) : null}
       {sheet === 'notes' ? (
-        <Sheet title="Painting Notes" eyebrow={`${notes.length} notes`} onClose={() => setSheet(null)}>
-          {notes.length ? (
-            <ul className={styles.noteList}>
-              {notes.map((note) => (
-                <li key={note.id} className={styles.noteItem}>
-                  <p className={styles.label}>{note.label}</p>
-                  <p className={styles.noteBody}>{note.body}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.muted}>Notes you write in Paint Mode, or add to a logged session, collect here.</p>
-          )}
+        <Sheet title="Painting Notes" eyebrow={`${notes.length} ${notes.length === 1 ? 'note' : 'notes'}`} onClose={() => setSheet(null)}>
+          <NotesSheetBody unit={unit} notes={notes} onLocalUnitChange={onLocalUnitChange} />
         </Sheet>
       ) : null}
     </Card>
+  )
+}
+
+function NotesSheetBody({ unit, notes, onLocalUnitChange }: {
+  unit: PreviewUnit
+  notes: PaintingNote[]
+  onLocalUnitChange: LocalUnitUpdater
+}) {
+  const router = useRouter()
+  const [unitNote, setUnitNote] = useState(unit.notes ?? '')
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
+  const [sessionDraft, setSessionDraft] = useState('')
+  const [saving, startSaving] = useTransition()
+  const [savedMessage, setSavedMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const unitNoteChanged = unitNote.trim() !== (unit.notes ?? '').trim()
+
+  function saveUnitNoteText() {
+    setError(null)
+    setSavedMessage(null)
+    startSaving(async () => {
+      try {
+        const saved = await saveUnitNote(unit.id, unitNote)
+        onLocalUnitChange((current) => (current ? { ...current, notes: saved.notes || null } : current))
+        setSavedMessage('Unit note saved')
+        router.refresh()
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Could not save the note.')
+      }
+    })
+  }
+
+  function saveSessionNote(session: UnitPaintSession) {
+    const seconds = session.durationSeconds ?? 0
+    if (!seconds) {
+      setError('This session has no length yet; edit it from Recent Sessions first.')
+      return
+    }
+    const startedAt = new Date(session.startedAt)
+    const data = new FormData()
+    data.set('unitId', unit.id)
+    data.set('sessionId', session.id)
+    data.set('startedAt', startedAt.toISOString())
+    data.set('endedAt', new Date(startedAt.getTime() + seconds * 1000).toISOString())
+    data.set('notes', sessionDraft)
+    setError(null)
+    setSavedMessage(null)
+    startSaving(async () => {
+      try {
+        await updateUnitSession(data)
+        const trimmed = sessionDraft.trim()
+        onLocalUnitChange((current) =>
+          current
+            ? {
+                ...current,
+                paintSessions: (current.paintSessions ?? []).map((item) =>
+                  item.id === session.id ? { ...item, notes: trimmed } : item
+                ),
+              }
+            : current
+        )
+        setEditingSessionId(null)
+        setSavedMessage('Session note saved')
+        router.refresh()
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Could not save the note.')
+      }
+    })
+  }
+
+  const sessionNotes = notes.filter((note) => note.kind === 'session')
+
+  return (
+    <>
+      <div className={styles.noteEditor}>
+        <label className={styles.field}>
+          Unit note
+          <textarea
+            rows={4}
+            value={unitNote}
+            onChange={(event) => setUnitNote(event.target.value)}
+            placeholder="What's done, what's next, mixes to remember…"
+            disabled={saving}
+          />
+        </label>
+        <div className={styles.noteActions}>
+          <span className={styles.muted}>Shown in Paint Mode too.</span>
+          <button type="button" onClick={saveUnitNoteText} disabled={saving || !unitNoteChanged} className={styles.smallButton}>
+            {saving && !editingSessionId ? 'Saving…' : 'Save note'}
+          </button>
+        </div>
+      </div>
+
+      {sessionNotes.length ? (
+        <div className={styles.checklistGroup}>
+          <p className={styles.label}>From painting sessions</p>
+          <ul className={styles.noteList}>
+            {sessionNotes.map((note) => (
+              <li key={note.id} className={styles.noteItem}>
+                <div className={styles.noteActions}>
+                  <p className={styles.label}>{note.label}</p>
+                  {editingSessionId === note.id ? null : (
+                    <button
+                      type="button"
+                      onClick={() => { setEditingSessionId(note.id); setSessionDraft(note.body); setError(null) }}
+                      className={styles.smallButtonQuiet}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {editingSessionId === note.id && note.session ? (
+                  <>
+                    <label className={styles.field}>
+                      <span className="sr-only">Session note</span>
+                      <textarea rows={3} value={sessionDraft} onChange={(event) => setSessionDraft(event.target.value)} disabled={saving} />
+                    </label>
+                    <div className={styles.noteActions}>
+                      <button type="button" onClick={() => setEditingSessionId(null)} disabled={saving} className={styles.smallButtonQuiet}>Cancel</button>
+                      <button type="button" onClick={() => saveSessionNote(note.session!)} disabled={saving} className={styles.smallButton}>
+                        {saving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className={styles.noteBody}>{note.body}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {savedMessage ? <p role="status" className={styles.muted}>{savedMessage}</p> : null}
+      {error ? <p role="alert" className={styles.error}>{error}</p> : null}
+    </>
   )
 }
 
@@ -663,7 +799,7 @@ export function WorkflowTab({ unit, autoStart, onLocalUnitChange }: {
       ) : null}
       {dialog?.kind === 'log' ? (
         <ManualSessionDialog
-          unitId={unit.id}
+          unit={unit}
           initialDateKey={getLocalDateKey(new Date())}
           onClose={() => setDialog(null)}
           onLogged={(logged) => {
@@ -1130,14 +1266,16 @@ function PaintSessionLog({ session, unitId, snapshots, onSaved }: {
   )
 }
 
-function ManualSessionDialog({ unitId, initialDateKey, onClose, onLogged }: {
-  unitId: string
+function ManualSessionDialog({ unit, initialDateKey, onClose, onLogged }: {
+  unit: PreviewUnit
   initialDateKey: string
   onClose: () => void
   onLogged: (session: UnitPaintSession) => void
 }) {
+  const unitId = unit.id
   const [saving, startSaving] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [dateKey, setDateKey] = useState(initialDateKey)
   const [defaultTime] = useState(() => {
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000)
     if (getLocalDateKey(hourAgo) !== initialDateKey) return '19:00'
@@ -1148,7 +1286,7 @@ function ManualSessionDialog({ unitId, initialDateKey, onClose, onLogged }: {
     event.preventDefault()
     if (saving) return
     const values = new FormData(event.currentTarget)
-    const start = new Date(`${values.get('date')}T${values.get('time')}`)
+    const start = new Date(`${dateKey}T${values.get('time')}`)
     const seconds = Math.round(Number(values.get('minutes')) * 60)
     const end = new Date(start.getTime() + seconds * 1000)
     if (!Number.isFinite(start.getTime()) || !Number.isFinite(seconds) || seconds <= 0) {
@@ -1188,7 +1326,8 @@ function ManualSessionDialog({ unitId, initialDateKey, onClose, onLogged }: {
   return (
     <Sheet title="Log a painting session" eyebrow="Log manually" onClose={onClose}>
       <form onSubmit={submit} aria-label="Log painting session" className={styles.form}>
-        <label className={styles.field}>Date<input name="date" type="date" required defaultValue={initialDateKey} max={getLocalDateKey(new Date())} disabled={saving} /></label>
+        <SessionCalendar unit={unit} selected={dateKey} onSelect={setDateKey} mode="past" />
+        <label className={styles.field}>Date<input name="date" type="date" required value={dateKey} onChange={(event) => setDateKey(event.target.value)} max={getLocalDateKey(new Date())} disabled={saving} /></label>
         <div className={styles.fieldRow}>
           <label className={styles.field}>Start time<input name="time" type="time" required defaultValue={defaultTime} disabled={saving} /></label>
           <label className={styles.field}>Minutes<input name="minutes" type="number" inputMode="numeric" min="1" step="any" required defaultValue={60} disabled={saving} /></label>
@@ -1214,12 +1353,12 @@ function ScheduleSessionDialog({ unit, existing, suggestedFocus, onClose, onSave
   const [notify, setNotify] = useState(existing?.notify ?? false)
   const [reminderHoursBefore, setReminderHoursBefore] = useState(existing?.reminderHoursBefore ?? 1)
   const [reminderChannel, setReminderChannel] = useState<'push' | 'email'>(existing?.reminderChannel ?? 'email')
+  const [dateKey, setDateKey] = useState(existing?.dateKey ?? todayKey)
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (saving) return
     const values = new FormData(event.currentTarget)
-    const dateKey = String(values.get('date') || '')
     const time = String(values.get('time') || '19:30')
     const minutes = String(values.get('minutes') || '')
     const focus = String(values.get('focus') || '').trim() || 'Focused painting session'
@@ -1267,7 +1406,8 @@ function ScheduleSessionDialog({ unit, existing, suggestedFocus, onClose, onSave
   return (
     <Sheet title={existing ? 'Edit scheduled session' : 'Schedule a session'} eyebrow="Schedule" onClose={onClose}>
       <form onSubmit={submit} className={styles.form}>
-        <label className={styles.field}>Date<input name="date" type="date" required min={todayKey} defaultValue={existing?.dateKey ?? todayKey} disabled={saving} /></label>
+        <SessionCalendar unit={unit} selected={dateKey} onSelect={setDateKey} mode="future" />
+        <label className={styles.field}>Date<input name="date" type="date" required min={todayKey} value={dateKey} onChange={(event) => setDateKey(event.target.value)} disabled={saving} /></label>
         <div className={styles.fieldRow}>
           <label className={styles.field}>Time<input name="time" type="time" required defaultValue={existing?.time ?? '19:30'} disabled={saving} /></label>
           <label className={styles.field}>Minutes<input name="minutes" type="number" inputMode="numeric" min="5" step="5" defaultValue={existing?.duration || '60'} disabled={saving} /></label>
@@ -1302,5 +1442,96 @@ function ScheduleSessionDialog({ unit, existing, suggestedFocus, onClose, onSave
         <button type="submit" disabled={saving} className={styles.primaryButton}>{saving ? 'Saving…' : 'Save Scheduled Session'}</button>
       </form>
     </Sheet>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Session calendar (Schedule / Log dialogs)                           */
+/* ------------------------------------------------------------------ */
+
+const weekDayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+function monthStart(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00`)
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function formatScheduleDay(dateKey: string) {
+  return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(`${dateKey}T12:00:00`))
+}
+
+// Month view of the unit's painting days: logged sessions and scheduled
+// sessions are marked; picking a day fills the dialog's date field. Logging
+// can only pick today or earlier, scheduling today or later.
+function SessionCalendar({ unit, selected, onSelect, mode }: {
+  unit: PreviewUnit
+  selected: string
+  onSelect: (dateKey: string) => void
+  mode: 'past' | 'future'
+}) {
+  const todayKey = getLocalDateKey(new Date())
+  const [cursor, setCursor] = useState(() => monthStart(selected || todayKey))
+  const loggedDays = useMemo(() => new Set((unit.paintSessions ?? []).map((session) => session.dateKey)), [unit.paintSessions])
+  const scheduledDays = useMemo(() => new Set((unit.scheduledSessions ?? []).map((session) => session.dateKey)), [unit.scheduledSessions])
+  const offset = cursor.getDay()
+  const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate()
+  const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(cursor)
+
+  // Typing a date in the field moves the calendar to that month.
+  const [shownSelection, setShownSelection] = useState(selected)
+  if (selected !== shownSelection) {
+    setShownSelection(selected)
+    if (selected) setCursor(monthStart(selected))
+  }
+
+  return (
+    <div className={styles.calendar} data-v3-unit-indicator="session-calendar">
+      <div className={styles.calendarHead}>
+        <button type="button" aria-label="Previous month" onClick={() => setCursor((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className={styles.calendarNav}>
+          <Icon name="chevron" className={`${styles.iconSmall} ${styles.flip}`} />
+        </button>
+        <p className={styles.calendarMonth} data-v3-unit-calendar-month={monthLabel}>{monthLabel}</p>
+        <button type="button" aria-label="Next month" onClick={() => setCursor((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className={styles.calendarNav}>
+          <Icon name="chevron" className={styles.iconSmall} />
+        </button>
+      </div>
+      <div className={styles.calendarGrid} role="grid" aria-label={monthLabel}>
+        {weekDayLabels.map((label, index) => (
+          <span key={`${label}-${index}`} className={styles.calendarWeekday} aria-hidden="true">{label}</span>
+        ))}
+        {Array.from({ length: offset }).map((_, index) => <span key={`blank-${index}`} />)}
+        {Array.from({ length: daysInMonth }).map((_, index) => {
+          const day = index + 1
+          const dateKey = getLocalDateKey(new Date(cursor.getFullYear(), cursor.getMonth(), day))
+          const logged = loggedDays.has(dateKey)
+          const scheduled = scheduledDays.has(dateKey)
+          const disabled = mode === 'past' ? dateKey > todayKey : dateKey < todayKey
+          const parts = [formatScheduleDay(dateKey)]
+          if (logged) parts.push('painting session logged')
+          if (scheduled) parts.push('session scheduled')
+          return (
+            <button
+              key={dateKey}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(dateKey)}
+              aria-pressed={selected === dateKey}
+              aria-label={parts.join(', ')}
+              className={styles.calendarDay}
+              data-logged={logged ? 'true' : undefined}
+              data-scheduled={scheduled ? 'true' : undefined}
+              data-today={dateKey === todayKey ? 'true' : undefined}
+            >
+              {day}
+              {logged || scheduled ? <span className={styles.calendarDot} aria-hidden="true" /> : null}
+            </button>
+          )
+        })}
+      </div>
+      <p className={styles.calendarLegend}>
+        <span><span className={styles.legendLogged} /> Logged</span>
+        <span><span className={styles.legendScheduled} /> Scheduled</span>
+      </p>
+    </div>
   )
 }

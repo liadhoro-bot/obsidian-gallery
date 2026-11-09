@@ -160,6 +160,20 @@ async function insertRecipeSteps(
     .insert(steps)
     .select('id, step_number')
 
+  // The Workflow step switch (migration 20261109130000) is an optional
+  // column: without it the creator's override is dropped, not the save.
+  if (isMissingColumn(result.error, 'workflow_step')) {
+    steps = steps.map((step) => {
+      const rest = { ...step } as RecipeStepInsert & { workflow_step?: boolean | null }
+      delete rest.workflow_step
+      return rest
+    })
+    result = await supabase
+      .from('recipe_steps')
+      .insert(steps)
+      .select('id, step_number')
+  }
+
   if (isMissingColumn(result.error, 'youtube_url')) {
     result = await supabase
       .from('recipe_steps')
