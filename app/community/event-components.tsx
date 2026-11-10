@@ -163,8 +163,13 @@ export function UpcomingEventRow({
       <span data-v3-community-indicator="upcoming-copy">
         <span data-v3-community-indicator="upcoming-title">{event.name}</span>
         <span data-v3-community-indicator="upcoming-meta">
-          {formatEventWeekday(event.eventDate)} {event.startTime} ·{' '}
-          {event.city}
+          {[
+            `${formatEventWeekday(event.eventDate)} ${event.startTime}`,
+            event.city,
+            event.locationName,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </span>
       </span>
       <span data-v3-community-indicator="row-chevron" aria-hidden="true">
