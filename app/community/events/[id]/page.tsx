@@ -72,7 +72,17 @@ export default async function CommunityEventPage({
       kind: 'phone',
     })
   }
-  if (event.contactUrl) {
+  if (event.contactUrl && isWhatsAppUrl(event.contactUrl)) {
+    // WhatsApp invite links are long tokens; show a label instead. No UTM
+    // tags, so the invite token reaches WhatsApp untouched.
+    contacts.push({
+      label: 'Registration',
+      value: 'Register on WhatsApp',
+      href: event.contactUrl,
+      kind: 'registration',
+      external: true,
+    })
+  } else if (event.contactUrl) {
     contacts.push({
       label: 'Website',
       value: event.contactUrl.replace(/^https?:\/\//, ''),
@@ -195,4 +205,13 @@ export default async function CommunityEventPage({
       </div>
     </main>
   )
+}
+
+function isWhatsAppUrl(url: string) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '')
+    return host === 'wa.me' || host === 'whatsapp.com' || host.endsWith('.whatsapp.com')
+  } catch {
+    return false
+  }
 }
