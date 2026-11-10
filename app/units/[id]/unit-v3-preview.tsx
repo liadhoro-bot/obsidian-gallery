@@ -259,7 +259,15 @@ export default function UnitV3Preview({
   const [localUnit, setLocalUnit] = useState<PreviewUnit | null>(liveUnit)
   // Both tabs render from the same server payload, so switching is local
   // state mirrored into ?tab= (no server round trip).
-  const [activeTab, setActiveTab] = useState<UnitTab>(initialTab)
+  // Read the URL first: coming Back (e.g. from a guide card opened from the
+  // Workflow tab) restores ?tab= but reuses the payload rendered for the
+  // tab the page was first opened on.
+  const [activeTab, setActiveTab] = useState<UnitTab>(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'workflow' || tabParam === 'paint' || tabParam === 'progress') return 'workflow'
+    // No ?tab= means Overview; initialTab only covers a missing URL.
+    return searchParams.size || tabParam !== null ? 'overview' : initialTab
+  })
   // ?autostart=1 starts a session once, on first render only.
   const [autoStart, setAutoStart] = useState(autoStartSession)
   const unit = useMemo(
