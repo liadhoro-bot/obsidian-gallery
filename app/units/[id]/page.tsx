@@ -315,7 +315,8 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
       )
       .eq('unit_id', id)
       .eq('user_id', userId)
-      .limit(1),
+      // Every project the unit belongs to (a unit can sit in several).
+      .order('created_at', { ascending: true }),
     unit.project_id
       ? supabase
           .from('projects')
@@ -429,11 +430,15 @@ async function getUnitV3PreviewUnit(id: string, userId: string) {
     throw new Error(unitNotesResult.error.message)
   }
 
-  const linkedProject = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
+  // The unit's main project (units.project_id) leads the list.
+  const linkedRows = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
+    .slice()
+    .sort((a, b) => Number(b.project_id === unit.project_id) - Number(a.project_id === unit.project_id))
+  const linkedProject = linkedRows
     .map((row) => firstRelation(row.project))
     .find((project): project is ParentProject => Boolean(project?.id))
   const directProject = directProjectResult.data as ParentProject | null
-  const linkedProjectIds = ((linkedProjectsResult.data ?? []) as UnitProjectRaw[])
+  const linkedProjectIds = linkedRows
     .map((row) => row.project_id)
     .filter(Boolean)
   const selectedProjectIds =

@@ -28,7 +28,7 @@ import DeckShareMenu, { type ShareCardEntry } from '../../shared/deck-share-menu
 
 type DeckDetailPageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ edit?: string; preview?: string; addCard?: string; card?: string }>
+  searchParams?: Promise<{ edit?: string; preview?: string; addCard?: string; card?: string; at?: string }>
 }
 
 type DeckGuidePaint = {
@@ -126,7 +126,7 @@ export default async function DeckDetailPage({
   const perf = createPerfTimer('/guides/decks/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} as { edit?: string; preview?: string; addCard?: string; card?: string }),
+    searchParams ?? Promise.resolve({} as { edit?: string; preview?: string; addCard?: string; card?: string; at?: string }),
   ])
   const isEditing = resolvedSearchParams.edit === '1'
 
@@ -168,7 +168,8 @@ export default async function DeckDetailPage({
     ? { id: inlineRow.inline_guide_id as string, title: (inlineGuideRow?.title as string | null | undefined)?.trim() || 'Untitled Guide' }
     : undefined
   if (inlineGuide && !(isEditing && deck.isOwner)) {
-    redirect(`/guides/${inlineGuide.id}?preview=1&view=1`)
+    const at = resolvedSearchParams.at && isUuid(resolvedSearchParams.at) ? `&at=${resolvedSearchParams.at}` : ''
+    redirect(`/guides/${inlineGuide.id}?preview=1&view=1${at}`)
   }
 
   // One kind of guide: editing a deck you own edits it as a full guide. An
@@ -371,6 +372,7 @@ export default async function DeckDetailPage({
       <V3PerfIndicator surface="deck-detail" detail="main" />
       <DeckCardViewer
         cards={cards}
+        initialCardKey={resolvedSearchParams.at}
         title={deck.title}
         backHref="/guides?preview=1&tab=guides"
         featureGuides={featureGuides}

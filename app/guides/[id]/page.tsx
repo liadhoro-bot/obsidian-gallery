@@ -22,7 +22,7 @@ import styles from '../guide-detail-silver.module.css'
 
 type GuideDetailPageProps = {
   params: Promise<{ id: string }>
-  searchParams?: Promise<{ edit?: string; view?: string; deck?: string }>
+  searchParams?: Promise<{ edit?: string; view?: string; deck?: string; at?: string }>
 }
 
 export default async function GuideDetailPage({
@@ -32,7 +32,7 @@ export default async function GuideDetailPage({
   const perf = createPerfTimer('/guides/[id]')
   const [{ id }, resolvedSearchParams] = await Promise.all([
     params,
-    searchParams ?? Promise.resolve({} as { edit?: string; view?: string; deck?: string }),
+    searchParams ?? Promise.resolve({} as { edit?: string; view?: string; deck?: string; at?: string }),
   ])
   const isEditing = resolvedSearchParams.edit === '1'
 
@@ -101,7 +101,9 @@ export default async function GuideDetailPage({
     const resolved = resolveGuideCards(details, guide.cardLayout)
     const entries = guideCardNodes(details, resolved, { id: guide.id, title: guide.title, description: guide.subtitle, image: guide.image })
     const cards = resolved.filter(card => !card.hidden).map(card => ({ key: guideCardKey(card), node: entries.get(guideCardKey(card)) }))
-    const firstCard = resolved.find(card => !card.hidden && !isGuideOwnedCard(card) && card.groupId === resolvedSearchParams.deck)
+    // ?at=<card id> opens the viewer on that card (e.g. a unit's workflow step).
+    const atCard = resolvedSearchParams.at ? resolved.find(card => !card.hidden && card.cardId === resolvedSearchParams.at) : undefined
+    const firstCard = atCard ?? resolved.find(card => !card.hidden && !isGuideOwnedCard(card) && card.groupId === resolvedSearchParams.deck)
     return <main><DeckCardViewer initialCardKey={firstCard ? guideCardKey(firstCard) : undefined} cards={cards} title={guide.title} backHref={`/guides/${guide.id}?preview=1`} featureGuides={featureGuides} heroActions={<>
       {guide.deckId ? (
         <DeckHeroActions

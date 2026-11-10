@@ -317,7 +317,7 @@ function SessionOverviewCard({ unit }: { unit: PreviewUnit }) {
   const hasSessions = (unit.paintSessions?.length ?? 0) > 0
   const latest = formatShortDate(unit.lastPainted ?? unit.paintSessions?.[0]?.dateKey)
   return (
-    <Card icon="calendar" title="Session Overview" indicator="session-overview">
+    <Card icon="calendar" title="Session Overview" indicator="session-overview" className={styles.sessionCard}>
       <div className={styles.statRow}>
         <div className={styles.stat}>
           <Icon name="timer" className={styles.statIcon} />
@@ -381,7 +381,7 @@ function getPaintingNotes(unit: PreviewUnit): PaintingNote[] {
 }
 
 type DetailsDraft = {
-  projectId: string
+  projectIds: string[]
   complexity: number
   modelCount: string
   deadline: string
@@ -399,18 +399,20 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
   const [draft, setDraft] = useState<DetailsDraft | null>(null)
   const editing = draft !== null
   const selectedProjectIds = unit.selectedProjectIds ?? []
-  const primaryProjectId = selectedProjectIds[0] ?? null
   const projects = unit.availableProjects ?? []
+  const projectName = (projectId: string, index: number) =>
+    projects.find((project) => project.id === projectId)?.name || (index === 0 ? unit.project : 'Untitled project')
   const paints = unit.palettePaints ?? []
   const notes = useMemo(() => getPaintingNotes(unit), [unit])
-  const visiblePaints = paints.length > 6 ? paints.slice(0, 5) : paints
+  // Up to five tiles plus the greyed add tile; more collapse into "+N".
+  const visiblePaints = paints.length > 5 ? paints.slice(0, 4) : paints
   const overflow = paints.length - visiblePaints.length
   const rawStatus = unit.rawStatus ?? 'active'
 
   function startEditing() {
     setError(null)
     setDraft({
-      projectId: primaryProjectId ?? '',
+      projectIds: selectedProjectIds,
       complexity: unit.complexity,
       modelCount: String(unit.modelCount),
       deadline: unit.rawDeadline ?? '',
@@ -424,10 +426,9 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
       setError('Model count must be 1 or more.')
       return
     }
-    // Only the primary project changes here; any other projects the unit
-    // also belongs to stay linked.
-    const others = selectedProjectIds.filter((projectId) => projectId !== primaryProjectId && projectId !== draft.projectId)
-    const projectIds = draft.projectId ? [draft.projectId, ...others] : others
+    // A unit can sit in several projects at once (e.g. two armies); the
+    // first one stays its main project.
+    const projectIds = draft.projectIds
     const formData = new FormData()
     formData.set('unitId', unit.id)
     formData.set('complexity', String(draft.complexity))
@@ -438,7 +439,7 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
     startSavingDetails(async () => {
       try {
         await updateUnitDetails(formData)
-        const projectName = projects.find((project) => project.id === projectIds[0])?.name
+        const firstName = projects.find((project) => project.id === projectIds[0])?.name
         onLocalUnitChange((current) =>
           current
             ? {
@@ -448,7 +449,7 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
                 rawDeadline: draft.deadline || null,
                 deadline: formatDeadline(draft.deadline || null),
                 selectedProjectIds: projectIds,
-                project: projectIds.length ? projectName || current.project : 'Standalone unit',
+                project: projectIds.length ? firstName || current.project : 'Standalone unit',
               }
             : current
         )
@@ -477,6 +478,8 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
   }
 
   const complexityValue = draft?.complexity ?? unit.complexity
+  const projectIdsShown = draft?.projectIds ?? selectedProjectIds
+  const addableProjects = projects.filter((project) => !projectIdsShown.includes(project.id))
 
   return (
     <Card
@@ -484,51 +487,67 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
       title="Unit Details"
       indicator="unit-details-card"
       guideTarget="units.detail.details"
+      className={styles.detailsCard}
       aside={
         editing ? (
           <span className={styles.editActions}>
-            <button type="button" onClick={() => { setDraft(null); setError(null) }} disabled={savingDetails} className={styles.smallButtonQuiet}>Cancel</button>
-            <button type="button" onClick={saveDetails} disabled={savingDetails} className={styles.smallButton}>{savingDetails ? 'Saving…' : 'Save'}</button>
+            <button type="button" onClick={() => { setDraft(null); setError(null) }} disabled={savingDetails} className={`${styles.smallButtonQuiet} ${styles.headerButton}`}>Cancel</button>
+            <button type="button" onClick={saveDetails} disabled={savingDetails} className={`${styles.smallButton} ${styles.headerButton}`}>{savingDetails ? 'Saving…' : 'Save'}</button>
           </span>
         ) : (
-          <button type="button" onClick={startEditing} className={styles.smallButton}>Edit</button>
+          <button type="button" onClick={startEditing} className={`${styles.smallButton} ${styles.headerButton}`}>Edit</button>
         )
       }
     >
       <div className={styles.detailRows} data-editing={editing ? 'true' : undefined}>
         <div className={`${styles.detailRow} ${styles.detailRow2}`}>
           <div className={styles.detailCell}>
-            {editing ? (
-              <>
-                <label className={styles.label} htmlFor={`unit-project-${unit.id}`}>Parent project</label>
-                <span className={styles.selectWrap} data-plain="true">
+            <p className={styles.label} id={`unit-projects-${unit.id}`}>
+              {projectIdsShown.length > 1 ? 'Parent projects' : 'Parent project'}
+            </p>
+            <div className={styles.projectChips} role="list" aria-labelledby={`unit-projects-${unit.id}`} data-v3-unit-indicator="parent-projects">
+              {projectIdsShown.length === 0 && !(editing && addableProjects.length) ? <span className={styles.chip} role="listitem">Standalone unit</span> : null}
+              {projectIdsShown.map((projectId, index) =>
+                editing ? (
+                  <span key={projectId} className={`${styles.chip} ${styles.projectChipEdit}`} role="listitem">
+                    <span className={styles.projectChipName}>{projectName(projectId, index)}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${projectName(projectId, index)}`}
+                      disabled={savingDetails}
+                      onClick={() => setDraft({ ...draft, projectIds: draft.projectIds.filter((id) => id !== projectId) })}
+                      className={styles.chipRemove}
+                    >
+                      <Icon name="close" className={styles.iconSmall} />
+                    </button>
+                  </span>
+                ) : (
+                  <Link key={projectId} role="listitem" href={`/projects/${projectId}?preview=1`} prefetch={false} className={styles.chip}>
+                    {projectName(projectId, index)}
+                  </Link>
+                )
+              )}
+              {editing && addableProjects.length ? (
+                <span className={`${styles.selectWrap} ${styles.addProject}`} data-plain="true" role="listitem">
                   <select
-                    id={`unit-project-${unit.id}`}
-                    value={draft.projectId}
-                    onChange={(event) => setDraft({ ...draft, projectId: event.target.value })}
+                    aria-label="Add a parent project"
+                    value=""
+                    onChange={(event) => {
+                      const next = event.target.value
+                      if (next) setDraft({ ...draft, projectIds: [...draft.projectIds, next] })
+                    }}
                     disabled={savingDetails}
                     className={styles.select}
                   >
-                    <option value="">Standalone unit</option>
-                    {projects.map((project) => (
+                    <option value="">{projectIdsShown.length ? '+ Add project' : '+ Choose project'}</option>
+                    {addableProjects.map((project) => (
                       <option key={project.id} value={project.id}>{project.name || 'Untitled project'}</option>
                     ))}
                   </select>
                   <Icon name="down" className={styles.selectChevron} />
                 </span>
-              </>
-            ) : (
-              <>
-                <p className={styles.label}>Parent project</p>
-                {primaryProjectId ? (
-                  <Link href={`/projects/${primaryProjectId}?preview=1`} prefetch={false} className={styles.chip}>
-                    {unit.project}
-                  </Link>
-                ) : (
-                  <span className={styles.chip}>{unit.project}</span>
-                )}
-              </>
-            )}
+              ) : null}
+            </div>
           </div>
           <div className={styles.detailCell}>
             <label className={styles.label} htmlFor={`unit-status-${unit.id}`}>Status</label>
@@ -623,6 +642,7 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
 
         <div className={styles.inlineRow}>
           <p className={styles.label}>Assigned paints</p>
+          <span className={styles.paintsRow}>
           <button
             type="button"
             onClick={() => setSheet('paints')}
@@ -650,6 +670,12 @@ function UnitDetailsCard({ unit, onLocalUnitChange }: {
               <span className={styles.addPaints}><Icon name="plus" className={styles.iconSmall} /> Add Paints</span>
             )}
           </button>
+          {paints.length ? (
+            <button type="button" onClick={() => setSheet('paints')} className={styles.swatchAdd} aria-label="Add more paints" title="Add more paints">
+              +1
+            </button>
+          ) : null}
+          </span>
         </div>
 
         <div className={styles.notesStrip} data-v3-unit-indicator="painting-notes">
@@ -1051,10 +1077,11 @@ export function WorkflowTab({ unit, autoStart, onLocalUnitChange }: {
   )
 }
 
-function StepRow({ step, tone, prefix, disabled, onToggle }: {
+function StepRow({ step, tone, prefix, href, disabled, onToggle }: {
   step: UnitWorkflowStep
   tone: 'done' | 'current' | 'next'
   prefix?: string
+  href?: string
   disabled: boolean
   onToggle: (step: UnitWorkflowStep) => void
 }) {
@@ -1072,10 +1099,20 @@ function StepRow({ step, tone, prefix, disabled, onToggle }: {
       >
         {step.done ? <Icon name="check" className={styles.checkIcon} /> : null}
       </button>
-      <span className={styles.stepText}>
-        {prefix ? <span className={styles.stepPrefix}>{prefix}</span> : null}
-        <span className={styles.stepTitle}>{step.title}</span>
-      </span>
+      {href ? (
+        <Link href={href} prefetch={false} className={styles.stepLink} aria-label={`Open in guide: ${step.title}`}>
+          <span className={styles.stepText}>
+            {prefix ? <span className={styles.stepPrefix}>{prefix}</span> : null}
+            <span className={styles.stepTitle}>{step.title}</span>
+          </span>
+          <Icon name="chevron" className={`${styles.iconSmall} ${styles.stepChevron}`} />
+        </Link>
+      ) : (
+        <span className={styles.stepText}>
+          {prefix ? <span className={styles.stepPrefix}>{prefix}</span> : null}
+          <span className={styles.stepTitle}>{step.title}</span>
+        </span>
+      )}
     </li>
   )
 }
@@ -1126,6 +1163,12 @@ function NextStepsCard({ unit, workflow, onLocalUnitChange }: {
   const { lastCompleted, current, upcoming } = summarizeWorkflow(workflow.steps, 1)
   const percent = workflow.total ? Math.round((workflow.completed / workflow.total) * 100) : 0
   const canTrack = workflow.trackingAvailable
+  const guideHref = new Map(workflow.guides.map((guide) => [guide.key, guide.href]))
+  // Opens the step's guide on that card.
+  const stepHref = (step: UnitWorkflowStep) => {
+    const href = guideHref.get(step.guideKey)
+    return href ? `${href}${href.includes('?') ? '&' : '?'}at=${encodeURIComponent(step.id)}` : undefined
+  }
 
   return (
     <Card
@@ -1178,17 +1221,17 @@ function NextStepsCard({ unit, workflow, onLocalUnitChange }: {
         <>
           <ul className={styles.stepList}>
             {lastCompleted ? (
-              <StepRow step={lastCompleted} tone="done" prefix="Last completed" disabled={!canTrack || pendingIds.has(lastCompleted.id)} onToggle={toggle} />
+              <StepRow step={lastCompleted} tone="done" prefix="Last completed" href={stepHref(lastCompleted)} disabled={!canTrack || pendingIds.has(lastCompleted.id)} onToggle={toggle} />
             ) : null}
             {current ? (
-              <StepRow step={current} tone="current" prefix="Current" disabled={!canTrack || pendingIds.has(current.id)} onToggle={toggle} />
+              <StepRow step={current} tone="current" prefix="Current" href={stepHref(current)} disabled={!canTrack || pendingIds.has(current.id)} onToggle={toggle} />
             ) : (
               <li className={styles.allDone}>
                 <Icon name="check" className={styles.iconSmall} /> All {workflow.total} steps complete
               </li>
             )}
             {upcoming.map((step) => (
-              <StepRow key={step.id} step={step} tone="next" disabled={!canTrack || pendingIds.has(step.id)} onToggle={toggle} />
+              <StepRow key={step.id} step={step} tone="next" href={stepHref(step)} disabled={!canTrack || pendingIds.has(step.id)} onToggle={toggle} />
             ))}
           </ul>
           <button type="button" onClick={() => setSheet('checklist')} className={styles.fullChecklist}>
@@ -1213,6 +1256,7 @@ function NextStepsCard({ unit, workflow, onLocalUnitChange }: {
                     step={step}
                     tone={step.done ? 'done' : step.id === current?.id ? 'current' : 'next'}
                     prefix={step.id === current?.id ? 'Current' : undefined}
+                    href={stepHref(step)}
                     disabled={!canTrack || pendingIds.has(step.id)}
                     onToggle={toggle}
                   />

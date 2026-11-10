@@ -1774,3 +1774,204 @@ div.notesStrip {
     height: 15px;
   }
 }
+
+/* ---------- Round 6: tighter overview, several projects, add paint, step links ---------- */
+
+.sessionCard {
+  gap: 6px;
+  padding-block: 10px;
+}
+
+.sessionCard .stat {
+  gap: 10px;
+  padding-block: 0;
+}
+
+.sessionCard .statIcon {
+  width: 22px;
+  height: 22px;
+}
+
+.sessionCard .statText {
+  gap: 2px;
+}
+
+.sessionCard .stat .statValue {
+  font-size: 1.12rem;
+}
+
+.sessionCard .stat .statValue.statEmpty {
+  font-size: 1rem;
+}
+
+.detailsCard {
+  gap: 8px;
+  padding-block: 10px 12px;
+}
+
+.detailsCard .detailRow .detailCell {
+  gap: 6px;
+  padding-block: 9px;
+}
+
+.detailsCard .inlineRow {
+  min-height: 50px;
+  padding-block: 7px;
+}
+
+.detailsCard .notesStrip {
+  padding-top: 9px;
+}
+
+.headerButton.headerButton {
+  min-height: 24px;
+  padding: 1px 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+.projectChips {
+  display: flex;
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.detailRow2 .projectChips .chip {
+  width: auto;
+  max-width: 100%;
+  min-height: 34px;
+}
+
+.projectChipEdit.projectChipEdit {
+  gap: 4px;
+  padding-inline-end: 4px;
+}
+
+.projectChipName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chipRemove {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--og-text-secondary);
+  cursor: pointer;
+}
+
+.chipRemove:hover {
+  background: color-mix(in srgb, var(--og-ink-950) 10%, transparent);
+  color: var(--og-text-primary);
+}
+
+.detailRow2 .addProject.addProject {
+  width: auto;
+  min-height: 34px;
+}
+
+.addProject .select {
+  color: var(--og-text-secondary);
+  font-size: 0.84rem;
+}
+
+.paintsRow {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.swatchAdd {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 1px dashed color-mix(in srgb, var(--og-ink-950) 30%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--og-ink-950) 7%, transparent);
+  color: var(--og-text-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.swatchAdd:hover {
+  border-color: var(--og-border-medium);
+  color: var(--og-text-secondary);
+}
+
+.swatchAdd:focus-visible,
+.chipRemove:focus-visible,
+.stepLink:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus);
+  outline-offset: 2px;
+}
+
+.stepLink {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-self: stretch;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: var(--og-radius-s);
+  color: inherit;
+  text-decoration: none;
+}
+
+.stepChevron {
+  flex: none;
+  color: var(--og-text-muted);
+}
+
+.stepLink:hover .stepTitle {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--og-brass-700) 60%, transparent);
+  text-underline-offset: 3px;
+}
+
+/* Native pickers inherit the app's dark color-scheme, which draws white
+   calendar/clock glyphs and a dark checkbox on parchment. Use the light
+   scheme and paint the picker glyphs in the cards' brass icon colour. */
+.sheet input,
+.sheet select,
+.sheet textarea,
+.field input,
+.field select,
+.field textarea,
+.inlineInput {
+  color-scheme: light;
+  accent-color: var(--og-brass-700);
+}
+
+.sheet input::-webkit-calendar-picker-indicator,
+.field input::-webkit-calendar-picker-indicator,
+.inlineInput::-webkit-calendar-picker-indicator {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: color-mix(in srgb, var(--og-brass-700) 80%, var(--og-ink-800));
+  opacity: 1;
+  cursor: pointer;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15' rx='2'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='5' width='17' height='15' rx='2'/%3E%3Cpath d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+}
+
+.sheet input[type='time']::-webkit-calendar-picker-indicator,
+.field input[type='time']::-webkit-calendar-picker-indicator {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E");
+}
