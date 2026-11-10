@@ -55,7 +55,11 @@ export default async function CommunityEventPage({
   const descriptionBlocks = parseEventDescription(event.description)
 
   const contacts: ContactLine[] = []
-  if (event.contactName) contacts.push({ label: 'Host', value: event.contactName })
+  if (event.contactName) {
+    // Several hosts are written as "A & B" or "A, B".
+    const hasSeveralHosts = /\s&\s|,/.test(event.contactName)
+    contacts.push({ label: hasSeveralHosts ? 'Hosts' : 'Host', value: event.contactName })
+  }
   if (event.contactEmail) {
     contacts.push({
       label: 'Email',
