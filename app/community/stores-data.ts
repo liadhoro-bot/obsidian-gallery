@@ -129,6 +129,7 @@ export const storeSpotlights: StoreSpotlight[] = [
     offerings: ['board_games'],
     ...noContactYet,
     address: 'Hankin 10',
+    phone: '+972 9-894-6404',
     hours: ['Sun–Thu: 12:00–20:00', 'Fri: 10:00–15:00'],
     image: '/community/stores/the-kingdom.jpg',
     photos: ['/community/stores/the-kingdom.jpg'],
