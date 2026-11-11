@@ -5,6 +5,7 @@ import { formatNewsDate, getNewsAvailability, type NewsAvailability } from '../n
 import { getNewsroomArticles } from '../news/news-queries'
 import styles from '../news/news.module.css'
 import { requireNewsroomAccess } from './guard'
+import { NewsroomTabs } from './newsroom-tabs'
 
 export const metadata: Metadata = { title: 'Newsroom | Obsidian Gallery', robots: { index: false } }
 
@@ -31,6 +32,7 @@ export default async function NewsroomPage({
   return (
     <NewsPageShell>
       <NewsPageHeader backHref="/community?tab=news" backLabel="Back to community" title="Newsroom" />
+      <NewsroomTabs active="articles" />
 
       <Link href="/community/newsroom/new" className={styles.primaryAction}>
         New article

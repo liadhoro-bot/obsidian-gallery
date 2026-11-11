@@ -159,6 +159,8 @@ export default async function proxy(request: NextRequest) {
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
     pathname === '/api/youtube-oembed' ||
+    // The news scheduler has no session; the route checks its own secret.
+    pathname === '/api/news/ingest' ||
     // Renders cards the caller already has on screen (public share pages
     // included) to PDF/PNG; it reads no data of its own.
     pathname === '/api/export/cards' ||

@@ -2,9 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'node:crypto'
-import { isCurrentUserAdmin } from '../../../lib/admin'
-import { createClient, getSessionUser } from '../../../utils/supabase/server'
-import { createServiceRoleClient } from '../../../utils/supabase/service-role'
 import {
   isValidNewsSlug,
   newsArticleHref,
@@ -14,6 +11,7 @@ import {
   validateNewsForPublish,
   type NewsDraftFields,
 } from '../news/news-data'
+import { findFreeSlug, requireNewsAdmin, type NewsSupabase } from './newsroom-admin'
 
 const IMAGE_BUCKET = 'obsidian-images'
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -40,16 +38,6 @@ type StoredArticle = {
 const STORED_COLUMNS =
   'id, slug, status, published_at, first_published_at, image_url, image_storage_path'
 
-// Admins come from ADMIN_USER_IDS, which RLS can't see, so writes use the
-// service role once this check passes, the same way contest management does.
-async function requireNewsAdmin() {
-  const user = await getSessionUser(await createClient())
-  if (!user || !(await isCurrentUserAdmin(user.id))) return null
-  return { supabase: createServiceRoleClient(), user }
-}
-
-type NewsSupabase = NonNullable<Awaited<ReturnType<typeof requireNewsAdmin>>>['supabase']
-
 async function loadStoredArticle(supabase: NewsSupabase, id: string) {
   const { data } = await supabase
     .from('news_articles')
@@ -69,19 +57,6 @@ function refreshNewsPages(slug: string) {
   revalidatePath('/community/news')
   revalidatePath(newsArticleHref(slug))
   revalidatePath('/community/newsroom')
-}
-
-async function findFreeSlug(supabase: NewsSupabase, base: string, ownId: string | null) {
-  for (let attempt = 1; attempt <= 20; attempt += 1) {
-    const candidate = attempt === 1 ? base : `${base}-${attempt}`
-    const { data } = await supabase
-      .from('news_articles')
-      .select('id')
-      .eq('slug', candidate)
-      .maybeSingle()
-    if (!data || data.id === ownId) return candidate
-  }
-  return `${base}-${randomUUID().slice(0, 8)}`
 }
 
 export async function saveNewsArticle(formData: FormData): Promise<NewsActionResult> {
