@@ -300,7 +300,7 @@ function PaintCta({ unit, tab, autoStart }: { unit: PreviewUnit; tab: WorkbenchT
 export function OverviewTab({ unit, autoStart, onEditGallery, onLocalUnitChange }: {
   unit: PreviewUnit
   autoStart: boolean
-  onEditGallery: () => void
+  onEditGallery: (focus?: 'snapshots') => void
   onLocalUnitChange: LocalUnitUpdater
 }) {
   return (
@@ -924,7 +924,7 @@ function UnitPaletteSheetBody({ unit }: { unit: PreviewUnit }) {
   return <PaletteCard unitId={unit.id} paints={paints} className="p-0" />
 }
 
-function GalleryCard({ unit, onEditGallery }: { unit: PreviewUnit; onEditGallery: () => void }) {
+function GalleryCard({ unit, onEditGallery }: { unit: PreviewUnit; onEditGallery: (focus?: 'snapshots') => void }) {
   const [viewing, setViewing] = useState<'inspiration' | 'snapshots' | null>(null)
   const [zoomed, setZoomed] = useState<PreviewGalleryImage | null>(null)
   const images = unit.galleryImages ?? []
@@ -936,7 +936,7 @@ function GalleryCard({ unit, onEditGallery }: { unit: PreviewUnit; onEditGallery
 
   const collections = [
     { key: 'inspiration' as const, title: 'Inspiration / Art', items: inspiration, empty: 'Add reference art or scheme inspiration.' },
-    { key: 'snapshots' as const, title: 'Progress / Snapshots', items: snapshots, empty: 'Snapshots you take in Paint Mode land here.' },
+    { key: 'snapshots' as const, title: 'Progress / Snapshots', items: snapshots, empty: 'Add a progress photo, or take snapshots in Paint Mode.' },
   ]
   const open = collections.find((collection) => collection.key === viewing)
 
@@ -946,7 +946,7 @@ function GalleryCard({ unit, onEditGallery }: { unit: PreviewUnit; onEditGallery
       title="Gallery"
       indicator="unit-gallery-card"
       guideTarget="units.detail.gallery"
-      aside={<button type="button" onClick={onEditGallery} className={styles.smallButton}>Manage</button>}
+      aside={<button type="button" onClick={() => onEditGallery()} className={styles.smallButton}>Manage</button>}
     >
       {collections.map((collection) => (
         <div key={collection.key} className={styles.galleryGroup} data-v3-unit-gallery={collection.key}>
@@ -971,12 +971,14 @@ function GalleryCard({ unit, onEditGallery }: { unit: PreviewUnit; onEditGallery
                 </button>
               ))}
             </div>
-          ) : collection.key === 'inspiration' ? (
-            <button type="button" onClick={onEditGallery} className={styles.thumbEmpty}>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onEditGallery(collection.key === 'snapshots' ? 'snapshots' : undefined)}
+              className={styles.thumbEmpty}
+            >
               <Icon name="plus" className={styles.iconSmall} /> {collection.empty}
             </button>
-          ) : (
-            <p className={styles.thumbEmpty}>{collection.empty}</p>
           )}
         </div>
       ))}
@@ -990,6 +992,17 @@ function GalleryCard({ unit, onEditGallery }: { unit: PreviewUnit; onEditGallery
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setViewing(null)
+              onEditGallery(open.key === 'snapshots' ? 'snapshots' : undefined)
+            }}
+            className={styles.smallButton}
+            style={{ marginTop: 14, width: '100%' }}
+          >
+            Manage {open.title}
+          </button>
         </Sheet>
       ) : null}
       {zoomed ? (

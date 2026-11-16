@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { findVisibleFeatureGuideIndex } from '../../components/feature-guide-navigation'
@@ -121,7 +121,7 @@ type PreviewProject = {
 }
 
 export type UnitStatus = 'complete' | 'active' | 'bench' | 'pile' | 'other'
-type EditTarget = 'details' | 'header' | 'gallery'
+type EditTarget = 'details' | 'header' | 'gallery' | 'snapshots'
 
 type PreviewPalettePaint = {
   themePaintId: string
@@ -566,7 +566,7 @@ export default function UnitV3Preview({
                 key={`overview-${unit.id}`}
                 unit={unit}
                 autoStart={autoStart}
-                onEditGallery={() => openLiveEditor('gallery')}
+                onEditGallery={(focus) => openLiveEditor(focus === 'snapshots' ? 'snapshots' : 'gallery')}
                 onLocalUnitChange={setLocalUnit}
               />
             ) : (
@@ -843,9 +843,13 @@ function UnitEditSheet({
           </>
         ) : null}
 
-        {target === 'gallery' ? (
+        {target === 'gallery' || target === 'snapshots' ? (
           <div className="mt-5">
-            <UnitV3GalleryCard unit={unit} onLocalUnitChange={onLocalUnitChange} />
+            <UnitV3GalleryManager
+              unit={unit}
+              focus={target === 'snapshots' ? 'snapshot' : 'inspiration'}
+              onLocalUnitChange={onLocalUnitChange}
+            />
           </div>
         ) : null}
       </section>
@@ -935,39 +939,108 @@ function EditSheetActions({
   )
 }
 
-function UnitV3GalleryCard({
+type UnitGalleryKind = 'inspiration' | 'snapshot'
+
+function getUnitGalleryKind(image: PreviewGalleryImage): UnitGalleryKind {
+  return image.isSnapshot ? 'snapshot' : 'inspiration'
+}
+
+// The gallery manager: Inspiration / Art and Progress / Snapshots as two
+// galleries, the same split the Overview's Gallery card shows. The hero
+// image is one per unit, so it can come from either.
+function UnitV3GalleryManager({
   unit,
+  focus,
   onLocalUnitChange,
 }: {
   unit: PreviewUnit
+  focus: UnitGalleryKind
   onLocalUnitChange: (updater: (current: PreviewUnit | null) => PreviewUnit | null) => void
 }) {
-  const images = useMemo(() => unit.galleryImages ?? [], [unit.galleryImages])
+  const snapshotsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (focus === 'snapshot') {
+      snapshotsRef.current?.scrollIntoView({ block: 'start' })
+    }
+  }, [focus])
+
+  return (
+    <div className="grid gap-4">
+      <UnitV3GalleryCard
+        unit={unit}
+        kind="inspiration"
+        onLocalUnitChange={onLocalUnitChange}
+      />
+      <div ref={snapshotsRef} className="scroll-mt-4">
+        <UnitV3GalleryCard
+          unit={unit}
+          kind="snapshot"
+          onLocalUnitChange={onLocalUnitChange}
+        />
+      </div>
+    </div>
+  )
+}
+
+function UnitV3GalleryCard({
+  unit,
+  kind,
+  onLocalUnitChange,
+}: {
+  unit: PreviewUnit
+  kind: UnitGalleryKind
+  onLocalUnitChange: (updater: (current: PreviewUnit | null) => PreviewUnit | null) => void
+}) {
+  const images = useMemo(
+    () => (unit.galleryImages ?? []).filter((image) => getUnitGalleryKind(image) === kind),
+    [unit.galleryImages, kind]
+  )
+  const isSnapshot = kind === 'snapshot'
 
   const handleImagesChange = useCallback(
     (nextImages: PreviewGalleryImage[]) => {
-      const featuredImage =
-        nextImages.find((image) => image.isFeatured) ?? nextImages[0] ?? null
+      onLocalUnitChange((current) => {
+        if (!current) return current
 
-      onLocalUnitChange((current) =>
-        current
-          ? {
-              ...current,
-              galleryImages: nextImages,
-              image: featuredImage?.image ?? current.image,
-            }
-          : current
-      )
+        const nextHasHero = nextImages.some((image) => image.isFeatured)
+        const others = (current.galleryImages ?? [])
+          .filter((image) => getUnitGalleryKind(image) !== kind)
+          // A new hero picked here replaces one in the other gallery.
+          .map((image) =>
+            nextHasHero && image.isFeatured ? { ...image, isFeatured: false } : image
+          )
+        const galleryImages = isSnapshot
+          ? [...others, ...nextImages]
+          : [...nextImages, ...others]
+        const featuredImage =
+          galleryImages.find((image) => image.isFeatured) ?? galleryImages[0] ?? null
+
+        return {
+          ...current,
+          galleryImages,
+          image: featuredImage?.image ?? current.image,
+        }
+      })
     },
-    [onLocalUnitChange]
+    [onLocalUnitChange, kind, isSnapshot]
   )
 
   return (
     <WorkbenchGallery<PreviewGalleryImage>
       images={images}
-      subtitle="unit photos and the hero image"
-      emptyText="No unit photos yet."
-      featureGuideTarget="units.detail.gallery"
+      title={isSnapshot ? 'Progress / Snapshots' : 'Inspiration / Art'}
+      subtitle={
+        isSnapshot
+          ? 'progress photos, plus snapshots from Paint Mode'
+          : 'reference art, scheme ideas and the hero image'
+      }
+      emptyText={
+        isSnapshot
+          ? 'No progress photos yet. Add one here or take a snapshot in Paint Mode.'
+          : 'No inspiration images yet.'
+      }
+      featureGuideTarget={isSnapshot ? undefined : 'units.detail.gallery'}
       samplerSourceType="unit_gallery"
       getSrc={(image) => image.image}
       getAlt={(image) => image.alt || unit.name}
@@ -977,6 +1050,7 @@ function UnitV3GalleryCard({
         image: previewUrl,
         alt: unit.name,
         isFeatured: false,
+        isSnapshot,
         createdAt: new Date().toISOString(),
         sortOrder: null,
         storageBucket: null,
@@ -988,6 +1062,7 @@ function UnitV3GalleryCard({
         const formData = new FormData()
         formData.set('unitId', unit.id)
         formData.set('uploadSource', source)
+        if (isSnapshot) formData.set('galleryKind', 'snapshot')
         files.forEach((file) => formData.append('image', file))
 
         const result = await uploadUnitGalleryImages(formData)
@@ -1020,8 +1095,11 @@ function mapUploadedUnitImages(
   return (result?.uploadedImages ?? []).map((image) => ({
     id: image.id,
     image: image.image_url,
-    alt: image.alt_text || fallbackAlt,
+    alt: image.alt_text?.startsWith('stage:')
+      ? `${fallbackAlt} snapshot`
+      : image.alt_text || fallbackAlt,
     isFeatured: image.is_featured,
+    isSnapshot: Boolean(image.alt_text?.startsWith('stage:')),
     createdAt: image.created_at,
     sortOrder: image.sort_order,
     storageBucket: image.storage_bucket,

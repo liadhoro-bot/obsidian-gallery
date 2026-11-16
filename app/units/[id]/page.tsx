@@ -1064,7 +1064,8 @@ export default async function UnitDetailPage({ params, searchParams }: PageProps
     const initialEditTarget =
       resolvedSearchParams.edit === 'details' ||
       resolvedSearchParams.edit === 'header' ||
-      resolvedSearchParams.edit === 'gallery'
+      resolvedSearchParams.edit === 'gallery' ||
+      resolvedSearchParams.edit === 'snapshots'
         ? resolvedSearchParams.edit
         : null
     const liveUnit = await getUnitV3PreviewUnit(id, user.id)

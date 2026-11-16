@@ -210,15 +210,18 @@
   letter-spacing: 0.14em;
 }
 
+/* The shared WorkbenchGallery styles its own controls. Left in, this walnut
+   fill turned its Add Image menu's invisible full-screen backdrop into an
+   opaque panel over the whole screen on phones. */
 .unitSilver [data-v3-unit-indicator="tab-content"] button,
-.unitSilver [role="dialog"]:not([data-wb-sheet]) button {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button:not([data-workbench-gallery] button) {
   border-color: color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
 }
 
 .unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child button,
 .unitSilver [data-v3-unit-indicator="tab-content"] section > button,
 .unitSilver [data-v3-unit-indicator="tab-content"] > button,
-.unitSilver [role="dialog"]:not([data-wb-sheet]) button,
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button:not([data-workbench-gallery] button),
 .unitSilver [data-v3-unit-indicator="tab-content"] :global(.tap-press) {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
   border-radius: var(--og-radius-s);
@@ -239,7 +242,7 @@
 .unitSilver [data-v3-unit-indicator="tab-content"] section > div:first-child button:hover,
 .unitSilver [data-v3-unit-indicator="tab-content"] section > button:hover,
 .unitSilver [data-v3-unit-indicator="tab-content"] > button:hover,
-.unitSilver [role="dialog"]:not([data-wb-sheet]) button:hover {
+.unitSilver [role="dialog"]:not([data-wb-sheet]) button:not([data-workbench-gallery] button):hover {
   border-color: color-mix(in srgb, var(--og-brass-500) 72%, var(--og-ink-950));
   color: var(--og-paper-50);
 }

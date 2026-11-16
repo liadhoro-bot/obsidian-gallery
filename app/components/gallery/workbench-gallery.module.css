@@ -96,7 +96,9 @@
 
 .gallery .addImageMenu .addImageChoices {
   position: absolute;
-  right: 0;
+  /* Open rightward from the button: anchored right, it spilled past the
+     left edge of scrolling sheets (which clip it) on phones. */
+  left: 0;
   top: calc(100% + 6px);
   z-index: 10;
   display: grid;

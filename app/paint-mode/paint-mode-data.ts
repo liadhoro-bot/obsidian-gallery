@@ -244,8 +244,12 @@ async function loadPaintModeUnit(
     createdAt: image.created_at,
   })
   const featured = images.find((image) => image.is_featured) ?? images[0]
+  // Same split as the unit page: session photos and stage-tagged progress
+  // photos (incl. ones added from the unit's gallery manager) are snapshots.
+  const isSnapshot = (image: (typeof images)[number]) =>
+    Boolean(image.unit_session_id) || Boolean(image.alt_text?.startsWith('stage:'))
   const snapshots = images
-    .filter((image) => image.unit_session_id)
+    .filter(isSnapshot)
     .sort((a, b) => Date.parse(a.created_at ?? '') - Date.parse(b.created_at ?? ''))
     .map(toImage)
 
@@ -295,7 +299,7 @@ async function loadPaintModeUnit(
     stagePaints,
     palette: themePaints,
     guides: [...guideFiles.map(toPaintModeGuideFile), ...decks.map(toPaintModeGuide)],
-    inspiration: images.filter((image) => !image.unit_session_id).map(toImage),
+    inspiration: images.filter((image) => !isSnapshot(image)).map(toImage),
     snapshots,
     metrics: {
       loggedSeconds: finished.reduce((sum, row) => sum + (row.duration_seconds ?? 0), 0),

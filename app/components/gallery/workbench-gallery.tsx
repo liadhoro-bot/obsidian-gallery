@@ -6,7 +6,7 @@ import type { ChangeEvent } from 'react'
 import { createPortal } from 'react-dom'
 import SampleColorFromImageAction from '@/components/color-sampler/SampleColorFromImageAction'
 import type { ColorSamplerSource } from '@/components/color-sampler/types'
-import { resolveOversizedGalleryImages } from '../../../utils/images/resolve-gallery-image-selection'
+import { prepareGalleryUploads } from '../../../utils/images/prepare-gallery-uploads'
 import GalleryPager, { useGalleryPages } from './gallery-pager'
 import styles from './workbench-gallery.module.css'
 
@@ -32,6 +32,7 @@ type DropTarget = {
 
 type Props<T extends WorkbenchGalleryItem> = {
   images: T[]
+  title?: string
   subtitle?: string
   emptyText?: string
   getSrc: (image: T) => string
@@ -56,6 +57,7 @@ function errorMessage(error: unknown, fallback: string) {
 
 export default function WorkbenchGallery<T extends WorkbenchGalleryItem>({
   images,
+  title = 'Gallery',
   subtitle = 'Photos and the hero image for this page',
   emptyText = 'No images yet.',
   getSrc,
@@ -126,15 +128,14 @@ export default function WorkbenchGallery<T extends WorkbenchGalleryItem>({
     input.value = ''
     if (!pickedFiles.length) return
 
-    const { files, error: resolveError } =
-      await resolveOversizedGalleryImages(pickedFiles)
+    const { files, failed: prepareFailures } = await prepareGalleryUploads(pickedFiles)
 
-    if (resolveError) {
-      setError(resolveError)
+    if (!files.length) {
+      if (prepareFailures.length) {
+        setError(`Could not upload ${prepareFailures.join('; ')}`)
+      }
       return
     }
-
-    if (!files.length) return
 
     const hadFeatured = imagesRef.current.some((image) => image.isFeatured)
     const optimisticImages = files.map((file, index) => {
@@ -157,7 +158,19 @@ export default function WorkbenchGallery<T extends WorkbenchGalleryItem>({
     }
 
     try {
-      const { uploaded, error: uploadError } = await uploadImages(files, source)
+      // One request per photo keeps each Server Action body small.
+      const uploaded: T[] = []
+      const failures = prepareFailures.map((failure) => `Could not upload ${failure}.`)
+      for (const file of files) {
+        try {
+          const result = await uploadImages([file], source)
+          uploaded.push(...result.uploaded)
+          if (result.error) failures.push(result.error)
+        } catch (fileError) {
+          failures.push(errorMessage(fileError, `Could not upload ${file.name}.`))
+        }
+      }
+      const uploadError = failures.length ? failures.join(' ') : null
       const uploadedFeatured = uploaded.some((image) => image.isFeatured)
       const uploadedIds = new Set(uploaded.map((image) => image.id))
 
@@ -283,10 +296,14 @@ export default function WorkbenchGallery<T extends WorkbenchGalleryItem>({
   }`
 
   return (
-    <section className={styles.gallery} data-feature-guide-target={featureGuideTarget}>
+    <section
+      className={styles.gallery}
+      data-workbench-gallery=""
+      data-feature-guide-target={featureGuideTarget}
+    >
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Gallery</h2>
+          <h2 className={styles.title}>{title}</h2>
           <p className={styles.subtitle}>
             {imageCountLabel} - {subtitle}
           </p>

@@ -1131,7 +1131,12 @@ export async function uploadUnitGalleryImages(
   // Paint Mode snapshots: tie the photo to the running session and tag it
   // with the stage being painted, so the Progress tab files it there too.
   const snapshotSessionId = String(formData.get('unitSessionId') || '') || null
-  const snapshotStageKey = String(formData.get('stageKey') || '') || null
+  // Progress photos added from the unit's gallery manager have no session;
+  // the stage: tag alone files them under Progress / Snapshots.
+  const isManualSnapshot = formData.get('galleryKind') === 'snapshot'
+  const snapshotStageKey =
+    String(formData.get('stageKey') || '') ||
+    (isManualSnapshot ? 'progress' : null)
 
   if (snapshotSessionId) {
     const { data: snapshotSession } = await supabase
