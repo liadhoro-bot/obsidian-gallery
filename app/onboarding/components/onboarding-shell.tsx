@@ -6,6 +6,7 @@ import V3PerfIndicator from '../../components/v3-perf-indicator'
 import styles from '../../auth-flow-silver.module.css'
 import { capturePostHog } from '../../../utils/analytics/client'
 import CuratorBridgeScreen from './screens/curator-bridge-screen'
+import NotificationsScreen from './screens/notifications-screen'
 import FirstProjectScreen from './screens/first-project-screen'
 import GoalScreen from './screens/goal-screen'
 import GuideCreationScreen from './screens/guide-creation-screen'
@@ -23,7 +24,12 @@ type OnboardingShellProps = {
   requireUnitSetup?: boolean
 }
 
-type OnboardingStep = 'terms' | 'persona' | 'creation' | 'curator'
+type OnboardingStep =
+  | 'terms'
+  | 'persona'
+  | 'creation'
+  | 'notifications'
+  | 'curator'
 
 export default function OnboardingShell({
   initialStep = 'terms',
@@ -47,7 +53,9 @@ export default function OnboardingShell({
         ? 'terms_and_conditions'
         : currentStep === 'persona'
           ? 'goal_screen'
-          : 'curator_bridge'
+          : currentStep === 'notifications'
+            ? 'notifications_opt_in'
+            : 'curator_bridge'
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
@@ -62,11 +70,16 @@ export default function OnboardingShell({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayedScreen])
 
+  // Signed-in users get the notifications opt-in before the final screen.
+  function goPastSetup() {
+    setCurrentStep(canBypassPersistence ? 'curator' : 'notifications')
+  }
+
   function continueFromPersona(goal: OnboardingGoal) {
     setSelectedGoal(goal)
 
     if (goal === 'look_around') {
-      setCurrentStep('curator')
+      goPastSetup()
       return
     }
 
@@ -93,7 +106,7 @@ export default function OnboardingShell({
       }
     }
 
-    setCurrentStep('curator')
+    goPastSetup()
   }
 
   return (
@@ -119,7 +132,7 @@ export default function OnboardingShell({
         {currentStep === 'creation' && selectedGoal !== 'create_content' ? (
           <FirstProjectScreen
             previewMode={canBypassPersistence}
-            onCreated={() => setCurrentStep('curator')}
+            onCreated={() => goPastSetup()}
             onSkip={() => {
               void skipCreationSetup()
             }}
@@ -129,11 +142,15 @@ export default function OnboardingShell({
         {currentStep === 'creation' && selectedGoal === 'create_content' ? (
           <GuideCreationScreen
             previewMode={canBypassPersistence}
-            onCreated={() => setCurrentStep('curator')}
+            onCreated={() => goPastSetup()}
             onSkip={() => {
               void skipCreationSetup()
             }}
           />
+        ) : null}
+
+        {currentStep === 'notifications' ? (
+          <NotificationsScreen onDone={() => setCurrentStep('curator')} />
         ) : null}
 
         {currentStep === 'curator' ? (
