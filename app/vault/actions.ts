@@ -40,6 +40,7 @@ export async function togglePaintOwnership(formData: FormData) {
 
   await updatePaintOwnership({
     userId: user.id,
+    userEmail: user.email,
     paintCatalogId: paintId,
     action: 'owned',
     currentValue:
@@ -140,6 +141,7 @@ export async function togglePaintWishlist(formData: FormData) {
 
   await updatePaintOwnership({
     userId: user.id,
+    userEmail: user.email,
     paintCatalogId: paintId,
     action: 'wishlist',
     currentValue:

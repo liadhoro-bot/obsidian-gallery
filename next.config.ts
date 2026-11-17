@@ -46,6 +46,15 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Freemium: the trial and paywall pages are gone. Old links (emails,
+  // bookmarks, installed-app history) land on the dashboard instead of a 404.
+  async redirects() {
+    return [
+      { source: '/subscribe', destination: '/dashboard', permanent: false },
+      { source: '/trial', destination: '/dashboard', permanent: false },
+    ]
+  },
+
   async headers() {
     return [
       {

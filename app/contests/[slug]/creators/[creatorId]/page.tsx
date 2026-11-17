@@ -12,13 +12,6 @@ import {
 import { canViewContest } from '../../../../../lib/contests/permissions'
 import { getNomineeType, GUIDE_CREATOR_CONTEST_SLUG } from '../../../../../lib/contests/nominee-copy'
 import { getContestPhase } from '../../../../../lib/contests/phases'
-import {
-  getAccessState,
-  getSubscriptionStatus,
-  hasAppAccess,
-  isSubscriptionGateEnabled,
-} from '../../../../../lib/subscription/subscription-guard'
-import { isPricingV2Active } from '../../../../../lib/subscription/pricing'
 import { getCreatorPublicGuides } from '../../../../guides/guides-v3-data'
 import { CompactGuideCard, LibrarySection, SharedCompactGuideCard } from '../../../../guides/shared/discover-guide-list'
 import CreatorVoteCta, { type CreatorVoteState } from '../../../../../components/contests/creator-vote-cta'
@@ -28,8 +21,8 @@ import contestStyles from '../../../../../components/contests/contest-v3-silver.
 
 // A contest creator page is public, like a shared guide link (the proxy lets
 // it through without a session). Members get the full page and can vote;
-// logged-out visitors and accounts without a trial or paid access get a
-// read-only view with a login / trial dialog, and its vote buttons open it.
+// logged-out visitors get a read-only view with a login dialog, and its vote
+// buttons open it.
 export default async function ContestCreatorGuidesPage({ params, searchParams }: {
   params: Promise<{ slug: string; creatorId: string }>
   searchParams: Promise<{ ballotPreview?: string }>
@@ -40,16 +33,7 @@ export default async function ContestCreatorGuidesPage({ params, searchParams }:
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
 
-  // Mirrors the proxy's payment gate, like the shared guide page.
-  let gateVariant: CreatorPageGateVariant | null = user ? null : 'login'
-  if (user && isSubscriptionGateEnabled()) {
-    if (isPricingV2Active()) {
-      const access = await getAccessState(user)
-      if (!hasAppAccess(access)) gateVariant = access.status === 'trial_available' ? 'trial' : 'subscribe'
-    } else if (!(await getSubscriptionStatus(user.email)).isActive) {
-      gateVariant = 'subscribe'
-    }
-  }
+  const gateVariant: CreatorPageGateVariant | null = user ? null : 'login'
   const isMember = Boolean(user) && !gateVariant
 
   const contest = isMember ? await getContestBySlug(slug) : await getPublicContestBySlug(slug)
@@ -86,13 +70,10 @@ export default async function ContestCreatorGuidesPage({ params, searchParams }:
   const returnPath = `/contests/${contest.slug}/creators/${creatorId}`
   const gate = gateVariant ? { variant: gateVariant, returnPath, creatorName } : undefined
   // Visitors can't open the Entries tab yet, so send them straight to the
-  // (V3) login, trial or subscribe step, which then returns them there.
+  // (V3) login step, which then returns them there.
   const entriesPath = `/contests/${contest.slug}?tab=entries`
   const entriesNext = encodeURIComponent(entriesPath)
-  const entriesHref = gateVariant === 'login' ? `/login?next=${entriesNext}&preview=1`
-    : gateVariant === 'trial' ? `/trial?next=${entriesNext}`
-      : gateVariant === 'subscribe' ? `/subscribe?next=${entriesNext}`
-        : entriesPath
+  const entriesHref = gateVariant === 'login' ? `/login?next=${entriesNext}&preview=1` : entriesPath
 
   // Dev-only preview lets the ballot be tried before voting opens; it never records a vote.
   const preview = process.env.NODE_ENV === 'development' && ballotPreview === '1'

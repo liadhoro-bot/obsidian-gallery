@@ -9,13 +9,6 @@ import {
   isLocalV3PreviewHost,
   isV3DeploymentHost,
 } from './lib/v3-preview'
-import {
-  getCachedAccessState,
-  getCachedSubscriptionStatus,
-  hasAppAccess,
-  isSubscriptionGateEnabled,
-} from './lib/subscription/subscription-guard'
-import { isPricingV2Active } from './lib/subscription/pricing'
 import { isPublicNewsPath } from './lib/news/public-path'
 import {
   FORWARDED_USER_HEADER,
@@ -120,23 +113,20 @@ export default async function proxy(request: NextRequest) {
     )
   }
 
-  // Anything "public" skips the payment gate below, so keep this list to
-  // pages a visitor needs before paying. /guides, /paints, /themes and
-  // /recipes were once listed here and let signed-in users with no trial or
-  // subscription browse them; share links (/s/) are the only public way in.
-  const isPrePaymentPage =
+  // Pages a signed-out visitor may open (and the only pages whose Server
+  // Actions run without a session). Share links (/s/) are the public way
+  // into content; everything else needs a signed-in account.
+  const isSignedOutPage =
     pathname === '/' ||
     pathname === '/login' ||
     pathname === '/offline' ||
     pathname === '/onboarding' ||
-    pathname === '/subscribe' ||
     pathname === '/payment-success' ||
-    pathname === '/trial' ||
     pathname === '/support' ||
     pathname === '/settings/terms' ||
     pathname === '/contests/dice-roll'
   // Server Actions can be POSTed to any path, not just the page that renders
-  // them. Only the pre-payment pages above may run them ungated, so a share
+  // them. Only the signed-out pages above may run them without a session, so a share
   // page or API path can't be used to reach the rest of the app's actions.
   const isServerActionRequest =
     request.method === 'POST' && request.headers.has('next-action')
@@ -147,14 +137,14 @@ export default async function proxy(request: NextRequest) {
 
   const isContestCreatorPage = /^\/contests\/[^/]+\/creators\/[0-9a-f-]{36}\/?$/i.test(pathname)
   const isPublicRoute = isServerActionRequest
-    ? isPrePaymentPage
-    : isPrePaymentPage ||
+    ? isSignedOutPage
+    : isSignedOutPage ||
     pathname.startsWith('/s/') ||
     // News is free to read and shareable. It runs no Server Actions.
     isPublicNewsPath(pathname) ||
     // Contest creator pages are shareable like /s/ links: visitors get a
-    // read-only page with a login / trial dialog. Voting (a Server Action)
-    // still goes through the gate, since only pre-payment pages run actions.
+    // read-only page with a login dialog. Voting (a Server Action) still
+    // needs a session, since only the pages above run actions signed out.
     isContestCreatorPage ||
     pathname === '/api/onboarding/terms-diagnostics' ||
     pathname === '/api/vault/paint-equivalencies' ||
@@ -168,7 +158,6 @@ export default async function proxy(request: NextRequest) {
     // next/image fetches it without the visitor's cookies.
     pathname === '/api/paints/v3-swatch' ||
     pathname.startsWith('/api/subscription/') ||
-    pathname.startsWith('/api/trial/') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/legal') ||
     // Real file extensions only. A bare "contains a dot" check made any
@@ -180,8 +169,6 @@ export default async function proxy(request: NextRequest) {
   const shouldCheckSession =
     !isPublicRoute ||
     pathname === '/onboarding' ||
-    pathname === '/subscribe' ||
-    pathname === '/trial' ||
     // Signed-in voters need a refreshed session here: the page's vote is a
     // Server Action, and a session the page refreshed but couldn't save
     // would leave that POST signed out.
@@ -293,37 +280,6 @@ export default async function proxy(request: NextRequest) {
     return finalizeResponse(
       NextResponse.redirect(new URL('/onboarding', request.url))
     )
-  }
-
-  // Payment gate: runs after the terms check so a brand-new user finishes
-  // onboarding basics first, then gets sent to pay. Disabled by default
-  // (SUBSCRIPTION_REQUIRED unset/false) so this has zero effect until you
-  // flip it on in Vercel's environment variables once Make/Grow are wired
-  // up and tested. /subscribe, /payment-success and /api/subscription/*
-  // are all in isPublicRoute above, so they never get caught by this check.
-  //
-  // After the pricing v2 cutover the gate is trial-aware instead: paid and
-  // bypass users pass, users without a trial go to /trial, and users whose
-  // trial has ended go to /subscribe. /trial and /api/trial/* are public too.
-  if (isSubscriptionGateEnabled() && !isPublicRoute && isPricingV2Active()) {
-    const access = await getCachedAccessState(activeUser)
-
-    if (!hasAppAccess(access)) {
-      const gateUrl = new URL(
-        access.status === 'trial_available' ? '/trial' : '/subscribe',
-        request.url
-      )
-      gateUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
-      return finalizeResponse(NextResponse.redirect(gateUrl))
-    }
-  } else if (isSubscriptionGateEnabled() && !isPublicRoute) {
-    const subscription = await getCachedSubscriptionStatus(activeUser.email)
-
-    if (!subscription.isActive) {
-      const subscribeUrl = new URL('/subscribe', request.url)
-      subscribeUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
-      return finalizeResponse(NextResponse.redirect(subscribeUrl))
-    }
   }
 
   return finalizeResponse(response)

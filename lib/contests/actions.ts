@@ -13,12 +13,9 @@ import { GUIDE_CREATOR_CONTEST_SLUG } from './nominee-copy'
 import { validateContestConfig } from './validation'
 import { canManageContest, canModerateContest, canNominateInContest } from './permissions'
 import {
-  getAccessState,
   getSubscriptionStatus,
-  hasAppAccess,
   isSubscriptionGateEnabled,
 } from '../subscription/subscription-guard'
-import { isPricingV2Active } from '../subscription/pricing'
 import {
   getSafeImageExtension,
   validateGalleryImageFile,
@@ -622,13 +619,13 @@ export async function submitNominationAction(
       throw new Error('This contest only accepts nominations from invited participants.')
     }
 
-    // Only paying (or bypass) members can be contest entries; free-trial
-    // accounts cannot. Fails closed if the subscription lookup errors.
+    // Only Premium (or bypass) members can be contest entries; free accounts
+    // cannot. Fails closed if the subscription lookup errors.
     if (
       isSubscriptionGateEnabled() &&
       !(await getSubscriptionStatus(user.email)).isActive
     ) {
-      throw new Error('Contest entries are open to subscribed members only. Free trial accounts can’t enter contests.')
+      throw new Error('Contest entries are open to Premium members only.')
     }
 
     const countResult = await supabase
@@ -918,13 +915,7 @@ export async function submitGuideCreatorBallotAction(contestId: string, creatorI
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Please sign in to cast your vote.' }
-  // Paid members and active free trials may vote (the proxy gates the page the same way).
-  if (isSubscriptionGateEnabled()) {
-    const canVote = isPricingV2Active()
-      ? hasAppAccess(await getAccessState(user))
-      : (await getSubscriptionStatus(user.email)).isActive
-    if (!canVote) return { error: 'Voting needs a free trial or paid access. Start your trial, then come back to vote.' }
-  }
+  // Any signed-in account may vote, free or Premium.
   const { data: contest, error: contestError } = await supabase.from('contests')
     .select('slug, maximum_selections_per_ballot, allow_self_vote, publication_status, submissions_open_at, submissions_close_at, voting_open_at, voting_close_at, results_published_at')
     .eq('id', contestId).single()

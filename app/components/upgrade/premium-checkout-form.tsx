@@ -1,7 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import styles from './subscribe-silver.module.css'
+import { PREMIUM_PRICE_ILS } from '@/lib/plan/limit-types'
+import styles from './premium-checkout.module.css'
 
 // Must match the string posted from app/payment-success/page.tsx.
 const PAYMENT_SUCCESS_MESSAGE = 'obsidian-gallery:grow-payment-success'
@@ -51,15 +52,10 @@ function LockIcon() {
   )
 }
 
-export default function SubscribeClient({
-  email,
-  nextPath,
-  ctaLabel = "Claim my Founder's Pass - ₪15",
-}: {
-  email: string
-  nextPath: string
-  ctaLabel?: string
-}) {
+// Grow checkout for Premium. Opens Grow in a popup, then waits for the
+// payment to land in subscriptions and reloads the page so the new plan
+// applies everywhere.
+export default function PremiumCheckoutForm({ email }: { email: string }) {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [status, setStatus] = useState<Status>('idle')
@@ -79,8 +75,8 @@ export default function SubscribeClient({
   const finishAsPaid = useCallback(() => {
     stopPolling()
     popupRef.current?.close()
-    window.location.assign(nextPath)
-  }, [nextPath, stopPolling])
+    window.location.reload()
+  }, [stopPolling])
 
   const startPolling = useCallback(() => {
     setStatus('waiting')
@@ -103,7 +99,7 @@ export default function SubscribeClient({
       stopPolling()
       setStatus('error')
       setMessage(
-        "Payment is taking a while to confirm. If you completed payment, refresh this page in a minute — it'll let you in as soon as it's confirmed."
+        "Payment is taking a while to confirm. If you completed payment, refresh this page in a minute — Premium switches on as soon as it's confirmed."
       )
     }, POLL_TIMEOUT_MS)
   }, [finishAsPaid, stopPolling])
@@ -172,48 +168,51 @@ export default function SubscribeClient({
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className={styles.formLight}>
+      <form onSubmit={handleSubmit} className={styles.form}>
         <div>
-          <label className={styles.fieldLabel}>Email</label>
+          <label htmlFor="premium-email" className={styles.fieldLabel}>Email</label>
           <div className={styles.inputWrap}>
             <span className={styles.inputIcon}>
               <MailIcon />
             </span>
             <input
+              id="premium-email"
               type="email"
               value={email}
               disabled
-              className={styles.inputLight}
+              className={styles.input}
             />
           </div>
         </div>
 
         <div>
-          <label className={styles.fieldLabel}>Full name</label>
+          <label htmlFor="premium-name" className={styles.fieldLabel}>Full name</label>
           <div className={styles.inputWrap}>
             <span className={styles.inputIcon}>
               <PersonIcon />
             </span>
             <input
+              id="premium-name"
               type="text"
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
               required
               minLength={3}
               autoComplete="name"
-              className={styles.inputLight}
+              className={styles.input}
               placeholder="First Last"
             />
           </div>
         </div>
 
         <div>
-          <label className={styles.fieldLabel}>Mobile phone</label>
+          <label htmlFor="premium-phone" className={styles.fieldLabel}>Mobile phone</label>
           <div className={styles.inputWrap}>
             <span className={styles.inputIcon}>
               <PhoneIcon />
             </span>
             <input
+              id="premium-phone"
               type="tel"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
@@ -221,13 +220,13 @@ export default function SubscribeClient({
               pattern="0\d{8,9}"
               autoComplete="tel"
               inputMode="numeric"
-              className={styles.inputLight}
+              className={styles.input}
               placeholder="0501234567"
-              aria-describedby="subscribe-phone-hint"
+              aria-describedby="premium-phone-hint"
             />
           </div>
           {/* Grow's payment page shows this number locked; it can't be fixed there. */}
-          <p id="subscribe-phone-hint" className={styles.fieldHint}>
+          <p id="premium-phone-hint" className={styles.fieldHint}>
             Double-check it: your receipt goes to this number, and it
             can&apos;t be changed on the payment screen.
           </p>
@@ -242,7 +241,7 @@ export default function SubscribeClient({
             ? 'Opening payment...'
             : status === 'waiting'
               ? 'Waiting for payment...'
-              : ctaLabel}
+              : `Upgrade for ₪${PREMIUM_PRICE_ILS}/month`}
         </button>
       </form>
 

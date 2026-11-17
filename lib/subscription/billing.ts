@@ -4,11 +4,9 @@ import { revalidateTag } from 'next/cache'
 import { Resend } from 'resend'
 import { createServiceRoleClient } from '../../utils/supabase/service-role'
 import {
-  getAccessState,
   getSubscriptionCacheTag,
-  type AccessUser,
+  getSubscriptionStatus,
 } from './subscription-guard'
-import { isMonthlyPaymentEnabled, isPricingV2Active } from './pricing'
 import {
   MONTHLY_GRACE_DAYS,
   MONTHLY_PLAN_NAME,
@@ -315,41 +313,38 @@ export async function cancelMonthlySubscription(
 // ---------------------------------------------------------------------------
 
 export type PlanSummary = {
-  /** Headline, e.g. "Free trial", "Monthly", "Founder's Pass". */
+  /** Headline, e.g. "Free", "Premium", "Founder's Pass". */
   label: string
   /** Badge next to the headline. */
-  badge: 'Active' | 'Trial' | 'Cancelled' | 'Expired' | 'Staff'
+  badge: 'Free' | 'Active' | 'Cancelled' | 'Staff'
   priceLabel: string
-  /** e.g. "Renews Nov 19, 2026", "Access until Dec 18, 2026", "4 days left". */
+  /** e.g. "Renews Nov 19, 2026", "Access until Dec 18, 2026". */
   detail: string
   canCancel: boolean
-  /** Show the "Subscribe" call to action, and what it says. */
-  subscribeLabel: string | null
+  /** Show the Upgrade to Premium button. */
+  canUpgrade: boolean
 }
 
-export async function getPlanSummary(user: AccessUser): Promise<PlanSummary> {
+export async function getPlanSummary(user: { email?: string | null }): Promise<PlanSummary> {
   const email = normalizeEmail(user.email)
-  const [access, row] = await Promise.all([
-    getAccessState(user),
+  const [status, row] = await Promise.all([
+    getSubscriptionStatus(email),
     email ? fetchSubscriptionRow(email).catch(() => null) : Promise.resolve(null),
   ])
-  const monthlyOpen = !isPricingV2Active() || isMonthlyPaymentEnabled()
-  const subscribeLabel = monthlyOpen ? `Subscribe for ₪${MONTHLY_PRICE_ILS}/month` : null
 
-  if (access.status === 'bypass') {
+  if (status.isActive && status.planName === 'bypass') {
     return {
       label: 'Staff access',
       badge: 'Staff',
       priceLabel: 'Free',
-      detail: 'Full access, no billing.',
+      detail: 'Premium, no billing.',
       canCancel: false,
-      subscribeLabel: null,
+      canUpgrade: false,
     }
   }
 
-  if (row?.paid_until) {
+  if (row?.paid_until && new Date(row.paid_until).getTime() > Date.now()) {
     const plan = describePlan(row.plan_name, toNumber(row.amount))
-    const isActive = new Date(row.paid_until).getTime() > Date.now()
     const isRecurring = row.billing_type === 'recurring'
     const canceled = Boolean(row.cancel_at_period_end)
     // paid_until on a monthly row includes grace days; the renewal date doesn't.
@@ -358,65 +353,26 @@ export async function getPlanSummary(user: AccessUser): Promise<PlanSummary> {
       : row.paid_until
     const neverEnds = new Date(row.paid_until).getUTCFullYear() >= 2099
 
-    if (isActive) {
-      return {
-        label: plan.label,
-        badge: isRecurring && canceled ? 'Cancelled' : 'Active',
-        priceLabel: plan.priceLabel,
-        detail: neverEnds
-          ? 'No end date.'
-          : isRecurring && !canceled
-            ? `Renews ${formatDate(periodEnd)}`
-            : `Access until ${formatDate(row.paid_until)}`,
-        canCancel: isRecurring && !canceled,
-        subscribeLabel: null,
-      }
-    }
-
     return {
       label: plan.label,
-      badge: 'Expired',
+      badge: isRecurring && canceled ? 'Cancelled' : 'Active',
       priceLabel: plan.priceLabel,
-      detail: `Ended ${formatDate(row.paid_until)}`,
-      canCancel: false,
-      subscribeLabel,
-    }
-  }
-
-  if (access.status === 'trialing') {
-    const daysLeft = access.endsAt
-      ? Math.max(0, Math.ceil((new Date(access.endsAt).getTime() - Date.now()) / DAY_MS))
-      : null
-    return {
-      label: 'Free trial',
-      badge: 'Trial',
-      priceLabel: 'Free',
-      detail:
-        daysLeft === null
-          ? 'Trial active'
-          : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left · ends ${formatDate(access.endsAt!)}`,
-      canCancel: false,
-      subscribeLabel,
-    }
-  }
-
-  if (access.status === 'trial_expired') {
-    return {
-      label: 'Free trial',
-      badge: 'Expired',
-      priceLabel: 'Free',
-      detail: `Ended ${formatDate(access.endsAt)}`,
-      canCancel: false,
-      subscribeLabel,
+      detail: neverEnds
+        ? 'No end date.'
+        : isRecurring && !canceled
+          ? `Renews ${formatDate(periodEnd)}`
+          : `Premium until ${formatDate(row.paid_until)}`,
+      canCancel: isRecurring && !canceled,
+      canUpgrade: false,
     }
   }
 
   return {
-    label: 'No plan',
-    badge: 'Expired',
-    priceLabel: '—',
-    detail: 'You have no active plan.',
+    label: 'Free',
+    badge: 'Free',
+    priceLabel: 'Free',
+    detail: `Upgrade to Premium for ₪${MONTHLY_PRICE_ILS}/month to lift the free plan's limits.`,
     canCancel: false,
-    subscribeLabel,
+    canUpgrade: true,
   }
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { openUpgradePromptFor } from '@/app/components/upgrade/upgrade-prompt'
 import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import PrefetchLink from '../components/prefetch-link'
@@ -363,6 +364,10 @@ export default function VaultGridClient({
           }),
         })
 
+        if (res.status === 402) {
+          // Free-plan collection limit: show the upgrade prompt, then roll back.
+          openUpgradePromptFor(await res.json().catch(() => null))
+        }
         if (!res.ok) throw new Error('Failed to update ownership')
       } catch {
         setPaints(

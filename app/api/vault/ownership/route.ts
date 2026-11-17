@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '../../../../utils/supabase/server'
 import { updatePaintOwnership } from '../../../../utils/paint-ownership/update-paint-ownership'
+import { PlanLimitError } from '../../../../lib/plan/limits'
 
 export async function POST(req: Request) {
   const body = await req.json()
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
   try {
     const result = await updatePaintOwnership({
       userId: user.id,
+      userEmail: user.email,
       paintCatalogId: paintId,
       action,
       currentValue,
@@ -56,6 +58,14 @@ export async function POST(req: Request) {
       ownership: result,
     })
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      // 402 + { limit }: clients open the upgrade prompt (openUpgradePromptFor).
+      return NextResponse.json(
+        { error: error.message, limit: error.hit },
+        { status: 402 }
+      )
+    }
+
     console.error('[vault ownership] update failed', {
       userId: user.id,
       paintId,

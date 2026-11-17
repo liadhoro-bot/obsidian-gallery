@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
-import {
-  isMonthlyPaymentEnabled,
-  isPricingV2Active,
-} from '../../../../lib/subscription/pricing'
 
 const ISRAELI_MOBILE_PATTERN = /^0\d{8,9}$/
 
@@ -20,19 +16,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
   }
 
-  // After the pricing v2 cutover, only the monthly scenario may be used; the
-  // original MAKE_CREATE_PAYMENT_WEBHOOK_URL scenario sells the ₪15 Founder's Pass.
-  const isMonthly = isPricingV2Active()
-  if (isMonthly && !isMonthlyPaymentEnabled()) {
-    return NextResponse.json(
-      { error: 'Subscriptions are not open yet.' },
-      { status: 403 }
-    )
-  }
-
-  const webhookEnvName = isMonthly
-    ? 'MAKE_CREATE_MONTHLY_PAYMENT_WEBHOOK_URL'
-    : 'MAKE_CREATE_PAYMENT_WEBHOOK_URL'
+  // Premium is the monthly plan. The old MAKE_CREATE_PAYMENT_WEBHOOK_URL
+  // scenario sells the retired ₪15 Founder's Pass and must not be used.
+  const webhookEnvName = 'MAKE_CREATE_MONTHLY_PAYMENT_WEBHOOK_URL'
   const webhookUrl = process.env[webhookEnvName]
   const sharedSecret = process.env.MAKE_WEBHOOK_SHARED_SECRET
 
@@ -80,7 +66,7 @@ export async function POST(request: Request) {
         lastName,
         phone,
         action: 'create',
-        plan: isMonthly ? 'monthly' : 'founders-pass',
+        plan: 'monthly',
       }),
     })
   } catch {

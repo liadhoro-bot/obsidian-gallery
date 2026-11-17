@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { FormEvent, useMemo, useState, useTransition } from 'react'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
+import { openUpgradePrompt } from '../components/upgrade/upgrade-prompt'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import type { FeatureGuideEntry } from '../components/feature-guide-types'
@@ -339,6 +340,10 @@ export default function ProjectsV3Preview({
         const result = await createProjectsPageProjectAction(formData)
 
         if (!result.ok) {
+          if (result.limit) {
+            openUpgradePrompt(result.limit)
+            return
+          }
           setCreateError(result.error)
           return
         }
@@ -373,6 +378,10 @@ export default function ProjectsV3Preview({
         const result = await createProjectsPageUnitAction(formData)
 
         if (!result.ok) {
+          if (result.limit) {
+            openUpgradePrompt(result.limit)
+            return
+          }
           setCreateError(result.error)
           return
         }

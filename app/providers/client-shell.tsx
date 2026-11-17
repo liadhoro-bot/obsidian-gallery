@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useSyncExternalStore } from 'react'
 import { isPublicNewsPath } from '../../lib/news/public-path'
 import MobileNav from '../components/MobileNav'
+import { UpgradePromptHost } from '../components/upgrade/upgrade-prompt'
 
 const ServiceWorkerRegistrar = dynamic(
   () => import('./service-worker-registrar'),
@@ -54,9 +55,7 @@ export default function ClientShell({
     !pathname.startsWith('/settings/terms') &&
     !pathname.startsWith('/guides/decks') &&
     !pathname.startsWith('/s/') &&
-    !pathname.startsWith('/subscribe') &&
-    !pathname.startsWith('/payment-success') &&
-    !pathname.startsWith('/trial')
+    !pathname.startsWith('/payment-success')
   const showInstallPrompt =
     !isLoggedOutNewsReader &&
     !pathname.startsWith('/s/') &&
@@ -65,9 +64,7 @@ export default function ClientShell({
     !pathname.startsWith('/onboarding') &&
     !pathname.startsWith('/offline') &&
     !pathname.startsWith('/settings/terms') &&
-    !pathname.startsWith('/subscribe') &&
-    !pathname.startsWith('/payment-success') &&
-    !pathname.startsWith('/trial')
+    !pathname.startsWith('/payment-success')
 
   return (
     <>
@@ -76,6 +73,7 @@ export default function ClientShell({
       {enableProductionTelemetry ? <PostHogUserIdentifier /> : null}
       {showMobileNav ? <MobileNav /> : null}
       {showMobileNav ? <OnboardingTour /> : null}
+      <UpgradePromptHost />
     </>
   )
 }

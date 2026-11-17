@@ -1,5 +1,6 @@
 'use client'
 
+import { openUpgradePromptFor } from '@/app/components/upgrade/upgrade-prompt'
 import Image from 'next/image'
 import { createPortal } from 'react-dom'
 import type { KeyboardEvent, MouseEvent } from 'react'
@@ -341,6 +342,10 @@ export default function PaintPickerDialog({
         }),
       })
 
+      if (response.status === 402) {
+        // Free-plan collection limit: show the upgrade prompt, then roll back.
+        openUpgradePromptFor(await response.json().catch(() => null))
+      }
       if (!response.ok) {
         throw new Error('Ownership update failed')
       }

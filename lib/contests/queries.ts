@@ -874,7 +874,7 @@ export async function getPublicGuideCreatorLeaderboard(
   if (error) throw new Error(error.message)
   if (!publicRecipes || publicRecipes.length === 0) return []
 
-  // Only paying (or bypass) members are contest entries; free-trial users
+  // Only Premium (or bypass) members are contest entries; free accounts
   // are not. If the lookup fails, show everyone rather than an empty contest.
   const payingOwners = isSubscriptionGateEnabled()
     ? await getPayingUserIds(

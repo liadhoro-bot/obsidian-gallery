@@ -1,9 +1,10 @@
 'use client'
 
-import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { PlanSummary } from '../../lib/subscription/billing'
+import { PREMIUM_PRICE_ILS } from '../../lib/plan/limit-types'
+import { openUpgradePrompt } from '../components/upgrade/upgrade-prompt'
 import styles from '../settings-support-silver.module.css'
 
 type CancelState = 'idle' | 'confirming' | 'cancelling' | 'done' | 'error'
@@ -30,7 +31,7 @@ export default function SettingsPlanCard({ plan }: { plan: PlanSummary }) {
       }
 
       setCancelState('done')
-      setMessage('Your plan is cancelled. You will not be charged again.')
+      setMessage('Premium is cancelled. You will not be charged again.')
       router.refresh()
     } catch {
       setCancelState('error')
@@ -50,7 +51,7 @@ export default function SettingsPlanCard({ plan }: { plan: PlanSummary }) {
           <span
             className={[
               styles.badge,
-              plan.badge === 'Active' || plan.badge === 'Trial' || plan.badge === 'Staff'
+              plan.badge === 'Active' || plan.badge === 'Staff'
                 ? ''
                 : styles.badgeMuted,
             ].join(' ')}
@@ -70,10 +71,14 @@ export default function SettingsPlanCard({ plan }: { plan: PlanSummary }) {
           </div>
         </dl>
 
-        {plan.subscribeLabel ? (
-          <Link href="/subscribe?upgrade=1&next=%2Fsettings" className={styles.walnutButton}>
-            {plan.subscribeLabel}
-          </Link>
+        {plan.canUpgrade ? (
+          <button
+            type="button"
+            className={styles.walnutButton}
+            onClick={() => openUpgradePrompt()}
+          >
+            Upgrade to Premium · ₪{PREMIUM_PRICE_ILS}/month
+          </button>
         ) : null}
 
         {plan.canCancel && (cancelState === 'idle' || cancelState === 'error') ? (
@@ -89,8 +94,8 @@ export default function SettingsPlanCard({ plan }: { plan: PlanSummary }) {
         {plan.canCancel && (cancelState === 'confirming' || cancelState === 'cancelling') ? (
           <div className={styles.planConfirm}>
             <p className={styles.linkDescription}>
-              Cancel your monthly plan? You won&apos;t be charged again, and you
-              keep full access until the end of the period you already paid for.
+              Cancel Premium? You won&apos;t be charged again, and you
+              keep Premium until the end of the period you already paid for.
             </p>
             <div className={styles.buttonGrid}>
               <button

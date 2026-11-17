@@ -10,14 +10,7 @@ import { guideDetailFeatureGuides } from '@/app/components/feature-guide-presets
 import detailStyles from '@/app/guides/guide-detail-silver.module.css'
 import { createClient, getSessionUser } from '@/utils/supabase/server'
 import { getSupabaseImageUrl } from '@/utils/images/supabase-image'
-import {
-  getAccessState,
-  getSubscriptionStatus,
-  hasAppAccess,
-  isSubscriptionGateEnabled,
-} from '@/lib/subscription/subscription-guard'
-import { isPricingV2Active } from '@/lib/subscription/pricing'
-import SharedGuideGate, { type SharedGuideGateVariant } from './shared-guide-gate'
+import SharedGuideGate from './shared-guide-gate'
 import styles from './shared-guide.module.css'
 
 type SharedGuidePageProps = {
@@ -48,10 +41,9 @@ export async function generateMetadata({ params }: SharedGuidePageProps): Promis
 }
 
 // Public share link for a guide. It always opens straight into the card
-// viewer (older ?view=1 links still work). Members are sent to the in-app
-// viewer; everyone else gets a fenced, read-only viewer (no app nav, no back
-// button, no links into the rest of the app) with a login, trial or
-// subscribe dialog over it.
+// viewer (older ?view=1 links still work). Signed-in users are sent to the
+// in-app viewer; visitors get a fenced, read-only viewer (no app nav, no back
+// button, no links into the rest of the app) with a login dialog over it.
 export default async function SharedGuidePage({ params, searchParams }: SharedGuidePageProps) {
   const [{ id }, query] = await Promise.all([
     params,
@@ -60,28 +52,11 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
 
   const supabase = await createClient()
   const user = await getSessionUser(supabase)
-  let variant: SharedGuideGateVariant = 'login'
 
   if (user) {
-    // Mirrors the proxy's payment gate: subscribers, bypass and trialing users
-    // are members; a user who never started a trial is offered one.
-    let isMember = true
-    if (isSubscriptionGateEnabled()) {
-      if (isPricingV2Active()) {
-        const access = await getAccessState(user)
-        isMember = hasAppAccess(access)
-        variant = access.status === 'trial_available' ? 'trial' : 'subscribe'
-      } else {
-        isMember = (await getSubscriptionStatus(user.email)).isActive
-        variant = 'subscribe'
-      }
-    }
-
-    if (isMember) {
-      const inApp = new URLSearchParams({ preview: '1', view: '1' })
-      if (query.deck) inApp.set('deck', query.deck)
-      redirect(`/guides/${id}?${inApp.toString()}`)
-    }
+    const inApp = new URLSearchParams({ preview: '1', view: '1' })
+    if (query.deck) inApp.set('deck', query.deck)
+    redirect(`/guides/${id}?${inApp.toString()}`)
   }
 
   const [shared, featureGuides] = await Promise.all([
@@ -107,7 +82,7 @@ export default async function SharedGuidePage({ params, searchParams }: SharedGu
         featureGuides={featureGuides}
         heroActions={<>
           <DeckShareMenu cards={cards} fileBaseName={guide.title} sharePath={`/s/guides/${guide.id}`} />
-          <SharedGuideGate guideId={guide.id} variant={variant} />
+          <SharedGuideGate guideId={guide.id} />
         </>}
       />
     </main>

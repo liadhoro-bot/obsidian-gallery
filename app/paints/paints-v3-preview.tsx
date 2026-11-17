@@ -1,5 +1,6 @@
 'use client'
 
+import { openUpgradePromptFor } from '@/app/components/upgrade/upgrade-prompt'
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
@@ -1183,6 +1184,10 @@ export default function PaintsV3Preview({
         }),
       })
 
+      if (response.status === 402) {
+        // Free-plan collection limit: show the upgrade prompt, then roll back.
+        openUpgradePromptFor(await response.json().catch(() => null))
+      }
       if (!response.ok) {
         throw new Error('Failed to update paint ownership.')
       }

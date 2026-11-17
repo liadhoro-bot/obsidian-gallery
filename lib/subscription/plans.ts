@@ -36,7 +36,7 @@ export function describePlan(
   if (name === MONTHLY_PLAN_NAME) {
     return {
       kind: 'monthly',
-      label: 'Monthly',
+      label: 'Premium',
       priceLabel: `₪${amount && amount > 0 ? amount : MONTHLY_PRICE_ILS} / month`,
     }
   }

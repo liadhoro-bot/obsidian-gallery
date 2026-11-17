@@ -1,5 +1,6 @@
 'use client'
 
+import { openUpgradePromptFor } from '@/app/components/upgrade/upgrade-prompt'
 import { useEffect, useState, useTransition } from 'react'
 import {
   countFilteredPaints,
@@ -138,6 +139,7 @@ export default function VaultBatchActions({
               ? await markFilteredPaintsWishlist(filters)
               : await removeFilteredPaintsOwned(filters)
 
+        if (openUpgradePromptFor(result)) return
         dispatchBatchUpdate(result.paint_ids, mode)
         setMessage(
           mode === 'owned'
@@ -171,6 +173,7 @@ export default function VaultBatchActions({
         }
 
         const result = await markPaintSetOwned(paintSet.id)
+        if (openUpgradePromptFor(result)) return
         dispatchBatchUpdate(result.paint_ids, 'owned')
         setMessage(`${result.paint_count} paints marked as owned.`)
         setSetModalOpen(false)

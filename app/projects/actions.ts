@@ -12,6 +12,8 @@ import {
   validateGalleryImageFile,
 } from '../../utils/images/gallery-upload'
 import { captureServerEvent } from '../../utils/analytics/server'
+import { checkPlanLimit } from '../../lib/plan/limits'
+import { planLimitSearchParams, type PlanLimitHit } from '../../lib/plan/limit-types'
 
 const IMAGE_BUCKET = 'obsidian-images'
 
@@ -23,6 +25,8 @@ export type CreateProjectsPageProjectResult =
   | {
       ok: false
       error: string
+      /** Set when a free-plan limit blocked it; the client opens the upgrade prompt. */
+      limit?: PlanLimitHit
     }
 
 export type CreateProjectsPageUnitResult =
@@ -33,7 +37,12 @@ export type CreateProjectsPageUnitResult =
   | {
       ok: false
       error: string
+      limit?: PlanLimitHit
     }
+
+function limitResult(limit: PlanLimitHit) {
+  return { ok: false as const, error: 'Free plan limit reached.', limit }
+}
 
 export async function addProject(formData: FormData) {
   const supabase = await createClient()
@@ -52,6 +61,11 @@ export async function addProject(formData: FormData) {
 
   if (!name) {
     throw new Error('Project name is required')
+  }
+
+  const projectLimit = await checkPlanLimit(supabase, user, 'active_projects')
+  if (projectLimit) {
+    redirect(`/projects?${planLimitSearchParams(projectLimit)}`)
   }
 
   const { data: newProject, error } = await supabase
@@ -178,6 +192,9 @@ export async function createProjectsPageProjectAction(
   if (imageValidationError) {
     console.error('Skipping invalid project image:', imageValidationError)
   }
+
+  const projectLimit = await checkPlanLimit(supabase, user, 'active_projects')
+  if (projectLimit) return limitResult(projectLimit)
 
   const { data: newProject, error } = await supabase
     .from('projects')
@@ -318,6 +335,14 @@ export async function createProjectsPageUnitAction(
 
   if (imageValidationError) {
     console.error('Skipping invalid unit image:', imageValidationError)
+  }
+
+  const unitLimit = await checkPlanLimit(supabase, user, 'unfinished_units')
+  if (unitLimit) return limitResult(unitLimit)
+
+  if (!linkedProjectId) {
+    const projectLimit = await checkPlanLimit(supabase, user, 'active_projects')
+    if (projectLimit) return limitResult(projectLimit)
   }
 
   if (linkedProjectId) {

@@ -19,7 +19,8 @@ export async function GET() {
     revalidateTag(getSubscriptionCacheTag(user.email), { expire: 0 })
   }
 
-  return NextResponse.json(status, {
+  // email lets the upgrade dialog show which account Premium goes to.
+  return NextResponse.json({ ...status, email: user.email }, {
     headers: { 'Cache-Control': 'no-store' },
   })
 }

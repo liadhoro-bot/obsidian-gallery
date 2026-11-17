@@ -3,36 +3,23 @@
 import { useCallback, useEffect, useState } from 'react'
 import styles from '@/app/s/guides/[id]/shared-guide.module.css'
 
-export type CreatorPageGateVariant = 'login' | 'trial' | 'subscribe'
+// Only logged-out visitors see this gate: any signed-in account can vote.
+export type CreatorPageGateVariant = 'login'
 
 export type CreatorPageGateProps = {
   variant: CreatorPageGateVariant
-  // Where the visitor comes back to after logging in or starting a trial.
+  // Where the visitor comes back to after logging in.
   returnPath: string
   creatorName: string
 }
 
-function copyFor(variant: CreatorPageGateVariant, creatorName: string, wantsToVote: boolean) {
-  if (variant === 'login') {
-    return {
-      trigger: 'Log in',
-      title: wantsToVote ? 'Log in to vote' : "You're viewing a contest entry",
-      body: wantsToVote
-        ? `Log in to vote for ${creatorName} in the Top Hobby Guides contest. New here? Try the app to start your free trial, then cast your vote.`
-        : `This is ${creatorName}'s entry in the Top Hobby Guides contest. Log in to vote, or try the app to start your free trial.`,
-    }
-  }
-  if (variant === 'trial') {
-    return {
-      trigger: 'Start free trial',
-      title: 'Start your free trial to vote',
-      body: `Start your 14-day free trial to vote for ${creatorName} and use the rest of Obsidian Gallery.`,
-    }
-  }
+function copyFor(_variant: CreatorPageGateVariant, creatorName: string, wantsToVote: boolean) {
   return {
-    trigger: 'Subscribe',
-    title: 'Subscribe to vote',
-    body: `Your free trial has ended. Subscribe to vote for ${creatorName} and keep using Obsidian Gallery.`,
+    trigger: 'Log in',
+    title: wantsToVote ? 'Log in to vote' : "You're viewing a contest entry",
+    body: wantsToVote
+      ? `Log in to vote for ${creatorName} in the Top Hobby Guides contest. New here? Join free, then cast your vote.`
+      : `This is ${creatorName}'s entry in the Top Hobby Guides contest. Log in to vote, or join free.`,
   }
 }
 
@@ -61,16 +48,8 @@ export function CreatorGateDialog({ variant, returnPath, creatorName, wantsToVot
         <h2 id="creator-gate-title" className={styles.dialogTitle}>{text.title}</h2>
         <p className={styles.dialogBody}>{text.body}</p>
         <div className={styles.dialogActions}>
-          {variant === 'login' ? (
-            <>
-              <a href={`/login?next=${next}&preview=1`} className={styles.primaryAction}>Log in</a>
-              <a href="/onboarding?preview=1" className={styles.secondaryAction}>Try the app</a>
-            </>
-          ) : variant === 'trial' ? (
-            <a href={`/trial?next=${next}`} className={styles.primaryAction}>Start free trial</a>
-          ) : (
-            <a href={`/subscribe?next=${next}`} className={styles.primaryAction}>Subscribe</a>
-          )}
+          <a href={`/login?next=${next}&preview=1`} className={styles.primaryAction}>Log in</a>
+          <a href="/onboarding?preview=1" className={styles.secondaryAction}>Join free</a>
         </div>
         <button type="button" className={styles.keepReading} onClick={onClose}>
           Keep browsing {creatorName}&apos;s guides

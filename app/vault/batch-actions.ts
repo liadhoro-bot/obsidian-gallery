@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { captureServerEvent } from '../../utils/analytics/server'
 import { createClient } from '../../utils/supabase/server'
+import { checkPlanLimit } from '../../lib/plan/limits'
+import type { PlanLimitHit } from '../../lib/plan/limit-types'
 import {
   VaultBatchFilters,
   countFilteredCatalogPaints,
@@ -44,6 +46,28 @@ function chunkArray<T>(values: T[], size: number) {
   }
 
   return chunks
+}
+
+/**
+ * Free-plan collection limit for a batch: counts only paints that aren't
+ * owned yet. Returns the hit, or null when the batch fits.
+ */
+async function checkBatchCollectionLimit(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { id: string; email?: string | null },
+  paintIds: string[]
+): Promise<PlanLimitHit | null> {
+  if (paintIds.length === 0) return null
+  const { data, error } = await supabase
+    .from('user_paint_ownership')
+    .select('paint_catalog_id')
+    .eq('user_id', user.id)
+    .eq('is_owned', true)
+    .in('paint_catalog_id', paintIds)
+  // Fail open, like checkPlanLimit itself.
+  if (error) return null
+  const adding = paintIds.length - (data?.length ?? 0)
+  return adding > 0 ? checkPlanLimit(supabase, user, 'collection_paints', adding) : null
 }
 
 async function requireUser() {
@@ -317,6 +341,8 @@ export async function markPaintSetOwned(
   const { supabase, user } = await requireUser()
   const details = await getPaintSetDetails(paintSetId)
   const paintIds = details.paints.map((paint) => paint.id)
+  const limit = await checkBatchCollectionLimit(supabase, user, paintIds)
+  if (limit) return { paint_count: 0, paint_ids: [] as string[], limit }
   const count = await upsertOwnershipRows({
     supabase,
     userId: user.id,
@@ -360,6 +386,8 @@ export async function markFilteredPaintsOwned(
     filters: normalized,
     limit: BATCH_LIMIT + 1,
   })
+  const limit = await checkBatchCollectionLimit(supabase, user, paintIds)
+  if (limit) return { paint_count: 0, paint_ids: [] as string[], limit }
   const count = await upsertOwnershipRows({
     supabase,
     userId: user.id,

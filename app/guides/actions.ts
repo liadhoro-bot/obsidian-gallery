@@ -725,6 +725,7 @@ export async function toggleDeckPaintOwnership(formData: FormData) {
 
   await updatePaintOwnership({
     userId: user.id,
+    userEmail: user.email,
     paintCatalogId,
     action,
     currentValue,

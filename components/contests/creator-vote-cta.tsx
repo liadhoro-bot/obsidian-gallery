@@ -17,8 +17,8 @@ export default function CreatorVoteCta({ contest, creators, creatorId, creatorNa
   state: CreatorVoteState
   opensLabel: string
   preview?: boolean
-  // Set for logged-out or non-member visitors: the button asks them to log in
-  // or start a trial instead of opening the ballot.
+  // Set for logged-out visitors: the button asks them to log in instead of
+  // opening the ballot.
   gate?: CreatorPageGateProps
 }) {
   const [isOpen, setIsOpen] = useState(false)

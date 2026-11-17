@@ -4,6 +4,7 @@ import { createClient } from '../supabase/server'
 import { captureServerEvent } from '../analytics/server'
 import { completeOnboardingActions } from '../../lib/onboarding/completion'
 import { safeEvaluateAchievements } from '../../lib/achievements/evaluateAchievements'
+import { PlanLimitError, checkPlanLimit } from '../../lib/plan/limits'
 
 type OwnershipAction =
   | 'owned'
@@ -13,6 +14,8 @@ type OwnershipAction =
 
 type Args = {
   userId: string
+  /** Needed for the free-plan collection limit (Premium is keyed by email). */
+  userEmail?: string | null
   paintCatalogId: string
   action: OwnershipAction
   currentValue?: boolean
@@ -21,6 +24,7 @@ type Args = {
 
 export async function updatePaintOwnership({
   userId,
+  userEmail,
   paintCatalogId,
   action,
   currentValue,
@@ -66,6 +70,16 @@ export async function updatePaintOwnership({
   if (action === 'decrement') {
     nextUnits = Math.max(previousUnits - 1, 0)
     nextOwned = nextUnits > 0
+  }
+
+  // Marking a not-yet-owned paint as owned grows the collection.
+  if (nextOwned && !previousOwned) {
+    const hit = await checkPlanLimit(
+      supabase,
+      { id: userId, email: userEmail },
+      'collection_paints'
+    )
+    if (hit) throw new PlanLimitError(hit)
   }
 
   const { data: updated, error: upsertError } = await supabase

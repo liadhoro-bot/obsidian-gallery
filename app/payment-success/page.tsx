@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 
-// Must match the string checked in app/subscribe/subscribe-client.tsx.
+// Must match the string checked in app/components/upgrade/premium-checkout-form.tsx.
 const PAYMENT_SUCCESS_MESSAGE = 'obsidian-gallery:grow-payment-success'
 
 // This is the page Grow's "Success URL" points to. It only ever loads
@@ -17,7 +17,7 @@ export default function PaymentSuccessPage() {
         window.opener.postMessage(PAYMENT_SUCCESS_MESSAGE, window.location.origin)
       }
     } catch {
-      // If the opener is unreachable for any reason, the subscribe page's
+      // If the opener is unreachable for any reason, the checkout form's
       // own polling still picks up the paid status within a few seconds.
     }
 
