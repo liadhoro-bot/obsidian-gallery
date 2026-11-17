@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'obsidian-gallery-v3-theme-card-fix-2026-09-27'
+const CACHE_VERSION = 'obsidian-gallery-v3-push-2026-11-17'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
 const OFFLINE_URL = '/offline'
@@ -79,6 +79,53 @@ self.addEventListener('activate', (event) => {
         )
       )
       .then(() => self.clients.claim())
+  )
+})
+
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { body: event.data ? event.data.text() : '' }
+  }
+
+  const title = data.title || 'Obsidian Gallery'
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag || undefined,
+      data: { url: data.url || '/dashboard' },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+
+  const target = new URL(
+    (event.notification.data && event.notification.data.url) || '/dashboard',
+    self.location.origin
+  )
+  // Only ever open pages on this site.
+  const url = target.origin === self.location.origin ? target.href : self.location.origin
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        const existing = windowClients.find(
+          (client) => new URL(client.url).origin === self.location.origin
+        )
+        if (existing) {
+          return existing.focus().then((client) =>
+            client && 'navigate' in client ? client.navigate(url) : client
+          )
+        }
+        return self.clients.openWindow(url)
+      })
   )
 })
 

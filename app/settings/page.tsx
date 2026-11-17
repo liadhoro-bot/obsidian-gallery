@@ -5,6 +5,7 @@ import SettingsProfileCard from './settings-profile-card'
 import SettingsSupportSection from './settings-support-section'
 import SettingsSessionSection from './settings-session-section'
 import SettingsPreferencesSection from './settings-preferences-section'
+import SettingsNotificationsSection from './settings-notifications-section'
 import SettingsV3Preview from './settings-v3-preview'
 import { hasV3PreviewSession } from '../../lib/v3-preview-server'
 import {
@@ -83,6 +84,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <SettingsPreferencesSection
           initialStartupPage={getStartupPage(user.user_metadata?.startup_page)}
         />
+
+        <SettingsNotificationsSection />
 
         <Suspense fallback={<SettingsCardSkeleton />}>
           <SettingsSupportSection />

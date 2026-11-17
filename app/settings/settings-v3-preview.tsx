@@ -4,6 +4,10 @@ import Image from 'next/image'
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useState, useTransition } from 'react'
 import V3PerfIndicator from '../components/v3-perf-indicator'
+import {
+  describePushStatus,
+  usePushNotifications,
+} from '../../lib/push/use-push-notifications'
 import AvatarUploadInput from './avatar-upload-input'
 import SettingsProfileEditor from './settings-profile-editor'
 import SettingsPlanCard from './settings-plan-card'
@@ -67,7 +71,8 @@ export default function SettingsV3Preview({
   plan: PlanSummary | null
   user: SettingsV3User
 }) {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const push = usePushNotifications()
+  const canTogglePush = push.status === 'on' || push.status === 'off'
   const [startupPage, setStartupPage] = useState<StartupPage>(user.startupPage)
   const [startupPageError, setStartupPageError] = useState<string | null>(null)
   const [isSavingStartupPage, startSavingStartupPage] = useTransition()
@@ -109,14 +114,28 @@ export default function SettingsV3Preview({
           <PreferenceRow
             icon="bell"
             title="Notifications"
-            description="Receive updates about guides, projects, and community activity."
+            description={push.error ?? describePushStatus(push.status)}
             action={
-              <Toggle
-                enabled={notificationsEnabled}
-                onChange={() => setNotificationsEnabled((enabled) => !enabled)}
-              />
+              canTogglePush ? (
+                <Toggle
+                  enabled={push.status === 'on'}
+                  disabled={push.busy}
+                  onChange={() => (push.status === 'on' ? push.disable() : push.enable())}
+                />
+              ) : null
             }
           />
+          {push.status === 'on' ? (
+            <button
+              type="button"
+              onClick={push.sendTest}
+              disabled={push.busy}
+              className={styles.startupStatus}
+              style={{ textDecoration: 'underline', background: 'none', border: 0, cursor: 'pointer' }}
+            >
+              {push.busy ? 'Sending…' : 'Send a test notification'}
+            </button>
+          ) : null}
 
           <div className={styles.preferenceBlock}>
             <div className={styles.preferenceIntro}>
@@ -349,9 +368,11 @@ function SettingsLinkRow({
 
 function Toggle({
   enabled,
+  disabled,
   onChange,
 }: {
   enabled: boolean
+  disabled?: boolean
   onChange: () => void
 }) {
   return (
@@ -359,6 +380,7 @@ function Toggle({
       type="button"
       role="switch"
       aria-checked={enabled}
+      disabled={disabled}
       onClick={onChange}
       className={[
         styles.switch,
