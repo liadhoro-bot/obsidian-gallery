@@ -89,7 +89,10 @@ async function sendToSubscriptions(
               keys: { p256dh: subscription.p256dh, auth: subscription.auth },
             },
             body,
-            { TTL: 60 * 60 * 24, urgency: 'normal' }
+            // 'high' makes FCM/APNs wake an idle phone. With 'normal',
+            // Android Doze and Samsung battery saving held messages back
+            // indefinitely (seen on a Samsung, 2026-11-18).
+            { TTL: 60 * 60 * 24, urgency: 'high' }
           )
           result.sent += 1
           usedIds.push(subscription.id)
