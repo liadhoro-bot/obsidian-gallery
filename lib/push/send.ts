@@ -18,6 +18,16 @@ export type PushSendResult = {
   failed: number
 }
 
+type SubscriptionRow = {
+  id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+}
+
+const SEND_CONCURRENCY = 20
+const PAGE_SIZE = 1000
+
 let configured = false
 
 export function isPushConfigured() {
@@ -47,22 +57,15 @@ function configure() {
 }
 
 /**
- * Sends one notification to every device the user has enabled push on.
- * Subscriptions the push service reports as expired are deleted.
+ * Sends one payload to the given subscriptions, a few at a time, deletes the
+ * ones the push service reports as gone (404/410) and stamps last_used_at on
+ * the ones that worked.
  */
-export async function sendPushToUser(
-  userId: string,
+async function sendToSubscriptions(
+  subscriptions: SubscriptionRow[],
   payload: PushPayload
 ): Promise<PushSendResult> {
   configure()
-
-  const supabase = createServiceRoleClient()
-  const { data: subscriptions, error } = await supabase
-    .from('push_subscriptions')
-    .select('id, endpoint, p256dh, auth')
-    .eq('user_id', userId)
-
-  if (error) throw new Error(error.message)
 
   const body = JSON.stringify({
     title: payload.title,
@@ -75,42 +78,101 @@ export async function sendPushToUser(
   const goneIds: string[] = []
   const usedIds: string[] = []
 
-  await Promise.all(
-    (subscriptions ?? []).map(async (subscription) => {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: subscription.endpoint,
-            keys: { p256dh: subscription.p256dh, auth: subscription.auth },
-          },
-          body,
-          { TTL: 60 * 60 * 24, urgency: 'normal' }
-        )
-        result.sent += 1
-        usedIds.push(subscription.id)
-      } catch (sendError) {
-        const statusCode = (sendError as { statusCode?: number }).statusCode
-        if (statusCode === 404 || statusCode === 410) {
-          goneIds.push(subscription.id)
-          result.removed += 1
-        } else {
-          result.failed += 1
-          console.error('[push] send failed', statusCode, sendError)
+  for (let start = 0; start < subscriptions.length; start += SEND_CONCURRENCY) {
+    const batch = subscriptions.slice(start, start + SEND_CONCURRENCY)
+    await Promise.all(
+      batch.map(async (subscription) => {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: subscription.endpoint,
+              keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+            },
+            body,
+            { TTL: 60 * 60 * 24, urgency: 'normal' }
+          )
+          result.sent += 1
+          usedIds.push(subscription.id)
+        } catch (sendError) {
+          const statusCode = (sendError as { statusCode?: number }).statusCode
+          if (statusCode === 404 || statusCode === 410) {
+            goneIds.push(subscription.id)
+            result.removed += 1
+          } else {
+            result.failed += 1
+            console.error('[push] send failed', statusCode, sendError)
+          }
         }
-      }
-    })
-  )
-
-  if (goneIds.length > 0) {
-    await supabase.from('push_subscriptions').delete().in('id', goneIds)
+      })
+    )
   }
 
-  if (usedIds.length > 0) {
+  const supabase = createServiceRoleClient()
+
+  for (let start = 0; start < goneIds.length; start += PAGE_SIZE) {
     await supabase
       .from('push_subscriptions')
-      .update({ last_used_at: new Date().toISOString() })
-      .in('id', usedIds)
+      .delete()
+      .in('id', goneIds.slice(start, start + PAGE_SIZE))
+  }
+
+  const now = new Date().toISOString()
+  for (let start = 0; start < usedIds.length; start += PAGE_SIZE) {
+    await supabase
+      .from('push_subscriptions')
+      .update({ last_used_at: now })
+      .in('id', usedIds.slice(start, start + PAGE_SIZE))
   }
 
   return result
+}
+
+/** Sends one notification to every device the user has enabled push on. */
+export async function sendPushToUser(
+  userId: string,
+  payload: PushPayload
+): Promise<PushSendResult> {
+  const supabase = createServiceRoleClient()
+  const { data, error } = await supabase
+    .from('push_subscriptions')
+    .select('id, endpoint, p256dh, auth')
+    .eq('user_id', userId)
+
+  if (error) throw new Error(error.message)
+  return sendToSubscriptions(data ?? [], payload)
+}
+
+async function loadAllSubscriptions() {
+  const supabase = createServiceRoleClient()
+  const rows: (SubscriptionRow & { user_id: string })[] = []
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('push_subscriptions')
+      .select('id, user_id, endpoint, p256dh, auth')
+      .order('created_at', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) throw new Error(error.message)
+    rows.push(...(data ?? []))
+    if (!data || data.length < PAGE_SIZE) break
+  }
+
+  return rows
+}
+
+/** How many devices and distinct people a broadcast would reach right now. */
+export async function getPushAudience() {
+  const rows = await loadAllSubscriptions()
+  return {
+    devices: rows.length,
+    people: new Set(rows.map((row) => row.user_id)).size,
+  }
+}
+
+/** Sends one notification to every subscribed device of every user. */
+export async function sendPushToEveryone(payload: PushPayload) {
+  const rows = await loadAllSubscriptions()
+  const result = await sendToSubscriptions(rows, payload)
+  return { devices: rows.length, ...result }
 }
