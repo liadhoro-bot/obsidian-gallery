@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { usePushNotifications } from '../../../../lib/push/use-push-notifications'
+import { recordNotificationEvent } from '../../../engage/actions'
 import { capturePostHog } from '../../../../utils/analytics/client'
 import styles from '../../../auth-flow-silver.module.css'
 
@@ -9,16 +10,20 @@ type NotificationsScreenProps = {
   onDone: () => void
 }
 
+const SOURCE = 'onboarding'
+
 /**
- * Optional opt-in for push notifications. Only shown when this device can
+ * Soft opt-in for push (ENGAGE framework 6.1). The native browser prompt only
+ * appears after the user taps Enable. Only shown when this device can
  * actually ask (Push API available and the user hasn't decided yet);
  * otherwise it passes straight through. iPhone Safari outside the Home
  * Screen app can't ask, so those users skip this and can turn it on later
  * in Settings.
  */
 export default function NotificationsScreen({ onDone }: NotificationsScreenProps) {
-  const push = usePushNotifications()
+  const push = usePushNotifications(SOURCE)
   const finished = useRef(false)
+  const shownLogged = useRef(false)
 
   function finish(result: string) {
     if (finished.current) return
@@ -26,6 +31,13 @@ export default function NotificationsScreen({ onDone }: NotificationsScreenProps
     void capturePostHog('onboarding_notifications', { result })
     onDone()
   }
+
+  useEffect(() => {
+    if (push.status === 'off' && !shownLogged.current) {
+      shownLogged.current = true
+      void recordNotificationEvent('soft_prompt_shown', SOURCE, 'prompt').catch(() => {})
+    }
+  }, [push.status])
 
   useEffect(() => {
     if (push.status === 'loading' || push.status === 'off') return
@@ -48,12 +60,12 @@ export default function NotificationsScreen({ onDone }: NotificationsScreenProps
       </div>
 
       <div className={`${styles.screenIntro} ${styles.screenIntroLarge}`}>
-        <h1 className={styles.screenTitle}>Stay on top of your bench</h1>
+        <h1 className={styles.screenTitle}>Keep your hobby moving</h1>
         <p className={styles.screenCopy}>
-          Get a nudge before the painting sessions you schedule, plus the odd
-          update from the community. You can turn this off anytime in
-          Settings.
+          Get a useful reminder when a project stalls, a deadline is close, a
+          saved Guide becomes relevant, or someone interacts with your work.
         </p>
+        <p className={styles.screenCopy}>No spam. You can change this anytime.</p>
       </div>
 
       {push.error ? (
@@ -64,16 +76,22 @@ export default function NotificationsScreen({ onDone }: NotificationsScreenProps
         <button
           type="button"
           disabled={push.busy}
-          onClick={() => void push.enable()}
+          onClick={() => {
+            void recordNotificationEvent('soft_prompt_enable', SOURCE).catch(() => {})
+            void push.enable()
+          }}
           className={`tap-press tap-target ${styles.ctaButton}`}
         >
-          {push.busy ? 'Turning on...' : 'Turn on notifications ->'}
+          {push.busy ? 'Turning on...' : 'Enable helpful painting reminders ->'}
         </button>
 
         <button
           type="button"
           disabled={push.busy}
-          onClick={() => finish('declined')}
+          onClick={() => {
+            void recordNotificationEvent('soft_prompt_skipped', SOURCE).catch(() => {})
+            finish('declined')
+          }}
           className={`tap-target ${styles.backButton}`}
         >
           Not now

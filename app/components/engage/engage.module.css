@@ -1,0 +1,136 @@
+/* ENGAGE in-app surfaces. The popup reuses the upgrade dialog's parchment
+   styles; this file holds the topper (a quiet card above the mobile nav). */
+
+.topper {
+  position: fixed;
+  inset-inline: var(--og-space-3);
+  inset-block-end: calc(69px + env(safe-area-inset-bottom) + var(--og-space-3));
+  z-index: 60;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--og-space-2) var(--og-space-3);
+  max-width: 520px;
+  margin-inline: auto;
+  padding: var(--og-space-3) var(--og-space-3) var(--og-space-3) var(--og-space-4);
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 64%, var(--og-border-subtle));
+  border-radius: var(--og-radius-m);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  box-shadow: var(--og-shadow-large);
+  color: var(--og-text-primary);
+  font-family: var(--og-font-ui);
+  animation: topperIn var(--og-motion-medium) var(--og-ease-physical);
+}
+
+@media (min-width: 1024px) {
+  .topper {
+    inset-block-end: var(--og-space-5);
+  }
+}
+
+.topperText {
+  min-width: 0;
+}
+
+.topperTitle {
+  margin: 0;
+  font-family: var(--og-font-display);
+  font-size: 1.02rem;
+  line-height: 1.2;
+}
+
+.topperBody {
+  margin: 2px 0 0;
+  color: var(--og-text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.topperActions {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--og-space-2);
+}
+
+.topperCta {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 var(--og-space-4);
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  border-radius: var(--og-radius-m);
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: var(--og-shadow-brass-plate);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.topperCta:disabled {
+  opacity: 0.6;
+}
+
+.topperDismiss {
+  min-height: 40px;
+  padding: 0 var(--og-space-3);
+  border: 0;
+  background: transparent;
+  color: var(--og-text-secondary);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.topperClose {
+  display: inline-grid;
+  align-self: start;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--og-radius-round);
+  background: transparent;
+  color: var(--og-text-secondary);
+  cursor: pointer;
+}
+
+.previewBadge {
+  display: inline-block;
+  margin-inline-start: var(--og-space-2);
+  padding: 1px 6px;
+  border-radius: var(--og-radius-s, 4px);
+  background: color-mix(in srgb, var(--og-brass-500) 30%, transparent);
+  color: var(--og-brass-700);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--og-danger-600, #9b2c2c);
+  font-size: 0.8rem;
+}
+
+@keyframes topperIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topper {
+    animation: none;
+  }
+}

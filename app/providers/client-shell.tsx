@@ -19,6 +19,10 @@ const OnboardingTour = dynamic(
   () => import('../components/onboarding-tour/onboarding-tour'),
   { ssr: false }
 )
+const EngageHost = dynamic(
+  () => import('../components/engage/engage-host'),
+  { ssr: false }
+)
 const PostHogUserIdentifier = dynamic(
   () => import('./posthog-user-identifier'),
   { ssr: false }
@@ -73,6 +77,7 @@ export default function ClientShell({
       {enableProductionTelemetry ? <PostHogUserIdentifier /> : null}
       {showMobileNav ? <MobileNav /> : null}
       {showMobileNav ? <OnboardingTour /> : null}
+      {showMobileNav && !isLoggedOutNewsReader ? <EngageHost /> : null}
       <UpgradePromptHost />
     </>
   )
