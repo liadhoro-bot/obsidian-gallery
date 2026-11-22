@@ -2,123 +2,121 @@ import { redirect } from 'next/navigation'
 import { createClient, getSessionUser } from '../../../utils/supabase/server'
 import { createServiceRoleClient } from '../../../utils/supabase/service-role'
 import { isCurrentUserAdmin } from '../../../lib/admin'
-import { eligibleTarget, renderMessage } from '../../../lib/engage/candidates'
+import { eligibleTarget } from '../../../lib/engage/candidates'
 import { planPushes } from '../../../lib/engage/push-dispatch'
+import { messageLabel, simulateUser, type UserPlan } from '../../../lib/engage/simulate'
 import {
   LIFECYCLE_LABELS,
-  LIFECYCLE_STATES,
   type EngagementMessage,
   type LifecycleState,
-  type RenderedMessage,
+  type MessageSurface,
   type UserLifecycle,
 } from '../../../lib/engage/types'
-import MessageControls from './message-controls'
+import DryRun from './dry-run'
+import MessageCard from './message-card'
 
-// ENGAGE control room: lifecycle distribution, context modifiers,
-// reachability, and the V1 message set with live previews, audience sizes
-// and status switches. Admins only.
+// ENGAGE control room: where users are (state x context), who gets what
+// (the map and every user), today's push dry run, the opt-in funnel, and the
+// message set with previews, editing and status switches. Admins only.
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+const DAY = 24 * 60 * 60 * 1000
 const SAMPLE = { unitId: 'sample', unitName: 'Tomb Guard', recipeId: 'sample', guideName: 'Weathered Bronze' }
 
-function pct(part: number, whole: number) {
-  return whole ? `${Math.round((part / whole) * 100)}%` : '–'
+// Display order: active first, then the people we are trying to win back.
+const STATE_ORDER: LifecycleState[] = ['active', 'passive', 'at_risk', 'dormant', 'unactivated']
+
+const STATE_STYLE: Record<LifecycleState, { dot: string; text: string; ring: string }> = {
+  active: { dot: 'bg-emerald-400', text: 'text-emerald-200', ring: 'border-emerald-400/40' },
+  passive: { dot: 'bg-cyan-400', text: 'text-cyan-200', ring: 'border-cyan-400/40' },
+  at_risk: { dot: 'bg-amber-400', text: 'text-amber-200', ring: 'border-amber-400/40' },
+  dormant: { dot: 'bg-rose-400', text: 'text-rose-200', ring: 'border-rose-400/40' },
+  unactivated: { dot: 'bg-slate-400', text: 'text-slate-300', ring: 'border-slate-400/40' },
 }
 
-function Stat({ label, value, note }: { label: string; value: string | number; note?: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-      <div className="text-[0.68rem] font-bold uppercase tracking-wide text-white/50">{label}</div>
-      <div className="mt-1 text-2xl font-black">{value}</div>
-      {note ? <div className="text-xs text-white/50">{note}</div> : null}
-    </div>
-  )
+const STATE_MEANING: Record<LifecycleState, string> = {
+  active: 'Made progress in the last 7 days',
+  passive: 'Opened the app 2+ days this week, no progress',
+  at_risk: 'No progress, barely opened, seen in the last 3 weeks',
+  dormant: 'Nothing for 22+ days',
+  unactivated: 'Never made any progress',
 }
 
-function SurfaceMock({ rendered }: { rendered: RenderedMessage }) {
-  if (rendered.surface === 'push') {
-    return (
-      <div className="rounded-2xl bg-[#e9edf1] p-3 text-[#1b1f24] shadow-inner">
-        <div className="flex items-center gap-2 text-[0.7rem] text-[#5a6470]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon-192.png" alt="" className="h-4 w-4 rounded" />
-          Obsidian Gallery · now
-        </div>
-        <div className="mt-1 text-sm font-bold">{rendered.title}</div>
-        <div className="text-sm leading-snug">{rendered.body}</div>
-      </div>
-    )
-  }
+const SURFACE_STYLE: Record<MessageSurface, string> = {
+  push: 'border-sky-300/40 bg-sky-300/15 text-sky-50',
+  popup: 'border-amber-300/40 bg-amber-300/15 text-amber-50',
+  topper: 'border-emerald-300/40 bg-emerald-300/15 text-emerald-50',
+  email: 'border-violet-300/40 bg-violet-300/15 text-violet-50',
+}
 
-  if (rendered.surface === 'email') {
-    return (
-      <div className="rounded-2xl bg-[#f6f1e7] p-4 text-[#2a2118]">
-        <div className="text-[0.7rem] text-[#7a6a55]">Subject</div>
-        <div className="font-bold">{rendered.title}</div>
-        <p className="mt-2 text-sm leading-snug">{rendered.body}</p>
-        <span className="mt-3 inline-block rounded-lg bg-[#b08a3e] px-3 py-1.5 text-sm font-bold text-[#1d160e]">
-          {rendered.ctaLabel}
-        </span>
-      </div>
-    )
-  }
+const SURFACE_LABEL: Record<MessageSurface, string> = {
+  push: 'Push',
+  popup: 'Popup',
+  topper: 'Topper',
+  email: 'Email',
+}
 
+function days(fromIso: string | null, now: number) {
+  if (!fromIso) return null
+  return Math.max(0, Math.floor((now - Date.parse(fromIso)) / DAY))
+}
+
+function Chip({
+  surface,
+  children,
+  muted = false,
+}: {
+  surface?: MessageSurface
+  children: React.ReactNode
+  muted?: boolean
+}) {
   return (
-    <div
-      className={`rounded-2xl border border-[#b08a3e]/70 bg-[#f6f1e7] text-[#2a2118] ${
-        rendered.surface === 'popup' ? 'p-5' : 'p-3'
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${
+        muted || !surface ? 'border-white/10 bg-white/[0.04] text-white/50' : SURFACE_STYLE[surface]
       }`}
     >
-      {rendered.surface === 'popup' ? (
-        <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.16em] text-[#8a6a2a]">
-          Obsidian Gallery
-        </div>
-      ) : null}
-      <div className={rendered.surface === 'popup' ? 'mt-1 text-xl font-bold' : 'font-bold'}>{rendered.title}</div>
-      <p className="mt-1 text-sm leading-snug text-[#5a4a38]">{rendered.body}</p>
-      <div className="mt-3 flex items-center gap-3">
-        <span
-          className={`inline-block rounded-lg bg-[#c9a24e] px-3 py-1.5 text-sm font-extrabold text-[#1d160e] ${
-            rendered.surface === 'popup' ? 'w-full text-center' : ''
-          }`}
-        >
-          {rendered.ctaLabel}
-        </span>
-        {rendered.surface === 'topper' ? <span className="text-sm font-bold text-[#5a4a38]">Not now</span> : null}
-      </div>
-      {rendered.surface === 'popup' ? (
-        <div className="mt-2 text-center text-sm font-bold text-[#5a4a38]">Not now</div>
-      ) : null}
-    </div>
+      {children}
+    </span>
   )
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  draft: 'bg-white/10 text-white/70',
-  review: 'bg-amber-300/20 text-amber-100',
-  live: 'bg-emerald-300/20 text-emerald-100',
-  paused: 'bg-red-300/20 text-red-100',
+function Count({ n }: { n: number }) {
+  return <span className="rounded-full bg-black/30 px-1.5 text-[0.7rem] font-black">{n}</span>
+}
+
+function StateName({ state, count }: { state: LifecycleState; count?: number }) {
+  return (
+    <span className={`inline-flex items-center gap-2 font-black ${STATE_STYLE[state].text}`}>
+      <span className={`h-2.5 w-2.5 rounded-full ${STATE_STYLE[state].dot}`} />
+      {LIFECYCLE_LABELS[state]}
+      {count === undefined ? null : <span className="text-white/50">{count}</span>}
+    </span>
+  )
 }
 
 async function loadOverview() {
   const now = Date.now()
-  const since = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const since = new Date(now - 30 * DAY).toISOString()
   const service = createServiceRoleClient()
   const { planned, messages, refreshed } = await planPushes(now, { refresh: true })
-  const [{ data: lifecycleRows }, { data: deliveries }, { data: funnel }] = await Promise.all([
+  const [{ data: lifecycleRows }, { data: deliveries }, { data: profiles }] = await Promise.all([
     service.from('user_lifecycle').select('*'),
     service
       .from('engagement_deliveries')
-      .select('message_key, status, is_preview')
+      .select('message_key, channel, status, is_preview')
       .gte('created_at', since),
-    service
-      .from('notification_permission_events')
-      .select('event_type, source')
-      .gte('created_at', since),
+    service.from('profiles').select('id, display_name, username, email'),
   ])
 
-  return { planned, messages, refreshed, lifecycleRows, deliveries, funnel, now }
+  const lifecycles = (lifecycleRows ?? []) as UserLifecycle[]
+  const unitIds = [...new Set(lifecycles.map((row) => row.focus_unit_id).filter((id): id is string => Boolean(id)))]
+  const { data: units } = unitIds.length
+    ? await service.from('units').select('id, name').in('id', unitIds)
+    : { data: [] as { id: string; name: string }[] }
+
+  return { planned, messages, refreshed, lifecycles, deliveries, profiles, units, now }
 }
 
 export default async function AdminEngagePage() {
@@ -127,180 +125,507 @@ export default async function AdminEngagePage() {
   if (!user) redirect('/login?next=%2Fadmin%2Fengage')
   if (!(await isCurrentUserAdmin(user.id))) redirect('/dashboard')
 
-  const { planned, messages, refreshed, lifecycleRows, deliveries, funnel, now } = await loadOverview()
-  const lifecycles = (lifecycleRows ?? []) as UserLifecycle[]
-  const byState = new Map<LifecycleState, UserLifecycle[]>(LIFECYCLE_STATES.map((state) => [state, []]))
-  for (const row of lifecycles) byState.get(row.lifecycle_state)?.push(row)
+  const { planned, messages, refreshed, lifecycles, deliveries, profiles, units, now } = await loadOverview()
 
-  const modifiers: [string, number][] = [
-    ['Active Unit', lifecycles.filter((row) => row.active_unit_count > 0).length],
-    ['Stale Unit (3d+)', lifecycles.filter((row) => row.stale_active_unit_count > 0).length],
-    ['Draft Guide', lifecycles.filter((row) => row.draft_guide_count > 0).length],
-    ['Assigned Guide', lifecycles.filter((row) => row.assigned_guide_count > 0).length],
-    ['Saved Guide, unassigned', lifecycles.filter((row) => row.saved_guides_unassigned_count > 0).length],
-    ['Deadline < 72h', lifecycles.filter((row) => row.deadline_within_72h).length],
-    ['Scheduled session < 24h', lifecycles.filter((row) => row.scheduled_session_within_24h).length],
-    ['Recent social reward', lifecycles.filter((row) => row.recent_social_reward_count > 0).length],
-    ['Upcoming event < 24h', lifecycles.filter((row) => row.upcoming_event_24h).length],
-    ['Reactivated (7d flag)', lifecycles.filter((row) => row.reactivated_until && Date.parse(row.reactivated_until) > now).length],
-    ['Notification Off', lifecycles.filter((row) => !row.push_subscription_active).length],
-  ]
+  const messageByKey = new Map(messages.map((message) => [message.key, message]))
+  const plannedByUser = new Map(planned.map((plan) => [plan.userId, plan.messageKey]))
+  const unitName = new Map((units ?? []).map((unit) => [unit.id, unit.name as string]))
+  const profileById = new Map((profiles ?? []).map((row) => [row.id as string, row]))
+  const nameOf = (id: string) => {
+    const row = profileById.get(id)
+    return (row?.display_name || row?.username || row?.email || id.slice(0, 8)) as string
+  }
 
-  const funnelCounts = new Map<string, number>()
-  for (const row of funnel ?? []) funnelCounts.set(row.event_type, (funnelCounts.get(row.event_type) ?? 0) + 1)
+  const users = lifecycles
+    .map((lifecycle) => ({ lifecycle, plan: simulateUser(lifecycle, messages, plannedByUser.get(lifecycle.user_id), now) }))
+    .sort(
+      (a, b) =>
+        STATE_ORDER.indexOf(a.lifecycle.lifecycle_state) - STATE_ORDER.indexOf(b.lifecycle.lifecycle_state) ||
+        (days(a.lifecycle.last_visit_at, now) ?? 9999) - (days(b.lifecycle.last_visit_at, now) ?? 9999)
+    )
+  const byState = new Map<LifecycleState, typeof users>(STATE_ORDER.map((state) => [state, []]))
+  for (const entry of users) byState.get(entry.lifecycle.lifecycle_state)?.push(entry)
 
+  // --- Map tallies -----------------------------------------------------------
+  function tally(entries: typeof users, keyOf: (plan: UserPlan) => string | null) {
+    const counts = new Map<string, number>()
+    for (const { plan } of entries) {
+      const key = keyOf(plan)
+      if (key) counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])
+  }
+
+  // --- Funnel ------------------------------------------------------------------
+  const funnel = new Map<string, number>()
   const deliveryCounts = new Map<string, Record<string, number>>()
   for (const row of deliveries ?? []) {
-    if (row.is_preview) continue
+    if (row.channel === 'permission') {
+      funnel.set(row.status, (funnel.get(row.status) ?? 0) + 1)
+      continue
+    }
+    if (row.is_preview || !row.message_key) continue
     const counts = deliveryCounts.get(row.message_key) ?? {}
     counts[row.status] = (counts[row.status] ?? 0) + 1
     deliveryCounts.set(row.message_key, counts)
   }
 
-  function audience(message: EngagementMessage) {
-    const eligible = lifecycles.filter((row) => eligibleTarget(message, row, now) !== null)
-    const byStateCounts = LIFECYCLE_STATES.map(
-      (state) => [state, eligible.filter((row) => row.lifecycle_state === state).length] as const
-    ).filter(([, count]) => count > 0)
-    return { total: eligible.length, byStateCounts }
-  }
+  const emailList = users.filter(({ plan }) => plan.email)
 
-  const sorted = [...messages].sort(
-    (a, b) => (a.v1_number ?? 99) - (b.v1_number ?? 99) || a.surface.localeCompare(b.surface)
-  )
+  const matrixColumns: { label: string; count: (row: UserLifecycle) => boolean }[] = [
+    { label: 'Push on', count: (row) => row.push_subscription_active },
+    { label: 'Email opt-in', count: (row) => row.email_marketing_allowed },
+    { label: 'Has an active unit', count: (row) => row.active_unit_count > 0 },
+    { label: 'Unit idle 3+ days', count: (row) => row.stale_active_unit_count > 0 },
+    { label: 'Saved guide not on a unit', count: (row) => row.saved_guides_unassigned_count > 0 },
+    { label: 'Draft guide', count: (row) => row.draft_guide_count > 0 },
+    {
+      label: 'Nothing started',
+      count: (row) => row.active_unit_count === 0 && row.saved_guides_unassigned_count === 0 && row.draft_guide_count === 0,
+    },
+  ]
+
+  const groups: { surface: MessageSurface; title: string; note: string }[] = [
+    { surface: 'popup', title: 'Popups', note: 'One per app session, 2 seconds after the app opens.' },
+    { surface: 'topper', title: 'Toppers', note: 'A one-line strip above the bottom bar. Title and button only.' },
+    { surface: 'push', title: 'Pushes', note: 'Daily at 16:00 UTC. One per person per run, at most 2 a week.' },
+    { surface: 'email', title: 'Email', note: 'Not sent automatically. Use the personal list above.' },
+  ]
+
+  function audienceFact(message: EngagementMessage) {
+    const eligible = lifecycles.filter((row) => eligibleTarget(message, row, now) !== null)
+    const parts = STATE_ORDER.map((state) => [state, eligible.filter((row) => row.lifecycle_state === state).length] as const)
+      .filter(([, count]) => count > 0)
+      .map(([state, count]) => `${LIFECYCLE_LABELS[state]} ${count}`)
+    const firstChoice = users.filter(
+      ({ plan }) =>
+        plan.inApp?.key === message.key ||
+        (plan.push.kind === 'send' && plan.push.key === message.key) ||
+        plan.email === message.key
+    ).length
+    return `${eligible.length} match the rule${parts.length ? ` (${parts.join(', ')})` : ''} · ${firstChoice} would get this one first`
+  }
 
   return (
     <main className="min-h-screen bg-[#081018] text-white">
-      <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 pb-28 pt-6 sm:max-w-3xl">
-        <header>
-          <h1 className="text-3xl font-black">ENGAGE</h1>
-          <p className="mt-2 text-sm text-white/60">
-            Lifecycle state owns the next engagement decision. {refreshed} users recomputed just now.
-          </p>
+      <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-4 pb-28 pt-6 sm:max-w-5xl">
+        <header className="space-y-4">
+          <div>
+            <h1 className="text-3xl font-black">ENGAGE</h1>
+            <p className="mt-1 text-sm text-white/60">
+              {refreshed} users recomputed just now. Everything below shows what would happen if every message in
+              review were live.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-2xl border border-amber-300/25 bg-amber-300/[0.06] p-3">
+              <div className="text-xs font-black uppercase tracking-wide text-amber-200">1 · They open the app</div>
+              <p className="mt-1 text-sm text-white/75">
+                Push off? They are asked to turn it on first, in a popup 2 seconds in. Otherwise the most useful
+                popup or one-line topper. One popup per app session.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-sky-300/25 bg-sky-300/[0.06] p-3">
+              <div className="text-xs font-black uppercase tracking-wide text-sky-200">2 · Daily push, 16:00 UTC</div>
+              <p className="mt-1 text-sm text-white/75">
+                Only people with push on. One per run, at most 2 a week; At Risk 1 a week, Dormant 1 every 2 weeks.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-violet-300/25 bg-violet-300/[0.06] p-3">
+              <div className="text-xs font-black uppercase tracking-wide text-violet-200">3 · You, personally</div>
+              <p className="mt-1 text-sm text-white/75">
+                At Risk or Dormant, push off, opted in to email: listed below so you can write to them yourself.
+              </p>
+            </div>
+          </div>
         </header>
 
+        {/* ------------------------------------------------------------------ */}
         <section className="space-y-3">
-          <h2 className="text-lg font-black">Lifecycle state</h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-            {LIFECYCLE_STATES.map((state) => {
-              const rows = byState.get(state) ?? []
-              const push = rows.filter((row) => row.push_subscription_active).length
-              const email = rows.filter((row) => row.email_status === 'deliverable').length
-              return (
-                <Stat
-                  key={state}
-                  label={LIFECYCLE_LABELS[state]}
-                  value={rows.length}
-                  note={`push ${pct(push, rows.length)} · email ${pct(email, rows.length)}`}
-                />
-              )
-            })}
+          <h2 className="text-xl font-black">Where we&apos;re at</h2>
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead className="bg-white/[0.04] text-left text-xs uppercase tracking-wide text-white/50">
+                <tr>
+                  <th className="p-3">State</th>
+                  <th className="p-3 text-right">Users</th>
+                  {matrixColumns.map((column) => (
+                    <th key={column.label} className="p-3 text-right">
+                      {column.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {STATE_ORDER.map((state) => {
+                  const rows = (byState.get(state) ?? []).map((entry) => entry.lifecycle)
+                  return (
+                    <tr key={state}>
+                      <td className="p-3">
+                        <StateName state={state} />
+                        <div className="text-xs text-white/45">{STATE_MEANING[state]}</div>
+                      </td>
+                      <td className="p-3 text-right text-lg font-black">{rows.length}</td>
+                      {matrixColumns.map((column) => {
+                        const n = rows.filter(column.count).length
+                        return (
+                          <td key={column.label} className={`p-3 text-right ${n ? 'font-bold' : 'text-white/25'}`}>
+                            {n}
+                            {n && rows.length ? (
+                              <span className="ml-1 text-xs font-normal text-white/40">
+                                {Math.round((n / rows.length) * 100)}%
+                              </span>
+                            ) : null}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+                <tr className="bg-white/[0.03] font-black">
+                  <td className="p-3">All</td>
+                  <td className="p-3 text-right text-lg">{lifecycles.length}</td>
+                  {matrixColumns.map((column) => (
+                    <td key={column.label} className="p-3 text-right">
+                      {lifecycles.filter(column.count).length}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <p className="text-xs text-white/45">
-            Active: 1+ Core Progress Action in 7 days. Passive: none, but 2+ visit days. At Risk: none, 0–1
-            visits, seen within 21 days. Dormant: 22+ days. Unactivated: no Core Progress Action ever. Visits
-            are recorded from this release on; until then a progress day or last sign-in stands in.
-          </p>
         </section>
 
+        {/* ------------------------------------------------------------------ */}
         <section className="space-y-3">
-          <h2 className="text-lg font-black">Context modifiers</h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {modifiers.map(([label, count]) => (
-              <Stat key={label} label={label} value={count} />
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-lg font-black">Push opt-in funnel · 30 days</h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat label="Soft prompt shown" value={funnelCounts.get('soft_prompt_shown') ?? 0} />
-            <Stat label="Chose Enable" value={funnelCounts.get('soft_prompt_enable') ?? 0} />
-            <Stat label="Native prompt" value={funnelCounts.get('native_prompt_requested') ?? 0} />
-            <Stat label="Granted" value={funnelCounts.get('permission_granted') ?? 0} />
-            <Stat label="Denied" value={funnelCounts.get('permission_denied') ?? 0} />
-            <Stat label="Skipped" value={funnelCounts.get('soft_prompt_skipped') ?? 0} />
-            <Stat label="Dismissed" value={funnelCounts.get('soft_prompt_dismissed') ?? 0} />
-            <Stat label="Turned off" value={funnelCounts.get('subscription_removed') ?? 0} />
-          </div>
-        </section>
-
-        <section className="space-y-4">
           <div>
-            <h2 className="text-lg font-black">V1 messages</h2>
+            <h2 className="text-xl font-black">Who gets what</h2>
             <p className="mt-1 text-sm text-white/55">
-              Review = previews only. Live in-app messages show to eligible users on their next visit; live
-              pushes go out on the daily 16:00 UTC run (max 2 per user per 7 days, one per run).
+              The first thing each group would get, and how many people. Colours:{' '}
+              <Chip surface="popup">Popup</Chip> <Chip surface="topper">Topper</Chip> <Chip surface="push">Push</Chip>{' '}
+              <Chip surface="email">Email</Chip>
             </p>
           </div>
 
-          {sorted.map((message) => {
-            const sample = renderMessage(message, 'sample', SAMPLE, true)
-            const { total, byStateCounts } = audience(message)
-            const plannedCount = planned.filter((plan) => plan.messageKey === message.key).length
-            const counts = deliveryCounts.get(message.key) ?? {}
+          <div className="overflow-x-auto rounded-2xl border border-white/10">
+            <div className="grid min-w-[760px] grid-cols-[12rem_1fr_1fr_0.8fr]">
+              <div className="bg-white/[0.04] p-3 text-xs font-black uppercase tracking-wide text-white/50">State</div>
+              <div className="bg-white/[0.04] p-3 text-xs font-black uppercase tracking-wide text-amber-200">
+                Opens the app → sees
+              </div>
+              <div className="bg-white/[0.04] p-3 text-xs font-black uppercase tracking-wide text-sky-200">
+                Daily push → gets
+              </div>
+              <div className="bg-white/[0.04] p-3 text-xs font-black uppercase tracking-wide text-violet-200">
+                You write to them
+              </div>
+
+              {STATE_ORDER.map((state) => {
+                const entries = byState.get(state) ?? []
+                const inApp = tally(entries, (plan) => plan.inApp?.key ?? null)
+                const inAppNone = entries.filter(({ plan }) => !plan.inApp).length
+                const sends = tally(entries, (plan) => (plan.push.kind === 'send' ? plan.push.key : null))
+                const held = entries.filter(({ plan }) => plan.push.kind === 'held').length
+                const unreachable = entries.filter(({ plan }) => plan.push.kind === 'unreachable')
+                const wouldGet = tally(unreachable, (plan) => (plan.push.kind === 'unreachable' ? plan.push.wouldGet : null))
+                const pushNothing = entries.filter(({ plan }) => plan.push.kind === 'nothing').length
+                const emails = entries.filter(({ plan }) => plan.email).length
+                return (
+                  <div key={state} className="contents">
+                    <div className={`border-t border-white/10 border-l-4 p-3 ${STATE_STYLE[state].ring}`}>
+                      <StateName state={state} count={entries.length} />
+                      <div className="mt-1 text-xs text-white/45">{STATE_MEANING[state]}</div>
+                    </div>
+                    <div className="flex flex-wrap content-start gap-1.5 border-t border-white/10 p-3">
+                      {inApp.map(([key, n]) => (
+                        <Chip key={key} surface={messageByKey.get(key)?.surface}>
+                          {messageLabel(key)} <Count n={n} />
+                        </Chip>
+                      ))}
+                      {inAppNone ? (
+                        <Chip muted>
+                          nothing <Count n={inAppNone} />
+                        </Chip>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap content-start gap-1.5 border-t border-white/10 p-3">
+                      {sends.map(([key, n]) => (
+                        <Chip key={key} surface="push">
+                          {messageLabel(key)} <Count n={n} />
+                        </Chip>
+                      ))}
+                      {held ? (
+                        <Chip muted>
+                          held by the weekly limit <Count n={held} />
+                        </Chip>
+                      ) : null}
+                      {unreachable.length ? (
+                        <Chip muted>
+                          push off, can&apos;t reach <Count n={unreachable.length} />
+                        </Chip>
+                      ) : null}
+                      {pushNothing ? (
+                        <Chip muted>
+                          nothing matches <Count n={pushNothing} />
+                        </Chip>
+                      ) : null}
+                      {wouldGet.length ? (
+                        <div className="w-full text-xs text-white/45">
+                          If they turned push on:{' '}
+                          {wouldGet.map(([key, n]) => `${messageLabel(key)} (${n})`).join(', ')}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap content-start gap-1.5 border-t border-white/10 p-3">
+                      {emails ? (
+                        <Chip surface="email">
+                          personal email <Count n={emails} />
+                        </Chip>
+                      ) : (
+                        <span className="text-xs text-white/30">–</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------------------ */}
+        <section className="space-y-3">
+          <h2 className="text-xl font-black">Every user</h2>
+          {STATE_ORDER.map((state) => {
+            const entries = byState.get(state) ?? []
+            if (!entries.length) return null
             return (
-              <article key={message.key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-black text-white/50">#{message.v1_number}</span>
-                  <span className="font-black">{message.key}</span>
-                  <span className="rounded-full bg-cyan-300/15 px-2 py-0.5 text-xs font-bold text-cyan-100">
-                    {message.surface}
-                  </span>
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-white/70">
-                    {message.value_pillar}
-                  </span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${STATUS_STYLE[message.status]}`}>
-                    {message.status}
-                  </span>
+              <details key={state} open={entries.length <= 10} className="rounded-2xl border border-white/10">
+                <summary className="cursor-pointer list-none p-3">
+                  <StateName state={state} count={entries.length} />
+                  <span className="ml-2 text-xs text-white/40">tap to {entries.length <= 10 ? 'collapse' : 'expand'}</span>
+                </summary>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px] text-sm">
+                    <thead className="text-left text-xs uppercase tracking-wide text-white/40">
+                      <tr>
+                        <th className="px-3 py-2">Painter</th>
+                        <th className="px-3 py-2">Their situation</th>
+                        <th className="px-3 py-2 text-amber-200/80">Opens the app → sees</th>
+                        <th className="px-3 py-2 text-sky-200/80">Daily push</th>
+                        <th className="px-3 py-2 text-violet-200/80">Email</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.06]">
+                      {entries.map(({ lifecycle: row, plan }) => {
+                        const seen = days(row.last_visit_at, now)
+                        const idle = days(row.focus_unit_last_activity_at, now)
+                        const focus = row.focus_unit_id ? unitName.get(row.focus_unit_id) : null
+                        return (
+                          <tr key={row.user_id} className="align-top">
+                            <td className="px-3 py-2">
+                              <div className="font-bold">{nameOf(row.user_id)}</div>
+                              <div className="text-xs text-white/45">
+                                {seen === null ? 'never seen' : seen === 0 ? 'seen today' : `seen ${seen}d ago`}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="flex flex-wrap gap-1">
+                                {focus ? (
+                                  <Chip muted>
+                                    {focus}
+                                    {idle !== null && idle >= 1 ? ` · idle ${idle}d` : ''}
+                                  </Chip>
+                                ) : null}
+                                {row.active_unit_count > 1 ? <Chip muted>{row.active_unit_count} units</Chip> : null}
+                                {row.saved_guides_unassigned_count ? (
+                                  <Chip muted>
+                                    {row.saved_guides_unassigned_count} saved{' '}
+                                    {row.saved_guides_unassigned_count === 1 ? 'guide' : 'guides'} not on a unit
+                                  </Chip>
+                                ) : null}
+                                {row.draft_guide_count ? <Chip muted>draft guide</Chip> : null}
+                                <Chip muted>
+                                  {row.push_subscription_active
+                                    ? '🔔 push on'
+                                    : row.push_platform_permission === 'denied'
+                                      ? '🔕 push blocked'
+                                      : '🔕 push off'}
+                                </Chip>
+                                {row.email_marketing_allowed ? <Chip muted>✉ opted in</Chip> : null}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              {plan.inApp ? (
+                                <Chip surface={plan.inApp.surface}>{messageLabel(plan.inApp.key)}</Chip>
+                              ) : (
+                                <span className="text-xs text-white/30">nothing</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              {plan.push.kind === 'send' ? (
+                                <Chip surface="push">{messageLabel(plan.push.key)}</Chip>
+                              ) : plan.push.kind === 'held' ? (
+                                <span className="text-xs text-white/50">
+                                  {messageLabel(plan.push.key)} · held by the weekly limit
+                                </span>
+                              ) : plan.push.kind === 'unreachable' ? (
+                                <span className="text-xs text-white/40">
+                                  can&apos;t reach
+                                  {plan.push.wouldGet ? ` (would get: ${messageLabel(plan.push.wouldGet)})` : ''}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-white/30">nothing matches</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              {plan.email ? (
+                                <Chip surface="email">write to them</Chip>
+                              ) : (
+                                <span className="text-xs text-white/30">–</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
+              </details>
+            )
+          })}
+        </section>
 
-                <div className="mt-3 grid gap-4 sm:grid-cols-[1fr_1fr]">
-                  <SurfaceMock rendered={sample} />
-                  <dl className="space-y-2 text-sm">
-                    <div>
-                      <dt className="text-xs font-bold uppercase text-white/45">Who</dt>
-                      <dd className="text-white/80">{message.eligibility}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase text-white/45">Eligible right now</dt>
-                      <dd className="text-white/80">
-                        {total} {total === 1 ? 'user' : 'users'}
-                        {byStateCounts.length
-                          ? ` (${byStateCounts.map(([state, count]) => `${LIFECYCLE_LABELS[state]} ${count}`).join(', ')})`
-                          : ''}
-                        {message.surface === 'push' ? ` · ${plannedCount} after push-on + cadence` : ''}
-                        {message.surface === 'popup' || message.surface === 'topper'
-                          ? ' · device push state is checked at display time'
-                          : ''}
-                        {message.surface === 'email' ? ' · not sendable: no sender domain or marketing consent yet' : ''}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase text-white/45">Hypothesis → success</dt>
-                      <dd className="text-white/80">
-                        {message.hypothesis} → {message.success_event}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-bold uppercase text-white/45">Last 30 days</dt>
-                      <dd className="text-white/80">
-                        {['shown', 'sent', 'clicked', 'dismissed']
-                          .map((status) => `${counts[status] ?? 0} ${status}`)
-                          .join(' · ')}
-                      </dd>
-                    </div>
-                  </dl>
+        {/* ------------------------------------------------------------------ */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-xl font-black">Write to them personally · {emailList.length}</h2>
+            <p className="mt-1 text-sm text-white/55">
+              At Risk or Dormant, push off, ticked &ldquo;product updates&rdquo; in onboarding, and has a unit to talk
+              about. {lifecycles.filter((row) => row.email_marketing_allowed).length} users opted in to email in total.
+            </p>
+          </div>
+          {emailList.length ? (
+            <ul className="divide-y divide-white/10 rounded-2xl border border-violet-300/20">
+              {emailList.map(({ lifecycle: row }) => {
+                const profile = profileById.get(row.user_id)
+                const focus = row.focus_unit_id ? unitName.get(row.focus_unit_id) : null
+                const idle = days(row.focus_unit_last_activity_at, now)
+                return (
+                  <li key={row.user_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 p-3 text-sm">
+                    <StateName state={row.lifecycle_state} />
+                    <span className="font-bold">{nameOf(row.user_id)}</span>
+                    {profile?.email ? (
+                      <a className="text-violet-200 underline" href={`mailto:${profile.email}`}>
+                        {profile.email}
+                      </a>
+                    ) : null}
+                    {focus ? (
+                      <span className="text-white/55">
+                        {focus}
+                        {idle !== null ? ` untouched ${idle} days` : ''}
+                      </span>
+                    ) : null}
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-white/50">Nobody right now.</p>
+          )}
+        </section>
+
+        {/* ------------------------------------------------------------------ */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-xl font-black">Today&apos;s push run</h2>
+            <p className="mt-1 text-sm text-white/55">
+              Runs the real daily logic (recompute, rules, weekly limits) and lists who would get which push. Nothing
+              is sent.
+            </p>
+          </div>
+          <DryRun />
+        </section>
+
+        {/* ------------------------------------------------------------------ */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-xl font-black">Push opt-in funnel · 30 days</h2>
+            <p className="mt-1 text-sm text-white/55">
+              Soft prompt = our own ask (onboarding step, popup, topper). Native prompt = the browser&apos;s
+              &ldquo;Allow notifications?&rdquo; dialog, which only opens after they tap yes on ours.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-stretch gap-2 text-center">
+            {[
+              ['Our ask shown', 'soft_prompt_shown'],
+              ['Tapped yes', 'soft_prompt_enable'],
+              ['Browser asked', 'native_prompt_requested'],
+              ['Allowed', 'permission_granted'],
+            ].map(([label, key], index) => (
+              <div key={key} className="flex items-center gap-2">
+                {index ? <span className="text-white/30">→</span> : null}
+                <div className="min-w-[7rem] rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.06] p-3">
+                  <div className="text-2xl font-black">{funnel.get(key) ?? 0}</div>
+                  <div className="text-xs text-white/55">{label}</div>
                 </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-white/45">
+            Not now: {funnel.get('soft_prompt_dismissed') ?? 0} · Skipped in onboarding:{' '}
+            {funnel.get('soft_prompt_skipped') ?? 0} · Blocked in the browser: {funnel.get('permission_denied') ?? 0} ·
+            Turned off later: {funnel.get('subscription_removed') ?? 0}
+          </p>
+        </section>
 
-                <MessageControls
-                  messageKey={message.key}
-                  surface={message.surface}
-                  status={message.status}
-                  previewPath={`/dashboard?engage_preview=${message.key}`}
-                />
-              </article>
+        {/* ------------------------------------------------------------------ */}
+        <section className="space-y-6">
+          <div>
+            <h2 className="text-xl font-black">Messages</h2>
+            <p className="mt-1 text-sm text-white/55">
+              Review = previews only. Edit changes the copy, link, priority and who it targets; the mock updates as you
+              type.
+            </p>
+          </div>
+
+          {groups.map((group) => {
+            const list = messages
+              .filter((message) => message.surface === group.surface)
+              .sort((a, b) => a.priority - b.priority || (a.v1_number ?? 99) - (b.v1_number ?? 99))
+            if (!list.length) return null
+            return (
+              <div key={group.surface} className="space-y-3">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <Chip surface={group.surface}>{SURFACE_LABEL[group.surface]}</Chip>
+                  <h3 className="text-lg font-black">{group.title}</h3>
+                  <span className="text-sm text-white/45">{group.note}</span>
+                </div>
+                {list.map((message) => {
+                  const counts = deliveryCounts.get(message.key) ?? {}
+                  return (
+                    <MessageCard
+                      key={message.key}
+                      message={message}
+                      label={messageLabel(message.key)}
+                      sample={SAMPLE}
+                      facts={[
+                        {
+                          label: 'Who',
+                          value: `${message.lifecycle_states.map((state) => LIFECYCLE_LABELS[state]).join(', ')} · priority ${message.priority}. ${message.eligibility}`,
+                        },
+                        { label: 'Right now', value: audienceFact(message) },
+                        { label: 'Hypothesis → success', value: `${message.hypothesis ?? '–'} → ${message.success_event ?? '–'}` },
+                        {
+                          label: 'Last 30 days',
+                          value: ['shown', 'sent', 'clicked', 'dismissed']
+                            .map((status) => `${counts[status] ?? 0} ${status}`)
+                            .join(' · '),
+                        },
+                      ]}
+                    />
+                  )
+                })}
+              </div>
             )
           })}
         </section>

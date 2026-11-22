@@ -15,6 +15,8 @@ const DAY = 24 * 60 * 60 * 1000
 export const STALE_UNIT_DAYS = 3
 export const SESSION_POPUP_WINDOW_MINUTES = 30
 export const PUSH_MAX_PER_7_DAYS = 2
+/** An unanswered opt-in popup comes back after this long (the topper fills the gap). */
+export const OPT_IN_REASK_HOURS = 24
 
 export type DeviceInfo = {
   /** What this device's push permission looks like right now (client-reported). */
@@ -46,13 +48,18 @@ function inOptInCooldown(lifecycle: UserLifecycle, now: number) {
   return until !== null && until > now
 }
 
-function hasHobbyContext(lifecycle: UserLifecycle) {
-  return (
-    lifecycle.active_unit_count > 0 ||
-    lifecycle.saved_guides_unassigned_count > 0 ||
-    lifecycle.draft_guide_count > 0 ||
-    lifecycle.scheduled_session_within_24h
-  )
+/** Push is off everywhere for this user and the browser would still let us ask. */
+function optInAskable(lifecycle: UserLifecycle, now: number) {
+  if (lifecycle.push_subscription_active) return false
+  if (lifecycle.push_platform_permission === 'denied') return false
+  if (lifecycle.push_platform_permission === 'unsupported') return false
+  return !inOptInCooldown(lifecycle, now)
+}
+
+/** The opt-in was shown within the last day and not answered (peeker closed the app). */
+function optInAskedRecently(lifecycle: UserLifecycle, now: number) {
+  const last = ms(lifecycle.message_family_last_at?.notification_opt_in)
+  return last !== null && now - last < OPT_IN_REASK_HOURS * 60 * 60 * 1000
 }
 
 /**
@@ -78,12 +85,24 @@ export function eligibleTarget(
     case 'stale_unit_push':
       return lifecycle.focus_unit_id && focusIsStale ? { targetId: lifecycle.focus_unit_id } : null
 
-    case 'at_risk_return_push':
-    case 'at_risk_return_email': {
-      const inStateFor = now - (ms(lifecycle.last_core_progress_at) ?? now)
-      if (!lifecycle.focus_unit_id || inStateFor < 7 * DAY) return null
+    case 'at_risk_return_push': {
+      const idleFor = now - (ms(lifecycle.last_core_progress_at) ?? now)
+      if (!lifecycle.focus_unit_id || idleFor < 7 * DAY) return null
       return { targetId: lifecycle.focus_unit_id }
     }
+
+    case 'dormant_return_push':
+      return lifecycle.focus_unit_id ? { targetId: lifecycle.focus_unit_id } : null
+
+    // Not sent automatically: the admin page lists these people so they can
+    // be written to personally.
+    case 'at_risk_return_email':
+      return lifecycle.focus_unit_id &&
+        lifecycle.email_marketing_allowed &&
+        lifecycle.email_status === 'deliverable' &&
+        !lifecycle.push_subscription_active
+        ? { targetId: lifecycle.focus_unit_id }
+        : null
 
     case 'session_next_step_popup': {
       const ended = ms(lifecycle.last_session_ended_at)
@@ -112,19 +131,18 @@ export function eligibleTarget(
         ? { targetId: lifecycle.social_reward_recipe_id }
         : null
 
+    // Push opt-in comes first (it is what lets us reach people later).
+    // Popup: Active users get the "keep your bench warm" ask, everyone else
+    // coming back gets the "grey pile" ask. Topper: the one-line follow-up
+    // when the popup was shown in the last day (or this session) unanswered.
     case 'push_opt_in_popup':
+    case 'push_opt_in_return_popup':
     case 'push_opt_in_topper': {
-      // Server-side view: push isn't on anywhere and the user hasn't blocked it.
-      if (lifecycle.push_subscription_active) return null
-      if (lifecycle.push_platform_permission === 'denied') return null
-      if (lifecycle.push_platform_permission === 'unsupported') return null
-      if (inOptInCooldown(lifecycle, now)) return null
-      if (!hasHobbyContext(lifecycle)) return null
-      // Device view: only ask where the native prompt can actually appear.
+      if (!optInAskable(lifecycle, now)) return null
+      // Only where the native prompt can actually appear.
       if (device && device.push !== 'off') return null
-      // Topper is the Passive variant; the popup follows a core action.
-      if (message.key === 'push_opt_in_topper' && lifecycle.lifecycle_state !== 'passive') return null
-      if (message.key === 'push_opt_in_popup' && lifecycle.core_progress_actions_7d === 0) return null
+      const askedRecently = optInAskedRecently(lifecycle, now) || Boolean(device?.popupShownThisSession)
+      if (message.key === 'push_opt_in_topper' ? !askedRecently : askedRecently) return null
       return { targetId: lifecycle.focus_unit_id }
     }
 

@@ -14,7 +14,7 @@ import styles from './engage.module.css'
 
 // One ENGAGE surface for the whole app (framework sections 5 and 9): at most
 // one topper visible, at most one popup per app session, never a popup the
-// moment the app opens. What to show is decided on the server
+// instant the app opens (it waits POPUP_DELAY_MS). What to show is decided on the server
 // (recordVisitAndGetPrompt); this only renders it and reports what happened.
 //
 // ?engage_preview=<message key> (admins) renders any popup/topper with the
@@ -22,7 +22,9 @@ import styles from './engage.module.css'
 
 const POPUP_SESSION_KEY = 'og:engage:popup-shown'
 const CHECK_INTERVAL_MS = 10 * 60 * 1000
-const POPUP_DELAY_MS = 4000
+// Long enough not to collide with the page appearing, short enough that a
+// quick peek at the dashboard still sees it.
+const POPUP_DELAY_MS = 2000
 const PUSH_OBSERVED_KEY = 'og:engage:push-observed'
 
 function readSession(key: string) {
@@ -100,29 +102,23 @@ function useMessageActions(message: RenderedMessage, onClose: () => void) {
   return { act, dismiss, busy: isOptIn && push.busy, error: isOptIn ? push.error : null }
 }
 
+// A one-line strip: title, one button, a close cross. The body copy is for
+// popups and pushes only.
 function Topper({ message, onClose }: { message: RenderedMessage; onClose: () => void }) {
   const { act, dismiss, busy, error } = useMessageActions(message, onClose)
 
   return (
     <aside className={styles.topper} role="status" aria-live="polite" data-engage={message.key}>
-      <div className={styles.topperText}>
-        <p className={styles.topperTitle}>
-          {message.title}
-          {message.isPreview ? <span className={styles.previewBadge}>Preview</span> : null}
-        </p>
-        <p className={styles.topperBody}>{message.body}</p>
-      </div>
-      <button type="button" className={styles.topperClose} aria-label="Dismiss" onClick={dismiss}>
+      <p className={styles.topperTitle}>
+        {message.title}
+        {message.isPreview ? <span className={styles.previewBadge}>Preview</span> : null}
+      </p>
+      <button type="button" className={`tap-press ${styles.topperCta}`} onClick={act} disabled={busy}>
+        {busy ? 'Turning on…' : message.ctaLabel}
+      </button>
+      <button type="button" className={styles.topperClose} aria-label="Not now" onClick={dismiss}>
         <CloseIcon />
       </button>
-      <div className={styles.topperActions}>
-        <button type="button" className={`tap-press ${styles.topperCta}`} onClick={act} disabled={busy}>
-          {busy ? 'Turning on…' : message.ctaLabel}
-        </button>
-        <button type="button" className={styles.topperDismiss} onClick={dismiss}>
-          Not now
-        </button>
-      </div>
       {error ? <p className={styles.error}>{error}</p> : null}
     </aside>
   )
