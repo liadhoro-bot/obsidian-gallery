@@ -14,6 +14,7 @@ import {
 } from '../../../lib/engage/types'
 import DryRun from './dry-run'
 import MessageCard from './message-card'
+import UserLookup, { type LookupEntry } from './user-lookup'
 
 // ENGAGE control room: where users are (state x context), who gets what
 // (the map and every user), today's push dry run, the opt-in funnel, and the
@@ -61,6 +62,42 @@ function days(fromIso: string | null, now: number) {
   if (!fromIso) return null
   return Math.max(0, Math.floor((now - Date.parse(fromIso)) / DAY))
 }
+
+function ago(fromIso: string | null, now: number, never = 'never') {
+  const d = days(fromIso, now)
+  return d === null ? never : d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`
+}
+
+const STATUS_GUIDE: { status: string; style: string; who: string; detail: string }[] = [
+  {
+    status: 'draft',
+    style: 'border-white/15 bg-white/[0.04] text-white/70',
+    who: 'Nobody',
+    detail:
+      'Work in progress. Left out of the map, every-user table and dry run. Preview in app and Send to my devices still work.',
+  },
+  {
+    status: 'review',
+    style: 'border-amber-300/30 bg-amber-300/[0.06] text-amber-100',
+    who: 'Nobody yet, but counted',
+    detail:
+      'Real users see nothing. The map, every-user table and dry run count it as if it were live, so you can see who it would reach.',
+  },
+  {
+    status: 'live',
+    style: 'border-emerald-300/30 bg-emerald-300/[0.06] text-emerald-100',
+    who: 'Real users',
+    detail:
+      'Popups and toppers show on their next app open; pushes go out on the next 16:00 UTC run. Email never goes live: you send it yourself.',
+  },
+  {
+    status: 'paused',
+    style: 'border-red-300/30 bg-red-300/[0.06] text-red-100',
+    who: 'Nobody, stopped',
+    detail:
+      'Switched off right away and left out of the map. Its 30-day numbers stay. Use it to stop a live message without losing its history.',
+  },
+]
 
 function Chip({
   surface,
@@ -172,6 +209,81 @@ export default async function AdminEngagePage() {
 
   const emailList = users.filter(({ plan }) => plan.email)
 
+  // --- Lookup ------------------------------------------------------------------
+  const lookupEntries: LookupEntry[] = users.map(({ lifecycle: row, plan }) => {
+    const profile = profileById.get(row.user_id)
+    const focus = row.focus_unit_id ? unitName.get(row.focus_unit_id) : null
+    const idle = days(row.focus_unit_last_activity_at, now)
+    const cooldown = row.notification_opt_in_cooldown_until && Date.parse(row.notification_opt_in_cooldown_until) > now
+    const askedAt = row.message_family_last_at?.notification_opt_in ?? null
+    const push = row.push_subscription_active
+      ? 'on'
+      : row.push_platform_permission === 'denied'
+        ? 'blocked in the browser'
+        : row.push_platform_permission === 'unsupported'
+          ? 'not supported on their device'
+          : 'off'
+    return {
+      id: row.user_id,
+      name: nameOf(row.user_id),
+      username: (profile?.username as string | null) ?? '',
+      email: (profile?.email as string | null) ?? '',
+      stateLabel: LIFECYCLE_LABELS[row.lifecycle_state],
+      stateMeaning: STATE_MEANING[row.lifecycle_state],
+      stateClass: STATE_STYLE[row.lifecycle_state].text,
+      dotClass: STATE_STYLE[row.lifecycle_state].dot,
+      // Tracking began 21 Nov 2026; until a user's state changes, that is all
+      // state_entered_at tells us.
+      stateSince: row.previous_state
+        ? `moved here from ${LIFECYCLE_LABELS[row.previous_state]} ${ago(row.state_entered_at, now)}`
+        : 'unchanged since tracking began on 21 Nov',
+      facts: [
+        { label: 'Last opened the app', value: ago(row.last_visit_at, now) },
+        { label: 'Days opened, last 7', value: String(row.visits_7d) },
+        { label: 'Last painting progress', value: ago(row.last_core_progress_at, now) },
+        {
+          label: 'Focus unit',
+          value: focus
+            ? `${focus}${idle !== null ? ` · untouched ${idle === 0 ? 'today' : `${idle}d`}` : ''}`
+            : 'none',
+        },
+        { label: 'Units in progress', value: String(row.active_unit_count) },
+        {
+          label: 'Guides',
+          value: `${row.saved_guides_unassigned_count} saved not on a unit · ${row.draft_guide_count} draft · ${row.assigned_guide_count} on a unit`,
+        },
+        { label: 'Push', value: push },
+        {
+          label: 'Push ask',
+          value: row.push_subscription_active
+            ? 'not needed'
+            : cooldown
+              ? `paused until ${new Date(row.notification_opt_in_cooldown_until as string).toLocaleDateString('en-GB')} (said Not now)`
+              : askedAt
+                ? `last asked ${ago(askedAt, now)}`
+                : 'never asked',
+        },
+        {
+          label: 'Email',
+          value: `${row.email_marketing_allowed ? 'opted in' : 'not opted in'} · ${row.email_status}`,
+        },
+        { label: 'Last push', value: ago(row.last_push_at, now) },
+        { label: 'Last popup', value: ago(row.last_popup_at, now) },
+      ],
+      inApp: plan.inApp ? { label: messageLabel(plan.inApp.key), surface: plan.inApp.surface } : null,
+      push:
+        plan.push.kind === 'send'
+          ? messageLabel(plan.push.key)
+          : plan.push.kind === 'held'
+            ? `${messageLabel(plan.push.key)} · held by the weekly limit`
+            : plan.push.kind === 'unreachable'
+              ? `can't reach, push is ${push}${plan.push.wouldGet ? ` (would get: ${messageLabel(plan.push.wouldGet)})` : ''}`
+              : 'nothing matches',
+      pushSurface: plan.push.kind === 'send',
+      emailPlan: plan.email ? 'On your personal list: write to them' : '',
+    }
+  })
+
   const matrixColumns: { label: string; count: (row: UserLifecycle) => boolean }[] = [
     { label: 'Push on', count: (row) => row.push_subscription_active },
     { label: 'Email opt-in', count: (row) => row.email_marketing_allowed },
@@ -239,6 +351,17 @@ export default async function AdminEngagePage() {
             </div>
           </div>
         </header>
+
+        {/* ------------------------------------------------------------------ */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-xl font-black">Look up a painter</h2>
+            <p className="mt-1 text-sm text-white/55">
+              Their state and why, and what the app, the daily push and you would send them.
+            </p>
+          </div>
+          <UserLookup entries={lookupEntries} />
+        </section>
 
         {/* ------------------------------------------------------------------ */}
         <section className="space-y-3">
@@ -583,9 +706,18 @@ export default async function AdminEngagePage() {
           <div>
             <h2 className="text-xl font-black">Messages</h2>
             <p className="mt-1 text-sm text-white/55">
-              Review = previews only. Edit changes the copy, link, priority and who it targets; the mock updates as you
-              type.
+              Edit changes the copy, link, priority and who it targets; the mock updates as you type. Each message has
+              one of four statuses:
             </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-4">
+            {STATUS_GUIDE.map((item) => (
+              <div key={item.status} className={`rounded-2xl border p-3 ${item.style}`}>
+                <div className="text-sm font-black">{item.status}</div>
+                <div className="text-xs font-bold opacity-80">Who sees it: {item.who}</div>
+                <p className="mt-1 text-xs text-white/70">{item.detail}</p>
+              </div>
+            ))}
           </div>
 
           {groups.map((group) => {
