@@ -60,12 +60,12 @@ export default function NotificationsScreen({ onDone }: NotificationsScreenProps
       </div>
 
       <div className={`${styles.screenIntro} ${styles.screenIntroLarge}`}>
-        <h1 className={styles.screenTitle}>Keep your hobby moving</h1>
+        <h1 className={styles.screenTitle}>Stay on top of your bench</h1>
         <p className={styles.screenCopy}>
-          Get a useful reminder when a project stalls, a deadline is close, a
-          saved Guide becomes relevant, or someone interacts with your work.
+          Get a nudge before the painting sessions you schedule, plus the odd
+          update from the community. You can turn this off anytime in
+          Settings.
         </p>
-        <p className={styles.screenCopy}>No spam. You can change this anytime.</p>
       </div>
 
       {push.error ? (
@@ -82,7 +82,7 @@ export default function NotificationsScreen({ onDone }: NotificationsScreenProps
           }}
           className={`tap-press tap-target ${styles.ctaButton}`}
         >
-          {push.busy ? 'Turning on...' : 'Enable helpful painting reminders ->'}
+          {push.busy ? 'Turning on...' : 'Turn on notifications ->'}
         </button>
 
         <button
