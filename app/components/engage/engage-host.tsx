@@ -64,12 +64,23 @@ function useMessageActions(message: RenderedMessage, onClose: () => void) {
     }
   }, [isOptIn, message])
 
+  // A real opt-in ask closes once push is on. An admin preview stays up on a
+  // device that already has push on, and only closes after it is turned on
+  // from this ask.
+  const sawPushOff = useRef(false)
   useEffect(() => {
-    if (isOptIn && push.status === 'on') onClose()
-  }, [isOptIn, onClose, push.status])
+    if (!isOptIn) return
+    if (push.status !== 'on' && push.status !== 'loading') sawPushOff.current = true
+    if (push.status === 'on' && (!message.isPreview || sawPushOff.current)) onClose()
+  }, [isOptIn, message.isPreview, onClose, push.status])
 
   const act = useCallback(() => {
     void recordEngagementDelivery(message.key, 'clicked', message.targetId, message.isPreview).catch(() => {})
+    if (isOptIn && message.isPreview && push.status === 'on') {
+      // Preview on a device that already has push on: nothing to turn on.
+      onClose()
+      return
+    }
     if (isOptIn) {
       if (!message.isPreview) {
         void recordNotificationEvent('soft_prompt_enable', `engage_${message.surface}`).catch(() => {})
