@@ -91,10 +91,15 @@ export default function DialogDemo() {
       <OgDialog
         open={open === 'simple'}
         onClose={close}
-        title="Unit Complete"
-        subtitle="The Gaunt Summoner is ready for the table."
-        image={{ src: '/onboarding/pains/scheme-loss.jpeg', alt: 'The finished miniature' }}
-        actions={<OgDialogAction onClick={close}>Share to Gallery</OgDialogAction>}
+        title="Let OG keep your bench warm"
+        subtitle="You're painting, nice. Turn on notifications and OG will tap you on the shoulder when a unit has been sitting too long, a deadline is close, or another painter saves your work. Two a week at most. Never spam."
+        image={{ src: '/onboarding/welcome-hero.jpeg', alt: '' }}
+        actions={
+          <>
+            <OgDialogAction onClick={close}>Turn on notifications</OgDialogAction>
+            <OgDialogAction variant="secondary" onClick={close}>Not now</OgDialogAction>
+          </>
+        }
       />
 
       <OgDialog
