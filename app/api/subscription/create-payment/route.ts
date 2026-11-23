@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, getSessionUser } from '../../../../utils/supabase/server'
+import { hasUncancelledMonthlyPlan } from '../../../../lib/subscription/billing'
 
 const ISRAELI_MOBILE_PATTERN = /^0\d{8,9}$/
 
@@ -14,6 +15,14 @@ export async function POST(request: Request) {
 
   if (!user?.email) {
     return NextResponse.json({ error: 'Not signed in.' }, { status: 401 })
+  }
+
+  // One direct debit per user: a second link would bill them twice.
+  if (await hasUncancelledMonthlyPlan(user.email)) {
+    return NextResponse.json(
+      { error: 'You already have a monthly plan. Manage it in Settings → Plan.' },
+      { status: 409 }
+    )
   }
 
   // Premium is the monthly plan. The old MAKE_CREATE_PAYMENT_WEBHOOK_URL

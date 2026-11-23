@@ -28,10 +28,11 @@ type SubscriptionRow = {
   grow_transaction_id: string | null
   grow_transaction_token: string | null
   grow_asmachta: string | null
+  grow_cancel_status: string | null
 }
 
 const SUBSCRIPTION_COLUMNS =
-  'email, plan_name, amount, billing_type, status, paid_until, cancel_at_period_end, canceled_at, grow_transaction_id, grow_transaction_token, grow_asmachta'
+  'email, plan_name, amount, billing_type, status, paid_until, cancel_at_period_end, canceled_at, grow_transaction_id, grow_transaction_token, grow_asmachta, grow_cancel_status'
 
 function normalizeEmail(email: string | null | undefined) {
   return email?.trim().toLowerCase() || null
@@ -129,6 +130,14 @@ export async function recordMonthlyPayment(
 
   const isRenewal =
     existing?.billing_type === 'recurring' && !existing.cancel_at_period_end
+  // A charge after the user cancelled, while Grow never confirmed stopping
+  // the direct debit, is the old debit still running, not a new
+  // subscription. Keep the cancellation so the user isn't silently put back
+  // on a plan they already left.
+  const chargedAfterCancel =
+    existing?.billing_type === 'recurring' &&
+    Boolean(existing.cancel_at_period_end) &&
+    existing.grow_cancel_status !== 'synced'
   const currentPaidUntil = existing?.paid_until ? new Date(existing.paid_until) : null
   // A recurring row's paid_until includes the grace days; don't stack them.
   const currentPeriodEnd =
@@ -172,7 +181,7 @@ export async function recordMonthlyPayment(
   if (notice.fullName) row.full_name = notice.fullName
   if (notice.phone) row.phone = notice.phone
 
-  if (!isRenewal) {
+  if (!isRenewal && !chargedAfterCancel) {
     row.grow_transaction_id = notice.transactionId
     row.grow_transaction_token = notice.transactionToken
     row.grow_asmachta = notice.asmachta
@@ -199,7 +208,9 @@ export async function recordMonthlyPayment(
   if (existing?.cancel_at_period_end) {
     await notifyAdmin(`Payment on a cancelled subscription: ${email}`, [
       `${email} was charged after cancelling their monthly plan.`,
-      'If they did not subscribe again, check the direct debit in Grow and refund.',
+      chargedAfterCancel
+        ? 'Grow never confirmed the cancel, so the old direct debit is still running. Stop it in the Grow dashboard and refund this charge. The plan stays cancelled in the app.'
+        : 'If they did not subscribe again, check the direct debit in Grow and refund.',
       '',
       `Grow transaction: ${notice.transactionId}`,
       `Cancelled at: ${existing.canceled_at ?? 'unknown'}`,
@@ -207,6 +218,17 @@ export async function recordMonthlyPayment(
   }
 
   return { status: 'recorded', paidUntil }
+}
+
+/**
+ * True when the user already has a monthly plan Grow may still charge.
+ * A second payment link would start a second direct debit.
+ */
+export async function hasUncancelledMonthlyPlan(rawEmail: string | null | undefined) {
+  const email = normalizeEmail(rawEmail)
+  if (!email) return false
+  const row = await fetchSubscriptionRow(email)
+  return row?.billing_type === 'recurring' && !row.cancel_at_period_end
 }
 
 // ---------------------------------------------------------------------------
@@ -332,7 +354,34 @@ export async function getPlanSummary(user: { email?: string | null }): Promise<P
     email ? fetchSubscriptionRow(email).catch(() => null) : Promise.resolve(null),
   ])
 
-  if (status.isActive && status.planName === 'bypass') {
+  const isStaff = status.isActive && status.planName === 'bypass'
+  const isRecurring = row?.billing_type === 'recurring'
+  const canceled = Boolean(row?.cancel_at_period_end)
+
+  // A monthly plan that hasn't been cancelled may still be charged by Grow,
+  // even after paid_until lapses (a late or missed notify) and even on a
+  // staff account. Always show it with a Cancel button, whatever else grants
+  // access; never fall through to "Staff" or "Free" and hide it.
+  if (row && isRecurring && !canceled) {
+    const plan = describePlan(row.plan_name, toNumber(row.amount))
+    // paid_until on a monthly row includes grace days; the renewal date doesn't.
+    const periodEnd = row.paid_until
+      ? new Date(new Date(row.paid_until).getTime() - MONTHLY_GRACE_DAYS * DAY_MS)
+      : null
+    const lapsed = !periodEnd || periodEnd.getTime() <= Date.now()
+    return {
+      label: plan.label,
+      badge: 'Active',
+      priceLabel: plan.priceLabel,
+      detail: lapsed
+        ? 'Monthly billing is on. Cancel to stop future charges.'
+        : `Renews ${formatDate(periodEnd.toISOString())}`,
+      canCancel: true,
+      canUpgrade: false,
+    }
+  }
+
+  if (isStaff) {
     return {
       label: 'Staff access',
       badge: 'Staff',
@@ -344,25 +393,17 @@ export async function getPlanSummary(user: { email?: string | null }): Promise<P
   }
 
   if (row?.paid_until && new Date(row.paid_until).getTime() > Date.now()) {
+    // Live monthly plans returned above, so this is a cancelled monthly
+    // plan or a one-time pass.
     const plan = describePlan(row.plan_name, toNumber(row.amount))
-    const isRecurring = row.billing_type === 'recurring'
-    const canceled = Boolean(row.cancel_at_period_end)
-    // paid_until on a monthly row includes grace days; the renewal date doesn't.
-    const periodEnd = isRecurring
-      ? new Date(new Date(row.paid_until).getTime() - MONTHLY_GRACE_DAYS * DAY_MS).toISOString()
-      : row.paid_until
     const neverEnds = new Date(row.paid_until).getUTCFullYear() >= 2099
 
     return {
       label: plan.label,
       badge: isRecurring && canceled ? 'Cancelled' : 'Active',
       priceLabel: plan.priceLabel,
-      detail: neverEnds
-        ? 'No end date.'
-        : isRecurring && !canceled
-          ? `Renews ${formatDate(periodEnd)}`
-          : `Premium until ${formatDate(row.paid_until)}`,
-      canCancel: isRecurring && !canceled,
+      detail: neverEnds ? 'No end date.' : `Premium until ${formatDate(row.paid_until)}`,
+      canCancel: false,
       canUpgrade: false,
     }
   }
