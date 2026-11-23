@@ -17,12 +17,14 @@ const methodLabels: Record<string, string> = {
   sitemap: 'Sitemap and page metadata',
   html_listing: 'Listing page',
   release_page: 'Release page',
+  youtube: 'YouTube Data API',
 }
 
 const permissionLabels: Record<string, string> = {
   unverified: 'Not checked yet',
   terms_allow: 'Allowed by their terms',
   written_permission: 'Written permission',
+  public_feed: 'Tip-off: headline and link only',
   denied: 'Not allowed',
 }
 

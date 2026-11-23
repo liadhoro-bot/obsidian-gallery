@@ -32,7 +32,7 @@ export type NewsFilter = (typeof NEWS_FILTERS)[number]
 export const NEWS_PAGE_SIZE = 12
 const MAX_NEWS_PAGE = 50
 export const MAX_HEADLINE_LENGTH = 120
-export const TARGET_SUMMARY_WORDS = { min: 50, max: 100 }
+export const TARGET_SUMMARY_WORDS = { min: 20, max: 60 }
 
 export type NewsArticle = {
   id: string
@@ -50,6 +50,7 @@ export type NewsArticle = {
   imageAlt: string | null
   imageCredit: string | null
   imageRights: NewsImageRights | null
+  videoId: string | null
   publishedAt: string | null
   firstPublishedAt: string | null
   retractedAt: string | null
@@ -57,7 +58,7 @@ export type NewsArticle = {
 }
 
 export const NEWS_COLUMNS =
-  'id, slug, status, category, headline, summary, why_painters_care, manufacturer, source_name, source_url, source_published_at, image_url, image_alt, image_credit, image_rights, published_at, first_published_at, retracted_at, updated_at'
+  'id, slug, status, category, headline, summary, why_painters_care, manufacturer, source_name, source_url, source_published_at, image_url, image_alt, image_credit, image_rights, video_id, published_at, first_published_at, retracted_at, updated_at'
 
 export type NewsArticleRow = {
   id: string
@@ -75,6 +76,7 @@ export type NewsArticleRow = {
   image_alt: string | null
   image_credit: string | null
   image_rights: NewsImageRights | null
+  video_id: string | null
   published_at: string | null
   first_published_at: string | null
   retracted_at: string | null
@@ -98,6 +100,7 @@ export function toNewsArticle(row: NewsArticleRow): NewsArticle {
     imageAlt: row.image_alt,
     imageCredit: row.image_credit,
     imageRights: row.image_rights,
+    videoId: row.video_id,
     publishedAt: row.published_at,
     firstPublishedAt: row.first_published_at,
     retractedAt: row.retracted_at,
@@ -236,4 +239,34 @@ export function getNewsSourceLabel(
 ) {
   if (article.category === 'og_announcement') return 'Obsidian Gallery'
   return article.manufacturer || article.sourceName || ''
+}
+
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/
+
+// Accepts a YouTube watch, share, shorts or embed link (or a bare id).
+export function parseYouTubeVideoId(value: string) {
+  const input = value.trim()
+  if (!input) return null
+  if (YOUTUBE_ID.test(input)) return input
+  try {
+    const url = new URL(input)
+    const host = url.hostname.replace(/^(www|m)\./, '')
+    let id: string | null = null
+    if (host === 'youtu.be') id = url.pathname.slice(1)
+    else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      id = url.searchParams.get('v') ?? url.pathname.match(/^\/(?:shorts|embed|live)\/([^/]+)/)?.[1] ?? null
+    }
+    return id && YOUTUBE_ID.test(id) ? id : null
+  } catch {
+    return null
+  }
+}
+
+// YouTube serves these alongside its embedded player; we never copy them.
+export function youTubeThumbnailUrl(videoId: string) {
+  return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+}
+
+export function youTubeWatchUrl(videoId: string) {
+  return `https://www.youtube.com/watch?v=${videoId}`
 }

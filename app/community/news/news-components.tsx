@@ -10,9 +10,12 @@ import {
   newsArticleHref,
   newsCategoryLabels,
   splitParagraphs,
+  youTubeThumbnailUrl,
+  youTubeWatchUrl,
   type NewsArticle,
   type NewsCategory,
 } from './news-data'
+import { NewsVideo } from './news-video'
 import styles from './news.module.css'
 
 const categoryIconPaths: Record<Exclude<NewsCategory, 'og_announcement'>, React.ReactNode> = {
@@ -76,6 +79,15 @@ export function NewsRow({ article }: { article: NewsArticle }) {
       <span className={styles.thumb}>
         {article.imageUrl ? (
           <Image src={article.imageUrl} alt="" fill sizes="72px" className="object-cover" />
+        ) : article.videoId ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={youTubeThumbnailUrl(article.videoId)}
+            alt=""
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            className="h-full w-full object-cover"
+          />
         ) : (
           <NewsFallbackArt category={article.category} />
         )}
@@ -145,6 +157,8 @@ export function NewsArticleView({
               sizes="(max-width: 640px) 100vw, 448px"
               className="object-cover"
             />
+          ) : article.videoId ? (
+            <NewsVideo videoId={article.videoId} title={article.headline} />
           ) : (
             <NewsFallbackArt category={article.category} large />
           )}
@@ -217,6 +231,16 @@ export function NewsArticleView({
               <div>
                 <dt>Image</dt>
                 <dd>{article.imageCredit}</dd>
+              </div>
+            ) : null}
+            {!article.imageUrl && article.videoId ? (
+              <div>
+                <dt>Video</dt>
+                <dd>
+                  <a href={youTubeWatchUrl(article.videoId)} target="_blank" rel="noopener noreferrer">
+                    {article.manufacturer ? `${article.manufacturer} on YouTube` : 'Watch on YouTube'}
+                  </a>
+                </dd>
               </div>
             ) : null}
           </dl>

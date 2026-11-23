@@ -7,6 +7,7 @@ const RELEASE_TERMS = [
   'new release', 'pre-order', 'preorder', 'pre order', 'now available', 'available now',
   'out now', 'coming soon', 'launch', 'announc', 'reveal', 'release', 'arriving', 'in stores',
   'new range', 'new paint', 'new kit', 'new miniature', 'new box', 'new set', 'unveil', 'first look',
+  'trailer', 'big news', 'preview', 'new rules',
 ]
 
 const HOBBY_TERMS = [
@@ -21,6 +22,9 @@ const NOT_NEWS_TERMS = [
   'livestream', 'giveaway', 'competition winner', 'hiring', 'vacanc', 'job opening', 'sale',
   'discount', 'black friday', 'cyber monday', 'celebrat', 'behind the scenes', 'showcase',
   'painting challenge', 'round-up', 'round up', 'roundup', 'recap',
+  // Seen on news blogs: lists, rules explainers, rumours and off-topic toys and games.
+  'army list', 'armylist', 'explained', 'how to play', 'rumor', 'rumour', 'winners', 'lego',
+  'dlc', 'video game', 'gameplay',
 ]
 
 export type Relevance = 'relevant' | 'maybe' | 'irrelevant'

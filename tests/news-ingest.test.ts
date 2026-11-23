@@ -35,6 +35,8 @@ function source(overrides: Partial<NewsSourceConfig> = {}): NewsSourceConfig {
     listingUrl: 'https://example.com/blogs/news.atom',
     sitemapChildPattern: null,
     urlIncludePattern: null,
+    youtubeChannelId: null,
+    contentReuse: 'link_and_summary',
     rateLimitMs: 500,
     maxItemsPerRun: 20,
     lookbackDays: 21,

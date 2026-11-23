@@ -4,7 +4,8 @@ import { fetchSourceText, SourceFetchError, type FetchedText } from './safe-fetc
 import { titleFromUrl, toPlainText } from './text'
 import { canonicalizeUrl } from './url'
 
-export type DiscoveryMethod = 'feed' | 'sitemap' | 'html_listing' | 'release_page'
+export type DiscoveryMethod = 'feed' | 'sitemap' | 'html_listing' | 'release_page' | 'youtube'
+export type ContentReuse = 'link_and_summary' | 'link_only'
 
 export type NewsSourceConfig = {
   id: string
@@ -15,6 +16,8 @@ export type NewsSourceConfig = {
   listingUrl: string
   sitemapChildPattern: string | null
   urlIncludePattern: string | null
+  youtubeChannelId: string | null
+  contentReuse: ContentReuse
   rateLimitMs: number
   maxItemsPerRun: number
   lookbackDays: number
@@ -29,10 +32,16 @@ export type Candidate = {
   publishedAt: Date | null
   excerpt: string
   needsMetadata: boolean
+  videoId?: string | null
+  thumbnailUrl?: string | null
 }
 
 export type SourceContext = {
   fetchText: (url: string, accept?: string) => Promise<FetchedText>
+  // Official APIs (not crawling): no robots.txt, but still HTTPS, on the
+  // given domain, and size and time capped.
+  fetchApi: (url: string, domain: string) => Promise<FetchedText>
+  youtubeApiKey: string | null
   now: Date
 }
 
@@ -43,7 +52,12 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 // respected, and spaced out by the source's rate limit.
 export function createSourceContext(
   source: Pick<NewsSourceConfig, 'domain' | 'rateLimitMs'>,
-  options: { fetchImpl?: typeof fetch; now?: Date; sleepImpl?: (ms: number) => Promise<unknown> } = {}
+  options: {
+    fetchImpl?: typeof fetch
+    now?: Date
+    sleepImpl?: (ms: number) => Promise<unknown>
+    youtubeApiKey?: string | null
+  } = {}
 ): SourceContext {
   const robotsByOrigin = new Map<string, Promise<RobotsPolicy>>()
   const wait = options.sleepImpl ?? sleep
@@ -76,6 +90,9 @@ export function createSourceContext(
 
   return {
     now: options.now ?? new Date(),
+    youtubeApiKey: options.youtubeApiKey ?? null,
+    fetchApi: (url, domain) =>
+      fetchSourceText(url, { domain, accept: 'application/json', fetchImpl: options.fetchImpl }),
     async fetchText(url, accept) {
       const target = new URL(url)
       const policy = await robotsFor(target.origin)
@@ -177,8 +194,79 @@ async function collectFromListing(source: NewsSourceConfig, context: SourceConte
   return { candidates: candidates.slice(0, source.maxItemsPerRun), skipped: 0 }
 }
 
+type YouTubePlaylistItem = {
+  snippet?: {
+    title?: string
+    description?: string
+    publishedAt?: string
+    resourceId?: { videoId?: string }
+    thumbnails?: Record<string, { url?: string } | undefined>
+  }
+}
+
+const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/
+const UNAVAILABLE_VIDEO_TITLES = new Set(['Private video', 'Deleted video'])
+
+function pickYouTubeThumbnail(thumbnails: Record<string, { url?: string } | undefined> = {}) {
+  for (const size of ['high', 'medium', 'standard', 'default']) {
+    const url = thumbnails[size]?.url
+    if (url && url.startsWith('https://i.ytimg.com/')) return url
+  }
+  return null
+}
+
+// A channel's latest uploads through the YouTube Data API (1 quota unit).
+// The uploads playlist id is the channel id with UU in place of UC.
+async function collectFromYouTube(source: NewsSourceConfig, context: SourceContext) {
+  if (!context.youtubeApiKey) throw new SourceFetchError('YOUTUBE_API_KEY is not set')
+  if (!source.youtubeChannelId) throw new SourceFetchError('This source has no YouTube channel id')
+  const params = new URLSearchParams({
+    part: 'snippet',
+    maxResults: String(Math.min(source.maxItemsPerRun, 50)),
+    playlistId: `UU${source.youtubeChannelId.slice(2)}`,
+    key: context.youtubeApiKey,
+  })
+  const response = await context.fetchApi(
+    `https://www.googleapis.com/youtube/v3/playlistItems?${params}`,
+    'googleapis.com'
+  )
+  let items: YouTubePlaylistItem[]
+  try {
+    items = (JSON.parse(response.text) as { items?: YouTubePlaylistItem[] }).items ?? []
+  } catch {
+    throw new SourceFetchError('YouTube returned an unreadable response')
+  }
+
+  const candidates: Candidate[] = []
+  let skipped = 0
+  for (const { snippet } of items) {
+    const videoId = snippet?.resourceId?.videoId ?? ''
+    const title = toPlainText(snippet?.title, MAX_TITLE_LENGTH)
+    if (!VIDEO_ID.test(videoId) || !title || UNAVAILABLE_VIDEO_TITLES.has(title)) {
+      skipped += 1
+      continue
+    }
+    const published = snippet?.publishedAt ? new Date(snippet.publishedAt) : null
+    const publishedAt = published && !Number.isNaN(published.getTime()) ? published : null
+    if (!isRecent(publishedAt, source, context.now)) continue
+    candidates.push({
+      externalId: `youtube:${videoId}`,
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+      title,
+      publishedAt,
+      excerpt: toPlainText(snippet?.description, MAX_EXCERPT_LENGTH),
+      needsMetadata: false,
+      videoId,
+      thumbnailUrl: pickYouTubeThumbnail(snippet?.thumbnails),
+    })
+  }
+  return { candidates: newestFirst(candidates).slice(0, source.maxItemsPerRun), skipped }
+}
+
 export async function collectCandidates(source: NewsSourceConfig, context: SourceContext) {
   switch (source.discoveryMethod) {
+    case 'youtube':
+      return collectFromYouTube(source, context)
     case 'feed':
       return collectFromFeed(source, context)
     case 'sitemap':

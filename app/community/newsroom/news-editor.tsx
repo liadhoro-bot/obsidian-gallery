@@ -14,6 +14,7 @@ import {
   newsImageRightsLabels,
   slugifyHeadline,
   TARGET_SUMMARY_WORDS,
+  youTubeWatchUrl,
   type NewsArticle,
   type NewsImageRights,
 } from '../news/news-data'
@@ -229,6 +230,19 @@ function NewsEditorForm({
       <label className={styles.field}>
         <span>Date the source announced it{isOfficial ? ' (optional)' : ''}</span>
         <input name="sourcePublishedAt" type="date" defaultValue={article?.sourcePublishedAt ?? ''} />
+      </label>
+
+      <label className={styles.field}>
+        <span>Official YouTube video (optional)</span>
+        <input
+          name="videoUrl"
+          type="url"
+          defaultValue={article?.videoId ? youTubeWatchUrl(article.videoId) : ''}
+          placeholder="https://www.youtube.com/watch?v=…"
+        />
+        <span className={styles.fieldHint}>
+          Only the maker&apos;s own channel. Shown with YouTube&apos;s player when there&apos;s no featured image.
+        </span>
       </label>
 
       {showsCurrentImage && article?.imageUrl ? (

@@ -65,8 +65,19 @@ type ItemForDraft = {
   title: string
   canonical_url: string
   published_at: string | null
-  news_sources: { id: string; name: string; manufacturer: string | null; default_category: string } | null
+  cluster_id: string | null
+  video_id: string | null
+  news_sources: {
+    id: string
+    name: string
+    manufacturer: string | null
+    default_category: string
+    content_reuse: string
+  } | null
 }
+
+const DRAFT_ITEM_COLUMNS =
+  'id, state, title, canonical_url, published_at, cluster_id, video_id, news_sources(id, name, manufacturer, default_category, content_reuse)'
 
 // Starts an editable draft from a collected item: headline and attribution
 // are filled in, the summary is left for the editor to write.
@@ -85,13 +96,28 @@ export async function startDraftFromItem(itemId: string): Promise<InboxActionRes
 
   const { data, error } = await supabase
     .from('news_source_items')
-    .select('id, state, title, canonical_url, published_at, news_sources(id, name, manufacturer, default_category)')
+    .select(DRAFT_ITEM_COLUMNS)
     .eq('id', itemId)
     .maybeSingle()
-  const item = data as unknown as ItemForDraft | null
-  if (error || !item || !item.news_sources) return { ok: false, error: 'That item no longer exists.' }
+  const picked = data as unknown as ItemForDraft | null
+  if (error || !picked || !picked.news_sources) return { ok: false, error: 'That item no longer exists.' }
 
-  const headline = item.title.slice(0, MAX_HEADLINE_LENGTH).trim()
+  // Other reports of the same story: credit the official source over a
+  // tip-off blog, and take an official video when there is one.
+  const { data: storyData } = picked.cluster_id
+    ? await supabase
+        .from('news_source_items')
+        .select(DRAFT_ITEM_COLUMNS)
+        .eq('cluster_id', picked.cluster_id)
+        .eq('state', 'new')
+    : { data: [] }
+  const story = [picked, ...((storyData ?? []) as unknown as ItemForDraft[]).filter((row) => row.id !== picked.id)]
+  const item =
+    story.find((row) => row.news_sources && row.news_sources.content_reuse !== 'link_only') ?? picked
+  if (!item.news_sources) return { ok: false, error: 'That item no longer exists.' }
+  const videoId = story.find((row) => row.video_id)?.video_id ?? null
+
+  const headline = picked.title.slice(0, MAX_HEADLINE_LENGTH).trim()
   const baseSlug = slugifyHeadline(headline)
   const slug = await findFreeSlug(supabase, isValidNewsSlug(baseSlug) ? baseSlug : 'news-item', null)
 
@@ -107,6 +133,7 @@ export async function startDraftFromItem(itemId: string): Promise<InboxActionRes
       source_name: item.news_sources.name,
       source_url: item.canonical_url,
       source_published_at: item.published_at ? item.published_at.slice(0, 10) : null,
+      video_id: videoId,
       created_by: user.id,
       updated_by: user.id,
     })
@@ -117,9 +144,12 @@ export async function startDraftFromItem(itemId: string): Promise<InboxActionRes
     return { ok: false, error: 'The draft could not be created.' }
   }
 
+  const storyIds = story.map((row) => row.id)
   const [link, stateUpdate] = await Promise.all([
-    supabase.from('news_article_sources').insert({ article_id: article.id, source_item_id: item.id }),
-    supabase.from('news_source_items').update({ state: 'drafted' }).eq('id', item.id),
+    supabase
+      .from('news_article_sources')
+      .insert(storyIds.map((id) => ({ article_id: article.id, source_item_id: id }))),
+    supabase.from('news_source_items').update({ state: 'drafted' }).in('id', storyIds),
   ])
   if (link.error || stateUpdate.error) {
     console.error('Failed to link a draft to its news item', link.error ?? stateUpdate.error)
@@ -128,9 +158,10 @@ export async function startDraftFromItem(itemId: string): Promise<InboxActionRes
   await logEvent(supabase, {
     event_type: 'draft_started',
     actor_id: user.id,
-    source_id: item.news_sources.id,
-    source_item_id: item.id,
+    source_id: picked.news_sources.id,
+    source_item_id: picked.id,
     article_id: article.id,
+    details: { story_item_ids: storyIds },
   })
   revalidatePath('/community/newsroom')
   revalidatePath('/community/newsroom/inbox')
@@ -174,7 +205,10 @@ export async function setSourceEnabled(sourceId: string, enabled: boolean): Prom
   if (error) {
     // news_sources_enabled_needs_permission
     if (error.code === '23514') {
-      return { ok: false, error: 'Record that collection is allowed (terms or written permission) before turning this on.' }
+      return {
+        ok: false,
+        error: 'Record that collection is allowed (terms, written permission, or a headline-only tip-off) before turning this on.',
+      }
     }
     console.error('Failed to change a news source', error)
     return { ok: false, error: 'The source could not be changed.' }

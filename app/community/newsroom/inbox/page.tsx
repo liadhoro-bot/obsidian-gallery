@@ -26,11 +26,11 @@ export default async function NewsInboxPage({
       <NewsPageHeader backHref="/community?tab=news" backLabel="Back to community" title="Newsroom" />
       <NewsroomTabs active="inbox" />
 
-      <nav className={styles.filters} data-columns="4" aria-label="Filter collected items">
+      <nav className={styles.filters} data-columns="5" aria-label="Filter collected items">
         {INBOX_FILTERS.map((option) => (
           <Link
             key={option.id}
-            href={option.id === 'new' ? '/community/newsroom/inbox' : `/community/newsroom/inbox?filter=${option.id}`}
+            href={option.id === 'today' ? '/community/newsroom/inbox' : `/community/newsroom/inbox?filter=${option.id}`}
             className={styles.filter}
             aria-current={filter === option.id ? 'page' : undefined}
           >
@@ -41,10 +41,13 @@ export default async function NewsInboxPage({
 
       <section data-v3-community-indicator="section-card" className="overflow-hidden">
         <div className="grid gap-1 px-4 py-3">
-          <h2 className="text-[10px] uppercase">Collected announcements</h2>
+          <h2 className="text-[10px] uppercase">
+            {filter === 'today' ? "Today's digest" : 'Collected announcements'}
+          </h2>
           <p className={styles.inboxNote}>
-            Headlines and links from approved sources. Read the original before writing, and write the
-            summary in your own words.
+            {filter === 'today'
+              ? 'The best stories found in the last day, one card per story. Pick 1–3, start a draft, write two sentences in your own words and publish.'
+              : 'Headlines and links from approved sources. Read the original before writing, and write the summary in your own words.'}
           </p>
         </div>
         <div className="divide-y">
@@ -54,9 +57,11 @@ export default async function NewsInboxPage({
             items.map((item) => <InboxItemCard key={item.id} item={item} />)
           ) : (
             <p data-v3-community-indicator="events-empty">
-              {filter === 'new'
-                ? 'Nothing new to review. Sources are checked every few hours.'
-                : 'Nothing here.'}
+              {filter === 'today'
+                ? 'No new stories in the last day. Older ones are under To review.'
+                : filter === 'new'
+                  ? 'Nothing new to review. Sources are checked every few hours.'
+                  : 'Nothing here.'}
             </p>
           )}
         </div>

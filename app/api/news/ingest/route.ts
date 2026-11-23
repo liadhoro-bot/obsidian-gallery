@@ -1,21 +1,12 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { NextResponse } from 'next/server'
+import { isNewsCronRequest } from '../../../../lib/news/cron-auth'
 import { runNewsIngestion } from '../../../../lib/news/ingest/run'
 
-// Called by the Supabase Cron job with a shared secret. The proxy lets this
-// path through without a session, so the secret check here is the only gate.
+// Called by the Supabase Cron job every 15 minutes.
 export const maxDuration = 60
 
-function secretMatches(provided: string, expected: string) {
-  const a = createHash('sha256').update(provided).digest()
-  const b = createHash('sha256').update(expected).digest()
-  return timingSafeEqual(a, b)
-}
-
 export async function POST(request: Request) {
-  const expected = process.env.NEWS_INGEST_SECRET
-  const provided = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
-  if (!expected || expected.length < 32 || !provided || !secretMatches(provided, expected)) {
+  if (!isNewsCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
   }
 

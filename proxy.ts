@@ -151,6 +151,7 @@ export default async function proxy(request: NextRequest) {
     pathname === '/api/youtube-oembed' ||
     // The news scheduler has no session; the route checks its own secret.
     pathname === '/api/news/ingest' ||
+    pathname === '/api/news/digest' ||
     // The daily ENGAGE run (Vercel Cron); the route checks CRON_SECRET.
     pathname === '/api/engage/dispatch' ||
     // Renders cards the caller already has on screen (public share pages

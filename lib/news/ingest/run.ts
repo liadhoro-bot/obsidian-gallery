@@ -6,6 +6,7 @@ import {
   createSourceContext,
   enrichCandidate,
   type Candidate,
+  type ContentReuse,
   type DiscoveryMethod,
   type NewsSourceConfig,
   type SourceContext,
@@ -23,6 +24,8 @@ type SourceRow = {
   listing_url: string
   sitemap_child_pattern: string | null
   url_include_pattern: string | null
+  youtube_channel_id: string | null
+  content_reuse: ContentReuse
   poll_interval_minutes: number
   rate_limit_ms: number
   max_items_per_run: number
@@ -33,7 +36,7 @@ type SourceRow = {
 }
 
 const SOURCE_COLUMNS =
-  'id, slug, name, domain, discovery_method, listing_url, sitemap_child_pattern, url_include_pattern, poll_interval_minutes, rate_limit_ms, max_items_per_run, lookback_days, last_attempt_at, consecutive_failures, failure_count'
+  'id, slug, name, domain, discovery_method, listing_url, sitemap_child_pattern, url_include_pattern, youtube_channel_id, content_reuse, poll_interval_minutes, rate_limit_ms, max_items_per_run, lookback_days, last_attempt_at, consecutive_failures, failure_count'
 
 // Pages fetched per run to fill in sitemap/listing entries. The rest wait for
 // the next run, which keeps each run short.
@@ -64,6 +67,8 @@ function toConfig(row: SourceRow): NewsSourceConfig {
     listingUrl: row.listing_url,
     sitemapChildPattern: row.sitemap_child_pattern,
     urlIncludePattern: row.url_include_pattern,
+    youtubeChannelId: row.youtube_channel_id,
+    contentReuse: row.content_reuse,
     rateLimitMs: row.rate_limit_ms,
     maxItemsPerRun: row.max_items_per_run,
     lookbackDays: row.lookback_days,
@@ -166,6 +171,17 @@ async function storeCandidates(
     if (knownId) {
       seenIds.add(knownId)
       counts.duplicate += 1
+      // YouTube API data must be kept current: refresh what we hold.
+      if (source.discoveryMethod === 'youtube') {
+        await supabase
+          .from('news_source_items')
+          .update({
+            title: original.title,
+            evidence_excerpt: original.excerpt || null,
+            thumbnail_url: original.thumbnailUrl ?? null,
+          })
+          .eq('id', knownId)
+      }
       continue
     }
 
@@ -189,7 +205,9 @@ async function storeCandidates(
       }
     }
 
+    // Triage may read a tip's teaser, but only its headline and link are kept.
     const { relevance, reasons } = classifyRelevance(candidate.title, candidate.excerpt)
+    const linkOnly = source.contentReuse === 'link_only'
     const { data, error } = await supabase
       .from('news_source_items')
       .insert({
@@ -198,7 +216,9 @@ async function storeCandidates(
         canonical_url: candidate.url,
         title: candidate.title,
         published_at: candidate.publishedAt?.toISOString() ?? null,
-        evidence_excerpt: candidate.excerpt || null,
+        evidence_excerpt: linkOnly ? null : candidate.excerpt || null,
+        video_id: candidate.videoId ?? null,
+        thumbnail_url: linkOnly ? null : (candidate.thumbnailUrl ?? null),
         content_fingerprint: contentFingerprint(candidate.title, candidate.publishedAt, candidate.url),
         relevance,
         relevance_reasons: reasons,
@@ -229,6 +249,38 @@ async function storeCandidates(
   return counts
 }
 
+const YOUTUBE_DATA_MAX_AGE_DAYS = 30
+
+// YouTube's API policies don't allow keeping its data for more than 30 days
+// without refreshing it. Videos still in a channel's recent uploads are
+// refreshed on every run; anything not seen for 30 days is deleted, or, if an
+// article was started from it, reduced to its video id.
+async function expireYouTubeData(supabase: Supabase, sourceId: string) {
+  const cutoff = new Date(Date.now() - YOUTUBE_DATA_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  const { error: deleteError } = await supabase
+    .from('news_source_items')
+    .delete()
+    .eq('source_id', sourceId)
+    .neq('state', 'drafted')
+    .lt('last_seen_at', cutoff)
+  if (deleteError) throw new Error(`Could not expire old YouTube items: ${deleteError.message}`)
+
+  const { data: drafted, error } = await supabase
+    .from('news_source_items')
+    .select('id, video_id')
+    .eq('source_id', sourceId)
+    .eq('state', 'drafted')
+    .lt('last_seen_at', cutoff)
+    .not('title', 'like', 'YouTube video%')
+  if (error) throw new Error(`Could not expire old YouTube items: ${error.message}`)
+  for (const item of drafted ?? []) {
+    await supabase
+      .from('news_source_items')
+      .update({ title: `YouTube video ${item.video_id ?? ''}`.trim(), evidence_excerpt: null, thumbnail_url: null })
+      .eq('id', item.id)
+  }
+}
+
 async function runSource(
   supabase: Supabase,
   row: SourceRow,
@@ -256,9 +308,13 @@ async function runSource(
 
   try {
     const config = toConfig(row)
-    const context = createSourceContext(config, { fetchImpl })
+    const context = createSourceContext(config, {
+      fetchImpl,
+      youtubeApiKey: process.env.YOUTUBE_API_KEY?.trim() || null,
+    })
     const { candidates, skipped } = await collectCandidates(config, context)
     const counts = await storeCandidates(supabase, config, candidates, context, run.id, deadline)
+    if (config.discoveryMethod === 'youtube') await expireYouTubeData(supabase, row.id)
     const result = {
       ...base,
       status: 'succeeded' as const,
@@ -326,7 +382,14 @@ export async function runNewsIngestion(options: {
   if (error) throw new Error(`Could not load news sources: ${error.message}`)
 
   const now = new Date()
-  const sources = (data as SourceRow[]).filter((row) => options.trigger === 'manual' || isSourceDue(row, now))
+  // Without an API key YouTube sources would only pile up failures and back
+  // off, so scheduled runs leave them alone until the key is configured.
+  const hasYouTubeKey = Boolean(process.env.YOUTUBE_API_KEY?.trim())
+  const sources = (data as SourceRow[]).filter(
+    (row) =>
+      options.trigger === 'manual' ||
+      (isSourceDue(row, now) && (hasYouTubeKey || row.discovery_method !== 'youtube'))
+  )
 
   return runIsolated(
     sources,

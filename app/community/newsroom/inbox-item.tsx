@@ -35,6 +35,20 @@ export default function InboxItemCard({ item }: { item: InboxItem }) {
 
   return (
     <article className={styles.inboxItem}>
+      {item.thumbnailUrl ? (
+        <a
+          href={item.videoId ? `https://www.youtube.com/watch?v=${item.videoId}` : item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.inboxThumb}
+          aria-label="Watch the official video"
+        >
+          {/* YouTube's own thumbnail, shown from YouTube: the article embeds this video. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
+          <span className={styles.playBadge} aria-hidden="true" />
+        </a>
+      ) : null}
       <span className={styles.newsroomRowTop}>
         <span className={styles.rowMeta}>
           <span>{item.sourceName}</span>
@@ -49,7 +63,14 @@ export default function InboxItemCard({ item }: { item: InboxItem }) {
       <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.inboxTitle}>
         {item.title}
       </a>
-      {item.excerpt ? <p className={styles.rowExcerpt}>{item.excerpt}</p> : null}
+      {item.excerpt ? (
+        <p className={styles.rowExcerpt}>
+          <span className={styles.inboxLabel}>What they say: </span>
+          {item.excerpt}
+        </p>
+      ) : item.isTip ? (
+        <p className={styles.inboxNote}>Tip-off: headline only. Open it to read, then write your own two sentences.</p>
+      ) : null}
       {item.alsoReportedBy.length > 0 ? (
         <p className={styles.inboxNote}>Also reported by {item.alsoReportedBy.join(', ')}</p>
       ) : null}

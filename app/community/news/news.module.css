@@ -620,3 +620,73 @@
   color: var(--og-text-secondary);
   font-weight: 600;
 }
+
+/* Daily digest: five filters, video thumbnails and the official-video player. */
+.filters[data-columns='5'] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.inboxThumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-bg-recess);
+}
+
+.inboxThumb img,
+.videoFacade img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playBadge {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 52px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--og-ink-950) 78%, transparent);
+  box-shadow: var(--og-shadow-medium);
+  transform: translate(-50%, -50%);
+}
+
+.playBadge::after {
+  position: absolute;
+  inset: 50% auto auto 54%;
+  border-block: 9px solid transparent;
+  border-inline-start: 15px solid var(--og-paper-50);
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
+.inboxLabel.inboxLabel {
+  color: var(--og-text-primary);
+  font-weight: 700;
+}
+
+.videoFacade.videoFacade {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.videoFrame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.videoFacade:focus-visible {
+  outline: 2px solid var(--og-brass-500);
+  outline-offset: -4px;
+}

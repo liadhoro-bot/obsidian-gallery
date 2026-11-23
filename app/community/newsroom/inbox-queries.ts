@@ -1,7 +1,19 @@
 import 'server-only'
 import { createServiceRoleClient } from '../../../utils/supabase/service-role'
+import {
+  buildDigest,
+  DIGEST_WINDOW_HOURS,
+  isTipSource,
+  type ClusterMember,
+  type InboxItem,
+  type SourceJoin,
+} from './inbox-digest'
+
+export type { InboxItem }
+
 
 export const INBOX_FILTERS = [
+  { id: 'today', label: 'Today' },
   { id: 'new', label: 'To review' },
   { id: 'other', label: 'Low match' },
   { id: 'drafted', label: 'Drafted' },
@@ -11,22 +23,7 @@ export const INBOX_FILTERS = [
 export type InboxFilter = (typeof INBOX_FILTERS)[number]['id']
 
 export function parseInboxFilter(value: unknown): InboxFilter {
-  return INBOX_FILTERS.find((filter) => filter.id === value)?.id ?? 'new'
-}
-
-export type InboxItem = {
-  id: string
-  title: string
-  url: string
-  publishedAt: string | null
-  discoveredAt: string
-  excerpt: string | null
-  relevance: 'relevant' | 'maybe' | 'irrelevant'
-  reasons: string[]
-  state: 'new' | 'dismissed' | 'drafted'
-  sourceName: string
-  alsoReportedBy: string[]
-  articleId: string | null
+  return INBOX_FILTERS.find((filter) => filter.id === value)?.id ?? 'today'
 }
 
 type ItemRow = {
@@ -40,24 +37,31 @@ type ItemRow = {
   relevance_reasons: string[]
   state: InboxItem['state']
   cluster_id: string | null
-  news_sources: { name: string } | null
+  video_id: string | null
+  thumbnail_url: string | null
+  news_sources: SourceJoin
 }
 
 const INBOX_LIMIT = 100
+
+const ITEM_COLUMNS =
+  'id, title, canonical_url, published_at, discovered_at, evidence_excerpt, relevance, relevance_reasons, state, cluster_id, video_id, thumbnail_url, news_sources(name, content_reuse)'
+
 
 // Admin-only: callers must have passed requireNewsroomAccess first.
 export async function getInboxItems(filter: InboxFilter): Promise<{ items: InboxItem[]; failed: boolean }> {
   const supabase = createServiceRoleClient()
   let query = supabase
     .from('news_source_items')
-    .select(
-      'id, title, canonical_url, published_at, discovered_at, evidence_excerpt, relevance, relevance_reasons, state, cluster_id, news_sources(name)'
-    )
+    .select(ITEM_COLUMNS)
     .order('published_at', { ascending: false, nullsFirst: false })
     .order('discovered_at', { ascending: false })
     .limit(INBOX_LIMIT)
 
-  if (filter === 'new') query = query.eq('state', 'new').in('relevance', ['relevant', 'maybe'])
+  if (filter === 'today') {
+    const since = new Date(Date.now() - DIGEST_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+    query = query.eq('state', 'new').in('relevance', ['relevant', 'maybe']).gte('discovered_at', since)
+  } else if (filter === 'new') query = query.eq('state', 'new').in('relevance', ['relevant', 'maybe'])
   else if (filter === 'other') query = query.eq('state', 'new').eq('relevance', 'irrelevant')
   else query = query.eq('state', filter)
 
@@ -72,7 +76,10 @@ export async function getInboxItems(filter: InboxFilter): Promise<{ items: Inbox
   const clusterIds = [...new Set(rows.map((row) => row.cluster_id).filter((id): id is string => Boolean(id)))]
   const [clusterMembers, links] = await Promise.all([
     clusterIds.length > 0
-      ? supabase.from('news_source_items').select('id, cluster_id, news_sources(name)').in('cluster_id', clusterIds)
+      ? supabase
+          .from('news_source_items')
+          .select('id, cluster_id, evidence_excerpt, video_id, thumbnail_url, news_sources(name, content_reuse)')
+          .in('cluster_id', clusterIds)
       : Promise.resolve({ data: [] }),
     supabase
       .from('news_article_sources')
@@ -80,14 +87,10 @@ export async function getInboxItems(filter: InboxFilter): Promise<{ items: Inbox
       .in('source_item_id', rows.map((row) => row.id)),
   ])
 
-  const membersByCluster = new Map<string, Array<{ id: string; name: string }>>()
-  for (const member of (clusterMembers.data ?? []) as unknown as Array<{
-    id: string
-    cluster_id: string
-    news_sources: { name: string } | null
-  }>) {
+  const membersByCluster = new Map<string, ClusterMember[]>()
+  for (const member of (clusterMembers.data ?? []) as unknown as ClusterMember[]) {
     const list = membersByCluster.get(member.cluster_id) ?? []
-    list.push({ id: member.id, name: member.news_sources?.name ?? 'Unknown source' })
+    list.push(member)
     membersByCluster.set(member.cluster_id, list)
   }
   const articleByItem = new Map(
@@ -97,29 +100,32 @@ export async function getInboxItems(filter: InboxFilter): Promise<{ items: Inbox
     ])
   )
 
-  return {
-    failed: false,
-    items: rows.map((row) => {
-      const sourceName = row.news_sources?.name ?? 'Unknown source'
-      const others = (row.cluster_id ? membersByCluster.get(row.cluster_id) ?? [] : [])
-        .filter((member) => member.id !== row.id)
-        .map((member) => member.name)
-      return {
-        id: row.id,
-        title: row.title,
-        url: row.canonical_url,
-        publishedAt: row.published_at,
-        discoveredAt: row.discovered_at,
-        excerpt: row.evidence_excerpt,
-        relevance: row.relevance,
-        reasons: row.relevance_reasons,
-        state: row.state,
-        sourceName,
-        alsoReportedBy: [...new Set(others)],
-        articleId: articleByItem.get(row.id) ?? null,
-      }
-    }),
-  }
+  const items: InboxItem[] = rows.map((row) => {
+    const others = (row.cluster_id ? membersByCluster.get(row.cluster_id) ?? [] : [])
+      .filter((member) => member.id !== row.id)
+      .map((member) => member.news_sources?.name ?? 'Unknown source')
+    return {
+      id: row.id,
+      title: row.title,
+      url: row.canonical_url,
+      publishedAt: row.published_at,
+      discoveredAt: row.discovered_at,
+      excerpt: row.evidence_excerpt,
+      relevance: row.relevance,
+      reasons: row.relevance_reasons,
+      state: row.state,
+      sourceName: row.news_sources?.name ?? 'Unknown source',
+      isTip: isTipSource(row.news_sources),
+      thumbnailUrl: row.thumbnail_url,
+      videoId: row.video_id,
+      alsoReportedBy: [...new Set(others)],
+      articleId: articleByItem.get(row.id) ?? null,
+    }
+  })
+
+  if (filter !== 'today') return { failed: false, items }
+  const clusterOf = new Map(rows.map((row) => [row.id, row.cluster_id]))
+  return { failed: false, items: buildDigest(items, membersByCluster, clusterOf) }
 }
 
 export type NewsSourceRun = {

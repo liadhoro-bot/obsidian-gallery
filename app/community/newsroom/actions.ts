@@ -6,6 +6,7 @@ import {
   isValidNewsSlug,
   newsArticleHref,
   normalizeSourceUrl,
+  parseYouTubeVideoId,
   slugifyHeadline,
   validateNewsDraft,
   validateNewsForPublish,
@@ -92,6 +93,10 @@ export async function saveNewsArticle(formData: FormData): Promise<NewsActionRes
       : validateNewsDraft(fields)
   if (validationError) return { ok: false, error: validationError }
 
+  const videoUrl = text(formData, 'videoUrl')
+  const videoId = videoUrl ? parseYouTubeVideoId(videoUrl) : null
+  if (videoUrl && !videoId) return { ok: false, error: 'That isn’t a YouTube video link.' }
+
   if (newImage) {
     if (!IMAGE_TYPES[newImage.type]) return { ok: false, error: 'Use a JPEG, PNG or WebP image.' }
     if (newImage.size > MAX_IMAGE_BYTES) return { ok: false, error: 'Keep the image under 5 MB.' }
@@ -159,6 +164,7 @@ export async function saveNewsArticle(formData: FormData): Promise<NewsActionRes
     image_alt: fields.hasImage ? text(formData, 'imageAlt') || null : null,
     image_credit: fields.hasImage ? text(formData, 'imageCredit') || null : null,
     image_rights: fields.hasImage ? fields.imageRights || null : null,
+    video_id: videoId,
     updated_by: user.id,
     updated_at: now.toISOString(),
     ...image,
