@@ -4,7 +4,7 @@ export type NotificationsCopyVariant = 'live' | 'proposed'
 
 export const NOTIFICATIONS_COPY: Record<
   NotificationsCopyVariant,
-  { title: string; body: string[]; cta: string; skip: string }
+  { title: string; body: string[]; note?: string; cta: string; skip: string }
 > = {
   live: {
     title: 'Stay on top of your bench',
@@ -15,12 +15,12 @@ export const NOTIFICATIONS_COPY: Record<
     skip: 'Not now',
   },
   proposed: {
-    title: 'Keep your hobby moving',
+    title: 'A little nudge to keep painting',
     body: [
-      'Get a useful reminder when a project stalls, a deadline is close, a saved Guide becomes relevant, or someone interacts with your work.',
-      'No spam. You can change this anytime.',
+      'Life gets busy. Get a gentle reminder to pick up your brush, stay on track with your projects, and see when fellow painters appreciate your work.',
     ],
-    cta: 'Enable helpful painting reminders ->',
+    note: "Only useful updates. No noise. You're always in control.",
+    cta: 'Keep my hobby moving ->',
     skip: 'Not now',
   },
 }

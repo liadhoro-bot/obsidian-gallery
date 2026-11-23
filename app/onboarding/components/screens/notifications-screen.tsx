@@ -75,6 +75,7 @@ export default function NotificationsScreen({ onDone, preview }: NotificationsSc
             {paragraph}
           </p>
         ))}
+        {copy.note ? <p className={styles.screenNote}>{copy.note}</p> : null}
       </div>
 
       {!preview && push.error ? (

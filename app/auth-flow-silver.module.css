@@ -464,6 +464,15 @@
   line-height: var(--og-leading-body);
 }
 
+/* A quieter line under the screen copy (reassurance, fine print). */
+.screenNote {
+  max-width: 350px;
+  color: var(--og-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: var(--og-leading-body);
+}
+
 .checkStack,
 .optionStack {
   margin-block-start: var(--og-space-6);

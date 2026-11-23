@@ -311,6 +311,7 @@ export default async function AdminOnboardingPage() {
                         {paragraph}
                       </dd>
                     ))}
+                    {variant.copy.note ? <dd className="text-white/45">{variant.copy.note}</dd> : null}
                   </div>
                   <div>
                     <dt className="text-xs font-bold text-white/40">Button</dt>
