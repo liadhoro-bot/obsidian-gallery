@@ -192,3 +192,22 @@ test('the digest shows one card per story, borrowing the official video and desc
   assert.equal(lead.thumbnailUrl, thumb)
   assert.equal(digest[1].id, 'other')
 })
+
+test('a short official headline groups with a longer blog headline, recurring columns do not', async () => {
+  const { isSameStory, titleTokens } = await import('../lib/news/ingest/classify')
+  assert.ok(
+    isSameStory(
+      titleTokens('A First Look at Kings of War: Arrogance'),
+      titleTokens('Kings of War: Arrogance New Rules, Army Updates & Minis For Pannithor')
+    )
+  )
+  assert.ok(
+    !isSameStory(titleTokens('Warhammer Next Week: New Seraphon'), titleTokens('Warhammer Next Week: New Orruks'))
+  )
+  assert.ok(
+    !isSameStory(
+      titleTokens('Games Workshop Pre-Orders: Skeletons and Goblins Go Bump in the Night'),
+      titleTokens('Tomb Kings Battle March Army, Blood Bowl Pre-Orders Live Worldwide')
+    )
+  )
+})

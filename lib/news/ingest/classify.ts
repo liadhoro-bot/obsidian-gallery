@@ -80,11 +80,26 @@ export function titleSimilarity(a: string[], b: string[]) {
 }
 
 // Secondary, fuzzy grouping of reports about the same event. Exact title keys
-// always match; otherwise titles must share most of their significant words.
-export function isSameStory(a: string[], b: string[]) {
-  if (a.length > 0 && [...a].sort().join(' ') === [...b].sort().join(' ')) return true
+// always match; otherwise titles must share most of their significant words,
+// or most of a shorter title's words ("A First Look at Kings of War:
+// Arrogance" vs a longer blog headline). Very short titles need the first rule,
+// so recurring "Warhammer Next Week: …" posts don't merge.
+// Words that recur in column and weekly-post titles, so they say nothing about
+// which story a headline is about.
+const COLUMN_WORDS = new Set([
+  'warhammer', '40k', '000', 'games', 'workshop', 'next', 'week', 'weekly', 'pre', 'order', 'orders',
+  'preview', 'previews', 'news', 'today', 'update', 'updates', 'sunday', 'saturday', 'live',
+])
+
+export function isSameStory(allA: string[], allB: string[]) {
+  if (allA.length > 0 && [...allA].sort().join(' ') === [...allB].sort().join(' ')) return true
+  const a = allA.filter((word) => !COLUMN_WORDS.has(word))
+  const b = allB.filter((word) => !COLUMN_WORDS.has(word))
   const { shared, score } = titleSimilarity(a, b)
-  return shared >= 3 && score >= 0.6
+  if (shared < 3) return false
+  if (score >= 0.6) return true
+  const shorter = Math.min(a.length, b.length)
+  return shorter >= 5 && shared / shorter >= 0.6
 }
 
 export function contentFingerprint(title: string, publishedAt: Date | null, canonicalUrl: string) {
