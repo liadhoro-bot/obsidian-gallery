@@ -1,0 +1,418 @@
+/*
+ * OgDialog - OG-WDS. Same materials as Paint Mode's center sheet
+ * (app/paint-mode/paint-mode-og.module.css): dimmed walnut backdrop,
+ * parchment panel with the constructed-panel bevel, ebonized brass close,
+ * brass plate CTA. Frames are CSS bevels from tokens; the only rasters are
+ * the tileable fills those tokens carry. The photo is content: object-fit cover.
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: var(--og-space-5) var(--og-space-4);
+  padding-top: max(var(--og-space-5), env(safe-area-inset-top));
+  padding-bottom: max(var(--og-space-5), env(safe-area-inset-bottom));
+  background: rgb(18 12 9 / 0.72);
+  backdrop-filter: blur(2px);
+  animation: og-dialog-fade var(--og-motion-medium) var(--og-ease-physical);
+}
+
+.panel {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - 2 * var(--og-space-5));
+  display: grid;
+  border-radius: var(--og-radius-l);
+  background: var(--og-material-parchment-panel);
+  color: var(--og-ink-950);
+  font-family: var(--og-font-ui);
+  box-shadow: var(--og-shadow-constructed-panel), var(--og-shadow-large);
+  animation: og-dialog-rise var(--og-motion-medium) var(--og-ease-physical);
+}
+
+.panel[data-size="wide"] {
+  max-width: 600px;
+}
+
+/* The panel can't clip (the close button overhangs it), so the scroller rounds its own corners. */
+.scroll {
+  display: grid;
+  align-content: start;
+  gap: var(--og-space-4);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: inherit;
+  padding: var(--og-space-5) var(--og-space-5) var(--og-space-5);
+}
+
+/* Paint Mode's ebonized round control, hung on the corner. */
+.close {
+  position: absolute;
+  z-index: 2;
+  top: calc(-1 * var(--og-space-3));
+  right: calc(-1 * var(--og-space-3));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  border-radius: var(--og-radius-round);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  color: var(--og-brass-500);
+  box-shadow: var(--og-shadow-control-built), 0 10px 22px color-mix(in srgb, var(--og-ink-950) 55%, transparent);
+  cursor: pointer;
+  transition: transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.close:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.close:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Head ---------- */
+
+.head {
+  display: grid;
+  justify-items: center;
+  gap: var(--og-space-1);
+  padding-inline: var(--og-space-4);
+  text-align: center;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-3);
+  width: 100%;
+  margin: 0;
+  font-family: var(--og-font-display);
+  font-size: clamp(1.6rem, 6.4vw, 2rem);
+  font-weight: 700;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+/* Thin brass rules either side of the title. */
+.title::before,
+.title::after {
+  content: '';
+  flex: 1 1 0;
+  min-width: var(--og-space-3);
+  max-width: 56px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--og-brass-700));
+}
+
+.title::after {
+  background: linear-gradient(90deg, var(--og-brass-700), transparent);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--og-ink-800);
+  font-family: var(--og-font-display);
+  font-size: 1.15rem;
+  font-style: italic;
+  line-height: var(--og-leading-subtitle);
+  text-wrap: balance;
+}
+
+/* ---------- Image ---------- */
+
+.imageMount {
+  position: relative;
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+  border-radius: var(--og-radius-m);
+  background: var(--og-material-leather);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--og-brass-500) 34%, transparent),
+    var(--og-shadow-photo-mount);
+}
+
+.image {
+  object-fit: cover;
+}
+
+/* ---------- Fields ---------- */
+
+.content {
+  display: grid;
+  gap: var(--og-space-4);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--og-space-3) var(--og-space-4);
+}
+
+.field {
+  display: grid;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.fieldLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  color: var(--og-ink-950);
+  font-family: var(--og-font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.fieldIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--og-ink-800);
+  line-height: 0;
+}
+
+.fieldLabelNote {
+  color: var(--og-ink-650);
+  font-weight: 500;
+}
+
+.control {
+  width: 100%;
+  min-height: var(--og-control-h);
+  padding: 0 var(--og-space-3);
+  border: 1px solid var(--og-border-medium);
+  border-radius: var(--og-radius-s);
+  background: var(--og-paper-50);
+  color: var(--og-ink-950);
+  font: inherit;
+  font-size: var(--og-type-body);
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.control::placeholder {
+  color: var(--og-ink-500);
+  font-family: var(--og-font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+
+.control:focus-visible,
+.action:focus-visible,
+.close:focus-visible,
+.checkInput:focus-visible + .checkBox {
+  outline: var(--og-focus-width) solid color-mix(in srgb, var(--og-focus) 82%, white);
+  outline-offset: var(--og-focus-offset);
+}
+
+.textArea {
+  min-height: 112px;
+  padding-block: var(--og-space-3);
+  line-height: var(--og-leading-body);
+  resize: vertical;
+}
+
+.selectWrap {
+  position: relative;
+  display: block;
+}
+
+.select {
+  appearance: none;
+  padding-right: calc(var(--og-space-3) + 26px);
+  cursor: pointer;
+}
+
+.selectChevron {
+  position: absolute;
+  top: 50%;
+  right: var(--og-space-3);
+  display: inline-flex;
+  color: var(--og-ink-800);
+  line-height: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.fieldHint {
+  margin: 0;
+  color: var(--og-ink-650);
+  font-size: var(--og-type-caption);
+  line-height: var(--og-leading-caption);
+}
+
+/* Checkbox - Paint Mode's .check box over a real (visually hidden) input. */
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--og-space-3);
+  cursor: pointer;
+}
+
+.checkInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+.checkBox {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  border: 1.5px solid var(--og-border-brass);
+  border-radius: var(--og-radius-s);
+  background: var(--og-paper-50);
+  color: var(--og-ink-950);
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.checkBox svg {
+  opacity: 0;
+  transition: opacity var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.checkInput:checked + .checkBox {
+  border-color: color-mix(in srgb, var(--og-brass-700) 80%, black);
+  background: var(--og-material-brass);
+  box-shadow: var(--og-shadow-brass-plate);
+}
+
+.checkInput:checked + .checkBox svg {
+  opacity: 1;
+}
+
+.checkInput:disabled + .checkBox {
+  opacity: 0.55;
+}
+
+.checkText {
+  display: grid;
+  gap: 2px;
+}
+
+.checkLabel {
+  font-family: var(--og-font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.checkDescription {
+  color: var(--og-ink-650);
+  font-family: var(--og-font-display);
+  font-size: 1.02rem;
+  font-style: italic;
+  line-height: 1.3;
+}
+
+/* ---------- Actions - Paint Mode's .actionButton ---------- */
+
+.actions {
+  display: grid;
+  gap: var(--og-space-2);
+  padding-top: var(--og-space-1);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+  min-height: var(--og-control-h-lg);
+  padding: 0 var(--og-space-4);
+  border: 1px solid var(--og-border-medium);
+  border-radius: var(--og-radius-m);
+  background: var(--og-material-paper-card);
+  color: var(--og-ink-950);
+  font-family: var(--og-font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  box-shadow: var(--og-shadow-control-built);
+  cursor: pointer;
+  transition: transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.action:active:not(:disabled) {
+  transform: translateY(var(--og-press-depth));
+}
+
+.action[data-variant="primary"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 80%, black);
+  background: var(--og-material-brass);
+  box-shadow: var(--og-shadow-brass-plate), 0 6px 14px color-mix(in srgb, var(--og-walnut-950) 26%, transparent);
+}
+
+.action[data-variant="danger"] {
+  border-color: color-mix(in srgb, var(--og-status-danger) 70%, black);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--og-paper-50) 18%, transparent), transparent 46%, rgb(0 0 0 / 0.18)),
+    linear-gradient(180deg, color-mix(in srgb, var(--og-status-danger) 86%, #c2453a), color-mix(in srgb, var(--og-status-danger) 70%, black));
+  color: var(--og-paper-50);
+}
+
+.action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action[aria-busy="true"] {
+  cursor: progress;
+}
+
+.actionIcon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+@keyframes og-dialog-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes og-dialog-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .scroll {
+    gap: var(--og-space-3);
+    padding: var(--og-space-4);
+  }
+
+  .close {
+    top: calc(-1 * var(--og-space-2));
+    right: calc(-1 * var(--og-space-2));
+  }
+}
