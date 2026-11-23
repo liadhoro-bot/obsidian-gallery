@@ -9,8 +9,7 @@ import {
 } from '../../engage/actions'
 import { detectPushStatus, usePushNotifications } from '../../../lib/push/use-push-notifications'
 import type { RenderedMessage } from '../../../lib/engage/types'
-import dialogStyles from '../upgrade/premium-checkout.module.css'
-import styles from './engage.module.css'
+import { PopupView, TopperView } from './engage-surfaces'
 
 // One ENGAGE surface for the whole app (framework sections 5 and 9): at most
 // one topper visible, at most one popup per app session, never a popup the
@@ -51,14 +50,6 @@ function toPermission(status: Awaited<ReturnType<typeof detectPushStatus>>) {
 // The first-run tour, the upgrade dialog or any other modal has the floor.
 function anotherOverlayIsOpen() {
   return Boolean(document.querySelector('[data-onboarding-tour], [aria-modal="true"]'))
-}
-
-function CloseIcon() {
-  return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6 6l12 12M18 6 6 18" />
-    </svg>
-  )
 }
 
 function useMessageActions(message: RenderedMessage, onClose: () => void) {
@@ -102,26 +93,9 @@ function useMessageActions(message: RenderedMessage, onClose: () => void) {
   return { act, dismiss, busy: isOptIn && push.busy, error: isOptIn ? push.error : null }
 }
 
-// A one-line strip: title, one button, a close cross. The body copy is for
-// popups and pushes only.
 function Topper({ message, onClose }: { message: RenderedMessage; onClose: () => void }) {
   const { act, dismiss, busy, error } = useMessageActions(message, onClose)
-
-  return (
-    <aside className={styles.topper} role="status" aria-live="polite" data-engage={message.key}>
-      <p className={styles.topperTitle}>
-        {message.title}
-        {message.isPreview ? <span className={styles.previewBadge}>Preview</span> : null}
-      </p>
-      <button type="button" className={`tap-press ${styles.topperCta}`} onClick={act} disabled={busy}>
-        {busy ? 'Turning on…' : message.ctaLabel}
-      </button>
-      <button type="button" className={styles.topperClose} aria-label="Not now" onClick={dismiss}>
-        <CloseIcon />
-      </button>
-      {error ? <p className={styles.error}>{error}</p> : null}
-    </aside>
-  )
+  return <TopperView message={message} onAct={act} onDismiss={dismiss} busy={busy} error={error} />
 }
 
 function Popup({ message, onClose }: { message: RenderedMessage; onClose: () => void }) {
@@ -135,35 +109,7 @@ function Popup({ message, onClose }: { message: RenderedMessage; onClose: () => 
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [dismiss])
 
-  return (
-    <div className={dialogStyles.backdrop} onClick={dismiss}>
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="engage-popup-title"
-        className={dialogStyles.dialog}
-        onClick={(event) => event.stopPropagation()}
-        data-engage={message.key}
-      >
-        <button type="button" className={dialogStyles.closeButton} aria-label="Close" onClick={dismiss}>
-          <CloseIcon />
-        </button>
-        <p className={dialogStyles.eyebrow}>
-          Obsidian Gallery
-          {message.isPreview ? <span className={styles.previewBadge}>Preview</span> : null}
-        </p>
-        <h2 id="engage-popup-title" className={dialogStyles.title}>{message.title}</h2>
-        <p className={dialogStyles.body}>{message.body}</p>
-        {error ? <p className={dialogStyles.body}>{error}</p> : null}
-        <button type="button" className={`tap-press tap-target ${dialogStyles.ctaGold}`} onClick={act} disabled={busy}>
-          {busy ? 'Turning on…' : message.ctaLabel}
-        </button>
-        <button type="button" className={dialogStyles.notNow} onClick={dismiss}>
-          Not now
-        </button>
-      </section>
-    </div>
-  )
+  return <PopupView message={message} onAct={act} onDismiss={dismiss} busy={busy} error={error} />
 }
 
 export default function EngageHost() {
