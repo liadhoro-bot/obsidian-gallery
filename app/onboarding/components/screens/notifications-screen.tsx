@@ -30,7 +30,7 @@ export default function NotificationsScreen({ onDone, preview }: NotificationsSc
   const push = usePushNotifications(SOURCE)
   const finished = useRef(false)
   const shownLogged = useRef(false)
-  const copy = NOTIFICATIONS_COPY[preview ?? 'live']
+  const copy = (preview === 'proposed' ? NOTIFICATIONS_COPY.proposed : null) ?? NOTIFICATIONS_COPY.live
 
   function finish(result: string) {
     if (finished.current) return

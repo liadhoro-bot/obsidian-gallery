@@ -8,7 +8,7 @@ import type { PreviewScreen } from '../../onboarding/screen-preview/screens'
 // Rollout step 2: what a new painter goes through on the way to turning on
 // push. Every onboarding screen in a phone frame (the real components, in
 // preview mode), who sees the notifications ask and who skips it, what
-// happens after "Not now", and the live copy next to the proposed copy.
+// happens after "Not now", and the live copy (next to any proposed copy).
 // Admins only.
 export const dynamic = 'force-dynamic'
 
@@ -16,8 +16,8 @@ const DAY = 24 * 60 * 60 * 1000
 
 const ROLLOUT = [
   { n: 1, title: 'Admin panel + engine', note: 'Pushed 23 Nov. Nothing visible to users.', state: 'done' },
-  { n: 2, title: 'New users: onboarding ask', note: 'This page. Approve the flow and copy.', state: 'now' },
-  { n: 3, title: 'Existing users: opt-in popups', note: 'Turn on push popups and the strip.', state: 'next' },
+  { n: 2, title: 'New users: onboarding ask', note: 'New copy live 23 Nov.', state: 'done' },
+  { n: 3, title: 'Existing users: opt-in popups', note: 'Turn on push popups and the strip.', state: 'now' },
   { n: 4, title: 'Pushes, popups, toppers', note: 'The rest of the message set.', state: 'next' },
 ] as const
 
@@ -281,20 +281,26 @@ export default async function AdminOnboardingPage() {
         {/* ------------------------------------------------------------------ */}
         <section className="space-y-3">
           <div>
-            <h2 className="text-xl font-black">The ask: live vs proposed</h2>
+            <h2 className="text-xl font-black">{proposed ? 'The ask: live vs proposed' : 'The ask'}</h2>
             <p className="mt-1 text-sm text-white/55">
-              The proposed copy is not live. Approve it (or tell me what to change) and it replaces the live screen.
+              {proposed
+                ? 'The proposed copy is not live. Approve it (or tell me what to change) and it replaces the live screen.'
+                : 'What new users see now. No new copy is waiting for approval.'}
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
               { screen: 'notifications' as const, label: 'Live now', copy: live, tone: 'border-white/15' },
-              {
-                screen: 'notifications_proposed' as const,
-                label: 'Proposed',
-                copy: proposed,
-                tone: 'border-cyan-300/50',
-              },
+              ...(proposed
+                ? [
+                    {
+                      screen: 'notifications_proposed' as const,
+                      label: 'Proposed',
+                      copy: proposed,
+                      tone: 'border-cyan-300/50',
+                    },
+                  ]
+                : []),
             ].map((variant) => (
               <div key={variant.screen} className={`flex gap-3 rounded-2xl border p-3 ${variant.tone}`}>
                 <PhoneFrame screen={variant.screen} label={variant.label} />
