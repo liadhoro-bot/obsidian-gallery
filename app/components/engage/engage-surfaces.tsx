@@ -45,14 +45,6 @@ export function TopperView({ message, onAct, onDismiss, busy = false, error = nu
   )
 }
 
-// One photo per popup, chosen by message. Same art as onboarding.
-const POPUP_IMAGES: Record<string, { src: string; position?: string }> = {
-  push_opt_in_popup: { src: '/onboarding/welcome-hero.jpeg' },
-  push_opt_in_return_popup: { src: '/onboarding/pains/pile-of-shame.jpeg' },
-  session_next_step_popup: { src: '/onboarding/problem-desk.jpeg' },
-  saved_guide_assign_popup: { src: '/onboarding/pains/scheme-loss.jpeg' },
-}
-
 // The app's dialog (OgDialog's look: parchment panel, brass-ruled title,
 // italic line, photo, brass button, ebonized close). Drawn here rather than
 // through OgDialog itself so the admin phone mock can hold it in place.
@@ -64,7 +56,8 @@ export function PopupView({
   error = null,
   modal = true,
 }: SurfaceProps & { modal?: boolean }) {
-  const image = POPUP_IMAGES[message.key]
+  // Chosen per message in /admin/engage (lib/engage/popup-images.ts).
+  const image = message.image ?? null
   return (
     <div
       className={dialogStyles.overlay}
@@ -93,12 +86,11 @@ export function PopupView({
           {image ? (
             <div className={dialogStyles.imageMount}>
               <Image
-                src={image.src}
+                src={image}
                 alt=""
                 fill
                 sizes="(max-width: 520px) 92vw, 460px"
                 className={dialogStyles.image}
-                style={image.position ? { objectPosition: image.position } : undefined}
               />
             </div>
           ) : null}

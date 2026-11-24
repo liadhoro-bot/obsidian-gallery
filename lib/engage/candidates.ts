@@ -1,3 +1,4 @@
+import { popupImageOf } from './popup-images'
 import type {
   EngagementMessage,
   MessageContext,
@@ -178,6 +179,7 @@ export function renderMessage(
     ctaPath: /\/(units|recipes)\/(\?|$)|unit=(&|$)/.test(ctaPath) ? '/dashboard' : ctaPath,
     targetId,
     isPreview,
+    image: popupImageOf(message),
   }
 }
 

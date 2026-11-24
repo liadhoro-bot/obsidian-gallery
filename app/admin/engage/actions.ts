@@ -6,6 +6,7 @@ import { createServiceRoleClient } from '../../../utils/supabase/service-role'
 import { isCurrentUserAdmin } from '../../../lib/admin'
 import { isPushConfigured } from '../../../lib/push/send'
 import { planPushes, sendPushPreviewToSelf } from '../../../lib/engage/push-dispatch'
+import { isLibraryImage } from '../../../lib/engage/popup-images'
 import type { LifecycleState, MessageStatus } from '../../../lib/engage/types'
 
 async function requireAdmin() {
@@ -62,6 +63,8 @@ export async function updateEngagementMessage(
     cta_path: string
     priority: number
     lifecycle_states: LifecycleState[]
+    /** Popups only: a library photo, or null for none. Omitted = unchanged. */
+    image_path?: string | null
   }
 ) {
   const user = await requireAdmin()
@@ -82,6 +85,8 @@ export async function updateEngagementMessage(
   }
   if (!(priority >= 1 && priority <= 7)) return { ok: false as const, error: 'Priority is 1 to 7.' }
   if (states.length === 0) return { ok: false as const, error: 'Pick at least one lifecycle state.' }
+  const imagePath = fields.image_path
+  if (imagePath != null && !isLibraryImage(imagePath)) return { ok: false as const, error: 'Unknown image.' }
 
   const { data, error } = await createServiceRoleClient()
     .from('engagement_messages')
@@ -92,11 +97,17 @@ export async function updateEngagementMessage(
       cta_path: ctaPath,
       priority,
       lifecycle_states: states,
+      ...(imagePath === undefined ? {} : { image_path: imagePath }),
       updated_at: new Date().toISOString(),
     })
     .eq('key', key)
     .select('key')
-  if (error) return { ok: false as const, error: error.message }
+  if (error) {
+    if (/image_path/.test(error.message)) {
+      return { ok: false as const, error: 'Image choice needs the image_path column first (migration 20261124100000).' }
+    }
+    return { ok: false as const, error: error.message }
+  }
   if (!data?.length) return { ok: false as const, error: 'Unknown message.' }
   revalidatePath('/admin/engage')
   return { ok: true as const }

@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Image from 'next/image'
 import { renderMessage } from '../../../lib/engage/candidates'
+import { POPUP_IMAGE_LIBRARY, popupImageOf } from '../../../lib/engage/popup-images'
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_STATES,
@@ -20,7 +22,9 @@ const STATUS_STYLE: Record<MessageStatus, string> = {
   paused: 'bg-red-300/20 text-red-100',
 }
 
-type Draft = Pick<EngagementMessage, 'title' | 'body' | 'cta_label' | 'cta_path' | 'priority' | 'lifecycle_states'>
+type Draft = Pick<EngagementMessage, 'title' | 'body' | 'cta_label' | 'cta_path' | 'priority' | 'lifecycle_states'> & {
+  image_path: string | null
+}
 
 function draftOf(message: EngagementMessage): Draft {
   return {
@@ -30,6 +34,7 @@ function draftOf(message: EngagementMessage): Draft {
     cta_path: message.cta_path,
     priority: message.priority,
     lifecycle_states: message.lifecycle_states,
+    image_path: popupImageOf(message),
   }
 }
 
@@ -77,7 +82,9 @@ export default function MessageCard({
   function save() {
     if (message.status === 'live' && !window.confirm('This message is live. Save the new copy for everyone?')) return
     startTransition(async () => {
-      const result = await updateEngagementMessage(message.key, draft)
+      const { image_path, ...rest } = draft
+      const changedImage = message.surface === 'popup' && image_path !== popupImageOf(message)
+      const result = await updateEngagementMessage(message.key, changedImage ? { ...rest, image_path } : rest)
       if (result.ok) {
         setEditing(false)
         setNote('Saved.')
@@ -164,6 +171,41 @@ export default function MessageCard({
                   />
                 </label>
               )}
+              {message.surface === 'popup' ? (
+                <div className="text-xs font-bold text-white/60">
+                  Image
+                  <div className="mt-1 grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ ...draft, image_path: null })}
+                      aria-pressed={draft.image_path === null}
+                      className={`flex aspect-[4/3] items-center justify-center rounded-lg border text-[0.7rem] ${
+                        draft.image_path === null ? 'border-cyan-300 bg-cyan-300/20 text-cyan-50' : 'border-white/15 text-white/50'
+                      }`}
+                    >
+                      No image
+                    </button>
+                    {POPUP_IMAGE_LIBRARY.map((image) => {
+                      const on = draft.image_path === image.src
+                      return (
+                        <button
+                          key={image.src}
+                          type="button"
+                          title={image.label}
+                          aria-label={image.label}
+                          aria-pressed={on}
+                          onClick={() => setDraft({ ...draft, image_path: image.src })}
+                          className={`relative aspect-[4/3] overflow-hidden rounded-lg border-2 ${
+                            on ? 'border-cyan-300' : 'border-transparent opacity-70 hover:opacity-100'
+                          }`}
+                        >
+                          <Image src={image.src} alt="" fill sizes="120px" className="object-cover" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
               <div className="text-xs font-bold text-white/60">
                 Who (lifecycle states)
                 <div className="mt-1 flex flex-wrap gap-1.5">

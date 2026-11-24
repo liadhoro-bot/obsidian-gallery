@@ -37,12 +37,14 @@ export type EngagementMessage = {
   eligibility: string
   hypothesis: string | null
   success_event: string | null
+  /** Popup photo; null = none. Undefined until the column is migrated. */
+  image_path?: string | null
   status: MessageStatus
   updated_at: string
 }
 
-export const MESSAGE_COLUMNS =
-  'key, v1_number, value_pillar, message_family, surface, lifecycle_states, priority, title, body, cta_label, cta_path, eligibility, hypothesis, success_event, status, updated_at'
+// '*' so image_path is read once that column exists, and nothing breaks before.
+export const MESSAGE_COLUMNS = '*'
 
 export type UserLifecycle = {
   user_id: string
@@ -107,6 +109,8 @@ export type RenderedMessage = {
   ctaPath: string
   targetId: string | null
   isPreview: boolean
+  /** Popup photo path, or null for none. */
+  image?: string | null
 }
 
 export type NotificationEventType =
