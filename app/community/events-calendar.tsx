@@ -119,6 +119,7 @@ export default function EventsCalendar({ events }: { events: CommunityEvent[] })
           {monthDays.days.map((day) => {
             const dayEvents = eventsByDate.get(day.dateKey) ?? []
             const hasEvents = dayEvents.length > 0
+            const isPast = day.dateKey < todayKey
             return (
               <button
                 key={day.dateKey}
@@ -131,6 +132,7 @@ export default function EventsCalendar({ events }: { events: CommunityEvent[] })
                     : ''
                 }`}
                 data-has-events={hasEvents ? 'true' : undefined}
+                data-past={hasEvents && isPast ? 'true' : undefined}
                 data-today={day.dateKey === todayKey ? 'true' : undefined}
                 data-v3-community-indicator="calendar-day"
               >
@@ -147,6 +149,12 @@ export default function EventsCalendar({ events }: { events: CommunityEvent[] })
               <p data-v3-community-indicator="calendar-day-title">
                 {formatDayLabel(selectedDateKey)}
               </p>
+              {selectedEvents.length > 0 && selectedDateKey < todayKey ? (
+                <p data-v3-community-indicator="calendar-day-note">
+                  {selectedEvents.length > 1 ? 'These events have' : 'This event has'} already
+                  taken place.
+                </p>
+              ) : null}
               {selectedEvents.length > 0 ? (
                 <div className="divide-y">
                   {selectedEvents.map((event) => (

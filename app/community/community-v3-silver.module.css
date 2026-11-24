@@ -1255,6 +1255,30 @@
   color: var(--og-ink-950);
 }
 
+/* Past event days: a worn brass outline instead of a full plate. */
+.communitySilver [data-v3-community-indicator="calendar-day"][data-has-events="true"][data-past="true"] {
+  border-color: color-mix(in srgb, var(--og-brass-700) 55%, transparent);
+  background-color: color-mix(in srgb, var(--og-brass-500) 18%, transparent);
+  background-image: none;
+  box-shadow: none;
+  color: var(--og-text-secondary);
+}
+
+.communitySilver [data-v3-community-indicator="calendar-day"][data-past="true"] [data-v3-community-indicator="calendar-dot"] {
+  background-color: var(--og-brass-700);
+}
+
+.communitySilver [data-v3-community-indicator="calendar-day"][data-has-events="true"][data-past="true"][aria-pressed="true"] {
+  background-color: color-mix(in srgb, var(--og-brass-500) 34%, transparent);
+  color: var(--og-text-primary);
+}
+
+.communitySilver [data-v3-community-indicator="calendar-day-note"] {
+  padding: 0 16px 4px;
+  color: var(--og-text-secondary);
+  font-size: 0.75rem;
+}
+
 .communitySilver [data-v3-community-indicator="calendar-day"] span {
   color: inherit;
 }

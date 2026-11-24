@@ -79,6 +79,25 @@ export async function getUpcomingCommunityEvents(): Promise<CommunityEvent[]> {
   return (data as CommunityEventRow[]).map(toCommunityEvent)
 }
 
+// Every published event, past ones included, so the calendar can still mark
+// days that had events.
+export async function getCalendarCommunityEvents(): Promise<CommunityEvent[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('community_events')
+    .select(EVENT_COLUMNS)
+    .eq('is_published', true)
+    .order('event_date', { ascending: true })
+    .order('start_time', { ascending: true })
+
+  if (error) {
+    console.error('Failed to load calendar community events', error)
+    return []
+  }
+
+  return (data as CommunityEventRow[]).map(toCommunityEvent)
+}
+
 export async function getCommunityEvent(id: string): Promise<CommunityEvent | null> {
   if (!UUID_PATTERN.test(id)) return null
 

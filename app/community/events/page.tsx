@@ -1,10 +1,13 @@
 import { EventsPageHeader, UpcomingEventRow } from '../event-components'
 import EventsCalendar from '../events-calendar'
-import { getUpcomingCommunityEvents } from '../events-queries'
+import { getCalendarCommunityEvents, getUpcomingCommunityEvents } from '../events-queries'
 import styles from '../community-v3-silver.module.css'
 
 export default async function CommunityEventsPage() {
-  const events = await getUpcomingCommunityEvents()
+  const [events, calendarEvents] = await Promise.all([
+    getUpcomingCommunityEvents(),
+    getCalendarCommunityEvents(),
+  ])
 
   return (
     <main className={styles.communitySilver}>
@@ -18,7 +21,7 @@ export default async function CommunityEventsPage() {
           title="Events"
         />
 
-        <EventsCalendar events={events} />
+        <EventsCalendar events={calendarEvents} />
 
         <section data-v3-community-indicator="section-card" className="overflow-hidden">
           <div className="px-4 py-3">
