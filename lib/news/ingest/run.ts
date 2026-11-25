@@ -11,7 +11,9 @@ import {
   type NewsSourceConfig,
   type SourceContext,
 } from './collect'
+import { searchOfficialVideo } from './match-video'
 import { describeIngestError, isSourceDue, runIsolated } from './schedule'
+import { detectGameSystem } from '../game-systems'
 
 type Supabase = ReturnType<typeof createServiceRoleClient>
 
@@ -391,7 +393,7 @@ export async function runNewsIngestion(options: {
       (isSourceDue(row, now) && (hasYouTubeKey || row.discovery_method !== 'youtube'))
   )
 
-  return runIsolated(
+  const results = await runIsolated<SourceRow, SourceRunResult>(
     sources,
     (row) => runSource(supabase, row, options.trigger, deadline, options.fetchImpl),
     (row, runError) => {
@@ -410,4 +412,137 @@ export async function runNewsIngestion(options: {
     },
     () => Date.now() < deadline - DEADLINE_MARGIN_MS * 2
   )
+
+  if (!options.sourceId) {
+    try {
+      const matched = await matchOfficialVideos(supabase, deadline, options.fetchImpl)
+      if (matched > 0) console.info(`News ingest: matched ${matched} official video(s) to stories`)
+    } catch (error) {
+      console.error('News video matching failed:', describeIngestError(error))
+    }
+  }
+  return results
+}
+
+const VIDEO_SEARCH_WINDOW_HOURS = 30
+const MAX_VIDEO_SEARCHES_PER_RUN = 3
+// Counts every story checked today, searched or not: at most 60 searches
+// (6,000 of YouTube's 10,000 free daily units) plus the channel checks.
+const MAX_VIDEO_CHECKS_PER_DAY = 60
+
+type ClusterItemRow = { title: string; published_at: string | null; relevance: string; video_id: string | null }
+
+// Gives new stories an official video: searches the maker's own channel for
+// each recent story that has none, and files a match under that channel's
+// source in the same story, where drafts and the digest pick it up. Each story
+// is checked once (news_story_clusters.video_searched_at).
+async function matchOfficialVideos(supabase: Supabase, deadline: number, fetchImpl?: typeof fetch) {
+  const apiKey = process.env.YOUTUBE_API_KEY?.trim()
+  if (!apiKey) return 0
+
+  const since = new Date(Date.now() - VIDEO_SEARCH_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+  const { data: clusters, error } = await supabase
+    .from('news_story_clusters')
+    .select('id')
+    .is('video_searched_at', null)
+    .gte('first_seen_at', since)
+    .order('first_seen_at', { ascending: false })
+    .limit(12)
+  if (error) {
+    // Most likely the migration adding video_searched_at hasn't run yet.
+    console.warn('News video matching skipped:', error.message)
+    return 0
+  }
+  if (!clusters?.length) return 0
+
+  const dayStart = new Date()
+  dayStart.setUTCHours(0, 0, 0, 0)
+  const { count: checkedToday } = await supabase
+    .from('news_story_clusters')
+    .select('id', { count: 'exact', head: true })
+    .gte('video_searched_at', dayStart.toISOString())
+  let checksLeft = MAX_VIDEO_CHECKS_PER_DAY - (checkedToday ?? 0)
+
+  const { data: channels } = await supabase
+    .from('news_sources')
+    .select('id, slug, youtube_channel_id')
+    .eq('enabled', true)
+    .eq('discovery_method', 'youtube')
+  const channelBySlug = new Map(
+    (channels ?? []).map((row) => [row.slug as string, row as { id: string; slug: string; youtube_channel_id: string | null }])
+  )
+  const context = createSourceContext({ domain: 'youtube.com', rateLimitMs: 0 }, { fetchImpl, youtubeApiKey: apiKey })
+
+  let searches = 0
+  let matched = 0
+  for (const cluster of clusters) {
+    if (checksLeft <= 0 || searches >= MAX_VIDEO_SEARCHES_PER_RUN || Date.now() > deadline - DEADLINE_MARGIN_MS) break
+    checksLeft -= 1
+    // Marked before searching, so a failing search isn't retried every run.
+    await supabase
+      .from('news_story_clusters')
+      .update({ video_searched_at: new Date().toISOString() })
+      .eq('id', cluster.id)
+
+    const { data: itemData } = await supabase
+      .from('news_source_items')
+      .select('title, published_at, relevance, video_id')
+      .eq('cluster_id', cluster.id)
+    const items = (itemData ?? []) as ClusterItemRow[]
+    const lead = items.find((item) => item.relevance === 'relevant')
+    if (!lead || items.some((item) => item.video_id)) continue
+
+    const system = detectGameSystem(...items.map((item) => item.title))
+    const channel = system?.channelSlug ? channelBySlug.get(system.channelSlug) : undefined
+    if (!channel?.youtube_channel_id) continue
+
+    searches += 1
+    let video: Candidate | null
+    try {
+      video = await searchOfficialVideo(
+        context,
+        channel.youtube_channel_id,
+        lead.title,
+        lead.published_at ? new Date(lead.published_at) : null
+      )
+    } catch (searchError) {
+      console.warn(`News video search failed for "${lead.title}":`, describeIngestError(searchError))
+      continue
+    }
+    if (!video) continue
+
+    const { data: existing } = await supabase
+      .from('news_source_items')
+      .select('id')
+      .eq('source_id', channel.id)
+      .eq('external_id', video.externalId)
+      .maybeSingle()
+    if (existing) {
+      await supabase.from('news_source_items').update({ cluster_id: cluster.id }).eq('id', existing.id)
+      matched += 1
+      continue
+    }
+
+    const { relevance, reasons } = classifyRelevance(video.title, video.excerpt)
+    const { error: insertError } = await supabase.from('news_source_items').insert({
+      source_id: channel.id,
+      external_id: video.externalId,
+      canonical_url: video.url,
+      title: video.title,
+      published_at: video.publishedAt?.toISOString() ?? null,
+      evidence_excerpt: video.excerpt || null,
+      video_id: video.videoId,
+      thumbnail_url: video.thumbnailUrl,
+      content_fingerprint: contentFingerprint(video.title, video.publishedAt, video.url),
+      relevance: relevance === 'irrelevant' ? 'maybe' : relevance,
+      relevance_reasons: ['matched to story', ...reasons],
+      cluster_id: cluster.id,
+    })
+    if (insertError) {
+      if (insertError.code !== '23505') console.warn('Could not store a matched video:', insertError.message)
+      continue
+    }
+    matched += 1
+  }
+  return matched
 }

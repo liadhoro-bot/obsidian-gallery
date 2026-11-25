@@ -3,6 +3,7 @@
 import Link from '@/app/components/navigation-feedback/navigation-link'
 import { useRouter } from '@/app/components/navigation-feedback/navigation-provider'
 import { useState, useTransition } from 'react'
+import { NewsCover } from '../news/news-cover'
 import { formatNewsDate } from '../news/news-data'
 import styles from '../news/news.module.css'
 import { dismissInboxItem, restoreInboxItem, startDraftFromItem, type InboxActionResult } from './inbox-actions'
@@ -48,7 +49,12 @@ export default function InboxItemCard({ item }: { item: InboxItem }) {
           <img src={item.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" />
           <span className={styles.playBadge} aria-hidden="true" />
         </a>
-      ) : null}
+      ) : (
+        // No official video yet: the cover the article will get.
+        <span className={styles.inboxThumb}>
+          <NewsCover headline={item.title} category="miniatures" />
+        </span>
+      )}
       <span className={styles.newsroomRowTop}>
         <span className={styles.rowMeta}>
           <span>{item.sourceName}</span>

@@ -98,6 +98,20 @@ select cron.schedule(
 To pause: `select cron.unschedule('news-ingest');` and
 `select cron.unschedule('news-digest');`, or turn sources off on the Sources page.
 
+## Official videos and covers
+
+After collecting, each run checks up to 3 new stories (from the last 30 hours,
+with at least one "Likely news" report and no video yet) for an official video.
+`lib/news/game-systems.ts` works out the game from the headline, which picks
+the maker's channel; `search.list` on that channel only (100 quota units), and
+a result is kept only when its title shares distinctive words with the story.
+A match is stored under that channel's YouTube source in the same story, so the
+Today card, Start draft and the article all get the video. Each story is
+checked once (`news_story_clusters.video_searched_at`), at most 60 a day.
+
+Articles with no image or video get a cover drawn in CSS (`news-cover.tsx`):
+the game, its maker and a colour per game. No outside image is used.
+
 ## Adding or enabling a source
 
 A source can only be turned on once `collection_permission` is

@@ -31,19 +31,72 @@
   box-shadow: var(--og-shadow-photo-mount);
 }
 
-.fallbackArt {
+/* Cover art for stories with no image or video cleared for use. */
+.cover {
+  --cover-tone: var(--og-status-neutral);
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  overflow: hidden;
+  padding: 18px 26px;
   background-color: var(--og-walnut-950);
-  background-image: var(--og-material-walnut-control);
+  background-image:
+    radial-gradient(110% 95% at 18% 22%, color-mix(in srgb, var(--cover-tone) 62%, transparent), transparent 72%),
+    linear-gradient(180deg, transparent 55%, color-mix(in srgb, var(--og-walnut-950) 55%, transparent)),
+    var(--og-material-walnut-control);
 }
 
-.fallbackPlate {
+.cover[data-tone='crimson'] { --cover-tone: var(--og-status-danger); }
+.cover[data-tone='azure'] { --cover-tone: var(--og-status-info); }
+.cover[data-tone='violet'] { --cover-tone: var(--og-status-special); }
+.cover[data-tone='steel'] { --cover-tone: var(--og-steel-500); }
+.cover[data-tone='bronze'] { --cover-tone: var(--og-brass-700); }
+.cover[data-tone='pitch'] { --cover-tone: var(--og-status-success); }
+.cover[data-tone='amber'] { --cover-tone: var(--og-status-warning); }
+.cover[data-tone='paint'] { --cover-tone: var(--og-leather-500); }
+.cover[data-tone='official'] { --cover-tone: var(--og-brass-500); }
+
+/* Enamel band down the left edge, in the game's colour. */
+.cover::before {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 6px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cover-tone) 85%, var(--og-paper-50)), var(--cover-tone));
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--og-brass-500) 70%, transparent);
+  content: '';
+}
+
+/* Fine brass frame. */
+.cover::after {
+  position: absolute;
+  inset: 10px 10px 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--og-brass-500) 45%, transparent);
+  border-radius: var(--og-radius-s);
+  content: '';
+  pointer-events: none;
+}
+
+.cover[data-size='thumb'] {
+  padding: 0;
+}
+
+.cover[data-size='thumb']::before {
+  width: 4px;
+}
+
+.cover[data-size='thumb']::after {
+  display: none;
+}
+
+.coverPlate {
   display: grid;
-  width: 42px;
-  height: 42px;
+  flex: none;
+  width: 76px;
+  height: 76px;
   place-items: center;
   overflow: hidden;
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
@@ -54,23 +107,69 @@
   color: var(--og-ink-950);
 }
 
-.fallbackPlate svg {
-  width: 24px;
-  height: 24px;
+.cover[data-size='thumb'] .coverPlate {
+  width: 44px;
+  height: 44px;
 }
 
-.fallbackArt[data-large] .fallbackPlate {
-  width: 72px;
-  height: 72px;
-}
-
-.fallbackArt[data-large] .fallbackPlate svg {
+.coverPlate svg {
   width: 40px;
   height: 40px;
 }
 
-.fallbackPlate img {
+.cover[data-size='thumb'] .coverPlate svg {
+  width: 24px;
+  height: 24px;
+}
+
+.coverPlate img {
   border-radius: var(--og-radius-round);
+}
+
+.coverMonogram.coverMonogram {
+  font-family: var(--og-font-display);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--og-paper-50) 45%, transparent);
+}
+
+.coverPlate[data-chars='3'] .coverMonogram.coverMonogram {
+  font-size: 22px;
+}
+
+.cover[data-size='thumb'] .coverMonogram.coverMonogram {
+  font-size: 16px;
+}
+
+.cover[data-size='thumb'] .coverPlate[data-chars='3'] .coverMonogram.coverMonogram {
+  font-size: 12.5px;
+}
+
+.coverText {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.coverLabel.coverLabel {
+  color: var(--og-parchment-50);
+  font-family: var(--og-font-display);
+  font-size: clamp(1.5rem, 6.5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.02;
+  text-shadow: 0 2px 6px color-mix(in srgb, var(--og-ink-950) 70%, transparent);
+  overflow-wrap: anywhere;
+}
+
+.coverMaker.coverMaker {
+  color: color-mix(in srgb, var(--og-parchment-100) 78%, transparent);
+  font-family: var(--og-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .rowBody {

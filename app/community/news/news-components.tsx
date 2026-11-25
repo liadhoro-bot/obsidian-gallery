@@ -15,53 +15,9 @@ import {
   type NewsArticle,
   type NewsCategory,
 } from './news-data'
+import { NewsCover } from './news-cover'
 import { NewsVideo } from './news-video'
 import styles from './news.module.css'
-
-const categoryIconPaths: Record<Exclude<NewsCategory, 'og_announcement'>, React.ReactNode> = {
-  paints: (
-    <>
-      <path d="M9 3h6v3l1.5 2.5V20a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1V8.5L9 6V3Z" />
-      <path d="M7.5 13h9" />
-    </>
-  ),
-  miniatures: (
-    <>
-      <circle cx="12" cy="6" r="3" />
-      <path d="M8 21v-5l-1-4 5-2 5 2-1 4v5" />
-      <path d="M5 21h14" />
-    </>
-  ),
-  tools: (
-    <>
-      <path d="m14 4 6 6-3 3-6-6 3-3Z" />
-      <path d="M11 7 4 14c-1 1-1 3 0 4l2 2c1 1 3 1 4 0l7-7" />
-    </>
-  ),
-  events: (
-    <>
-      <rect x="4" y="5" width="16" height="16" rx="2" />
-      <path d="M4 10h16M8 3v4M16 3v4" />
-    </>
-  ),
-}
-
-// Shown when an article has no image cleared for use.
-function NewsFallbackArt({ category, large = false }: { category: NewsCategory; large?: boolean }) {
-  return (
-    <span className={styles.fallbackArt} data-large={large || undefined} aria-hidden="true">
-      <span className={styles.fallbackPlate}>
-        {category === 'og_announcement' ? (
-          <Image src="/icon-192.png" alt="" width={large ? 44 : 28} height={large ? 44 : 28} />
-        ) : (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            {categoryIconPaths[category]}
-          </svg>
-        )}
-      </span>
-    </span>
-  )
-}
 
 export function NewsBadge({ category }: { category: NewsCategory }) {
   return (
@@ -89,7 +45,7 @@ export function NewsRow({ article }: { article: NewsArticle }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <NewsFallbackArt category={article.category} />
+          <NewsCover headline={article.headline} category={article.category} manufacturer={article.manufacturer} size="thumb" />
         )}
       </span>
       <span className={styles.rowBody}>
@@ -160,7 +116,12 @@ export function NewsArticleView({
           ) : article.videoId ? (
             <NewsVideo videoId={article.videoId} title={article.headline} />
           ) : (
-            <NewsFallbackArt category={article.category} large />
+            <NewsCover
+              headline={article.headline}
+              category={article.category}
+              manufacturer={article.manufacturer}
+              context={article.summary}
+            />
           )}
         </div>
 
