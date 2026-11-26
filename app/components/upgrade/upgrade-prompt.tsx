@@ -18,7 +18,7 @@ import styles from './premium-checkout.module.css'
 // back from the server calls openUpgradePrompt(hit); Settings calls it with
 // no hit. <UpgradePromptHost /> (mounted once in ClientShell) renders it.
 
-type PromptState = { open: false } | { open: true; hit: PlanLimitHit | null; id: number }
+type PromptState = { open: false } | { open: true; hit: PlanLimitHit | null; id: number; checkout: boolean }
 
 let state: PromptState = { open: false }
 let openCount = 0
@@ -29,9 +29,10 @@ function setState(next: PromptState) {
   listeners.forEach((listener) => listener())
 }
 
-export function openUpgradePrompt(hit: PlanLimitHit | null = null) {
+/** checkout: skip the offer and open on the payment form (sale banner). */
+export function openUpgradePrompt(hit: PlanLimitHit | null = null, { checkout = false } = {}) {
   openCount += 1
-  setState({ open: true, hit, id: openCount })
+  setState({ open: true, hit, id: openCount, checkout })
 }
 
 /**
@@ -62,8 +63,16 @@ function CloseIcon() {
   )
 }
 
-function UpgradeDialog({ hit, onClose }: { hit: PlanLimitHit | null; onClose: () => void }) {
-  const [step, setStep] = useState<'offer' | 'checkout'>('offer')
+function UpgradeDialog({
+  hit,
+  startAtCheckout,
+  onClose,
+}: {
+  hit: PlanLimitHit | null
+  startAtCheckout: boolean
+  onClose: () => void
+}) {
+  const [step, setStep] = useState<'offer' | 'checkout'>(startAtCheckout ? 'checkout' : 'offer')
   const [email, setEmail] = useState('')
   const [alreadyPremium, setAlreadyPremium] = useState(false)
 
@@ -176,5 +185,5 @@ export function UpgradePromptHost() {
   }, [pathname])
 
   if (!current.open) return null
-  return <UpgradeDialog key={current.id} hit={current.hit} onClose={close} />
+  return <UpgradeDialog key={current.id} hit={current.hit} startAtCheckout={current.checkout} onClose={close} />
 }
