@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { PlanSummary } from '../../lib/subscription/billing'
 import { PREMIUM_PRICE_ILS } from '../../lib/plan/limit-types'
+import { SALE, isSaleActive } from '../../lib/subscription/sale'
 import { openUpgradePrompt } from '../components/upgrade/upgrade-prompt'
 import styles from '../settings-support-silver.module.css'
 
@@ -11,6 +12,7 @@ type CancelState = 'idle' | 'confirming' | 'cancelling' | 'done' | 'error'
 
 export default function SettingsPlanCard({ plan }: { plan: PlanSummary }) {
   const router = useRouter()
+  const [onSale] = useState(() => isSaleActive())
   const [cancelState, setCancelState] = useState<CancelState>('idle')
   const [message, setMessage] = useState<string | null>(null)
 
@@ -77,7 +79,7 @@ export default function SettingsPlanCard({ plan }: { plan: PlanSummary }) {
             className={styles.walnutButton}
             onClick={() => openUpgradePrompt()}
           >
-            Upgrade to Premium · ₪{PREMIUM_PRICE_ILS}/month
+            Upgrade to Premium · ₪{onSale ? SALE.priceIls : PREMIUM_PRICE_ILS}/month
           </button>
         ) : null}
 

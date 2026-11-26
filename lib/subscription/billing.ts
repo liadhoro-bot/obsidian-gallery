@@ -13,6 +13,7 @@ import {
   MONTHLY_PRICE_ILS,
   describePlan,
 } from './plans'
+import { currentPremiumPrice } from './sale'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -412,7 +413,7 @@ export async function getPlanSummary(user: { email?: string | null }): Promise<P
     label: 'Free',
     badge: 'Free',
     priceLabel: 'Free',
-    detail: `Upgrade to Premium for ₪${MONTHLY_PRICE_ILS}/month to lift the free plan's limits.`,
+    detail: `Upgrade to Premium for ₪${currentPremiumPrice()}/month to lift the free plan's limits.`,
     canCancel: false,
     canUpgrade: true,
   }

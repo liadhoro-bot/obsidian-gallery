@@ -1,0 +1,23 @@
+.slot {
+  position: relative;
+  z-index: 20;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 0;
+}
+
+/* OgTopper sizes its layout from its own width (container query), so it
+   needs a definite width rather than shrinking to fit its content. */
+.slot > * {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* The display font has no ₪ glyph; the UI font does. */
+.price {
+  font-family: var(--og-font-ui);
+  font-style: normal;
+  font-weight: 700;
+}

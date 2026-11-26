@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PREMIUM_PRICE_ILS } from '@/lib/plan/limit-types'
+import { SALE, isSaleActive } from '@/lib/subscription/sale'
 import styles from './premium-checkout.module.css'
 
 // Must match the string posted from app/payment-success/page.tsx.
@@ -56,6 +57,7 @@ function LockIcon() {
 // payment to land in subscriptions and reloads the page so the new plan
 // applies everywhere.
 export default function PremiumCheckoutForm({ email }: { email: string }) {
+  const [onSale] = useState(() => isSaleActive())
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [status, setStatus] = useState<Status>('idle')
@@ -241,9 +243,16 @@ export default function PremiumCheckoutForm({ email }: { email: string }) {
             ? 'Opening payment...'
             : status === 'waiting'
               ? 'Waiting for payment...'
-              : `Upgrade for ₪${PREMIUM_PRICE_ILS}/month`}
+              : `Upgrade for ₪${onSale ? SALE.priceIls : PREMIUM_PRICE_ILS}/month`}
         </button>
       </form>
+
+      {onSale ? (
+        <p className={styles.saleTerms}>
+          {SALE.name} price: {SALE.months} monthly charges of ₪{SALE.priceIls}.
+          Cancel anytime in Settings.
+        </p>
+      ) : null}
 
       <p className={styles.secureNote}>
         <LockIcon />

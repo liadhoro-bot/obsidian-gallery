@@ -23,6 +23,10 @@ const EngageHost = dynamic(
   () => import('../components/engage/engage-host'),
   { ssr: false }
 )
+const SaleTopper = dynamic(
+  () => import('../components/sale/sale-topper'),
+  { ssr: false }
+)
 const PostHogUserIdentifier = dynamic(
   () => import('./posthog-user-identifier'),
   { ssr: false }
@@ -78,6 +82,7 @@ export default function ClientShell({
       {showMobileNav ? <MobileNav /> : null}
       {showMobileNav ? <OnboardingTour /> : null}
       {showMobileNav && !isLoggedOutNewsReader ? <EngageHost /> : null}
+      {showMobileNav ? <SaleTopper /> : null}
       <UpgradePromptHost />
     </>
   )

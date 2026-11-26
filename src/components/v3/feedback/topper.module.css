@@ -1,0 +1,184 @@
+/*
+ * OgTopper - parchment strip, double brass edge, four corner rivets.
+ * Pure CSS frame; the only rasters are the tiled parchment fiber and the
+ * small fixed-size rivet stud.
+ */
+
+.topper {
+  container-type: inline-size;
+  position: relative;
+  border: calc(var(--og-border-width) * 2) solid color-mix(in srgb, var(--og-brass-700) 88%, var(--og-ink-950));
+  border-radius: var(--og-radius-s);
+  padding: var(--og-space-2) var(--og-space-3) var(--og-space-2) var(--og-space-5);
+  color: var(--og-text-primary);
+  background-color: var(--og-surface-primary);
+  background-image: var(--og-material-parchment-panel);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 300px auto, 100% 100%;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--og-paper-50) 34%, transparent),
+    inset 0 0 0 3px color-mix(in srgb, var(--og-brass-700) 40%, transparent),
+    var(--og-shadow-medium);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--og-space-3);
+  min-height: 44px;
+}
+
+.rivet {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--og-radius-round);
+  background-color: var(--og-brass-500);
+  background-image: var(--og-asset-rivet), var(--og-material-brass);
+  background-position: center;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-size: cover, 100% 100%, 220px auto, 100% 100%;
+  box-shadow: var(--og-shadow-hardware-pin);
+}
+
+.rivet[data-corner="tl"] { top: 5px; left: 5px; }
+.rivet[data-corner="tr"] { top: 5px; right: 5px; }
+.rivet[data-corner="bl"] { bottom: 5px; left: 5px; }
+.rivet[data-corner="br"] { bottom: 5px; right: 5px; }
+
+.copy {
+  min-width: 0;
+}
+
+.title,
+.subtitle {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  font-family: var(--og-font-display);
+  font-size: var(--og-type-subtitle-lg);
+  font-style: italic;
+  font-weight: 600;
+  line-height: var(--og-leading-subtitle);
+  white-space: nowrap;
+}
+
+.subtitle {
+  font-family: var(--og-font-display);
+  font-size: var(--og-type-body);
+  font-style: italic;
+  line-height: var(--og-leading-caption);
+  color: var(--og-text-secondary);
+}
+
+.cta {
+  display: inline-flex;
+  min-height: var(--og-control-h-compact);
+  align-items: center;
+  gap: var(--og-space-2);
+  border: var(--og-border-width) solid var(--og-border-brass);
+  border-radius: var(--og-radius-round);
+  padding-inline: var(--og-space-4);
+  font-family: var(--og-font-display);
+  font-size: var(--og-type-body);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--og-paper-50);
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  background-position: center;
+  background-repeat: no-repeat, repeat, no-repeat;
+  background-size: 100% 100%, 180px auto, 100% 100%;
+  box-shadow: var(--og-shadow-control-built);
+  cursor: pointer;
+  transition:
+    box-shadow var(--og-motion-fast) var(--og-ease-physical),
+    transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.cta:hover {
+  border-color: var(--og-brass-500);
+}
+
+.cta:active {
+  transform: translateY(var(--og-press-depth));
+  box-shadow: var(--og-shadow-pressed);
+}
+
+.dismiss {
+  display: inline-flex;
+  width: var(--og-touch-target-min);
+  height: var(--og-touch-target-min);
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: var(--og-border-width) solid var(--og-border-medium);
+  border-radius: 0;
+  padding: 0 0 0 var(--og-space-2);
+  color: var(--og-text-primary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--og-brass-700);
+}
+
+.cta:focus-visible,
+.dismiss:focus-visible {
+  outline: var(--og-space-1) solid color-mix(in srgb, var(--og-focus) 82%, white);
+  outline-offset: var(--og-space-1);
+}
+
+/* Phone widths: one row, tighter type . */
+@container (max-width: 520px) {
+  .inner {
+    gap: var(--og-space-2);
+    margin-right: calc(-1 * var(--og-space-1));
+  }
+
+  .title {
+    font-size: 0.9375rem;
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  .subtitle {
+    font-size: 0.6875rem;
+    line-height: 1.25;
+  }
+
+  .cta {
+    min-height: 30px;
+    gap: var(--og-space-1);
+    padding-inline: 10px;
+    font-size: 0.75rem;
+  }
+
+  .dismiss {
+    width: 32px;
+    padding-left: var(--og-space-1);
+  }
+}
+
+/* Very narrow (< 300px): the CTA drops under the copy so the title keeps its room. */
+@container (max-width: 300px) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'copy dismiss'
+      'cta dismiss';
+    row-gap: var(--og-space-2);
+  }
+
+  .copy { grid-area: copy; }
+  .cta { grid-area: cta; justify-self: start; }
+  .dismiss { grid-area: dismiss; }
+}

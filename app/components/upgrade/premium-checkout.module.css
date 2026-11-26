@@ -125,6 +125,21 @@
   font-weight: 700;
 }
 
+.planPriceWas {
+  margin-right: 6px;
+  color: var(--og-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.saleTerms {
+  margin: var(--og-space-3) 0 0;
+  color: var(--og-text-secondary);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .notNow {
   display: block;
   width: 100%;

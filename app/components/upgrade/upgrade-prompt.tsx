@@ -10,6 +10,7 @@ import {
   planLimitFromSearchParams,
   type PlanLimitHit,
 } from '@/lib/plan/limit-types'
+import { SALE, isSaleActive } from '@/lib/subscription/sale'
 import PremiumCheckoutForm from './premium-checkout-form'
 import styles from './premium-checkout.module.css'
 
@@ -89,7 +90,8 @@ function UpgradeDialog({ hit, onClose }: { hit: PlanLimitHit | null; onClose: ()
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
-  const title = hit ? 'Time to upgrade your workbench' : 'Upgrade to Premium'
+  const [onSale] = useState(() => isSaleActive())
+  const title = hit ?'Time to upgrade your workbench' : 'Upgrade to Premium'
   const body = alreadyPremium
     ? 'Your account is already on Premium. Refresh the page and try again.'
     : hit
@@ -108,7 +110,11 @@ function UpgradeDialog({ hit, onClose }: { hit: PlanLimitHit | null; onClose: ()
         <button type="button" className={styles.closeButton} aria-label="Close" onClick={onClose}>
           <CloseIcon />
         </button>
-        <p className={styles.eyebrow}>{hit ? 'Free plan limit reached' : 'Obsidian Gallery Premium'}</p>
+        <p className={styles.eyebrow}>{hit
+          ? 'Free plan limit reached'
+          : onSale
+            ? `${SALE.name} · ends ${SALE.endsLabel}`
+            : 'Obsidian Gallery Premium'}</p>
         <h2 id="upgrade-prompt-title" className={styles.title}>{title}</h2>
         <p className={styles.body}>{body}</p>
 
@@ -119,10 +125,15 @@ function UpgradeDialog({ hit, onClose }: { hit: PlanLimitHit | null; onClose: ()
               <img src="/icon-192.png" alt="" className={styles.planIcon} />
               <div className={styles.planText}>
                 <span className={styles.planName}>Premium</span>
-                <span className={styles.planNote}>Billed monthly · cancel anytime in Settings</span>
+                <span className={styles.planNote}>
+                  {onSale
+                    ? `For ${SALE.months} months`
+                    : 'Billed monthly · cancel anytime in Settings'}
+                </span>
               </div>
               <span className={styles.planPrice}>
-                ₪{PREMIUM_PRICE_ILS}<small>/mo</small>
+                {onSale ? <s className={styles.planPriceWas}>₪{PREMIUM_PRICE_ILS}</s> : null}
+                ₪{onSale ? SALE.priceIls : PREMIUM_PRICE_ILS}<small>/mo</small>
               </span>
             </div>
 
