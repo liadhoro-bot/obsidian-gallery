@@ -161,7 +161,7 @@ export async function GET(request: Request) {
   const { data: ownershipRows, error: ownershipError } = matchIds.length
     ? await supabase
         .from('user_paint_ownership')
-        .select('paint_catalog_id, is_owned, is_wishlist')
+        .select('paint_catalog_id, is_owned, is_wishlist, sale_alert')
         .eq('user_id', user.id)
         .in('paint_catalog_id', matchIds)
     : { data: [], error: null }

@@ -8,12 +8,16 @@ export type PaintsV3Paint = {
   brand: string
   line: string
   finish: string
+  // '' when the catalog has no size; the detail pane hides it.
   size: string
   msrp: string
+  sku: string | null
   color: string
   swatchImageUrl: string | null
   owned: boolean
   wish: boolean
+  // "Notify me when this paint is on sale" (user_paint_ownership.sale_alert).
+  saleAlert: boolean
   colorMatchEnabled: boolean
   notes: string
 }
@@ -44,6 +48,7 @@ export type CatalogPaintRow = {
   paint_type: string | null
   color_match_enabled: boolean | null
   price_usd: number | string | null
+  size_ml?: number | string | null
 }
 
 type CustomPaintRow = {
@@ -59,6 +64,7 @@ export type OwnershipRow = {
   paint_catalog_id: string
   is_owned: boolean | null
   is_wishlist: boolean | null
+  sale_alert?: boolean | null
 }
 
 type CollectionOwnershipRow = OwnershipRow & {
@@ -68,7 +74,6 @@ type CollectionOwnershipRow = OwnershipRow & {
 const collectionLimit = 72
 const libraryPageSize = 1000
 const customLimit = 36
-const defaultPaintSize = '18ml'
 const fallbackColors = [
   '#111417',
   '#5aa7c9',
@@ -96,6 +101,14 @@ function fallbackColor(seed: string) {
 function cleanLabel(value: string | null | undefined, fallback: string) {
   const cleanValue = value?.trim()
   return cleanValue || fallback
+}
+
+function formatSize(value: CatalogPaintRow['size_ml']) {
+  if (value === null || value === undefined || value === '') return ''
+  const sizeMl = Number(value)
+  if (!Number.isFinite(sizeMl) || sizeMl <= 0) return ''
+
+  return `${Number.isInteger(sizeMl) ? sizeMl : sizeMl.toFixed(1)} ml`
 }
 
 function formatMsrp(value: CatalogPaintRow['price_usd']) {
@@ -126,6 +139,7 @@ export const catalogPaintFields = [
   'paint_type',
   'color_match_enabled',
   'price_usd',
+  'size_ml',
 ]
 
 const catalogPaintFieldsWithSwatchImages = [
@@ -174,14 +188,16 @@ export function toCatalogPaint(
     brand,
     line,
     finish,
-    size: defaultPaintSize,
+    size: formatSize(paint.size_ml),
     msrp: formatMsrp(paint.price_usd),
+    sku: paint.sku?.trim() || null,
     color: isHexColor(paint.hex_approx) ? paint.hex_approx!.toUpperCase() : fallbackColor(paint.id),
     swatchImageUrl: includeSwatchImages
       ? getPaintSwatchImageUrl(paint.swatch_image_url)
       : null,
     owned: ownership?.is_owned === true,
     wish: ownership?.is_wishlist === true,
+    saleAlert: ownership?.sale_alert === true,
     colorMatchEnabled: paint.color_match_enabled !== false,
     notes: `${brand} ${line}${paint.sku ? `, SKU ${paint.sku}` : ''}.`,
   }
@@ -202,14 +218,16 @@ function toCustomPaint(
     brand,
     line,
     finish,
-    size: 'Custom',
+    size: '',
     msrp: '-',
+    sku: null,
     color: isHexColor(paint.color_hex) ? paint.color_hex!.toUpperCase() : fallbackColor(paint.id),
     swatchImageUrl: includeSwatchImages
       ? getPaintSwatchImageUrl(imageByPaintId.get(paint.id))
       : null,
     owned: true,
     wish: false,
+    saleAlert: false,
     colorMatchEnabled: false,
     notes: 'Custom mix saved in your paint collection.',
   }
@@ -312,7 +330,7 @@ export const getPaintsV3Payload = cache(
       await Promise.all([
         supabase
           .from('user_paint_ownership')
-          .select('paint_catalog_id, is_owned, is_wishlist')
+          .select('paint_catalog_id, is_owned, is_wishlist, sale_alert')
           .eq('user_id', userId),
         supabase
           .from('user_paint_ownership')

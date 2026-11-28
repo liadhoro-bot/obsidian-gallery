@@ -8,6 +8,13 @@
   color: var(--og-text-primary);
   font-family: var(--og-font-ui);
   padding-bottom: calc(var(--og-control-h-lg) + env(safe-area-inset-bottom));
+  /* One grid row: 4 rows (3 x 8px gaps) fill the space between the grid's
+     top (--paint-grid-top, measured in JS) and the bottom nav (78px). */
+  --paint-row-h: clamp(
+    104px,
+    calc((100dvh - var(--paint-grid-top, 200px) - 78px - env(safe-area-inset-bottom) - 24px - 10px) / 4),
+    190px
+  );
 }
 
 .paintsSilver [data-v3-paints-indicator="content"] {
@@ -15,8 +22,18 @@
   max-width: var(--og-workbench-compact-max-width);
   margin-inline: auto;
   gap: 10px;
-  /* Clears the fixed info pane and bottom nav so the last row and "Load more" can scroll fully into view. */
-  padding: 12px 14px calc(214px + env(safe-area-inset-bottom));
+  /* Clears the bottom nav so "Load more" can scroll fully into view. */
+  padding: 12px 14px calc(110px + env(safe-area-inset-bottom));
+}
+
+/* With the detail sheet up, leave room so even the last row can scroll to
+   the top half of the screen above the sheet. */
+.paintsSilver[data-paint-sheet-open="true"] [data-v3-paints-indicator="content"] {
+  padding-bottom: calc(100dvh - var(--paint-row-h));
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] {
+  height: var(--paint-row-h);
 }
 
 .paintsSilver [data-v3-paints-indicator="app-header"] {
@@ -160,24 +177,10 @@
   padding: 7px;
 }
 
+/* No panel behind the search field and buttons: they sit straight on the walnut. */
 .paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] {
   position: relative;
-  border-width: 1.5px;
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.85);
-  border-radius: var(--og-radius-m);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.3) 100%),
-    rgba(250, 246, 236, 0.32);
   color: var(--og-text-primary);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.8),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.28),
-    inset 0 -2px 0 rgba(86, 55, 27, 0.18),
-    0 8px 20px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(18px) saturate(140%) brightness(1.06) contrast(0.97);
-  padding: 8px;
-  overflow: hidden;
 }
 
 .paintsSilver h1,
@@ -287,10 +290,13 @@
   color: var(--og-text-muted);
 }
 
-.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] input {
+/* White glass search field and Filter/Sort keys, straight on the walnut. */
+.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] input,
+.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] button {
   border-width: 1.5px;
   border-style: solid;
   border-color: rgba(255, 255, 255, 0.9);
+  border-radius: var(--og-radius-s);
   background-color: transparent;
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 100%),
@@ -305,8 +311,12 @@
   backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
 }
 
+.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] input {
+  font-size: 0.8rem;
+}
+
 .paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] input::placeholder {
-  color: var(--og-text-muted);
+  color: var(--og-text-secondary);
 }
 
 .paintsSilver input:focus,
@@ -328,12 +338,15 @@
 
 .paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] svg {
   color: var(--og-text-primary);
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.35));
+}
+
+.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] label svg {
+  z-index: 1;
+  color: var(--og-text-muted);
 }
 
 .paintsSilver [data-v3-paints-indicator="actions-toolbar"] button,
-.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) button,
-.paintsSilver [data-v3-paints-indicator="paint-info-panel"] button {
+.paintsSilver [role="dialog"]:not([data-feature-guide-dialog]) button {
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 76%, var(--og-ink-950));
   border-radius: var(--og-radius-s);
   background-color: var(--og-walnut-950);
@@ -346,25 +359,13 @@
 }
 
 .paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] button {
-  border-width: 1.5px;
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.9);
-  background-color: transparent;
-  background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 100%),
-    linear-gradient(rgba(250, 246, 236, 0.36), rgba(250, 246, 236, 0.36));
-  border-radius: var(--og-radius-s);
-  color: var(--og-text-primary);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, 0.85),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
-    inset 0 -2px 0 rgba(86, 55, 27, 0.2),
-    0 4px 14px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(18px) saturate(140%) brightness(1.08) contrast(0.97);
+  font-family: var(--og-font-ui);
+  font-size: 0.7rem;
+  font-weight: 800;
 }
 
-.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] button:hover {
+.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] button:hover,
+.paintsSilver [data-v3-paints-indicator="search-filter-toolbar"] button[aria-expanded="true"] {
   border-color: color-mix(in srgb, var(--og-focus) 60%, rgba(255, 255, 255, 0.4));
   color: var(--og-text-primary);
 }
@@ -481,7 +482,6 @@
 
 .paintsSilver [data-v3-paints-indicator="paint-swatch"],
 .paintsSilver [data-v3-paints-indicator="paint-card"] {
-  min-height: 92px;
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
   border-radius: var(--og-radius-m);
   background-color: var(--og-surface-primary);
@@ -490,7 +490,6 @@
   box-shadow: var(--og-shadow-constructed-card);
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-swatch"][aria-pressed="true"],
 .paintsSilver [data-v3-paints-indicator="paint-card"][aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--og-status-info) 55%, var(--og-brass-500));
   box-shadow:
@@ -498,29 +497,68 @@
     var(--og-shadow-constructed-card);
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-swatch"] > span:first-child {
+/* Selected paint: a thick polished-brass frame with a warm glow, lifted
+   slightly off the board, and a brass-tinted label. */
+.paintsSilver [data-v3-paints-indicator="paint-swatch"][aria-pressed="true"] {
+  z-index: 1;
+  border-color: color-mix(in srgb, var(--og-brass-500) 45%, white);
+  outline: 3px solid color-mix(in srgb, var(--og-brass-500) 55%, #ffd98a);
+  outline-offset: 1px;
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--og-brass-700) 80%, var(--og-ink-950)),
+    0 0 18px 6px color-mix(in srgb, #ffcf6e 60%, transparent),
+    0 10px 18px color-mix(in srgb, var(--og-ink-950) 45%, transparent);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-swatch"][aria-pressed="true"] [data-part="label"] {
+  background-color: color-mix(in srgb, #ffd98a 38%, var(--og-paper-50));
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-swatch"]:hover {
+  border-color: color-mix(in srgb, var(--og-brass-500) 70%, var(--og-walnut-700));
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="thumb"] {
   border-block-end: var(--og-border-width) solid color-mix(in srgb, var(--og-walnut-700) 56%, var(--og-ink-950));
   box-shadow: inset 0 -8px 18px color-mix(in srgb, var(--og-ink-950) 18%, transparent);
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-swatch"] > span:last-child {
-  min-height: 0;
-  overflow: hidden;
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="label"] {
   background-color: color-mix(in srgb, var(--og-paper-50) 72%, transparent);
   color: var(--og-text-primary);
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-swatch"] > span:last-child span:first-child {
+/* Base size; fitPaintNames() steps it down per card until the name fits. */
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="name"] {
+  flex: 0 1 auto;
+  overflow: hidden;
   color: var(--og-text-primary);
   font-family: var(--og-font-display);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  font-weight: 700;
   letter-spacing: 0;
+  line-height: 1.02;
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-swatch"] > span:last-child span:last-child {
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="brand"],
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="line"] {
+  flex-shrink: 0;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="brand"],
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="line"] {
   color: var(--og-text-muted);
-  letter-spacing: 0.1em;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-swatch"] [data-part="line"] {
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
 .paintsSilver [data-v3-paints-indicator="paint-card"] {
@@ -589,32 +627,137 @@
   font-size: 0.72rem;
 }
 
+/* ---- Paint detail sheet: slides up when a paint is picked ---- */
+
+@keyframes paintSheetUp {
+  from {
+    transform: translateY(calc(100% + 90px));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes paintSheetDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(100% + 90px));
+  }
+}
+
 .paintsSilver [data-v3-paints-indicator="paint-info-panel"] {
-  /* Sit above the bottom nav (69px + 1px border + safe-area inset). A fixed
-     bottom-16 tucked the pane under the nav, worst on Android gesture bars. */
+  /* Sit above the bottom nav (69px + 1px border + safe-area inset). */
   bottom: calc(78px + env(safe-area-inset-bottom));
+  /* Only as tall as its content, and it grows (no inner scroller) when the
+     stores list opens. The cap only matters on very short screens. */
+  max-height: calc(100dvh - 78px - env(safe-area-inset-bottom) - 12px);
   border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
   border-radius: var(--og-radius-l);
   background-color: var(--og-surface-primary);
   background-image: var(--og-material-parchment-panel);
   color: var(--og-text-primary);
   box-shadow: var(--og-shadow-large);
+  /* backwards fill so an inline drag transform still applies after it ends. */
+  animation: paintSheetUp 320ms cubic-bezier(0.2, 0.85, 0.25, 1) backwards;
+  transition: transform 200ms var(--og-ease-physical);
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-info-panel"] > div > div:first-child {
-  border-inline-end: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 70%, var(--og-ink-950));
-  box-shadow: inset -12px 0 18px color-mix(in srgb, var(--og-ink-950) 18%, transparent);
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"][data-dragging="true"] {
+  transition: none;
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-info-panel"] h2 {
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"][data-sheet-state="closing"] {
+  animation: paintSheetDown 220ms ease-in forwards;
+  pointer-events: none;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="handle"] > span {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-walnut-700) 45%, transparent);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="thumb"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 70%, var(--og-ink-950));
+  box-shadow:
+    inset 0 -10px 18px color-mix(in srgb, var(--og-ink-950) 22%, transparent),
+    var(--og-shadow-contact);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="name"] {
   color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.08;
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-info-panel"] p {
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="brand-line"] {
+  margin-top: 2px;
   color: var(--og-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [aria-pressed="true"] {
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="meta"] {
+  color: var(--og-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  row-gap: 2px;
+}
+
+/* Divider only between items that exist, so a missing field leaves no gap. */
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="meta"] li + li {
+  margin-inline-start: 8px;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid color-mix(in srgb, var(--og-walnut-700) 35%, transparent);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="note"] {
+  color: var(--og-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="close"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-ebonized-control);
+  color: var(--og-paper-50);
+  box-shadow: var(--og-shadow-control-built);
+}
+
+/* Owned / Wishlist / Equivalents: parchment keys, brass when on. */
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="action"] {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding-inline: 6px;
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  border-radius: var(--og-radius-s);
+  background-color: var(--og-surface-secondary-light);
+  background-image: var(--og-material-paper-card);
+  color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.05;
+  text-align: center;
+  box-shadow: var(--og-shadow-constructed-card);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="action"] svg {
+  flex-shrink: 0;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="action"][aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--og-brass-500) 70%, var(--og-walnut-700));
   background-color: var(--og-brass-500);
   background-image: var(--og-material-brass);
@@ -622,38 +765,160 @@
   box-shadow: var(--og-shadow-brass-plate);
 }
 
-.paintsSilver [data-v3-paints-indicator="ownership-actions"] {
-  grid-template-columns: repeat(2, minmax(84px, 1fr));
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="action"][aria-busy="true"] {
+  opacity: 0.7;
 }
 
-.paintsSilver [data-v3-paints-indicator="ownership-actions"] button {
-  display: inline-flex;
-  min-width: 0;
-  min-height: 28px;
-  width: 100%;
-  align-items: center;
-  justify-content: center;
-  padding-inline: 8px;
-  text-align: center;
-  white-space: nowrap;
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
-/* Parchment in both states; more specific than the info pane's brass
-   [aria-pressed="true"] rule. Pressed reads as pushed in, not brass. */
-.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-v3-paints-indicator="show-equivalents"] {
-  border-color: color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="where-to-buy"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  background-color: color-mix(in srgb, var(--og-status-info) 34%, var(--og-ink-950));
+  background-image: linear-gradient(
+    180deg,
+    color-mix(in srgb, white 10%, transparent),
+    transparent 55%,
+    color-mix(in srgb, var(--og-ink-950) 22%, transparent)
+  );
+  color: var(--og-paper-50);
+  font-family: var(--og-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="where-to-buy"] [data-part="chevron"] {
+  transition: transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="where-to-buy"][aria-expanded="true"] [data-part="chevron"] {
+  transform: rotate(180deg);
+}
+
+/* Stores pane: grid-rows trick so it slides open to its own height. */
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="stores"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 260ms var(--og-ease-physical),
+    opacity 200ms ease;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="stores"][data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="store"],
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="no-stores"],
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="sale-alert"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 46%, var(--og-border-subtle));
   background-color: var(--og-surface-secondary-light);
   background-image: var(--og-material-paper-card);
-  color: var(--og-text-primary);
-  box-shadow: var(--og-shadow-constructed-card);
+  box-shadow: var(--og-shadow-contact);
 }
 
-.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-v3-paints-indicator="show-equivalents"][aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--og-brass-700) 72%, var(--og-ink-950));
-  background-color: var(--og-surface-primary);
-  background-image: var(--og-material-parchment-panel);
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="no-stores"] {
+  color: var(--og-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="store-thumb"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 56%, var(--og-border-subtle));
+  background-color: var(--og-walnut-900, var(--og-walnut-950));
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="store-thumb"][data-logo="true"] {
+  background-color: var(--og-paper-50);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="featured"] {
+  position: absolute;
+  inset-inline-start: 3px;
+  inset-block-end: 3px;
+  border-radius: 999px;
+  background-color: var(--og-brass-500);
+  background-image: var(--og-material-brass);
+  color: var(--og-ink-950);
+  font-size: 0.56rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 2px 5px;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="store-name"] {
   color: var(--og-text-primary);
+  font-family: var(--og-font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="store-location"] {
+  color: var(--og-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="view-store"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 84%, var(--og-ink-950));
+  background-color: var(--og-walnut-950);
+  background-image: var(--og-material-walnut-control);
+  color: var(--og-paper-50);
+  font-family: var(--og-font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--og-shadow-control-built);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="sale-alert"] {
+  color: var(--og-text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="sale-alert-error"] {
+  color: var(--og-status-danger, #a33);
+  font-size: 0.7rem;
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="switch"] {
+  border: var(--og-border-width) solid color-mix(in srgb, var(--og-brass-700) 70%, var(--og-ink-950));
+  background-color: color-mix(in srgb, var(--og-walnut-700) 45%, var(--og-paper-200));
   box-shadow: var(--og-shadow-pressed);
+  transition: background-color var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="switch"] > span {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background-color: var(--og-paper-50);
+  background-image: var(--og-material-paper-card);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--og-ink-950) 45%, transparent);
+  transition: transform var(--og-motion-fast) var(--og-ease-physical);
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="switch"][aria-checked="true"] {
+  background-color: color-mix(in srgb, var(--og-status-info) 55%, var(--og-ink-950));
+}
+
+.paintsSilver [data-v3-paints-indicator="paint-info-panel"] [data-part="switch"][aria-checked="true"] > span {
+  transform: translateX(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paintsSilver [data-v3-paints-indicator="paint-info-panel"],
+  .paintsSilver [data-v3-paints-indicator="paint-info-panel"][data-sheet-state="closing"] {
+    animation-duration: 1ms;
+  }
 }
 
 .paintsSilver [data-v3-paints-indicator="equivalents-banner"] {
@@ -808,9 +1073,5 @@
 
   :global([data-v3-paints-indicator="filter-panel"]) > div {
     grid-template-columns: 1fr;
-  }
-
-  .paintsSilver [data-v3-paints-indicator="paint-swatch"] {
-    min-height: 98px;
   }
 }

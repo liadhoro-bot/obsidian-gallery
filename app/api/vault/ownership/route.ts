@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     | 'wishlist'
     | 'increment'
     | 'decrement'
+    | 'sale_alert'
 
   const currentValue =
     body.currentValue === undefined

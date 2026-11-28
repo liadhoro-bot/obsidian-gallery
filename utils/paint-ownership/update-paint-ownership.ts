@@ -11,6 +11,8 @@ type OwnershipAction =
   | 'wishlist'
   | 'increment'
   | 'decrement'
+  // "Notify me when this paint is on sale"; never touches owned/wishlist.
+  | 'sale_alert'
 
 type Args = {
   userId: string
@@ -34,7 +36,7 @@ export async function updatePaintOwnership({
 
   const { data: existing, error: fetchError } = await supabase
     .from('user_paint_ownership')
-    .select('is_owned, is_wishlist, units_owned')
+    .select('is_owned, is_wishlist, units_owned, sale_alert')
     .eq('user_id', userId)
     .eq('paint_catalog_id', paintCatalogId)
     .maybeSingle()
@@ -46,10 +48,12 @@ export async function updatePaintOwnership({
   const previousOwned = existing?.is_owned ?? false
   const previousWishlist = existing?.is_wishlist ?? false
   const previousUnits = existing?.units_owned ?? currentUnits ?? 0
+  const previousSaleAlert = existing?.sale_alert ?? false
 
   let nextOwned = previousOwned
   let nextWishlist = previousWishlist
   let nextUnits = previousUnits
+  let nextSaleAlert = previousSaleAlert
 
   if (action === 'owned') {
     nextOwned = !(currentValue ?? previousOwned)
@@ -60,6 +64,10 @@ export async function updatePaintOwnership({
 
   if (action === 'wishlist') {
     nextWishlist = !(currentValue ?? previousWishlist)
+  }
+
+  if (action === 'sale_alert') {
+    nextSaleAlert = !(currentValue ?? previousSaleAlert)
   }
 
   if (action === 'increment') {
@@ -91,12 +99,13 @@ export async function updatePaintOwnership({
         is_owned: nextOwned,
         is_wishlist: nextWishlist,
         units_owned: nextUnits,
+        sale_alert: nextSaleAlert,
       },
       {
         onConflict: 'user_id,paint_catalog_id',
       }
     )
-    .select('is_owned, is_wishlist, units_owned')
+    .select('is_owned, is_wishlist, units_owned, sale_alert')
     .single()
 
   if (upsertError) {
@@ -136,6 +145,7 @@ export async function updatePaintOwnership({
         is_owned: updated.is_owned,
         is_wishlist: updated.is_wishlist,
         units_owned: updated.units_owned,
+        sale_alert: updated.sale_alert,
       },
     })
   } catch (error) {

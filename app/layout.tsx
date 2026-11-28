@@ -15,7 +15,8 @@ const ogDisplayFont = Cormorant_Garamond({
   display: 'swap',
   subsets: ['latin'],
   variable: '--font-og-display',
-  weight: '600',
+  // 700 for bold paint names on the Paints page.
+  weight: ['600', '700'],
 })
 
 const ogUiFont = Source_Sans_3({

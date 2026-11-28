@@ -1,11 +1,13 @@
 'use client'
 
 import { openUpgradePromptFor } from '@/app/components/upgrade/upgrade-prompt'
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import AppHamburgerMenu from '../components/app-hamburger-menu'
+import { getStoresForPaintBrand, storeHref } from '../community/stores-data'
+import { TrackedLink } from '../community/tracked-link'
 import { findVisibleFeatureGuideIndex } from '../components/feature-guide-navigation'
 import V3PerfIndicator from '../components/v3-perf-indicator'
 import { capturePostHog } from '../../utils/analytics/client'
@@ -21,17 +23,20 @@ type PaintRecord = {
   finish: string
   size: string
   msrp?: string
+  sku?: string | null
   color: string
   swatchImageUrl?: string | null
   owned: boolean
   wish: boolean
+  saleAlert?: boolean
   colorMatchEnabled?: boolean
   notes: string
 }
 
 type PaintExportFormat = 'csv' | 'txt' | 'json' | 'pdf'
-type PaintOwnershipAction = 'owned' | 'wishlist'
-type PaintOwnershipState = Pick<PaintRecord, 'owned' | 'wish'>
+type PaintOwnershipAction = 'owned' | 'wishlist' | 'sale_alert'
+type PaintOwnershipState = Pick<PaintRecord, 'owned' | 'wish'> &
+  Required<Pick<PaintRecord, 'saleAlert'>>
 type PaintSortMode = 'name-asc' | 'name-desc' | 'brand-asc' | 'line-asc' | 'match'
 type PaintEquivalentMatch = {
   tier: 'chart' | 'community' | 'linked' | 'exact' | 'close' | 'near' | 'contextual'
@@ -778,7 +783,81 @@ export default function PaintsV3Preview({
     return uniqueSortedPaintValues(lineSourcePaints, (paint) => paint.line)
   }, [activeFilterPaints, brandFilter])
   const [selectedPaintId, setSelectedPaintId] = useState<string | null>(null)
+  const [isSheetClosing, setIsSheetClosing] = useState(false)
+  const sheetCloseTimerRef = useRef<number | null>(null)
   const [showRealSwatches, setShowRealSwatches] = useState(false)
+
+  const mainRef = useRef<HTMLElement>(null)
+  const gridSectionRef = useRef<HTMLElement>(null)
+
+  // Row height comes from the space below the toolbar (CSS --paint-row-h):
+  // 4 rows fill the screen, and the open sheet starts right under 2 rows.
+  // The grid's top moves with the equivalents banner, so re-measure on every
+  // render; writing a CSS variable directly doesn't trigger a re-render.
+  useLayoutEffect(() => {
+    const main = mainRef.current
+    const grid = gridSectionRef.current
+    if (!main || !grid) return
+    const top = Math.round(grid.getBoundingClientRect().top - main.getBoundingClientRect().top)
+    if (main.style.getPropertyValue('--paint-grid-top') !== `${top}px`) {
+      main.style.setProperty('--paint-grid-top', `${top}px`)
+    }
+  })
+
+  // Bring the selected paint's row to the top of the screen (second row when
+  // there is a row above it) so it stays visible above the detail sheet.
+  useEffect(() => {
+    if (!selectedPaintId) return
+
+    const frame = window.requestAnimationFrame(() => {
+      const card = document.querySelector<HTMLElement>(
+        `[data-paint-id="${CSS.escape(selectedPaintId)}"]`
+      )
+      const firstCard = card?.parentElement?.firstElementChild as HTMLElement | null
+      if (!card || !firstCard) return
+
+      const isFirstRow =
+        Math.abs(card.getBoundingClientRect().top - firstCard.getBoundingClientRect().top) < 4
+      // 8px = grid gap; the sheet's top edge is set to match in the CSS.
+      card.style.scrollMarginTop = `${isFirstRow ? 10 : card.offsetHeight + 8 + 10}px`
+      card.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+        block: 'start',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [selectedPaintId])
+
+  useEffect(
+    () => () => {
+      if (sheetCloseTimerRef.current !== null) {
+        window.clearTimeout(sheetCloseTimerRef.current)
+      }
+    },
+    []
+  )
+
+  function openPaintSheet(paintId: string) {
+    if (sheetCloseTimerRef.current !== null) {
+      window.clearTimeout(sheetCloseTimerRef.current)
+      sheetCloseTimerRef.current = null
+    }
+    setIsSheetClosing(false)
+    setSelectedPaintId(paintId)
+  }
+
+  function closePaintSheet() {
+    if (sheetCloseTimerRef.current !== null) return
+    setIsSheetClosing(true)
+    sheetCloseTimerRef.current = window.setTimeout(() => {
+      sheetCloseTimerRef.current = null
+      setIsSheetClosing(false)
+      setSelectedPaintId(null)
+    }, 220)
+  }
   const [mixName, setMixName] = useState('')
   const [mixBase, setMixBase] = useState(allPaints[0]?.name ?? '')
 
@@ -1004,6 +1083,28 @@ export default function PaintsV3Preview({
 
   const visiblePaints = filteredPaints.slice(0, visibleCount)
   const remainingCount = filteredPaints.length - visiblePaints.length
+  const visiblePaintKey = visiblePaints.map((paint) => paint.id).join(',')
+
+  // Re-fit card names when the cards change, the screen resizes, or the
+  // display font finishes loading (it changes text width).
+  useLayoutEffect(() => {
+    const grid = gridSectionRef.current
+    if (!grid || viewMode !== 'grid') return
+
+    let frame = 0
+    const refit = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => fitPaintNames(grid))
+    }
+
+    fitPaintNames(grid)
+    window.addEventListener('resize', refit)
+    void document.fonts?.ready.then(refit)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('resize', refit)
+    }
+  }, [visiblePaintKey, viewMode])
   const selectedPaint = selectedPaintId
     ? allPaints.find((paint) => paint.id === selectedPaintId) ??
       equivalentPaints.find((paint) => paint.id === selectedPaintId) ??
@@ -1098,7 +1199,7 @@ export default function PaintsV3Preview({
   }
 
   function selectGridPaint(paint: PaintRecord) {
-    setSelectedPaintId(paint.id)
+    openPaintSheet(paint.id)
     const match = equivalentsView?.matches[paint.id]
     if (!equivalentsView || !match || paint.id === selectedPaintId) return
     void capturePostHog('paint_equivalent_selected', {
@@ -1142,25 +1243,28 @@ export default function PaintsV3Preview({
   async function togglePaintOwnershipState(
     paint: PaintRecord,
     action: PaintOwnershipAction
-  ) {
+  ): Promise<boolean> {
     if (isCustomPaintId(paint.id) || pendingPaintActions[paint.id]) {
-      return
+      return false
     }
 
     const previousState: PaintOwnershipState = {
       owned: paint.owned,
       wish: paint.wish,
+      saleAlert: Boolean(paint.saleAlert),
     }
-    const optimisticState: PaintOwnershipState =
+    const currentValue =
       action === 'owned'
-        ? {
-            ...previousState,
-            owned: !paint.owned,
-          }
-        : {
-            ...previousState,
-            wish: !paint.wish,
-          }
+        ? previousState.owned
+        : action === 'wishlist'
+          ? previousState.wish
+          : previousState.saleAlert
+    const optimisticState: PaintOwnershipState = {
+      ...previousState,
+      ...(action === 'owned' ? { owned: !currentValue } : {}),
+      ...(action === 'wishlist' ? { wish: !currentValue } : {}),
+      ...(action === 'sale_alert' ? { saleAlert: !currentValue } : {}),
+    }
 
     setPaintStateOverrides((current) => ({
       ...current,
@@ -1179,7 +1283,7 @@ export default function PaintsV3Preview({
         },
         body: JSON.stringify({
           action,
-          currentValue: action === 'owned' ? paint.owned : paint.wish,
+          currentValue,
           paintId: paint.id,
         }),
       })
@@ -1196,6 +1300,7 @@ export default function PaintsV3Preview({
         ownership?: {
           is_owned?: boolean | null
           is_wishlist?: boolean | null
+          sale_alert?: boolean | null
         }
       }
       const ownership = result.ownership
@@ -1205,13 +1310,23 @@ export default function PaintsV3Preview({
         [paint.id]: {
           owned: Boolean(ownership?.is_owned),
           wish: Boolean(ownership?.is_wishlist),
+          saleAlert: Boolean(ownership?.sale_alert),
         },
       }))
+      if (action === 'sale_alert') {
+        void capturePostHog('paint_sale_alert_toggled', {
+          paint_id: paint.id,
+          paint_brand: paint.brand,
+          enabled: Boolean(ownership?.sale_alert),
+        })
+      }
+      return true
     } catch {
       setPaintStateOverrides((current) => ({
         ...current,
         [paint.id]: previousState,
       }))
+      return false
     } finally {
       setPendingPaintActions((current) => {
         const next = { ...current }
@@ -1223,9 +1338,11 @@ export default function PaintsV3Preview({
 
   return (
     <main
+      ref={mainRef}
       className={styles.paintsSilver}
       data-v3-paints-indicator="root"
       data-v3-paints-source={initialPayload ? 'live' : 'fallback'}
+      data-paint-sheet-open={selectedPaint ? 'true' : undefined}
     >
       <V3PerfIndicator surface="paints" detail={activeTab} />
       <div
@@ -1297,7 +1414,7 @@ export default function PaintsV3Preview({
           data-v3-paints-indicator="search-filter-toolbar"
         >
           <div
-            className="grid grid-cols-[minmax(0,1fr)_64px_56px] gap-2"
+            className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2"
             data-tour-target="paints.toolbar"
           >
             <label
@@ -1308,7 +1425,7 @@ export default function PaintsV3Preview({
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/28"
+                className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/28"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -1324,8 +1441,8 @@ export default function PaintsV3Preview({
                   setQuery(event.target.value)
                   resetPaintListState()
                 }}
-                placeholder="Search by name or brand..."
-                className="h-12 w-full rounded-[8px] border border-white/10 bg-[#111821] pl-10 pr-3 text-sm font-semibold text-white outline-none transition placeholder:text-white/28 focus:border-cyan-300/70"
+                placeholder="Search by name or brand"
+                className="h-11 w-full rounded-[8px] border border-white/10 bg-[#111821] pl-8 pr-2 text-sm font-semibold text-white outline-none transition placeholder:text-white/28 focus:border-cyan-300/70"
               />
             </label>
 
@@ -1339,9 +1456,12 @@ export default function PaintsV3Preview({
                 setIsExportOpen(false)
                 setIsFilterOpen((open) => !open)
               }}
-              className="flex h-12 items-center justify-center rounded-[8px] border border-white/10 bg-[#111821] px-2 text-xs font-black text-white/48 transition hover:text-cyan-300"
+              className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-[8px] border border-white/10 bg-[#111821] px-2.5 text-xs font-black leading-none text-white/48 transition hover:text-cyan-300"
               data-feature-guide-target="paints.filters"
             >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 5h18l-7 8.5V19l-4 2v-7.5z" />
+              </svg>
               Filter
             </button>
 
@@ -1355,9 +1475,12 @@ export default function PaintsV3Preview({
                 setIsExportOpen(false)
                 setIsSortOpen((open) => !open)
               }}
-              className="flex h-12 items-center justify-center rounded-[8px] border border-white/10 bg-[#111821] px-2 text-xs font-black text-white/48 transition hover:text-cyan-300"
+              className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-[8px] border border-white/10 bg-[#111821] px-2.5 text-xs font-black leading-none text-white/48 transition hover:text-cyan-300"
               data-feature-guide-target="paints.sort"
             >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" />
+              </svg>
               Sort
             </button>
           </div>
@@ -1646,13 +1769,13 @@ export default function PaintsV3Preview({
             count={filteredPaints.length}
             isSourceSelected={selectedPaintId === equivalentsView.source.id}
             onExit={exitEquivalents}
-            onSelectSource={() => setSelectedPaintId(equivalentsView.source.id)}
+            onSelectSource={() => openPaintSheet(equivalentsView.source.id)}
             source={equivalentsView.source}
             status={equivalentsView.status}
           />
         ) : null}
 
-        <section className="relative">
+        <section className="relative" ref={gridSectionRef}>
           {equivalentsView && equivalentsView.status !== 'ready' ? (
             <div
               className="rounded-[8px] border border-dashed border-white/10 bg-[#111821] p-6 text-center"
@@ -1698,7 +1821,7 @@ export default function PaintsV3Preview({
                         : undefined
                     }
                     paint={paint}
-                    isSelected={paint.id === selectedPaintId}
+                    isSelected={paint.id === selectedPaintId && !isSheetClosing}
                     showRealSwatch={showRealSwatches}
                     onSelect={() => selectGridPaint(paint)}
                   />
@@ -1749,9 +1872,11 @@ export default function PaintsV3Preview({
       </div>
 
       {selectedPaint ? (
-        <PaintInfoPanel
+        <PaintDetailSheet
+          isClosing={isSheetClosing}
           isEquivalentsSource={equivalentsView?.source.id === selectedPaint.id}
           matchNote={describeEquivalent(equivalentsView?.matches[selectedPaint.id])}
+          onClose={closePaintSheet}
           onToggleEquivalents={() =>
             equivalentsView?.source.id === selectedPaint.id
               ? exitEquivalents()
@@ -1764,10 +1889,11 @@ export default function PaintsV3Preview({
           onToggleWishlist={() =>
             togglePaintOwnershipState(selectedPaint, 'wishlist')
           }
+          onToggleSaleAlert={() =>
+            togglePaintOwnershipState(selectedPaint, 'sale_alert')
+          }
         />
-      ) : (
-        <PaintInfoEmptyPanel />
-      )}
+      ) : null}
 
       {isExportOpen ? (
         <div className="fixed inset-0 z-[60] grid place-items-end bg-black/65 px-3 py-4 backdrop-blur-sm">
@@ -2002,15 +2128,13 @@ function PaintSwatch({
       onClick={onSelect}
       aria-pressed={isSelected}
       data-v3-paints-indicator="paint-swatch"
-      className={[
-        'relative h-[86px] overflow-hidden rounded-[8px] border bg-[#111821] text-left transition',
-        isSelected
-          ? 'border-cyan-300/75 shadow-[0_0_0_1px_rgba(34,211,238,0.35)]'
-          : 'border-white/[0.055] hover:border-cyan-300/45',
-      ].join(' ')}
+      data-paint-id={paint.id}
+      className="relative flex flex-col overflow-hidden rounded-[8px] border text-left transition"
     >
+      {/* Top half: swatch photo (hex fill until it loads). */}
       <span
-        className="absolute inset-x-0 top-0 h-[39%] overflow-hidden"
+        className="relative h-1/2 w-full shrink-0 overflow-hidden"
+        data-part="thumb"
         style={{ backgroundColor: paint.color }}
       >
         {showRealSwatch && paint.swatchImageUrl ? (
@@ -2024,48 +2148,58 @@ function PaintSwatch({
         ) : null}
         {matchLabel ? (
           <span
-            className="absolute left-1.5 top-1.5 rounded-full bg-black/70 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.06em] text-cyan-200"
+            className="absolute left-1.5 top-1.5 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.06em]"
             data-v3-paints-indicator="equivalent-badge"
           >
             {matchLabel}
           </span>
         ) : null}
+        {paint.owned || paint.wish ? (
+          <span
+            className="absolute right-1.5 top-1.5 grid h-4 w-4 place-items-center rounded-full text-[10px] font-black"
+            data-v3-paints-indicator="paint-state-badge"
+            aria-label={paint.owned ? 'Owned' : 'On wishlist'}
+          >
+            {paint.owned ? <IconCheck className="h-2.5 w-2.5" /> : '+'}
+          </span>
+        ) : null}
       </span>
-      {(paint.owned || paint.wish) && (
-        <span
-          className="absolute right-2 top-2 grid h-4 w-4 place-items-center rounded-full bg-cyan-300 text-[10px] font-black text-black"
-          data-v3-paints-indicator="paint-state-badge"
-        >
-          {paint.owned ? (
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 12 12"
-              className="h-2.5 w-2.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m2.5 6 2 2 5-5" />
-            </svg>
-          ) : (
-            '+'
-          )}
-        </span>
-      )}
-      <span className="absolute inset-x-0 bottom-0 top-[39%] grid min-h-0 grid-rows-[1fr_auto] overflow-hidden p-2">
-        <span className="block min-w-0 truncate text-[11px] font-black leading-tight text-white">
+      {/* Bottom half: name, then brand and line on their own lines. Long
+          names drop a font size (and may take a third line) so they fit. */}
+      <span
+        className="flex h-1/2 min-h-0 flex-col justify-center px-1.5 py-1"
+        data-part="label"
+      >
+        <span className="min-h-0 break-words" data-part="name">
           {paint.name}
         </span>
-        <span className="mt-1 flex min-w-0 items-center gap-1 overflow-hidden text-[8px] font-black uppercase tracking-[0.08em] text-white/36">
-          <span className="shrink-0">{getBrandCode(paint.brand)}</span>
-          <span className="text-white/24">/</span>
-          <span className="min-w-0 truncate">{paint.line}</span>
+        <span className="mt-0.5 block min-w-0 truncate" data-part="brand">
+          {paint.brand}
+        </span>
+        <span className="block min-w-0 truncate" data-part="line">
+          {paint.line}
         </span>
       </span>
     </button>
   )
+}
+
+// Shrinks each grid card name until the whole name fits in the card's text
+// half (the name box gets whatever height brand + line leave over).
+const minPaintNameFontPx = 9
+
+function fitPaintNames(root: ParentNode) {
+  const names = root.querySelectorAll<HTMLElement>(
+    '[data-v3-paints-indicator="paint-swatch"] [data-part="name"]'
+  )
+  for (const name of names) {
+    name.style.fontSize = ''
+    let size = parseFloat(getComputedStyle(name).fontSize)
+    while (name.scrollHeight > name.clientHeight + 1 && size > minPaintNameFontPx) {
+      size = Math.max(minPaintNameFontPx, size - 0.5)
+      name.style.fontSize = `${size}px`
+    }
+  }
 }
 
 function PaintCard({
@@ -2087,6 +2221,7 @@ function PaintCard({
       onClick={onSelect}
       aria-pressed={isSelected}
       data-v3-paints-indicator="paint-card"
+      data-paint-id={paint.id}
       className={[
         'grid min-h-[76px] grid-cols-[52px_1fr_auto] items-center gap-3 rounded-[8px] border bg-[#111821] p-2 text-left transition',
         isSelected
@@ -2128,167 +2263,424 @@ function PaintCard({
           </span>
         ) : null}
         <span>{paint.finish}</span>
-        <span>{paint.size}</span>
+        {paint.size ? <span>{paint.size}</span> : null}
       </span>
     </button>
   )
 }
 
-function PaintInfoEmptyPanel() {
-  return (
-    <aside
-      className="fixed inset-x-2 bottom-16 z-40 mx-auto max-w-md overflow-hidden rounded-[8px] border border-cyan-300/18 bg-[#10161d]/96 shadow-2xl shadow-black/50 backdrop-blur"
-      data-v3-paints-indicator="paint-info-panel"
-      data-feature-guide-target="paints.paint_info_panel"
-    >
-      <div className="grid min-h-[118px] grid-cols-[64px_1fr]">
-        <div className="grid place-items-center bg-black/10 px-2 text-center">
-          <span className="text-[9px] font-black uppercase tracking-[0.08em] text-white/38">
-            Paint Preview
-          </span>
-        </div>
-        <div className="min-w-0 p-3">
-          <h2 className="text-sm font-black uppercase text-white">
-            Paint Detail Pane
-          </h2>
-          <p className="mt-1 text-[10px] font-bold text-white/36">
-            Select a paint
-          </p>
+// Drag the handle down past this many pixels to dismiss the sheet.
+const sheetDismissDistance = 90
 
-          <div className="mt-3 grid grid-cols-4 gap-3 text-[11px] text-white/34">
-            <InfoPair label="Brand" value="-" />
-            <InfoPair label="Line" value="-" />
-            <InfoPair label="Size" value="-" />
-            <InfoPair label="MSRP" value="-" />
-          </div>
-
-          <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-white/46">
-            Click a paint card to preview color, ownership, finish, and notes.
-          </p>
-        </div>
-      </div>
-    </aside>
-  )
-}
-
-function PaintInfoPanel({
+function PaintDetailSheet({
+  isClosing,
   isEquivalentsSource,
   matchNote,
+  onClose,
   onToggleEquivalents,
   onToggleOwned,
+  onToggleSaleAlert,
   onToggleWishlist,
   paint,
   pendingAction,
   showRealSwatch,
 }: {
+  isClosing: boolean
   isEquivalentsSource: boolean
   matchNote?: string
+  onClose: () => void
   onToggleEquivalents: () => void
   onToggleOwned: () => void
+  onToggleSaleAlert: () => Promise<boolean>
   onToggleWishlist: () => void
   paint: PaintRecord
   pendingAction?: PaintOwnershipAction
   showRealSwatch: boolean
 }) {
   const isCustomPaint = isCustomPaintId(paint.id)
-  const isOwnedPending = pendingAction === 'owned'
-  const isWishlistPending = pendingAction === 'wishlist'
+  const [storesPaintId, setStoresPaintId] = useState<string | null>(null)
+  const isStoresOpen = storesPaintId === paint.id
+  const stores = useMemo(() => getStoresForPaintBrand(paint.brand), [paint.brand])
+  const [saleAlertErrorPaintId, setSaleAlertErrorPaintId] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState(0)
+  const dragStartRef = useRef<number | null>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  const metaItems = [
+    paint.size ? { key: 'size', icon: <IconBottle />, text: paint.size } : null,
+    paint.sku ? { key: 'sku', icon: <IconBarcode />, text: `SKU ${paint.sku}` } : null,
+    paint.msrp && paint.msrp !== '-'
+      ? { key: 'msrp', icon: <IconTag />, text: paint.msrp }
+      : null,
+  ].filter((item) => item !== null)
+
+  useEffect(() => {
+    scrollAreaRef.current?.scrollTo({ top: 0 })
+  }, [paint.id])
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
+
+  async function toggleSaleAlert() {
+    // Pending owned/wishlist saves for this paint make the shared toggle a
+    // no-op (it returns false without trying), so only flag real failures.
+    if (isCustomPaint || pendingAction) return
+    const paintId = paint.id
+    setSaleAlertErrorPaintId(null)
+    const saved = await onToggleSaleAlert()
+    if (!saved) setSaleAlertErrorPaintId(paintId)
+  }
+
+  function toggleStores() {
+    const opening = !isStoresOpen
+    setStoresPaintId(opening ? paint.id : null)
+    if (opening) {
+      void capturePostHog('paint_where_to_buy_opened', {
+        paint_id: paint.id,
+        paint_brand: paint.brand,
+        store_count: stores.length,
+      })
+    }
+  }
+
+  function handleDragStart(event: ReactPointerEvent<HTMLDivElement>) {
+    dragStartRef.current = event.clientY
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  function handleDragMove(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragStartRef.current === null) return
+    setDragOffset(Math.max(0, event.clientY - dragStartRef.current))
+  }
+
+  function handleDragEnd() {
+    if (dragStartRef.current === null) return
+    dragStartRef.current = null
+    if (dragOffset > sheetDismissDistance) {
+      onClose()
+      return
+    }
+    setDragOffset(0)
+  }
 
   return (
     <aside
-      className="fixed inset-x-2 bottom-16 z-40 mx-auto max-w-md overflow-hidden rounded-[8px] border border-cyan-300/18 bg-[#10161d]/96 shadow-2xl shadow-black/50 backdrop-blur"
+      className="fixed inset-x-2 z-40 mx-auto flex max-w-md flex-col overflow-hidden"
       data-v3-paints-indicator="paint-info-panel"
       data-feature-guide-target="paints.paint_info_panel"
+      data-sheet-state={isClosing ? 'closing' : 'open'}
+      data-dragging={dragOffset > 0 ? 'true' : undefined}
+      aria-label={`${paint.name} details`}
+      style={dragOffset > 0 ? { transform: `translateY(${dragOffset}px)` } : undefined}
     >
-      <div className="grid grid-cols-[64px_1fr]">
-        <div
-          className="relative overflow-hidden"
-          style={{ backgroundColor: paint.color }}
-        >
-          {showRealSwatch && paint.swatchImageUrl ? (
-            <Image
-              src={paint.swatchImageUrl}
-              alt=""
-              fill
-              sizes="64px"
-              className="object-cover"
-            />
-          ) : null}
+      <div
+        className="flex h-5 shrink-0 cursor-grab touch-none items-center justify-center"
+        data-part="handle"
+        onPointerDown={handleDragStart}
+        onPointerMove={handleDragMove}
+        onPointerUp={handleDragEnd}
+        onPointerCancel={handleDragEnd}
+        aria-hidden="true"
+      >
+        <span />
+      </div>
+
+      <div ref={scrollAreaRef} className="min-h-0 overflow-y-auto px-3 pb-3" data-part="body">
+        <div className="grid grid-cols-[76px_minmax(0,1fr)_auto] gap-3" data-part="header">
+          <div
+            className="relative h-[76px] w-[76px] overflow-hidden rounded-[8px]"
+            data-part="thumb"
+            style={{ backgroundColor: paint.color }}
+          >
+            {showRealSwatch && paint.swatchImageUrl ? (
+              <Image src={paint.swatchImageUrl} alt="" fill sizes="76px" className="object-cover" />
+            ) : null}
+          </div>
+          <div className="min-w-0 self-center">
+            <h2 className="line-clamp-2" data-part="name">
+              {paint.name}
+            </h2>
+            <p className="truncate" data-part="brand-line">
+              {paint.brand} · {paint.line}
+            </p>
+            {metaItems.length > 0 ? (
+              <ul className="mt-1.5 flex flex-wrap items-center" data-part="meta">
+                {metaItems.map((item) => (
+                  <li key={item.key} className="flex items-center gap-1">
+                    {item.icon}
+                    <span>{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close paint details"
+            className="grid h-8 w-8 place-items-center rounded-full"
+            data-part="close"
+          >
+            <IconX className="h-4 w-4" />
+          </button>
         </div>
-        <div className="min-w-0 p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="line-clamp-2 text-base font-black uppercase leading-[1.05] text-white">
-                {paint.name}
-              </h2>
-            </div>
-            <div
-              className="grid shrink-0 grid-cols-2 gap-2"
-              data-v3-paints-indicator="ownership-actions"
-            >
-              <button
-                type="button"
-                onClick={onToggleOwned}
-                disabled={isCustomPaint}
-                aria-pressed={paint.owned}
-                aria-busy={isOwnedPending || undefined}
-                className={[
-                  'rounded-full border px-3 py-1 text-[10px] font-black transition disabled:cursor-not-allowed disabled:opacity-55',
-                  paint.owned
-                    ? 'border-cyan-300/45 bg-cyan-300/10 text-cyan-300'
-                    : 'border-white/10 bg-white/[0.04] text-white/44 hover:border-cyan-300/40 hover:text-cyan-200',
-                ].join(' ')}
-              >
-                {paint.owned ? 'Owned' : 'Not owned'}
-              </button>
-              <button
-                type="button"
-                onClick={onToggleWishlist}
-                disabled={isCustomPaint}
-                aria-pressed={paint.wish}
-                aria-busy={isWishlistPending || undefined}
-                className={[
-                  'rounded-full border px-3 py-1 text-[10px] font-black transition disabled:cursor-not-allowed disabled:opacity-55',
-                  paint.wish
-                    ? 'border-fuchsia-300/45 bg-fuchsia-300/10 text-fuchsia-200'
-                    : 'border-white/10 bg-white/[0.04] text-white/44 hover:border-fuchsia-300/40 hover:text-fuchsia-100',
-                ].join(' ')}
-              >
-                {paint.wish ? 'Wishlisted' : 'Wishlist'}
-              </button>
-            </div>
-          </div>
 
-          <div className="mt-3 grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto_auto] items-start gap-2 text-[11px] text-white/34">
-            <InfoPair label="Brand" value={paint.brand} />
-            <InfoPair label="Line" value={paint.line} />
-            <InfoPair label="Size" value={paint.size} />
-            <InfoPair label="MSRP" value={paint.msrp ?? '-'} />
-            <button
-              type="button"
-              onClick={onToggleEquivalents}
-              disabled={isCustomPaint}
-              aria-pressed={isEquivalentsSource}
-              data-v3-paints-indicator="show-equivalents"
-              className={[
-                'shrink-0 self-center rounded-[6px] border px-2 py-1.5 text-center text-[9px] font-black uppercase leading-[1.2] tracking-normal transition disabled:cursor-not-allowed disabled:opacity-45',
-                isEquivalentsSource
-                  ? 'border-cyan-300/55 bg-cyan-300/12 text-cyan-200'
-                  : 'border-white/12 bg-white/[0.04] text-white/62 hover:border-cyan-300/45 hover:text-cyan-200',
-              ].join(' ')}
-            >
-              {/* Two stacked words keep the button narrow on phones. */}
-              <span className="block">{isEquivalentsSource ? 'Hide' : 'Show'}</span>
-              <span className="block">equivalents</span>
-            </button>
-          </div>
-
-          <p className="mt-2 line-clamp-2 text-[10px] font-semibold leading-4 text-white/46">
-            {matchNote ?? paint.notes}
+        {matchNote ? (
+          <p className="mt-2 line-clamp-2" data-part="note">
+            {matchNote}
           </p>
+        ) : null}
+
+        <div className="mt-3 grid grid-cols-3 gap-2" data-v3-paints-indicator="ownership-actions">
+          <button
+            type="button"
+            onClick={onToggleOwned}
+            disabled={isCustomPaint}
+            aria-pressed={paint.owned}
+            aria-busy={pendingAction === 'owned' || undefined}
+            data-part="action"
+          >
+            {paint.owned ? <IconCheck className="h-4 w-4" /> : <IconX className="h-4 w-4" />}
+            {paint.owned ? 'Owned' : 'Not owned'}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleWishlist}
+            disabled={isCustomPaint}
+            aria-pressed={paint.wish}
+            aria-busy={pendingAction === 'wishlist' || undefined}
+            data-part="action"
+          >
+            <IconCart filled={paint.wish} className="h-4 w-4" />
+            {paint.wish ? 'Wishlisted' : 'Wishlist'}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleEquivalents}
+            disabled={isCustomPaint}
+            aria-pressed={isEquivalentsSource}
+            data-v3-paints-indicator="show-equivalents"
+            data-part="action"
+          >
+            <IconScale className="h-4 w-4" />
+            {isEquivalentsSource ? 'Hide Equivalents' : 'Equivalents'}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={toggleStores}
+          disabled={isCustomPaint}
+          aria-expanded={isStoresOpen}
+          aria-controls="paint-where-to-buy"
+          className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[8px]"
+          data-part="where-to-buy"
+        >
+          <IconPin className="h-4 w-4" />
+          Where can I buy this?
+          <IconChevron className="h-4 w-4" data-part="chevron" />
+        </button>
+
+        <div
+          id="paint-where-to-buy"
+          className="grid"
+          data-part="stores"
+          data-open={isStoresOpen ? 'true' : undefined}
+          aria-hidden={!isStoresOpen}
+          inert={!isStoresOpen}
+        >
+          <div className="min-h-0 overflow-hidden">
+            {stores.length > 0 ? (
+              <ul className="mt-2 grid gap-2" aria-label={`Stores that sell ${paint.brand}`}>
+                {stores.map((store) => (
+                  <li
+                    key={store.id}
+                    className="grid grid-cols-[76px_minmax(0,1fr)_auto] items-center gap-3 rounded-[8px] p-2"
+                    data-part="store"
+                  >
+                    <span
+                      className="relative h-12 w-[76px] overflow-hidden rounded-[6px]"
+                      data-part="store-thumb"
+                      data-logo={store.imageIsLogo ? 'true' : undefined}
+                    >
+                      <Image
+                        src={store.image}
+                        alt=""
+                        fill
+                        sizes="76px"
+                        className={store.imageIsLogo ? 'object-contain p-1' : 'object-cover'}
+                      />
+                      {store.promo ? <span data-part="featured">Featured</span> : null}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate" data-part="store-name">
+                        {store.name}
+                      </span>
+                      <span className="mt-0.5 flex items-center gap-1" data-part="store-location">
+                        {store.city ? <IconPin className="h-3 w-3" /> : <IconGlobe className="h-3 w-3" />}
+                        <span className="truncate">{store.city ?? 'Online (Israel)'}</span>
+                      </span>
+                    </span>
+                    <TrackedLink
+                      href={storeHref(store)}
+                      click={{
+                        targetType: 'store',
+                        targetId: store.id,
+                        linkKind: 'store_page',
+                        source: 'paints_where_to_buy',
+                      }}
+                      className="flex h-9 items-center gap-1 rounded-[6px] px-3"
+                      data-part="view-store"
+                    >
+                      View Store
+                      <IconChevron className="h-3.5 w-3.5 -rotate-90" />
+                    </TrackedLink>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 rounded-[8px] p-3 text-center" data-part="no-stores">
+                None of our partner stores list {paint.brand} yet.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div
+          className="mt-2 flex items-center gap-3 rounded-[8px] px-3 py-2"
+          data-part="sale-alert"
+        >
+          <IconBell className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1" id={`sale-alert-label-${paint.id}`}>
+            Notify me when this paint is on sale
+            {saleAlertErrorPaintId === paint.id ? (
+              <span className="block" data-part="sale-alert-error">
+                Couldn&apos;t save that. Try again.
+              </span>
+            ) : null}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(paint.saleAlert)}
+            aria-labelledby={`sale-alert-label-${paint.id}`}
+            aria-busy={pendingAction === 'sale_alert' || undefined}
+            disabled={isCustomPaint}
+            onClick={toggleSaleAlert}
+            className="relative h-6 w-11 shrink-0 rounded-full"
+            data-part="switch"
+          >
+            <span aria-hidden="true" />
+          </button>
         </div>
       </div>
     </aside>
+  )
+}
+
+type IconProps = { className?: string; 'data-part'?: string }
+
+function SheetIcon({ children, className = 'h-3.5 w-3.5', ...rest }: IconProps & { children: ReactNode }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...rest}
+    >
+      {children}
+    </svg>
+  )
+}
+
+function IconCheck(props: IconProps) {
+  return <SheetIcon {...props}><path d="m5 12.5 4.5 4.5L19 7.5" /></SheetIcon>
+}
+
+function IconX(props: IconProps) {
+  return <SheetIcon {...props}><path d="M6 6l12 12M18 6 6 18" /></SheetIcon>
+}
+
+function IconCart({ filled, ...props }: IconProps & { filled: boolean }) {
+  return (
+    <SheetIcon {...props}>
+      <path d="M3 4h2.5l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.4a1.5 1.5 0 0 0 1.5-1.1L21 8H6.4" fill="none" />
+      {filled ? <path d="M7 8h13.5l-1.6 6.1a1 1 0 0 1-1 .8H8.6z" fill="currentColor" stroke="none" /> : null}
+      <circle cx="9.5" cy="19.5" r="1.4" fill={filled ? 'currentColor' : 'none'} />
+      <circle cx="17" cy="19.5" r="1.4" fill={filled ? 'currentColor' : 'none'} />
+    </SheetIcon>
+  )
+}
+
+function IconScale(props: IconProps) {
+  return (
+    <SheetIcon {...props}>
+      <path d="M12 3v18M7 21h10M5 7h14M12 5l-7 2M12 5l7 2" />
+      <path d="M5 7 2.5 13a3 3 0 0 0 5 0zM19 7l-2.5 6a3 3 0 0 0 5 0z" />
+    </SheetIcon>
+  )
+}
+
+function IconPin(props: IconProps) {
+  return (
+    <SheetIcon {...props}>
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </SheetIcon>
+  )
+}
+
+function IconGlobe(props: IconProps) {
+  return (
+    <SheetIcon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </SheetIcon>
+  )
+}
+
+function IconChevron(props: IconProps) {
+  return <SheetIcon {...props}><path d="m6 9 6 6 6-6" /></SheetIcon>
+}
+
+function IconBell(props: IconProps) {
+  return (
+    <SheetIcon {...props}>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+      <path d="M10 20.5a2 2 0 0 0 4 0" />
+    </SheetIcon>
+  )
+}
+
+function IconBottle(props: IconProps) {
+  return (
+    <SheetIcon {...props}>
+      <path d="M10 3h4v3l2 2.5V20a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V8.5L10 6z" />
+      <path d="M8 12h8" />
+    </SheetIcon>
+  )
+}
+
+function IconBarcode(props: IconProps) {
+  return <SheetIcon {...props}><path d="M4 5v14M7 5v14M10.5 5v14M13 5v14M16.5 5v14M20 5v14" /></SheetIcon>
+}
+
+function IconTag(props: IconProps) {
+  return (
+    <SheetIcon {...props}>
+      <path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z" />
+      <circle cx="7.5" cy="7.5" r="1.3" />
+    </SheetIcon>
   )
 }
 
@@ -2350,14 +2742,5 @@ function EquivalentsBanner({
         Back to paints
       </button>
     </section>
-  )
-}
-
-function InfoPair({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="font-black uppercase tracking-[0.12em]">{label}</p>
-      <p className="mt-1 line-clamp-2 text-[12px] font-semibold leading-[1.15] text-white/62">{value}</p>
-    </div>
   )
 }

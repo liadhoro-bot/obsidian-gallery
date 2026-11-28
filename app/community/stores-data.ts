@@ -46,6 +46,9 @@ export type StoreSpotlight = {
   highlights: string[]
   // "What you'll find" boxes, up to 5.
   offerings: StoreOffering[]
+  // Paint brands the store sells, spelled as paint_catalog.brand. Drives
+  // "Where can I buy this?" on the Paints page; leave unset if unknown.
+  paintBrands?: string[]
   address: string | null
   hours: string[] | null
   // Person to ask for, shown next to the phone number.
@@ -98,6 +101,8 @@ export const storeSpotlights: StoreSpotlight[] = [
       'Sirolynia is a Jerusalem game store for trading cards, board games, Warhammer miniatures and Citadel paints, with play tables where the community meets for open game nights.',
     highlights: ['Play tables', 'Game nights'],
     offerings: ['trading_cards', 'board_games', 'miniatures', 'paints', 'play_tables'],
+    // Citadel paints are catalogued as Warhammer Colour.
+    paintBrands: ['Warhammer Colour'],
     ...noContactYet,
     address: 'Shmaryahu Levin 74',
     hours: ['Sun–Thu: 10:00–22:00'],
@@ -176,6 +181,7 @@ export const storeSpotlights: StoreSpotlight[] = [
       'Hobbytech is an online store for painting and modeling supplies: paints and pigments from Vallejo, AK Interactive, AMMO, MRP, Scale75 and GSW, airbrushes, modeling tools, diorama materials and modeling accessories.',
     highlights: ['Vallejo', 'AK', 'AMMO'],
     offerings: ['paints', 'airbrushes', 'hobby_tools', 'scenery'],
+    paintBrands: ['Vallejo', 'AK Interactive', 'Scale75', 'Green Stuff World', 'AMMO', 'MRP'],
     ...noContactYet,
     // Online-only; this is the business address, not a shop to visit.
     address: 'Arazim St., Har Halutz 2012100',
@@ -213,6 +219,20 @@ export function getStorePromo() {
 
 export function getStore(id: string) {
   return storeSpotlights.find((store) => store.id === id && !store.hidden) ?? null
+}
+
+// Visible stores that sell this paint brand. Stores with no paintBrands are
+// left out rather than guessed at.
+export function getStoresForPaintBrand(brand: string) {
+  const wanted = brand.trim().toLowerCase()
+  if (!wanted) return []
+
+  return getVisibleStores()
+    .filter((store) =>
+      store.paintBrands?.some((storeBrand) => storeBrand.toLowerCase() === wanted)
+    )
+    // In-person stores first, then online.
+    .sort((first, second) => Number(first.city === null) - Number(second.city === null))
 }
 
 export function storeHref(store: StoreSpotlight) {
